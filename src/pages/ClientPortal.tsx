@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { clientPortalData } from "@/data/mockData";
 import { cn } from "@/lib/utils";
-import { TrendingUp, Filter, Calendar, FileText, DollarSign, LogOut, ArrowRight } from "lucide-react";
+import { TrendingUp, Filter, Calendar, FileText, DollarSign, LogOut, ArrowRight, ChevronDown, MessageSquare, Pencil, Check, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 function DeltaBadge({ delta, type }: { delta: number; type: string }) {
   return (
@@ -19,7 +21,32 @@ const appointmentSources = ["Booked by AI", "Appointment Setter", "Direct From A
 
 export default function ClientPortal() {
   const d = clientPortalData;
-  const [leadSources, setLeadSources] = useState<Record<string, string>>({});
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
+  const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [editingField, setEditingField] = useState<{ name: string; field: string } | null>(null);
+  const [fieldDraft, setFieldDraft] = useState("");
+  const [leadOverrides, setLeadOverrides] = useState<Record<string, Record<string, string>>>({});
+
+  const saveNote = (leadName: string) => {
+    setLeadNotes((prev) => ({ ...prev, [leadName]: noteDraft }));
+    setEditingNote(null);
+    setNoteDraft("");
+  };
+
+  const saveField = (leadName: string, field: string) => {
+    setLeadOverrides((prev) => ({
+      ...prev,
+      [leadName]: { ...(prev[leadName] || {}), [field]: fieldDraft },
+    }));
+    setEditingField(null);
+    setFieldDraft("");
+  };
+
+  const getFieldValue = (leadName: string, field: string, original: string) => {
+    return leadOverrides[leadName]?.[field] || original;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -45,6 +72,8 @@ export default function ClientPortal() {
         <div className="grid grid-cols-4 gap-4">
           {(Object.entries(d.kpis) as [keyof typeof d.kpis, typeof d.kpis.newLeads][]).map(([key, kpi]) => {
             const Icon = kpiIcons[key];
+            const isAppointments = key === "appointmentsSet";
+
             return (
               <div key={key} className={cn("rounded-lg border border-border bg-card p-5", key === "closedDeals" && "bg-success/10 border-success/30")}>
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
@@ -52,7 +81,34 @@ export default function ClientPortal() {
                   <span className="text-xs font-medium uppercase tracking-wider">{kpiLabels[key]}</span>
                 </div>
                 <p className="text-3xl font-bold tabular-nums text-foreground">{kpi.value}</p>
-                <DeltaBadge delta={kpi.delta} type={kpi.deltaType} />
+                <div className="flex items-center gap-2 mt-1">
+                  <DeltaBadge delta={kpi.delta} type={kpi.deltaType} />
+                </div>
+
+                {isAppointments && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="mt-3 flex items-center gap-1.5 rounded-md border border-border bg-accent/50 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors w-full">
+                        <span className="truncate">{selectedSource || "Select source"}</span>
+                        <ChevronDown className="h-3 w-3 ml-auto shrink-0" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-48 p-1" align="start">
+                      {appointmentSources.map((source) => (
+                        <button
+                          key={source}
+                          onClick={() => setSelectedSource(source)}
+                          className={cn(
+                            "w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                            selectedSource === source && "bg-accent font-medium text-foreground"
+                          )}
+                        >
+                          {source}
+                        </button>
+                      ))}
+                    </PopoverContent>
+                  </Popover>
+                )}
               </div>
             );
           })}
@@ -113,53 +169,145 @@ export default function ClientPortal() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-accent/50">
-                {["Name", "Date", "Stage", "Phone", "Status"].map((h) => (
+                {["Name", "Date", "Stage", "Phone", "Status", "Notes"].map((h) => (
                   <th key={h} className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {d.recentLeads.map((lead) => (
-                <tr key={lead.name} className="border-b border-border">
-                  <td className="px-5 py-3 font-medium text-foreground">{lead.name}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{lead.date}</td>
-                  <td className="px-5 py-3 text-muted-foreground">
-                    {lead.stage === "Appointment Set" ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button className="text-left hover:text-foreground transition-colors underline decoration-dotted underline-offset-4">
-                            {leadSources[lead.name] || lead.stage}
+              {d.recentLeads.map((lead) => {
+                const isEditingThis = editingField?.name === lead.name;
+                return (
+                  <tr key={lead.name} className="border-b border-border group">
+                    {/* Name */}
+                    <td className="px-5 py-3 font-medium text-foreground">{lead.name}</td>
+
+                    {/* Date – editable */}
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {isEditingThis && editingField?.field === "date" ? (
+                        <span className="flex items-center gap-1">
+                          <Input
+                            value={fieldDraft}
+                            onChange={(e) => setFieldDraft(e.target.value)}
+                            className="h-7 w-24 text-xs"
+                            autoFocus
+                            onKeyDown={(e) => e.key === "Enter" && saveField(lead.name, "date")}
+                          />
+                          <button onClick={() => saveField(lead.name, "date")} className="text-success hover:text-success/80"><Check className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => setEditingField(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 group/cell">
+                          {getFieldValue(lead.name, "date", lead.date)}
+                          <button
+                            onClick={() => { setEditingField({ name: lead.name, field: "date" }); setFieldDraft(getFieldValue(lead.name, "date", lead.date)); }}
+                            className="opacity-0 group-hover/cell:opacity-100 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                          >
+                            <Pencil className="h-3 w-3 text-muted-foreground" />
                           </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-48 p-1" align="start">
-                          {appointmentSources.map((source) => (
-                            <button
-                              key={source}
-                              onClick={() => setLeadSources((prev) => ({ ...prev, [lead.name]: source }))}
-                              className={cn(
-                                "w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
-                                leadSources[lead.name] === source && "bg-accent font-medium text-foreground"
-                              )}
-                            >
-                              {source}
-                            </button>
-                          ))}
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      lead.stage
-                    )}
-                  </td>
-                  <td className="px-5 py-3 tabular-nums text-muted-foreground">{lead.phone}</td>
-                  <td className="px-5 py-3">
-                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium",
-                      lead.status === "Won" ? "bg-success/15 text-success" :
-                      lead.status === "New" ? "bg-primary/15 text-primary" :
-                      "bg-accent text-muted-foreground"
-                    )}>{lead.status}</span>
-                  </td>
-                </tr>
-              ))}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Stage – editable */}
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {isEditingThis && editingField?.field === "stage" ? (
+                        <span className="flex items-center gap-1">
+                          <Input
+                            value={fieldDraft}
+                            onChange={(e) => setFieldDraft(e.target.value)}
+                            className="h-7 w-32 text-xs"
+                            autoFocus
+                            onKeyDown={(e) => e.key === "Enter" && saveField(lead.name, "stage")}
+                          />
+                          <button onClick={() => saveField(lead.name, "stage")} className="text-success hover:text-success/80"><Check className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => setEditingField(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 group/cell">
+                          {getFieldValue(lead.name, "stage", lead.stage)}
+                          <button
+                            onClick={() => { setEditingField({ name: lead.name, field: "stage" }); setFieldDraft(getFieldValue(lead.name, "stage", lead.stage)); }}
+                            className="opacity-0 group-hover/cell:opacity-100 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                          >
+                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Phone – editable */}
+                    <td className="px-5 py-3 tabular-nums text-muted-foreground">
+                      {isEditingThis && editingField?.field === "phone" ? (
+                        <span className="flex items-center gap-1">
+                          <Input
+                            value={fieldDraft}
+                            onChange={(e) => setFieldDraft(e.target.value)}
+                            className="h-7 w-32 text-xs"
+                            autoFocus
+                            onKeyDown={(e) => e.key === "Enter" && saveField(lead.name, "phone")}
+                          />
+                          <button onClick={() => saveField(lead.name, "phone")} className="text-success hover:text-success/80"><Check className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => setEditingField(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 group/cell">
+                          {getFieldValue(lead.name, "phone", lead.phone)}
+                          <button
+                            onClick={() => { setEditingField({ name: lead.name, field: "phone" }); setFieldDraft(getFieldValue(lead.name, "phone", lead.phone)); }}
+                            className="opacity-0 group-hover/cell:opacity-100 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                          >
+                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                          </button>
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-5 py-3">
+                      <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium",
+                        lead.status === "Won" ? "bg-success/15 text-success" :
+                        lead.status === "New" ? "bg-primary/15 text-primary" :
+                        "bg-accent text-muted-foreground"
+                      )}>{lead.status}</span>
+                    </td>
+
+                    {/* Notes */}
+                    <td className="px-5 py-3">
+                      {editingNote === lead.name ? (
+                        <div className="flex flex-col gap-1.5">
+                          <Textarea
+                            value={noteDraft}
+                            onChange={(e) => setNoteDraft(e.target.value)}
+                            className="min-h-[60px] text-xs resize-none"
+                            placeholder="Add a note..."
+                            autoFocus
+                          />
+                          <div className="flex gap-1">
+                            <button onClick={() => saveNote(lead.name)} className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground hover:bg-primary/90">Save</button>
+                            <button onClick={() => { setEditingNote(null); setNoteDraft(""); }} className="rounded bg-accent px-2 py-1 text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+                          </div>
+                        </div>
+                      ) : leadNotes[lead.name] ? (
+                        <button
+                          onClick={() => { setEditingNote(lead.name); setNoteDraft(leadNotes[lead.name]); }}
+                          className="text-xs text-muted-foreground hover:text-foreground text-left max-w-[150px] truncate"
+                          title={leadNotes[lead.name]}
+                        >
+                          {leadNotes[lead.name]}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => { setEditingNote(lead.name); setNoteDraft(""); }}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MessageSquare className="h-3 w-3" /> Add note
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           <div className="px-5 py-3 border-t border-border">
