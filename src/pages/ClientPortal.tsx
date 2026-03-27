@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { clientPortalData } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { TrendingUp, Filter, Calendar, FileText, DollarSign, LogOut, ArrowRight } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 function DeltaBadge({ delta, type }: { delta: number; type: string }) {
   return (
