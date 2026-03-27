@@ -106,7 +106,7 @@ export default function ClientPortal() {
         </div>
 
         {/* Recent Leads */}
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <div className="rounded-lg border border-border bg-card">
           <div className="px-5 py-4 border-b border-border">
             <h3 className="text-sm font-semibold text-foreground">Recent Leads</h3>
           </div>
