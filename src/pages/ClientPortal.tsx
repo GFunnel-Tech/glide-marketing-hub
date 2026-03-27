@@ -123,7 +123,33 @@ export default function ClientPortal() {
                 <tr key={lead.name} className="border-b border-border">
                   <td className="px-5 py-3 font-medium text-foreground">{lead.name}</td>
                   <td className="px-5 py-3 text-muted-foreground">{lead.date}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{lead.stage}</td>
+                  <td className="px-5 py-3 text-muted-foreground">
+                    {lead.stage === "Appointment Set" ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="text-left hover:text-foreground transition-colors underline decoration-dotted underline-offset-4">
+                            {leadSources[lead.name] || lead.stage}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-48 p-1" align="start">
+                          {appointmentSources.map((source) => (
+                            <button
+                              key={source}
+                              onClick={() => setLeadSources((prev) => ({ ...prev, [lead.name]: source }))}
+                              className={cn(
+                                "w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
+                                leadSources[lead.name] === source && "bg-accent font-medium text-foreground"
+                              )}
+                            >
+                              {source}
+                            </button>
+                          ))}
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      lead.stage
+                    )}
+                  </td>
                   <td className="px-5 py-3 tabular-nums text-muted-foreground">{lead.phone}</td>
                   <td className="px-5 py-3">
                     <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium",
