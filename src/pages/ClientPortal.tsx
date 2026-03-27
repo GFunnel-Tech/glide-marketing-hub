@@ -15,8 +15,11 @@ function DeltaBadge({ delta, type }: { delta: number; type: string }) {
 const kpiIcons = { newLeads: Filter, appointmentsSet: Calendar, applications: FileText, closedDeals: DollarSign };
 const kpiLabels = { newLeads: "New Leads", appointmentsSet: "Appointments Set", applications: "Applications", closedDeals: "Closed Deals" };
 
+const appointmentSources = ["Booked by AI", "Appointment Setter", "Direct From Ad"] as const;
+
 export default function ClientPortal() {
   const d = clientPortalData;
+  const [leadSources, setLeadSources] = useState<Record<string, string>>({});
 
   return (
     <div className="min-h-screen bg-background">
