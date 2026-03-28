@@ -3,9 +3,16 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import ClientPortal from "./pages/ClientPortal.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import Index from "./pages/Index";
+import ClientPortal from "./pages/ClientPortal";
+import ClientProfile from "./pages/ClientProfile";
+import Campaigns from "./pages/Campaigns";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
+import Onboarding from "./pages/Onboarding";
+import AiAssistant from "./pages/AiAssistant";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -16,8 +23,16 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/clients" element={<Index />} />
+          <Route path="/" element={<DashboardLayout />}>
+            <Route index element={<Index />} />
+            <Route path="clients" element={<Index />} />
+            <Route path="client/:id" element={<ClientProfile />} />
+            <Route path="campaigns" element={<Campaigns />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="onboarding" element={<Onboarding />} />
+            <Route path="ai" element={<AiAssistant />} />
+          </Route>
           <Route path="/client-portal/:id" element={<ClientPortal />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
