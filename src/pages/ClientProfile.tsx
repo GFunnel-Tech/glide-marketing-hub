@@ -235,7 +235,7 @@ export default function ClientProfile() {
               <div className="space-y-2">
                 {audit.priorityActions.map((a, i) => (
                   <label key={i} className="flex items-start gap-2 text-sm">
-                    <input type="checkbox" className="mt-1 rounded border-border" disabled={a.status === "done"} />
+                    <input type="checkbox" className="mt-1 rounded border-border" defaultChecked={false} />
                     <div className="flex-1">
                       <p className="text-foreground">{a.text}</p>
                       <div className="flex items-center gap-2 mt-0.5">
