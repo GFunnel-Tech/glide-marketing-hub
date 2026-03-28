@@ -6,67 +6,66 @@
 
 @layer base {
   :root {
-    --background: 230 15% 95%;
-    --foreground: 230 25% 10%;
-    --card: 230 10% 98%;
-    --card-foreground: 230 25% 10%;
-    --popover: 230 10% 98%;
-    --popover-foreground: 230 25% 10%;
-    --primary: 228 89% 64%;
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 25 95% 53%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 230 10% 92%;
-    --secondary-foreground: 230 25% 10%;
-    --muted: 230 10% 92%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-    --accent: 230 10% 90%;
-    --accent-foreground: 230 25% 10%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 230 15% 85%;
-    --input: 230 15% 85%;
-    --ring: 228 89% 64%;
-    --radius: 0.5rem;
-
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 25 95% 53%;
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --purple: 258 90% 66%;
     --purple-foreground: 0 0% 100%;
+    --radius: 0.5rem;
 
-    --surface: 230 10% 96%;
-    --surface-border: 230 15% 88%;
+    --surface: 210 40% 98%;
+    --surface-border: 214 32% 91%;
 
-    --sidebar-background: 230 10% 96%;
-    --sidebar-foreground: 215 16% 47%;
-    --sidebar-primary: 228 89% 64%;
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 215 20% 65%;
+    --sidebar-primary: 25 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 10% 92%;
-    --sidebar-accent-foreground: 230 25% 10%;
-    --sidebar-border: 230 15% 88%;
-    --sidebar-ring: 228 89% 64%;
+    --sidebar-accent: 222 47% 15%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 222 47% 15%;
+    --sidebar-ring: 25 95% 53%;
   }
 
   .dark {
-    --background: 240 20% 4%;
-    --foreground: 210 40% 96%;
-    --card: 240 17% 8%;
-    --card-foreground: 210 40% 96%;
-    --popover: 240 17% 8%;
-    --popover-foreground: 210 40% 96%;
-    --primary: 228 89% 64%;
+    --background: 222 47% 7%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 10%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 10%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 25 95% 53%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 14% 12%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 240 14% 12%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 240 14% 12%;
-    --accent-foreground: 210 40% 96%;
+    --secondary: 223 47% 14%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 223 47% 14%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 223 47% 14%;
+    --accent-foreground: 213 31% 91%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 14% 18%;
-    --input: 240 14% 18%;
-    --ring: 228 89% 64%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 25 95% 53%;
 
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
@@ -75,17 +74,17 @@
     --purple: 258 90% 66%;
     --purple-foreground: 0 0% 100%;
 
-    --surface: 240 17% 8%;
-    --surface-border: 240 14% 18%;
+    --surface: 222 47% 10%;
+    --surface-border: 216 34% 17%;
 
-    --sidebar-background: 240 17% 8%;
-    --sidebar-foreground: 215 16% 47%;
-    --sidebar-primary: 228 89% 64%;
+    --sidebar-background: 222 47% 7%;
+    --sidebar-foreground: 215 20% 65%;
+    --sidebar-primary: 25 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 14% 12%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 240 14% 18%;
-    --sidebar-ring: 228 89% 64%;
+    --sidebar-accent: 223 47% 14%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 216 34% 17%;
+    --sidebar-ring: 25 95% 53%;
   }
 }
 
@@ -112,4 +111,13 @@
 
 .animate-pulse-amber {
   animation: pulse-amber 2s ease-in-out infinite;
+}
+
+@keyframes pulse-blocked {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-blocked {
+  animation: pulse-blocked 2s ease-in-out infinite;
 }

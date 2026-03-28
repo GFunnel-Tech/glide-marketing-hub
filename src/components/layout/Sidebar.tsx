@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Users, Megaphone, Filter, BarChart3,
-  Settings, HelpCircle, ChevronLeft, ChevronRight
+  LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
+  Bot, Settings, ChevronLeft, ChevronRight, LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -11,10 +11,10 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: Users, label: "Clients", path: "/clients" },
   { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
-  { icon: Filter, label: "Lead Pipeline", path: "/pipeline" },
-  { icon: BarChart3, label: "Reports", path: "/reports" },
+  { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
+  { icon: FileBarChart, label: "Reports", path: "/reports" },
+  { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
   { icon: Settings, label: "Settings", path: "/settings" },
-  { icon: HelpCircle, label: "Support", path: "/support" },
 ];
 
 export function Sidebar() {
@@ -24,19 +24,21 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "flex flex-col border-r border-border bg-card transition-all duration-200",
+        "flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200",
         collapsed ? "w-16" : "w-60"
       )}
     >
-      <div className={cn("flex items-center gap-3 border-b border-border px-4 py-5", collapsed && "justify-center px-2")}>
+      {/* Logo */}
+      <div className={cn("flex items-center gap-3 border-b border-sidebar-border px-4 py-5", collapsed && "justify-center px-2")}>
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
           E
         </div>
         {!collapsed && (
-          <span className="text-sm font-semibold text-foreground truncate">Expert Mortgage Marketing</span>
+          <span className="text-sm font-semibold text-sidebar-accent-foreground truncate">Expert Mortgage Marketing</span>
         )}
       </div>
 
+      {/* Nav */}
       <nav className="flex-1 space-y-1 p-2">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path));
@@ -50,12 +52,19 @@ export function Sidebar() {
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 collapsed && "justify-center px-2"
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && (
+                <span className="flex-1">{item.label}</span>
+              )}
+              {!collapsed && item.badge && (
+                <span className="ml-auto text-[10px] bg-primary text-primary-foreground rounded px-1.5 py-0.5 font-medium">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
 
@@ -72,24 +81,31 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-border p-2">
+      {/* Collapse toggle */}
+      <div className="border-t border-sidebar-border p-2">
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center justify-center rounded-md px-3 py-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          className="flex w-full items-center justify-center rounded-md px-3 py-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
       </div>
 
-      <div className={cn("border-t border-border p-3 flex items-center gap-3", collapsed && "justify-center p-2")}>
+      {/* User footer */}
+      <div className={cn("border-t border-sidebar-border p-3 flex items-center gap-3", collapsed && "justify-center p-2")}>
         <div className="h-8 w-8 shrink-0 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-semibold">
-          SK
+          CM
         </div>
         {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">Sarah K.</p>
-            <p className="text-xs text-muted-foreground">Admin</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-sidebar-accent-foreground truncate">Cam Mitchell</p>
+            <p className="text-xs text-sidebar-foreground">Admin</p>
           </div>
+        )}
+        {!collapsed && (
+          <button className="text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors">
+            <LogOut className="h-4 w-4" />
+          </button>
         )}
       </div>
     </aside>

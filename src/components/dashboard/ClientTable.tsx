@@ -3,7 +3,7 @@ import { clients, Client } from "@/data/mockData";
 import { StatusBadge } from "./StatusBadge";
 import { ClientDrawer } from "./ClientDrawer";
 import { cn } from "@/lib/utils";
-import { ArrowUpDown, Building2, User, MoreHorizontal, Search } from "lucide-react";
+import { ArrowUpDown, Building2, User, MoreHorizontal, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 
@@ -106,6 +106,7 @@ export function ClientTable() {
                   { key: "spend" as SortKey, label: "Spend", w: "w-24" },
                   { key: "formCvr" as SortKey, label: "Form CVR", w: "w-20" },
                   { key: "frequency" as SortKey, label: "Freq", w: "w-16" },
+                  { key: "doubleCount" as SortKey, label: "DC", w: "w-14" },
                   { key: "plaiConnected" as SortKey, label: "Plai", w: "w-14" },
                 ].map((col) => (
                   <th
@@ -153,6 +154,18 @@ export function ClientTable() {
                   <td className="px-3 py-3 tabular-nums text-foreground">${c.spend.toLocaleString()}</td>
                   <td className={cn("px-3 py-3 font-semibold tabular-nums", getCVRColor(c.formCvr))}>{c.formCvr}%</td>
                   <td className={cn("px-3 py-3 tabular-nums", getFreqColor(c.frequency))}>{c.frequency}</td>
+                  <td className="px-3 py-3">
+                    <Tooltip>
+                      <TooltipTrigger>
+                        {c.doubleCount ? (
+                          <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                        ) : (
+                          <CheckCircle className="h-3.5 w-3.5 text-success" />
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>{c.doubleCount ? "Double-counting confirmed — reported leads are inflated" : "No double-counting detected"}</TooltipContent>
+                    </Tooltip>
+                  </td>
                   <td className="px-3 py-3">
                     <Tooltip>
                       <TooltipTrigger>

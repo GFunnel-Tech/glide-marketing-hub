@@ -1,13 +1,15 @@
 import { X, ExternalLink } from "lucide-react";
-import { Client, campaigns, notes } from "@/data/mockData";
+import { Client, campaigns, notes, mockLeads } from "@/data/mockData";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const tabs = ["Overview", "Campaigns", "Leads", "Actions"] as const;
 
@@ -16,6 +18,8 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [showScaleDialog, setShowScaleDialog] = useState(false);
   const [pauseInput, setPauseInput] = useState("");
+
+  const clientLeads = mockLeads.filter(l => l.clientId === String(client.id));
 
   return (
     <>
@@ -28,10 +32,22 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
             <p className="text-sm text-muted-foreground">{client.brand}</p>
             <div className="mt-2 flex items-center gap-2">
               <StatusBadge status={client.status} />
-              <button className="text-xs text-primary hover:underline flex items-center gap-1">
-                Open Full Profile <ExternalLink className="h-3 w-3" />
-              </button>
+              {client.doubleCount && (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <span className="rounded bg-destructive/15 text-destructive px-1.5 py-0.5 text-[10px] font-bold">DC</span>
+                  </TooltipTrigger>
+                  <TooltipContent>Double-counting detected</TooltipContent>
+                </Tooltip>
+              )}
             </div>
+            {/* Quick stat pills */}
+            <div className="flex flex-wrap gap-1.5 mt-2 text-xs text-muted-foreground">
+              <span className="bg-accent rounded px-1.5 py-0.5">${client.cpl} CPL</span>
+              <span className="bg-accent rounded px-1.5 py-0.5">{client.leads} leads</span>
+              <span className="bg-accent rounded px-1.5 py-0.5">{client.formCvr}% CVR</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Last audited: {client.lastAudit}</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-5 w-5" />
@@ -71,6 +87,7 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                 <tbody className="text-foreground">
                   {[
                     ["CPL", `$${client.cpl}`, "< $30"],
+                    ...(client.doubleCount ? [["True CPL", `$${client.trueCpl}`, "< $30"]] : []),
                     ["CPM", `$${client.cpm}`, "< $120"],
                     ["Leads (MTD)", client.leads, "50+"],
                     ["Form CVR", `${client.formCvr}%`, "> 15%"],
@@ -117,8 +134,40 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
 
           {activeTab === "Leads" && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Recent leads for {client.name}</p>
-              <p className="text-xs text-muted-foreground italic">Lead data will be loaded from GHL API</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Recent leads for {client.name}</p>
+                <a href="#" className="text-xs text-primary hover:underline flex items-center gap-1">View all in GHL <ExternalLink className="h-3 w-3" /></a>
+              </div>
+              {clientLeads.length > 0 ? (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="pb-2 text-xs font-medium">Name</th>
+                      <th className="pb-2 text-xs font-medium">Date</th>
+                      <th className="pb-2 text-xs font-medium">Stage</th>
+                      <th className="pb-2 text-xs font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clientLeads.map(l => (
+                      <tr key={l.id} className="border-b border-border">
+                        <td className="py-2 text-foreground font-medium">{l.name}</td>
+                        <td className="py-2 text-muted-foreground">{l.date}</td>
+                        <td className="py-2 text-muted-foreground">{l.stage}</td>
+                        <td className="py-2">
+                          <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium",
+                            l.status === "closed" ? "bg-success/15 text-success" :
+                            l.status === "new" ? "bg-primary/15 text-primary" :
+                            "bg-accent text-muted-foreground"
+                          )}>{l.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No leads found for this client</p>
+              )}
             </div>
           )}
 
@@ -146,8 +195,16 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                 Add Note
               </button>
 
+              {/* Open Full Profile link */}
+              <Link to={`/client/${client.id}`} className="w-full rounded-lg border border-primary text-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/10 transition-colors flex items-center justify-center gap-2" onClick={onClose}>
+                Open Full Profile <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+
               <div className="mt-6 space-y-3">
-                <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Notes</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Notes</h4>
+                  <Link to={`/client/${client.id}`} className="text-xs text-primary hover:underline" onClick={onClose}>View Full Activity Log →</Link>
+                </div>
                 {notes.map((n) => (
                   <div key={n.id} className="rounded-lg border border-border p-3">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
