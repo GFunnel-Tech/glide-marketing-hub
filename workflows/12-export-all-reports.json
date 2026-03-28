@@ -1,0 +1,82 @@
+{
+  "name": "EMM — Export All Reports",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "export-all-reports",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "l1200001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "export-all-reports"
+    },
+    {
+      "parameters": {
+        "jsCode": "const clientIds = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'];\nconst month = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });\nreturn clientIds.map(id => ({ json: { clientId: id, month } }));"
+      },
+      "id": "l1200001-0001-0001-0001-000000000002",
+      "name": "Generate Client List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apihub.gfunnel.com/webhook/generate-report",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "clientId", "value": "={{ $json.clientId }}" },
+            { "name": "month", "value": "={{ $json.month }}" }
+          ]
+        },
+        "options": {
+          "response": { "response": { "fullResponse": true } },
+          "timeout": 120000
+        }
+      },
+      "id": "l1200001-0001-0001-0001-000000000003",
+      "name": "Generate Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet generated = 0;\nlet failed = 0;\nconst failedClients = [];\n\nitems.forEach(item => {\n  const data = item.json.body || item.json;\n  if (data.success) {\n    generated++;\n  } else {\n    failed++;\n    failedClients.push(data.clientName || data.clientId || 'Unknown');\n  }\n});\n\nreturn [{\n  json: {\n    success: true,\n    generated,\n    failed,\n    failedClients,\n    message: generated + ' reports generated. ' + (failed > 0 ? failed + ' failed — check API connections for failed clients.' : 'All reports generated successfully.')\n  }\n}];"
+      },
+      "id": "l1200001-0001-0001-0001-000000000004",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "l1200001-0001-0001-0001-000000000005",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [920, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Generate Client List", "type": "main", "index": 0 }]] },
+    "Generate Client List": { "main": [[{ "node": "Generate Report", "type": "main", "index": 0 }]] },
+    "Generate Report": { "main": [[{ "node": "Aggregate Results", "type": "main", "index": 0 }]] },
+    "Aggregate Results": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}

@@ -1,0 +1,88 @@
+{
+  "name": "EMM — ClickUp Task Creation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clickup-task",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "c9000001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "clickup-task"
+    },
+    {
+      "parameters": {
+        "jsCode": "const teamMembers = {\n  'Cam': 'CLICKUP_USER_CAM',\n  'Zach': 'CLICKUP_USER_ZACH',\n  'Danish': 'CLICKUP_USER_DANISH',\n  'Maru': 'CLICKUP_USER_MARU',\n  'Tim': 'CLICKUP_USER_TIM'\n};\n\nconst lists = {\n  redAccounts: 'LIST_ID_RED_ACCOUNTS',\n  yellowAccounts: 'LIST_ID_YELLOW_ACCOUNTS',\n  trackingFixes: 'LIST_ID_CAPI_PIXEL_FIX',\n  formSwaps: 'LIST_ID_FORM_SWAP',\n  activeSprint: 'LIST_ID_ACTIVE_SPRINT'\n};\n\nconst body = $input.first().json.body || {};\nconst { title, description, owner, priority, listId, dueDate, clientId } = body;\n\nif (!title) {\n  return [{ json: { success: false, error: 'MISSING_TITLE', message: 'Task title is required' } }];\n}\n\n// Resolve list ID\nconst resolvedListId = lists[listId] || listId || lists.activeSprint;\n\n// Resolve assignee\nconst assigneeId = teamMembers[owner] || null;\n\n// Map priority: 1=urgent, 2=high, 3=normal, 4=low\nconst priorityMap = { urgent: 1, high: 2, normal: 3, low: 4 };\nconst resolvedPriority = typeof priority === 'number' ? priority : (priorityMap[priority] || 3);\n\n// Calculate due date timestamp\nlet dueDateTs = null;\nif (dueDate) {\n  dueDateTs = new Date(dueDate).getTime();\n}\n\nreturn [{ json: { title, description: description || '', resolvedListId, assigneeId, resolvedPriority, dueDateTs, clientId: clientId || '' } }];"
+      },
+      "id": "c9000001-0001-0001-0001-000000000002",
+      "name": "Prepare Task",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.clickup.com/api/v2/list/{{ $json.resolvedListId }}/task",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ $credentials.clickUpApiToken }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "name", "value": "={{ $json.title }}" },
+            { "name": "description", "value": "={{ $json.description }}" },
+            { "name": "priority", "value": "={{ $json.resolvedPriority }}" },
+            { "name": "due_date", "value": "={{ $json.dueDateTs }}" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "c9000001-0001-0001-0001-000000000003",
+      "name": "Create ClickUp Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst taskData = response.body || response;\n\nif (taskData.id) {\n  return [{\n    json: {\n      success: true,\n      taskId: taskData.id,\n      taskUrl: taskData.url || null,\n      message: 'ClickUp task created successfully'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    success: false,\n    error: 'CLICKUP_API_ERROR',\n    message: 'Failed to create ClickUp task: ' + JSON.stringify(taskData),\n    retryable: true\n  }\n}];"
+      },
+      "id": "c9000001-0001-0001-0001-000000000004",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "c9000001-0001-0001-0001-000000000005",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Prepare Task", "type": "main", "index": 0 }]] },
+    "Prepare Task": { "main": [[{ "node": "Create ClickUp Task", "type": "main", "index": 0 }]] },
+    "Create ClickUp Task": { "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]] },
+    "Format Response": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}

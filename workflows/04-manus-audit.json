@@ -1,0 +1,124 @@
+{
+  "name": "EMM — Manus Audit (Claude)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "manus-audit",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "e4000001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "manus-audit"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst clientId = body.clientId;\nif (!clientId) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'clientId is required' } }];\n}\nreturn [{ json: { clientId } }];"
+      },
+      "id": "e4000001-0001-0001-0001-000000000002",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apihub.gfunnel.com/webhook/meta-ads-sync",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "clientId", "value": "={{ $json.clientId }}" }] },
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 30000 }
+      },
+      "id": "e4000001-0001-0001-0001-000000000003",
+      "name": "Fetch Meta Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apihub.gfunnel.com/webhook/ghl-sync",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "clientId", "value": "={{ $('Validate Input').item.json.clientId }}" }] },
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 30000 }
+      },
+      "id": "e4000001-0001-0001-0001-000000000004",
+      "name": "Fetch GHL Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const clientId = $('Validate Input').first().json.clientId;\nconst metaResponse = $('Fetch Meta Data').first().json;\nconst ghlResponse = $('Fetch GHL Data').first().json;\n\nconst metaData = metaResponse.body || metaResponse;\nconst ghlData = ghlResponse.body || ghlResponse;\n\nconst summary = metaData.data?.summary || {};\nconst pipeline = ghlData.pipeline || {};\nconst campaigns = metaData.data?.campaigns || [];\n\n// Client name lookup\nconst clientNames = {\n  '1': { name: 'Joseph Bui', brand: 'Open House Finance', bmType: 'own' },\n  '2': { name: 'Matt Tixier', brand: 'True Mortgage', bmType: 'agency' },\n  '3': { name: 'Richard Weinberg', brand: 'Rich Capital', bmType: 'own' },\n  '4': { name: 'John Flanders', brand: 'Karpata Finance', bmType: 'agency' },\n  '5': { name: 'Matthew Silva', brand: 'Woodlands', bmType: 'agency' },\n  '6': { name: 'Derek Schaffer', brand: 'Investor Capital Loans NJ', bmType: 'own' },\n  '7': { name: 'Paul Healey', brand: 'Spectrum One Mortgage', bmType: 'agency' },\n  '8': { name: 'Jason Gilmore', brand: 'James Paxton Mortgages', bmType: 'agency' },\n  '9': { name: 'Dan Nguyen', brand: 'Win Capital LLC', bmType: 'own' },\n  '10': { name: 'Chad', brand: 'Canada Mortgage Direct', bmType: 'own' },\n  '11': { name: 'Kelto', brand: 'Quebec Refinance', bmType: 'own' },\n  '12': { name: 'Shaun Woods', brand: 'Opus Grenero', bmType: 'agency' },\n  '13': { name: 'Dean Onwumere', brand: 'Part 2 Lending', bmType: 'agency' },\n  '14': { name: 'Benjamin Gerritsen', brand: 'Mortgage Miracles', bmType: 'agency' },\n  '15': { name: 'Natalie x Brian', brand: 'NB Capital', bmType: 'own' }\n};\n\nconst client = clientNames[clientId] || { name: 'Unknown', brand: 'Unknown', bmType: 'unknown' };\n\nreturn [{\n  json: {\n    clientId,\n    client,\n    performance: summary,\n    campaigns,\n    pipeline\n  }\n}];"
+      },
+      "id": "e4000001-0001-0001-0001-000000000005",
+      "name": "Build Audit Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $credentials.anthropicApiKey }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2000,\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": \"You are auditing a DSCR mortgage advertising account for Expert Mortgage Marketing.\\n\\nAccount: {{ $json.client.name }} ({{ $json.client.brand }})\\nBusiness Manager: {{ $json.client.bmType }}\\n\\nPERFORMANCE (last 30 days):\\n- Spend: ${{ $json.performance.totalSpend || 0 }}\\n- Reported leads: {{ $json.performance.reportedLeads || 0 }}\\n- True leads (deduplicated): {{ $json.performance.trueLeads || 0 }}\\n- Reported CPL: ${{ $json.performance.blendedCpl || 0 }}\\n- True CPL: ${{ $json.performance.trueCpl || 0 }}\\n- CPM: ${{ $json.performance.cpm || 0 }}\\n- Frequency: {{ $json.performance.frequency || 0 }}\\n- Double-counting detected: {{ $json.performance.doubleCount || false }}\\n\\nCAMPAIGNS:\\n{{ JSON.stringify($json.campaigns) }}\\n\\nPIPELINE (from GHL):\\n{{ JSON.stringify($json.pipeline) }}\\n\\nBENCHMARKS:\\n- DSCR CPL target: below $50\\n- CPM acceptable: below $120\\n- Form CVR target: above 15%\\n- Frequency danger zone: above 3.5\\n- Max active ads: 6 (fragmentation above this)\\n\\nRespond with JSON only, no prose:\\n{\\n  \\\"status\\\": \\\"GREEN|YELLOW|RED|BLOCKED\\\",\\n  \\\"trueCpl\\\": number,\\n  \\\"doubleCount\\\": boolean,\\n  \\\"activeAds\\\": number,\\n  \\\"formCvr\\\": number,\\n  \\\"conflicts\\\": [\\\"string array of specific issues found\\\"],\\n  \\\"priorityActions\\\": [\\n    { \\\"text\\\": \\\"action description\\\", \\\"owner\\\": \\\"Zach|Danish|Cam|Tim|Maru\\\", \\\"urgency\\\": \\\"today|this_week|day_7\\\", \\\"reason\\\": \\\"why this matters\\\" }\\n  ],\\n  \\\"adConsolidation\\\": {\\n    \\\"keep\\\": [\\\"ad names to keep with CPL reason\\\"],\\n    \\\"pause\\\": [\\\"ad names to pause with reason\\\"]\\n  },\\n  \\\"pathToGreen\\\": \\\"one sentence definition of what green looks like\\\",\\n  \\\"estimatedTimeline\\\": \\\"X days/weeks\\\",\\n  \\\"highlights\\\": [\\\"1-2 things working well\\\"]\\n}\"\n  }]\n}",
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 60000 }
+      },
+      "id": "e4000001-0001-0001-0001-000000000006",
+      "name": "Call Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const clientId = $('Validate Input').first().json.clientId;\nconst claudeResponse = $('Call Claude API').first().json;\nconst body = claudeResponse.body || claudeResponse;\n\nlet auditData;\ntry {\n  const text = body.content?.[0]?.text || '{}';\n  // Remove any markdown code fences if present\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  auditData = JSON.parse(cleaned);\n} catch (e) {\n  auditData = {\n    status: 'YELLOW',\n    error: 'Failed to parse Claude response',\n    rawResponse: body.content?.[0]?.text || 'No response'\n  };\n}\n\nreturn [{\n  json: {\n    success: true,\n    clientId,\n    auditDate: new Date().toISOString(),\n    result: auditData\n  }\n}];"
+      },
+      "id": "e4000001-0001-0001-0001-000000000007",
+      "name": "Parse Audit Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "e4000001-0001-0001-0001-000000000008",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1400, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]] },
+    "Validate Input": { "main": [[{ "node": "Fetch Meta Data", "type": "main", "index": 0 }, { "node": "Fetch GHL Data", "type": "main", "index": 0 }]] },
+    "Fetch Meta Data": { "main": [[{ "node": "Build Audit Context", "type": "main", "index": 0 }]] },
+    "Fetch GHL Data": { "main": [[{ "node": "Build Audit Context", "type": "main", "index": 0 }]] },
+    "Build Audit Context": { "main": [[{ "node": "Call Claude API", "type": "main", "index": 0 }]] },
+    "Call Claude API": { "main": [[{ "node": "Parse Audit Result", "type": "main", "index": 0 }]] },
+    "Parse Audit Result": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}

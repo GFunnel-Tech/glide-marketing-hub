@@ -1,0 +1,146 @@
+{
+  "name": "EMM — GHL Pipeline Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ghl-sync",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "b2000001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "ghl-sync"
+    },
+    {
+      "parameters": {
+        "jsCode": "const locationMap = {\n  '1': 'PLACEHOLDER_GHL_1',\n  '2': 'PLACEHOLDER_GHL_2',\n  '3': 'PLACEHOLDER_GHL_3',\n  '4': 'PLACEHOLDER_GHL_4',\n  '5': 'PLACEHOLDER_GHL_5',\n  '6': 'PLACEHOLDER_GHL_6',\n  '7': 'PLACEHOLDER_GHL_7',\n  '8': 'PLACEHOLDER_GHL_8',\n  '9': 'PLACEHOLDER_GHL_9',\n  '10': 'PLACEHOLDER_GHL_10',\n  '11': 'PLACEHOLDER_GHL_11',\n  '12': 'PLACEHOLDER_GHL_12',\n  '13': 'PLACEHOLDER_GHL_13',\n  '14': 'PLACEHOLDER_GHL_14',\n  '15': 'PLACEHOLDER_GHL_15'\n};\n\nconst body = $input.first().json.body || {};\nconst clientId = body.clientId;\n\nif (!clientId) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'clientId is required' } }];\n}\n\nconst locationId = locationMap[clientId];\nif (!locationId) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'Client ID not found in GHL mapping' } }];\n}\n\nreturn [{ json: { clientId, locationId } }];"
+      },
+      "id": "b2000001-0001-0001-0001-000000000002",
+      "name": "Resolve Location",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [{ "id": "cond-loc", "leftValue": "={{ $json.locationId }}", "rightValue": "", "operator": { "type": "string", "operation": "exists" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "b2000001-0001-0001-0001-000000000003",
+      "name": "Location Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://services.leadconnectorhq.com/opportunities/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $credentials.ghlApiKey }}" },
+            { "name": "Version", "value": "2021-07-28" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "location_id", "value": "={{ $json.locationId }}" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "b2000001-0001-0001-0001-000000000004",
+      "name": "Get Opportunities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://services.leadconnectorhq.com/contacts/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $credentials.ghlApiKey }}" },
+            { "name": "Version", "value": "2021-07-28" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "locationId", "value": "={{ $('Resolve Location').item.json.locationId }}" },
+            { "name": "limit", "value": "10" },
+            { "name": "sortBy", "value": "dateAdded" },
+            { "name": "sortDirection", "value": "desc" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "b2000001-0001-0001-0001-000000000005",
+      "name": "Get Recent Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const clientId = $('Resolve Location').first().json.clientId;\nconst oppsResponse = $('Get Opportunities').first().json;\nconst contactsResponse = $('Get Recent Contacts').first().json;\n\nconst opportunities = oppsResponse.body?.opportunities || oppsResponse.opportunities || [];\nconst contacts = contactsResponse.body?.contacts || contactsResponse.contacts || [];\n\n// Count leads per stage\nconst stages = {\n  'New Lead': 0,\n  'Conversation': 0,\n  'Appointment Set': 0,\n  'Application': 0,\n  'Closed Won': 0\n};\n\nopportunities.forEach(opp => {\n  const stageName = opp.pipelineStageId || opp.status || 'New Lead';\n  // Map GHL stage names to our standard stages\n  if (stageName.toLowerCase().includes('new') || stageName.toLowerCase().includes('lead')) stages['New Lead']++;\n  else if (stageName.toLowerCase().includes('conversation') || stageName.toLowerCase().includes('contact')) stages['Conversation']++;\n  else if (stageName.toLowerCase().includes('appointment') || stageName.toLowerCase().includes('booked')) stages['Appointment Set']++;\n  else if (stageName.toLowerCase().includes('application') || stageName.toLowerCase().includes('app')) stages['Application']++;\n  else if (stageName.toLowerCase().includes('closed') || stageName.toLowerCase().includes('won')) stages['Closed Won']++;\n  else stages['New Lead']++;\n});\n\n// Calculate conversion rates\nconst conversionRates = {\n  leadToConversation: stages['New Lead'] > 0 ? parseFloat((stages['Conversation'] / stages['New Lead'] * 100).toFixed(1)) : 0,\n  conversationToAppt: stages['Conversation'] > 0 ? parseFloat((stages['Appointment Set'] / stages['Conversation'] * 100).toFixed(1)) : 0,\n  apptToApplication: stages['Appointment Set'] > 0 ? parseFloat((stages['Application'] / stages['Appointment Set'] * 100).toFixed(1)) : 0,\n  applicationToClose: stages['Application'] > 0 ? parseFloat((stages['Closed Won'] / stages['Application'] * 100).toFixed(1)) : 0\n};\n\n// Format recent leads\nconst recentLeads = contacts.slice(0, 10).map(c => ({\n  name: [c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unknown',\n  email: c.email || '',\n  phone: c.phone || '',\n  dateAdded: c.dateAdded || '',\n  tags: c.tags || []\n}));\n\nreturn [{\n  json: {\n    success: true,\n    clientId,\n    pipeline: {\n      stages: Object.entries(stages).map(([name, count]) => ({ name, count })),\n      conversionRates,\n      recentLeads,\n      totalOpportunities: opportunities.length\n    }\n  }\n}];"
+      },
+      "id": "b2000001-0001-0001-0001-000000000006",
+      "name": "Process Pipeline",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "b2000001-0001-0001-0001-000000000007",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseCode": 400, "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "b2000001-0001-0001-0001-000000000008",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 500]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Resolve Location", "type": "main", "index": 0 }]] },
+    "Resolve Location": { "main": [[{ "node": "Location Valid?", "type": "main", "index": 0 }]] },
+    "Location Valid?": {
+      "main": [
+        [{ "node": "Get Opportunities", "type": "main", "index": 0 }, { "node": "Get Recent Contacts", "type": "main", "index": 0 }],
+        [{ "node": "Error Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Opportunities": { "main": [[{ "node": "Process Pipeline", "type": "main", "index": 0 }]] },
+    "Get Recent Contacts": { "main": [[{ "node": "Process Pipeline", "type": "main", "index": 0 }]] },
+    "Process Pipeline": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}

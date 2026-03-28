@@ -1,0 +1,124 @@
+{
+  "name": "EMM — Monthly Report Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-report",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "i8000001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "generate-report"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst clientId = body.clientId;\nconst month = body.month || new Date().toLocaleString('default', { month: 'long', year: 'numeric' });\n\nif (!clientId) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'clientId is required' } }];\n}\n\nconst clientNames = {\n  '1': { name: 'Joseph Bui', brand: 'Open House Finance' },\n  '2': { name: 'Matt Tixier', brand: 'True Mortgage' },\n  '3': { name: 'Richard Weinberg', brand: 'Rich Capital' },\n  '4': { name: 'John Flanders', brand: 'Karpata Finance' },\n  '5': { name: 'Matthew Silva', brand: 'Woodlands' },\n  '6': { name: 'Derek Schaffer', brand: 'Investor Capital Loans NJ' },\n  '7': { name: 'Paul Healey', brand: 'Spectrum One Mortgage' },\n  '8': { name: 'Jason Gilmore', brand: 'James Paxton Mortgages' },\n  '9': { name: 'Dan Nguyen', brand: 'Win Capital LLC' },\n  '10': { name: 'Chad', brand: 'Canada Mortgage Direct' },\n  '11': { name: 'Kelto', brand: 'Quebec Refinance' },\n  '12': { name: 'Shaun Woods', brand: 'Opus Grenero' },\n  '13': { name: 'Dean Onwumere', brand: 'Part 2 Lending' },\n  '14': { name: 'Benjamin Gerritsen', brand: 'Mortgage Miracles' },\n  '15': { name: 'Natalie x Brian', brand: 'NB Capital' }\n};\n\nconst client = clientNames[clientId];\nif (!client) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'Client ID not found' } }];\n}\n\nreturn [{ json: { clientId, month, clientName: client.name, brand: client.brand } }];"
+      },
+      "id": "i8000001-0001-0001-0001-000000000002",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apihub.gfunnel.com/webhook/meta-ads-sync",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "clientId", "value": "={{ $json.clientId }}" }] },
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 30000 }
+      },
+      "id": "i8000001-0001-0001-0001-000000000003",
+      "name": "Fetch Meta Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apihub.gfunnel.com/webhook/ghl-sync",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "clientId", "value": "={{ $('Validate Input').item.json.clientId }}" }] },
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 30000 }
+      },
+      "id": "i8000001-0001-0001-0001-000000000004",
+      "name": "Fetch GHL Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $('Validate Input').first().json;\nconst metaResponse = $('Fetch Meta Data').first().json;\nconst ghlResponse = $('Fetch GHL Data').first().json;\n\nconst metaData = metaResponse.body || metaResponse;\nconst ghlData = ghlResponse.body || ghlResponse;\n\nconst summary = metaData.data?.summary || {};\nconst pipeline = ghlData.pipeline || {};\nconst stages = pipeline.stages || [];\n\nconst closedStage = stages.find(s => s.name === 'Closed Won' || s.name === 'Closed');\nconst apptStage = stages.find(s => s.name === 'Appointment Set' || s.name === 'Appointments');\nconst appStage = stages.find(s => s.name === 'Application' || s.name === 'Applications');\n\nreturn [{\n  json: {\n    clientId: input.clientId,\n    clientName: input.clientName,\n    brand: input.brand,\n    month: input.month,\n    metrics: {\n      spend: summary.totalSpend || 0,\n      reportedLeads: summary.reportedLeads || 0,\n      trueLeads: summary.trueLeads || 0,\n      trueCpl: summary.trueCpl || 0,\n      cpm: summary.cpm || 0,\n      frequency: summary.frequency || 0,\n      doubleCount: summary.doubleCount || false\n    },\n    pipeline: {\n      stages,\n      closedDeals: closedStage?.count || 0,\n      appointments: apptStage?.count || 0,\n      applications: appStage?.count || 0\n    }\n  }\n}];"
+      },
+      "id": "i8000001-0001-0001-0001-000000000005",
+      "name": "Build Report Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $credentials.anthropicApiKey }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2000,\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": \"Write a professional monthly performance report for {{ $json.clientName }} ({{ $json.brand }}).\\n\\nData for {{ $json.month }}:\\n- Ad spend: ${{ $json.metrics.spend }}\\n- True leads: {{ $json.metrics.trueLeads }}\\n- True CPL: ${{ $json.metrics.trueCpl }}\\n- Closed deals: {{ $json.pipeline.closedDeals }}\\n- Appointments: {{ $json.pipeline.appointments }}\\n- Applications: {{ $json.pipeline.applications }}\\n- CPM: ${{ $json.metrics.cpm }}\\n- Frequency: {{ $json.metrics.frequency }}\\n- Double-counting detected: {{ $json.metrics.doubleCount }}\\n\\nWrite 5 sections with clear headers:\\n1. \\\"What Worked This Month\\\" — 3-4 bullet points\\n2. \\\"What Changed\\\" — what was adjusted and why\\n3. \\\"Actions Taken\\\" — specific optimizations made\\n4. \\\"Next 30 Days\\\" — planned actions\\n5. \\\"Summary\\\" — 2-3 sentence executive summary\\n\\nTone: professional, direct, data-driven. Written to the business owner, not to a marketing expert. Avoid jargon.\\n\\nRespond with JSON only:\\n{\\n  \\\"whatWorked\\\": \\\"section content\\\",\\n  \\\"whatChanged\\\": \\\"section content\\\",\\n  \\\"actionsTaken\\\": \\\"section content\\\",\\n  \\\"next30Days\\\": \\\"section content\\\",\\n  \\\"summary\\\": \\\"section content\\\"\\n}\"\n  }]\n}",
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 60000 }
+      },
+      "id": "i8000001-0001-0001-0001-000000000006",
+      "name": "Generate with Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const context = $('Build Report Context').first().json;\nconst claudeResponse = $('Generate with Claude').first().json;\nconst body = claudeResponse.body || claudeResponse;\n\nlet sections;\ntry {\n  const text = body.content?.[0]?.text || '{}';\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  sections = JSON.parse(cleaned);\n} catch (e) {\n  sections = {\n    whatWorked: 'Report generation in progress',\n    whatChanged: '',\n    actionsTaken: '',\n    next30Days: '',\n    summary: 'Report could not be fully generated. Raw data available in metrics.'\n  };\n}\n\nreturn [{\n  json: {\n    success: true,\n    reportId: 'report_' + context.clientId + '_' + Date.now(),\n    clientId: context.clientId,\n    clientName: context.clientName,\n    brand: context.brand,\n    month: context.month,\n    sections,\n    metrics: context.metrics,\n    pipeline: context.pipeline\n  }\n}];"
+      },
+      "id": "i8000001-0001-0001-0001-000000000007",
+      "name": "Parse Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "i8000001-0001-0001-0001-000000000008",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1400, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]] },
+    "Validate Input": { "main": [[{ "node": "Fetch Meta Data", "type": "main", "index": 0 }, { "node": "Fetch GHL Data", "type": "main", "index": 0 }]] },
+    "Fetch Meta Data": { "main": [[{ "node": "Build Report Context", "type": "main", "index": 0 }]] },
+    "Fetch GHL Data": { "main": [[{ "node": "Build Report Context", "type": "main", "index": 0 }]] },
+    "Build Report Context": { "main": [[{ "node": "Generate with Claude", "type": "main", "index": 0 }]] },
+    "Generate with Claude": { "main": [[{ "node": "Parse Report", "type": "main", "index": 0 }]] },
+    "Parse Report": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}

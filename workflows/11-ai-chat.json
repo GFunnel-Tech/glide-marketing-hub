@@ -1,0 +1,83 @@
+{
+  "name": "EMM — AI Chat",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-chat",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "k1100001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "ai-chat"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst message = body.message;\nconst context = body.context || {};\n\nif (!message) {\n  return [{ json: { success: false, error: 'MISSING_MESSAGE', message: 'message field is required' } }];\n}\n\nreturn [{ json: { message, context, valid: true } }];"
+      },
+      "id": "k1100001-0001-0001-0001-000000000002",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $credentials.anthropicApiKey }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 1500,\n  \"system\": \"You are an AI operations assistant for GFunnel, managing Expert Mortgage Marketing's Meta advertising campaigns.\\n\\nPortfolio context:\\n- 32 total clients\\n- Blended true CPL: $60.92 (reported: $36.95 — double-counting confirmed on 9 campaigns)\\n- Total monthly spend: ~$120,000\\n- RED accounts: Richard Weinberg, Matt Tixier, John Flanders, Matthew Silva, Paul Healey, Benjamin Gerritsen\\n- GREEN accounts: Dan Nguyen ($8.10 CPL), Chad ($10.72 CAD), Kelto ($10.02 CAD), Jason Gilmore ($13.83 CPL — do not touch)\\n\\nCurrent focused client: {{ $json.context.focusedClient?.name || 'none' }}\\n{{ $json.context.focusedClient ? 'Client data: ' + JSON.stringify($json.context.focusedClient) : '' }}\\n\\nYou can analyze performance data, recommend actions, and create ClickUp tasks.\\nWhen you recommend an action, structure it as:\\n{ \\\"action\\\": \\\"action_type\\\", \\\"params\\\": {...}, \\\"description\\\": \\\"plain text\\\" }\\n\\nBe concise. Use data. Prioritize highest-leverage actions.\",\n  \"messages\": [{\n    \"role\": \"user\",\n    \"content\": {{ JSON.stringify($json.message) }}\n  }]\n}",
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 60000 }
+      },
+      "id": "k1100001-0001-0001-0001-000000000003",
+      "name": "Call Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const claudeResponse = $('Call Claude').first().json;\nconst body = claudeResponse.body || claudeResponse;\nconst text = body.content?.[0]?.text || 'I was unable to generate a response. Please try again.';\n\n// Parse for any structured actions in the response\nlet suggestedActions = [];\ntry {\n  const actionMatches = text.match(/\\{[^}]*\"action\"[^}]*\\}/g);\n  if (actionMatches) {\n    suggestedActions = actionMatches.map(m => {\n      try { return JSON.parse(m); } catch { return null; }\n    }).filter(Boolean).map(a => ({\n      type: a.action,\n      params: a.params || {},\n      label: a.description || a.action\n    }));\n  }\n} catch (e) { /* no actions found, that's fine */ }\n\nreturn [{\n  json: {\n    success: true,\n    message: text,\n    suggestedActions,\n    structuredData: null\n  }\n}];"
+      },
+      "id": "k1100001-0001-0001-0001-000000000004",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "k1100001-0001-0001-0001-000000000005",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [920, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]] },
+    "Validate Input": { "main": [[{ "node": "Call Claude", "type": "main", "index": 0 }]] },
+    "Call Claude": { "main": [[{ "node": "Parse Response", "type": "main", "index": 0 }]] },
+    "Parse Response": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}

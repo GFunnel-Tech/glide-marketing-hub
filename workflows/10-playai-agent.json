@@ -1,0 +1,123 @@
+{
+  "name": "EMM — Play.ai Agent Setup",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "playai-agent",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "j1000001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "playai-agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst clientId = body.clientId;\n\nif (!clientId) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'clientId is required' } }];\n}\n\nconst clientNames = {\n  '1': { name: 'Joseph Bui', brand: 'Open House Finance', firstName: 'Joseph' },\n  '2': { name: 'Matt Tixier', brand: 'True Mortgage', firstName: 'Matt' },\n  '3': { name: 'Richard Weinberg', brand: 'Rich Capital', firstName: 'Richard' },\n  '4': { name: 'John Flanders', brand: 'Karpata Finance', firstName: 'John' },\n  '5': { name: 'Matthew Silva', brand: 'Woodlands', firstName: 'Matthew' },\n  '6': { name: 'Derek Schaffer', brand: 'Investor Capital Loans NJ', firstName: 'Derek' },\n  '7': { name: 'Paul Healey', brand: 'Spectrum One Mortgage', firstName: 'Paul' },\n  '8': { name: 'Jason Gilmore', brand: 'James Paxton Mortgages', firstName: 'Jason' },\n  '9': { name: 'Dan Nguyen', brand: 'Win Capital LLC', firstName: 'Dan' },\n  '10': { name: 'Chad', brand: 'Canada Mortgage Direct', firstName: 'Chad' },\n  '11': { name: 'Kelto', brand: 'Quebec Refinance', firstName: 'Kelto' },\n  '12': { name: 'Shaun Woods', brand: 'Opus Grenero', firstName: 'Shaun' },\n  '13': { name: 'Dean Onwumere', brand: 'Part 2 Lending', firstName: 'Dean' },\n  '14': { name: 'Benjamin Gerritsen', brand: 'Mortgage Miracles', firstName: 'Benjamin' },\n  '15': { name: 'Natalie x Brian', brand: 'NB Capital', firstName: 'Natalie' }\n};\n\nconst client = clientNames[clientId];\nif (!client) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'Client ID not found' } }];\n}\n\nreturn [{ json: { clientId, ...client } }];"
+      },
+      "id": "j1000001-0001-0001-0001-000000000002",
+      "name": "Resolve Client",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apihub.gfunnel.com/webhook/meta-ads-sync",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "clientId", "value": "={{ $json.clientId }}" }] },
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 30000 }
+      },
+      "id": "j1000001-0001-0001-0001-000000000003",
+      "name": "Fetch Performance",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apihub.gfunnel.com/webhook/ghl-sync",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [{ "name": "clientId", "value": "={{ $('Resolve Client').item.json.clientId }}" }] },
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 30000 }
+      },
+      "id": "j1000001-0001-0001-0001-000000000004",
+      "name": "Fetch Pipeline",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const client = $('Resolve Client').first().json;\nconst metaResponse = $('Fetch Performance').first().json;\nconst ghlResponse = $('Fetch Pipeline').first().json;\n\nconst metaData = (metaResponse.body || metaResponse);\nconst ghlData = (ghlResponse.body || ghlResponse);\nconst summary = metaData.data?.summary || {};\nconst pipeline = ghlData.pipeline || {};\nconst stages = pipeline.stages || [];\n\nconst trueCpl = summary.trueCpl || 0;\nconst trueLeads = summary.trueLeads || 0;\nconst apptCount = stages.find(s => s.name?.includes('Appointment'))?.count || 0;\nconst appCount = stages.find(s => s.name?.includes('Application'))?.count || 0;\nconst closedCount = stages.find(s => s.name?.includes('Closed'))?.count || 0;\n\nconst status = trueCpl <= 50 ? 'GREEN' : trueCpl <= 80 ? 'YELLOW' : 'RED';\n\nconst systemPrompt = `You are the AI account manager for ${client.name} at ${client.brand}.\n\nYour role is to answer questions about their Meta advertising campaigns and mortgage lead generation performance.\n\nCurrent performance as of ${new Date().toISOString().split('T')[0]}:\n- Cost per lead: $${trueCpl} (target: below $50)\n- Leads generated this month: ${trueLeads}\n- Appointments set: ${apptCount}\n- Applications submitted: ${appCount}\n- Closed deals: ${closedCount}\n- Campaign status: ${status}\n\nGuidelines:\n- Answer questions about performance, results, and what we are doing\n- Do not promise specific CPL numbers or guaranteed results\n- If asked about specific leads, say you can pull the data and the team will follow up\n- Offer to schedule a call with Cam if the client has complex questions\n- Keep responses conversational and under 3 sentences\n- If status is RED, acknowledge the issue and explain the fix in progress`;\n\nconst greeting = `Hi ${client.firstName}! I'm your AI account manager. Your campaigns generated ${trueLeads} leads this month at $${trueCpl} cost per lead. What questions do you have?`;\n\nreturn [{\n  json: {\n    clientId: client.clientId,\n    clientName: client.name,\n    brand: client.brand,\n    systemPrompt,\n    greeting,\n    agentName: client.name + ' Account Manager'\n  }\n}];"
+      },
+      "id": "j1000001-0001-0001-0001-000000000005",
+      "name": "Build Agent Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.play.ai/api/v1/agents",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $credentials.playAiApiKey }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.agentName }}\",\n  \"description\": \"AI account manager for {{ $json.brand }} mortgage marketing\",\n  \"systemPrompt\": {{ JSON.stringify($json.systemPrompt) }},\n  \"greeting\": {{ JSON.stringify($json.greeting) }},\n  \"llmModel\": \"PlayAI-Agent\",\n  \"voice\": { \"provider\": \"PlayHT\", \"voiceId\": \"professional-male\" },\n  \"enableTextToSpeech\": true,\n  \"enableSpeechToText\": true\n}",
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 30000 }
+      },
+      "id": "j1000001-0001-0001-0001-000000000006",
+      "name": "Create Play.ai Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Build Agent Config').first().json;\nconst agentResponse = $('Create Play.ai Agent').first().json;\nconst agentData = agentResponse.body || agentResponse;\n\nif (agentData.id) {\n  return [{\n    json: {\n      success: true,\n      agentId: agentData.id,\n      embedUrl: agentData.embedUrl || agentData.embed_url || null,\n      agentName: config.agentName\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    success: false,\n    error: 'PLAYAI_API_ERROR',\n    message: 'Failed to create Play.ai agent: ' + JSON.stringify(agentData),\n    retryable: true\n  }\n}];"
+      },
+      "id": "j1000001-0001-0001-0001-000000000007",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "j1000001-0001-0001-0001-000000000008",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1400, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Resolve Client", "type": "main", "index": 0 }]] },
+    "Resolve Client": { "main": [[{ "node": "Fetch Performance", "type": "main", "index": 0 }, { "node": "Fetch Pipeline", "type": "main", "index": 0 }]] },
+    "Fetch Performance": { "main": [[{ "node": "Build Agent Config", "type": "main", "index": 0 }]] },
+    "Fetch Pipeline": { "main": [[{ "node": "Build Agent Config", "type": "main", "index": 0 }]] },
+    "Build Agent Config": { "main": [[{ "node": "Create Play.ai Agent", "type": "main", "index": 0 }]] },
+    "Create Play.ai Agent": { "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]] },
+    "Format Response": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}

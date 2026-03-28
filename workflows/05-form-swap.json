@@ -1,0 +1,119 @@
+{
+  "name": "EMM — Form Swap",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "form-swap",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "f5000001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "form-swap"
+    },
+    {
+      "parameters": {
+        "jsCode": "const clientMapping = {\n  '1': { name: 'Joseph Bui', brand: 'Open House Finance', adAccountId: 'act_PLACEHOLDER_1', pageId: 'PAGE_ID_1', uphex: false },\n  '2': { name: 'Matt Tixier', brand: 'True Mortgage', adAccountId: 'act_PLACEHOLDER_2', pageId: 'PAGE_ID_2', uphex: false },\n  '3': { name: 'Richard Weinberg', brand: 'Rich Capital', adAccountId: 'act_PLACEHOLDER_3', pageId: 'PAGE_ID_3', uphex: false },\n  '4': { name: 'John Flanders', brand: 'Karpata Finance', adAccountId: 'act_PLACEHOLDER_4', pageId: 'PAGE_ID_4', uphex: false },\n  '5': { name: 'Matthew Silva', brand: 'Woodlands', adAccountId: 'act_PLACEHOLDER_5', pageId: 'PAGE_ID_5', uphex: false },\n  '6': { name: 'Derek Schaffer', brand: 'Investor Capital Loans NJ', adAccountId: 'act_1501251134615354', pageId: 'PAGE_ID_6', uphex: false },\n  '7': { name: 'Paul Healey', brand: 'Spectrum One Mortgage', adAccountId: 'act_PLACEHOLDER_7', pageId: 'PAGE_ID_7', uphex: false },\n  '8': { name: 'Jason Gilmore', brand: 'James Paxton Mortgages', adAccountId: 'act_PLACEHOLDER_8', pageId: 'PAGE_ID_8', uphex: true },\n  '9': { name: 'Dan Nguyen', brand: 'Win Capital LLC', adAccountId: 'act_PLACEHOLDER_9', pageId: 'PAGE_ID_9', uphex: false },\n  '10': { name: 'Chad', brand: 'Canada Mortgage Direct', adAccountId: 'act_PLACEHOLDER_10', pageId: 'PAGE_ID_10', uphex: false },\n  '11': { name: 'Kelto', brand: 'Quebec Refinance', adAccountId: 'act_PLACEHOLDER_11', pageId: 'PAGE_ID_11', uphex: false },\n  '12': { name: 'Shaun Woods', brand: 'Opus Grenero', adAccountId: 'act_PLACEHOLDER_12', pageId: 'PAGE_ID_12', uphex: false },\n  '13': { name: 'Dean Onwumere', brand: 'Part 2 Lending', adAccountId: 'act_PLACEHOLDER_13', pageId: 'PAGE_ID_13', uphex: false },\n  '14': { name: 'Benjamin Gerritsen', brand: 'Mortgage Miracles', adAccountId: 'act_PLACEHOLDER_14', pageId: 'PAGE_ID_14', uphex: false },\n  '15': { name: 'Natalie x Brian', brand: 'NB Capital', adAccountId: 'act_PLACEHOLDER_15', pageId: 'PAGE_ID_15', uphex: false }\n};\n\nconst body = $input.first().json.body || {};\nconst clientId = body.clientId;\n\nif (!clientId) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'clientId is required' } }];\n}\n\nconst client = clientMapping[clientId];\nif (!client) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'Client ID not found' } }];\n}\n\n// Block UPHEX accounts from write operations\nif (client.uphex) {\n  return [{ json: { success: false, error: 'UPHEX_ACCOUNT', message: client.name + ' is on UPHEX — read-only. No write operations allowed.' } }];\n}\n\nreturn [{ json: { clientId, ...client, valid: true } }];"
+      },
+      "id": "f5000001-0001-0001-0001-000000000002",
+      "name": "Resolve Client",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [{ "id": "cond-valid", "leftValue": "={{ $json.valid }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "f5000001-0001-0001-0001-000000000003",
+      "name": "Client Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.pageId }}/leadgen_forms",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "access_token", "value": "={{ $credentials.metaAccessToken }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.name }} — Simplified Form — {{ new Date().toLocaleString('default', { month: 'long', year: 'numeric' }) }}\",\n  \"questions\": [\n    {\n      \"type\": \"CUSTOM\",\n      \"label\": \"What type of financing are you looking for?\",\n      \"options\": [\n        {\"value\": \"Cash-Out Refinance\"},\n        {\"value\": \"Rate & Term Refinance (better interest rate)\"},\n        {\"value\": \"DSCR Investor Property Purchase\"},\n        {\"value\": \"Fix & Flip\"},\n        {\"value\": \"Ground-Up Construction\"},\n        {\"value\": \"Not sure — I want to explore my options\"}\n      ]\n    },\n    {\n      \"type\": \"CUSTOM\",\n      \"label\": \"Approximately how much loan value do you need?\",\n      \"options\": [\n        {\"value\": \"$500,000 or more\"},\n        {\"value\": \"$200,000 – $499,999\"},\n        {\"value\": \"$100,000 – $199,999\"},\n        {\"value\": \"Under $100,000\"}\n      ]\n    },\n    {\n      \"type\": \"CUSTOM\",\n      \"label\": \"Is your credit score 640 or above?\",\n      \"options\": [\n        {\"value\": \"Yes\"},\n        {\"value\": \"No\"},\n        {\"value\": \"Unsure\"}\n      ]\n    }\n  ]\n}",
+        "options": { "response": { "response": { "fullResponse": true } }, "timeout": 30000 }
+      },
+      "id": "f5000001-0001-0001-0001-000000000004",
+      "name": "Create Lead Form",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const client = $('Resolve Client').first().json;\nconst formResponse = $('Create Lead Form').first().json;\nconst formData = formResponse.body || formResponse;\n\nif (!formData.id) {\n  return [{\n    json: {\n      success: false,\n      error: 'META_API_ERROR',\n      message: 'Failed to create lead form: ' + JSON.stringify(formData.error || formData),\n      retryable: true\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    success: true,\n    formId: formData.id,\n    testLeadPassed: false,\n    campaignsUpdated: 0,\n    clientId: client.clientId,\n    message: 'Form created successfully (ID: ' + formData.id + '). Test lead verification and campaign attachment pending — use Meta Ads Manager to attach to active campaigns. Monitor form CVR for 72 hours. Target: 15%+'\n  }\n}];"
+      },
+      "id": "f5000001-0001-0001-0001-000000000005",
+      "name": "Process Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "f5000001-0001-0001-0001-000000000006",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1140, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseCode": 400, "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "f5000001-0001-0001-0001-000000000007",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 420]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Resolve Client", "type": "main", "index": 0 }]] },
+    "Resolve Client": { "main": [[{ "node": "Client Valid?", "type": "main", "index": 0 }]] },
+    "Client Valid?": {
+      "main": [
+        [{ "node": "Create Lead Form", "type": "main", "index": 0 }],
+        [{ "node": "Error Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Lead Form": { "main": [[{ "node": "Process Result", "type": "main", "index": 0 }]] },
+    "Process Result": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}

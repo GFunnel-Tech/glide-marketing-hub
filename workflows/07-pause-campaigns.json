@@ -1,0 +1,136 @@
+{
+  "name": "EMM — Pause Campaigns",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pause-campaigns",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "h7000001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "pause-campaigns"
+    },
+    {
+      "parameters": {
+        "jsCode": "const uphexAccounts = ['8'];\n\nconst body = $input.first().json.body || {};\nconst { clientId, campaignIds } = body;\n\nif (!clientId) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'clientId is required' } }];\n}\n\nif (uphexAccounts.includes(clientId)) {\n  return [{ json: { success: false, error: 'UPHEX_ACCOUNT', message: 'Jason Gilmore (ID 8) is on UPHEX — read-only. No pause operations allowed.' } }];\n}\n\nif (!campaignIds || !Array.isArray(campaignIds) || campaignIds.length === 0) {\n  return [{ json: { success: false, error: 'MISSING_CAMPAIGNS', message: 'campaignIds array is required' } }];\n}\n\nreturn campaignIds.map(id => ({ json: { campaignId: id, clientId, valid: true } }));"
+      },
+      "id": "h7000001-0001-0001-0001-000000000002",
+      "name": "Validate & Split",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [{ "id": "cond-valid", "leftValue": "={{ $json.valid }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "h7000001-0001-0001-0001-000000000003",
+      "name": "Input Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.campaignId }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "access_token", "value": "={{ $credentials.metaAccessToken }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "status", "value": "PAUSED" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "h7000001-0001-0001-0001-000000000004",
+      "name": "Pause Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v18.0/{{ $('Validate & Split').item.json.campaignId }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "id,name,status,effective_status" },
+            { "name": "access_token", "value": "={{ $credentials.metaAccessToken }}" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "h7000001-0001-0001-0001-000000000005",
+      "name": "Verify Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst paused = items.map(item => {\n  const data = item.json.body || item.json;\n  return {\n    id: data.id,\n    name: data.name || 'Unknown',\n    status: data.status,\n    effectiveStatus: data.effective_status\n  };\n});\n\nreturn [{\n  json: {\n    success: true,\n    paused: paused.map(p => p.name),\n    details: paused,\n    message: 'Campaigns paused. Review before reactivating.'\n  }\n}];"
+      },
+      "id": "h7000001-0001-0001-0001-000000000006",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "h7000001-0001-0001-0001-000000000007",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseCode": 400, "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "h7000001-0001-0001-0001-000000000008",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 420]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Validate & Split", "type": "main", "index": 0 }]] },
+    "Validate & Split": { "main": [[{ "node": "Input Valid?", "type": "main", "index": 0 }]] },
+    "Input Valid?": {
+      "main": [
+        [{ "node": "Pause Campaign", "type": "main", "index": 0 }],
+        [{ "node": "Error Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Pause Campaign": { "main": [[{ "node": "Verify Status", "type": "main", "index": 0 }]] },
+    "Verify Status": { "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]] },
+    "Format Response": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}
