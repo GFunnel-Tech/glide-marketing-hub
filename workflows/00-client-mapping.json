@@ -1,0 +1,44 @@
+{
+  "clientMapping": [
+    { "id": "1", "name": "Joseph Bui", "brand": "Open House Finance", "adAccountId": "act_PLACEHOLDER_1", "ghlLocationId": "PLACEHOLDER_GHL_1", "plaiId": "PLACEHOLDER_PLAI_1", "bmType": "own", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "2", "name": "Matt Tixier", "brand": "True Mortgage", "adAccountId": "act_PLACEHOLDER_2", "ghlLocationId": "PLACEHOLDER_GHL_2", "plaiId": null, "bmType": "agency", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "3", "name": "Richard Weinberg", "brand": "Rich Capital", "adAccountId": "act_PLACEHOLDER_3", "ghlLocationId": "PLACEHOLDER_GHL_3", "plaiId": "PLACEHOLDER_PLAI_3", "bmType": "own", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "4", "name": "John Flanders", "brand": "Karpata Finance", "adAccountId": "act_PLACEHOLDER_4", "ghlLocationId": "PLACEHOLDER_GHL_4", "plaiId": null, "bmType": "agency", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "5", "name": "Matthew Silva", "brand": "Woodlands", "adAccountId": "act_PLACEHOLDER_5", "ghlLocationId": "PLACEHOLDER_GHL_5", "plaiId": null, "bmType": "agency", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "6", "name": "Derek Schaffer", "brand": "Investor Capital Loans NJ", "adAccountId": "act_1501251134615354", "ghlLocationId": "PLACEHOLDER_GHL_6", "plaiId": "PLACEHOLDER_PLAI_6", "bmType": "own", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "7", "name": "Paul Healey", "brand": "Spectrum One Mortgage", "adAccountId": "act_PLACEHOLDER_7", "ghlLocationId": "PLACEHOLDER_GHL_7", "plaiId": "PLACEHOLDER_PLAI_7", "bmType": "agency", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "8", "name": "Jason Gilmore", "brand": "James Paxton Mortgages", "adAccountId": "act_PLACEHOLDER_8", "ghlLocationId": "PLACEHOLDER_GHL_8", "plaiId": null, "bmType": "agency", "currency": "USD", "language": "en", "uphex": true },
+    { "id": "9", "name": "Dan Nguyen", "brand": "Win Capital LLC", "adAccountId": "act_PLACEHOLDER_9", "ghlLocationId": "PLACEHOLDER_GHL_9", "plaiId": "PLACEHOLDER_PLAI_9", "bmType": "own", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "10", "name": "Chad", "brand": "Canada Mortgage Direct", "adAccountId": "act_PLACEHOLDER_10", "ghlLocationId": "PLACEHOLDER_GHL_10", "plaiId": "PLACEHOLDER_PLAI_10", "bmType": "own", "currency": "CAD", "language": "en", "uphex": false },
+    { "id": "11", "name": "Kelto", "brand": "Quebec Refinance", "adAccountId": "act_PLACEHOLDER_11", "ghlLocationId": "PLACEHOLDER_GHL_11", "plaiId": "PLACEHOLDER_PLAI_11", "bmType": "own", "currency": "CAD", "language": "fr", "uphex": false },
+    { "id": "12", "name": "Shaun Woods", "brand": "Opus Grenero", "adAccountId": "act_PLACEHOLDER_12", "ghlLocationId": "PLACEHOLDER_GHL_12", "plaiId": null, "bmType": "agency", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "13", "name": "Dean Onwumere", "brand": "Part 2 Lending", "adAccountId": "act_PLACEHOLDER_13", "ghlLocationId": "PLACEHOLDER_GHL_13", "plaiId": null, "bmType": "agency", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "14", "name": "Benjamin Gerritsen", "brand": "Mortgage Miracles", "adAccountId": "act_PLACEHOLDER_14", "ghlLocationId": "PLACEHOLDER_GHL_14", "plaiId": null, "bmType": "agency", "currency": "USD", "language": "en", "uphex": false },
+    { "id": "15", "name": "Natalie x Brian", "brand": "NB Capital", "adAccountId": "act_PLACEHOLDER_15", "ghlLocationId": "PLACEHOLDER_GHL_15", "plaiId": null, "bmType": "own", "currency": "USD", "language": "en", "uphex": false }
+  ],
+  "gfunnelBmId": "1235501193620966",
+  "metaApiVersion": "v18.0",
+  "clickUpLists": {
+    "redAccounts": "LIST_ID_RED_ACCOUNTS",
+    "yellowAccounts": "LIST_ID_YELLOW_ACCOUNTS",
+    "trackingFixes": "LIST_ID_CAPI_PIXEL_FIX",
+    "formSwaps": "LIST_ID_FORM_SWAP",
+    "activeSprint": "LIST_ID_ACTIVE_SPRINT"
+  },
+  "teamMembers": {
+    "Cam": { "clickUpUserId": "CLICKUP_USER_CAM" },
+    "Zach": { "clickUpUserId": "CLICKUP_USER_ZACH" },
+    "Danish": { "clickUpUserId": "CLICKUP_USER_DANISH" },
+    "Maru": { "clickUpUserId": "CLICKUP_USER_MARU" },
+    "Tim": { "clickUpUserId": "CLICKUP_USER_TIM" }
+  },
+  "benchmarks": {
+    "cplTarget": 50,
+    "cpmMax": 120,
+    "formCvrTarget": 15,
+    "frequencyDanger": 3.5,
+    "maxActiveAds": 6,
+    "cplAlertThreshold": 80,
+    "cpmAlertThreshold": 150
+  }
+}

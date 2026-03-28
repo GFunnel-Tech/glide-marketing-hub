@@ -1,0 +1,103 @@
+{
+  "name": "EMM — Sync All Accounts",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sync-all",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "d3000001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "sync-all"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate items for all 15 known clients (expand to 32 when all IDs known)\nconst clientIds = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'];\nreturn clientIds.map(id => ({ json: { clientId: id } }));"
+      },
+      "id": "d3000001-0001-0001-0001-000000000002",
+      "name": "Generate Client List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apihub.gfunnel.com/webhook/meta-ads-sync",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "clientId", "value": "={{ $json.clientId }}" }
+          ]
+        },
+        "options": {
+          "response": { "response": { "fullResponse": true } },
+          "timeout": 30000
+        }
+      },
+      "id": "d3000001-0001-0001-0001-000000000003",
+      "name": "Call Meta Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://apihub.gfunnel.com/webhook/ghl-sync",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "clientId", "value": "={{ $json.clientId }}" }
+          ]
+        },
+        "options": {
+          "response": { "response": { "fullResponse": true } },
+          "timeout": 30000
+        }
+      },
+      "id": "d3000001-0001-0001-0001-000000000004",
+      "name": "Call GHL Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\n\nlet totalSpend = 0;\nlet totalReportedLeads = 0;\nlet totalTrueLeads = 0;\nlet doubleCountAccounts = 0;\nlet redAccounts = 0;\nlet yellowAccounts = 0;\nlet greenAccounts = 0;\n\nallItems.forEach(item => {\n  const data = item.json.body || item.json;\n  if (data.success && data.data?.summary) {\n    const s = data.data.summary;\n    totalSpend += s.totalSpend || 0;\n    totalReportedLeads += s.reportedLeads || 0;\n    totalTrueLeads += s.trueLeads || 0;\n    if (s.doubleCount) doubleCountAccounts++;\n    if (s.alerts?.some(a => a.type === 'high_cpl')) redAccounts++;\n    else if (s.alerts?.length > 0) yellowAccounts++;\n    else greenAccounts++;\n  }\n});\n\nreturn [{\n  json: {\n    success: true,\n    syncedAt: new Date().toISOString(),\n    portfolioSummary: {\n      totalClients: allItems.length,\n      totalSpend: parseFloat(totalSpend.toFixed(2)),\n      reportedLeads: totalReportedLeads,\n      trueLeads: totalTrueLeads,\n      blendedCpl: totalReportedLeads > 0 ? parseFloat((totalSpend / totalReportedLeads).toFixed(2)) : 0,\n      trueCpl: totalTrueLeads > 0 ? parseFloat((totalSpend / totalTrueLeads).toFixed(2)) : 0,\n      doubleCountAccounts,\n      redAccounts,\n      yellowAccounts,\n      greenAccounts\n    }\n  }\n}];"
+      },
+      "id": "d3000001-0001-0001-0001-000000000005",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "d3000001-0001-0001-0001-000000000006",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Generate Client List", "type": "main", "index": 0 }]] },
+    "Generate Client List": { "main": [[{ "node": "Call Meta Sync", "type": "main", "index": 0 }, { "node": "Call GHL Sync", "type": "main", "index": 0 }]] },
+    "Call Meta Sync": { "main": [[{ "node": "Aggregate Results", "type": "main", "index": 0 }]] },
+    "Call GHL Sync": { "main": [[{ "node": "Aggregate Results", "type": "main", "index": 0 }]] },
+    "Aggregate Results": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}

@@ -1,0 +1,158 @@
+{
+  "name": "EMM — Budget Scale (20% Rule)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "budget-scale",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "g6000001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "budget-scale"
+    },
+    {
+      "parameters": {
+        "jsCode": "const uphexAccounts = ['8'];\n\nconst body = $input.first().json.body || {};\nconst { clientId, campaignIds, percentage } = body;\n\nif (!clientId) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'clientId is required' } }];\n}\n\nif (uphexAccounts.includes(clientId)) {\n  return [{ json: { success: false, error: 'UPHEX_ACCOUNT', message: 'Jason Gilmore (ID 8) is on UPHEX — read-only. No budget changes allowed.' } }];\n}\n\nif (!campaignIds || !Array.isArray(campaignIds) || campaignIds.length === 0) {\n  return [{ json: { success: false, error: 'MISSING_CAMPAIGNS', message: 'campaignIds array is required' } }];\n}\n\nconst scalePercentage = percentage || 20;\n\nreturn [{ json: { clientId, campaignIds, scalePercentage, valid: true } }];"
+      },
+      "id": "g6000001-0001-0001-0001-000000000002",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [{ "id": "cond-valid", "leftValue": "={{ $json.valid }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "g6000001-0001-0001-0001-000000000003",
+      "name": "Input Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split campaign IDs into individual items for processing\nconst { campaignIds, scalePercentage, clientId } = $input.first().json;\nreturn campaignIds.map(id => ({ json: { campaignId: id, scalePercentage, clientId } }));"
+      },
+      "id": "g6000001-0001-0001-0001-000000000004",
+      "name": "Split Campaigns",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.campaignId }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "id,name,daily_budget,budget_remaining,status" },
+            { "name": "access_token", "value": "={{ $credentials.metaAccessToken }}" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "g6000001-0001-0001-0001-000000000005",
+      "name": "Get Current Budget",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const campaignData = $input.first().json;\nconst campaign = campaignData.body || campaignData;\nconst scalePercentage = $('Split Campaigns').first().json.scalePercentage;\n\nconst currentBudgetCents = parseInt(campaign.daily_budget || 0);\nconst currentBudget = currentBudgetCents / 100;\nconst scaleFactor = 1 + (scalePercentage / 100);\nconst newBudget = Math.round(currentBudget * scaleFactor);\nconst newBudgetCents = newBudget * 100;\n\nreturn [{\n  json: {\n    campaignId: campaign.id,\n    campaignName: campaign.name || 'Unknown',\n    currentBudget,\n    newBudget,\n    newBudgetCents,\n    scalePercentage\n  }\n}];"
+      },
+      "id": "g6000001-0001-0001-0001-000000000006",
+      "name": "Calculate New Budget",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.campaignId }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "access_token", "value": "={{ $credentials.metaAccessToken }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "daily_budget", "value": "={{ $json.newBudgetCents }}" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "g6000001-0001-0001-0001-000000000007",
+      "name": "Apply New Budget",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst changes = items.map(item => {\n  const data = item.json;\n  const calcData = $('Calculate New Budget').first().json;\n  return {\n    campaignId: calcData.campaignId,\n    campaignName: calcData.campaignName,\n    from: calcData.currentBudget,\n    to: calcData.newBudget\n  };\n});\n\nreturn [{\n  json: {\n    success: true,\n    changes,\n    message: 'Budget scaled ' + ($('Validate Input').first().json.scalePercentage || 20) + '%. Monitor CPL for 7 days before scaling again.'\n  }\n}];"
+      },
+      "id": "g6000001-0001-0001-0001-000000000008",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "g6000001-0001-0001-0001-000000000009",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1760, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseCode": 400, "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] } }
+      },
+      "id": "g6000001-0001-0001-0001-000000000010",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 420]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]] },
+    "Validate Input": { "main": [[{ "node": "Input Valid?", "type": "main", "index": 0 }]] },
+    "Input Valid?": {
+      "main": [
+        [{ "node": "Split Campaigns", "type": "main", "index": 0 }],
+        [{ "node": "Error Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Split Campaigns": { "main": [[{ "node": "Get Current Budget", "type": "main", "index": 0 }]] },
+    "Get Current Budget": { "main": [[{ "node": "Calculate New Budget", "type": "main", "index": 0 }]] },
+    "Calculate New Budget": { "main": [[{ "node": "Apply New Budget", "type": "main", "index": 0 }]] },
+    "Apply New Budget": { "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]] },
+    "Format Response": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "callerPolicy": "workflowsFromSameOwner" },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}

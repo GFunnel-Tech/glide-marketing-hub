@@ -1,0 +1,142 @@
+{
+  "name": "EMM — Meta Ads Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meta-ads-sync",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "a1000001-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "meta-ads-sync"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Client mapping lookup\nconst clientMapping = [\n  { id: '1', name: 'Joseph Bui', brand: 'Open House Finance', adAccountId: 'act_PLACEHOLDER_1', bmType: 'own', currency: 'USD' },\n  { id: '2', name: 'Matt Tixier', brand: 'True Mortgage', adAccountId: 'act_PLACEHOLDER_2', bmType: 'agency', currency: 'USD' },\n  { id: '3', name: 'Richard Weinberg', brand: 'Rich Capital', adAccountId: 'act_PLACEHOLDER_3', bmType: 'own', currency: 'USD' },\n  { id: '4', name: 'John Flanders', brand: 'Karpata Finance', adAccountId: 'act_PLACEHOLDER_4', bmType: 'agency', currency: 'USD' },\n  { id: '5', name: 'Matthew Silva', brand: 'Woodlands', adAccountId: 'act_PLACEHOLDER_5', bmType: 'agency', currency: 'USD' },\n  { id: '6', name: 'Derek Schaffer', brand: 'Investor Capital Loans NJ', adAccountId: 'act_1501251134615354', bmType: 'own', currency: 'USD' },\n  { id: '7', name: 'Paul Healey', brand: 'Spectrum One Mortgage', adAccountId: 'act_PLACEHOLDER_7', bmType: 'agency', currency: 'USD' },\n  { id: '8', name: 'Jason Gilmore', brand: 'James Paxton Mortgages', adAccountId: 'act_PLACEHOLDER_8', bmType: 'agency', currency: 'USD' },\n  { id: '9', name: 'Dan Nguyen', brand: 'Win Capital LLC', adAccountId: 'act_PLACEHOLDER_9', bmType: 'own', currency: 'USD' },\n  { id: '10', name: 'Chad', brand: 'Canada Mortgage Direct', adAccountId: 'act_PLACEHOLDER_10', bmType: 'own', currency: 'CAD' },\n  { id: '11', name: 'Kelto', brand: 'Quebec Refinance', adAccountId: 'act_PLACEHOLDER_11', bmType: 'own', currency: 'CAD' },\n  { id: '12', name: 'Shaun Woods', brand: 'Opus Grenero', adAccountId: 'act_PLACEHOLDER_12', bmType: 'agency', currency: 'USD' },\n  { id: '13', name: 'Dean Onwumere', brand: 'Part 2 Lending', adAccountId: 'act_PLACEHOLDER_13', bmType: 'agency', currency: 'USD' },\n  { id: '14', name: 'Benjamin Gerritsen', brand: 'Mortgage Miracles', adAccountId: 'act_PLACEHOLDER_14', bmType: 'agency', currency: 'USD' },\n  { id: '15', name: 'Natalie x Brian', brand: 'NB Capital', adAccountId: 'act_PLACEHOLDER_15', bmType: 'own', currency: 'USD' }\n];\n\nconst body = $input.first().json.body || {};\nconst clientId = body.clientId;\n\nif (!clientId) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'clientId is required' } }];\n}\n\nconst client = clientMapping.find(c => c.id === clientId);\nif (!client) {\n  return [{ json: { success: false, error: 'INVALID_CLIENT_ID', message: 'Client ID not found in mapping' } }];\n}\n\nreturn [{ json: { ...client, clientId } }];"
+      },
+      "id": "a1000001-0001-0001-0001-000000000002",
+      "name": "Resolve Client",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [{ "id": "cond-valid", "leftValue": "={{ $json.adAccountId }}", "rightValue": "", "operator": { "type": "string", "operation": "exists" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "a1000001-0001-0001-0001-000000000003",
+      "name": "Client Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v18.0/{{ $json.adAccountId }}/campaigns",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "id,name,status,effective_status,objective,daily_budget,lifetime_budget" },
+            { "name": "date_preset", "value": "last_30d" },
+            { "name": "access_token", "value": "={{ $credentials.metaAccessToken }}" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "a1000001-0001-0001-0001-000000000004",
+      "name": "Get Campaigns",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v18.0/{{ $('Resolve Client').item.json.adAccountId }}/insights",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "spend,impressions,cpm,ctr,frequency,actions,cost_per_action_type" },
+            { "name": "date_preset", "value": "last_30d" },
+            { "name": "level", "value": "account" },
+            { "name": "access_token", "value": "={{ $credentials.metaAccessToken }}" }
+          ]
+        },
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "a1000001-0001-0001-0001-000000000005",
+      "name": "Get Account Insights",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const client = $('Resolve Client').first().json;\nconst campaignsResponse = $('Get Campaigns').first().json;\nconst insightsResponse = $('Get Account Insights').first().json;\n\nconst campaigns = campaignsResponse.body?.data || campaignsResponse.data || [];\nconst insights = insightsResponse.body?.data?.[0] || insightsResponse.data?.[0] || {};\n\nconst spend = parseFloat(insights.spend || 0);\nconst impressions = parseInt(insights.impressions || 0);\nconst cpm = parseFloat(insights.cpm || 0);\nconst ctr = parseFloat(insights.ctr || 0);\nconst frequency = parseFloat(insights.frequency || 0);\n\n// Calculate double-counting\nconst actions = insights.actions || [];\nconst reportedLeads = parseInt(actions.find(a => a.action_type === 'lead')?.value || 0);\nconst trueLeads = parseInt(actions.find(a => a.action_type === 'onsite_conversion.lead_grouped')?.value || reportedLeads);\nconst doubleCount = reportedLeads > 0 && trueLeads > 0 && (reportedLeads / trueLeads) > 1.1;\nconst inflation = reportedLeads > 0 && trueLeads > 0 ? ((reportedLeads - trueLeads) / trueLeads * 100).toFixed(0) : '0';\nconst blendedCpl = reportedLeads > 0 ? (spend / reportedLeads) : null;\nconst trueCpl = trueLeads > 0 ? (spend / trueLeads) : null;\n\n// Check alert thresholds\nconst alerts = [];\nif (cpm > 150) alerts.push({ type: 'high_cpm', client: client.clientId, value: cpm });\nif (frequency > 3.5) alerts.push({ type: 'high_frequency', client: client.clientId, value: frequency });\nif (doubleCount) alerts.push({ type: 'double_count', client: client.clientId, inflation: inflation + '%' });\nif (trueCpl > 80) alerts.push({ type: 'high_cpl', client: client.clientId, value: trueCpl });\n\nreturn [{\n  json: {\n    success: true,\n    clientId: client.clientId,\n    data: {\n      campaigns: campaigns.map(c => ({\n        id: c.id,\n        name: c.name,\n        status: c.status,\n        effectiveStatus: c.effective_status,\n        objective: c.objective,\n        dailyBudget: c.daily_budget ? parseInt(c.daily_budget) / 100 : null\n      })),\n      summary: {\n        totalSpend: spend,\n        reportedLeads,\n        trueLeads,\n        blendedCpl: blendedCpl ? parseFloat(blendedCpl.toFixed(2)) : null,\n        trueCpl: trueCpl ? parseFloat(trueCpl.toFixed(2)) : null,\n        cpm: parseFloat(cpm.toFixed(2)),\n        ctr: parseFloat(ctr.toFixed(2)),\n        frequency: parseFloat(frequency.toFixed(2)),\n        doubleCount,\n        inflation: inflation + '%',\n        alerts\n      }\n    }\n  }\n}];"
+      },
+      "id": "a1000001-0001-0001-0001-000000000006",
+      "name": "Process & Calculate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] }
+        }
+      },
+      "id": "a1000001-0001-0001-0001-000000000007",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": { "entries": [{ "name": "Access-Control-Allow-Origin", "value": "*" }] }
+        }
+      },
+      "id": "a1000001-0001-0001-0001-000000000008",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 500]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Resolve Client", "type": "main", "index": 0 }]] },
+    "Resolve Client": { "main": [[{ "node": "Client Valid?", "type": "main", "index": 0 }]] },
+    "Client Valid?": {
+      "main": [
+        [{ "node": "Get Campaigns", "type": "main", "index": 0 }, { "node": "Get Account Insights", "type": "main", "index": 0 }],
+        [{ "node": "Error Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Campaigns": { "main": [[{ "node": "Process & Calculate", "type": "main", "index": 0 }]] },
+    "Get Account Insights": { "main": [[{ "node": "Process & Calculate", "type": "main", "index": 0 }]] },
+    "Process & Calculate": { "main": [[{ "node": "Success Response", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [{ "name": "EMM" }],
+  "meta": { "templateCredsSetupCompleted": true }
+}
