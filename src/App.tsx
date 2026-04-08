@@ -25,6 +25,7 @@ function RealtimeProvider({ children }: { children: React.ReactNode }) {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <RealtimeProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
