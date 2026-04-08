@@ -14,7 +14,364 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_log: {
+        Row: {
+          action: string
+          author: string
+          client_id: number
+          created_at: string
+          id: string
+          result: string | null
+          timestamp: string
+          type: string
+        }
+        Insert: {
+          action: string
+          author: string
+          client_id: number
+          created_at?: string
+          id?: string
+          result?: string | null
+          timestamp: string
+          type: string
+        }
+        Update: {
+          action?: string
+          author?: string
+          client_id?: number
+          created_at?: string
+          id?: string
+          result?: string | null
+          timestamp?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          ad_sets: number
+          ads: number
+          client_id: number
+          cpl: number
+          cpm: number
+          created_at: string
+          double_count: boolean
+          frequency: number
+          id: string
+          leads: number
+          name: string
+          spend: number
+          status: Database["public"]["Enums"]["campaign_status"]
+          true_cpl: number
+          true_leads: number
+          updated_at: string
+        }
+        Insert: {
+          ad_sets?: number
+          ads?: number
+          client_id: number
+          cpl?: number
+          cpm?: number
+          created_at?: string
+          double_count?: boolean
+          frequency?: number
+          id?: string
+          leads?: number
+          name: string
+          spend?: number
+          status?: Database["public"]["Enums"]["campaign_status"]
+          true_cpl?: number
+          true_leads?: number
+          updated_at?: string
+        }
+        Update: {
+          ad_sets?: number
+          ads?: number
+          client_id?: number
+          cpl?: number
+          cpm?: number
+          created_at?: string
+          double_count?: boolean
+          frequency?: number
+          id?: string
+          leads?: number
+          name?: string
+          spend?: number
+          status?: Database["public"]["Enums"]["campaign_status"]
+          true_cpl?: number
+          true_leads?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          bm_type: Database["public"]["Enums"]["bm_type"]
+          brand: string
+          cpl: number
+          cpm: number
+          created_at: string
+          double_count: boolean
+          form_cvr: number
+          frequency: number
+          id: number
+          last_audit: string | null
+          leads: number
+          name: string
+          plai_connected: boolean
+          reported_leads: number
+          spend: number
+          status: Database["public"]["Enums"]["client_status"]
+          true_cpl: number
+          true_leads: number
+          updated_at: string
+        }
+        Insert: {
+          bm_type?: Database["public"]["Enums"]["bm_type"]
+          brand: string
+          cpl?: number
+          cpm?: number
+          created_at?: string
+          double_count?: boolean
+          form_cvr?: number
+          frequency?: number
+          id?: number
+          last_audit?: string | null
+          leads?: number
+          name: string
+          plai_connected?: boolean
+          reported_leads?: number
+          spend?: number
+          status?: Database["public"]["Enums"]["client_status"]
+          true_cpl?: number
+          true_leads?: number
+          updated_at?: string
+        }
+        Update: {
+          bm_type?: Database["public"]["Enums"]["bm_type"]
+          brand?: string
+          cpl?: number
+          cpm?: number
+          created_at?: string
+          double_count?: boolean
+          form_cvr?: number
+          frequency?: number
+          id?: number
+          last_audit?: string | null
+          leads?: number
+          name?: string
+          plai_connected?: boolean
+          reported_leads?: number
+          spend?: number
+          status?: Database["public"]["Enums"]["client_status"]
+          true_cpl?: number
+          true_leads?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          client_id: number
+          created_at: string
+          date: string
+          id: string
+          name: string
+          phone: string | null
+          stage: string
+          status: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          date: string
+          id?: string
+          name: string
+          phone?: string | null
+          stage: string
+          status?: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          date?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          stage?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding: {
+        Row: {
+          blockers: string[]
+          brand: string
+          client_id: number
+          created_at: string
+          days_in_phase: number
+          id: string
+          name: string
+          owner: string
+          phase: number
+          updated_at: string
+        }
+        Insert: {
+          blockers?: string[]
+          brand: string
+          client_id: number
+          created_at?: string
+          days_in_phase?: number
+          id?: string
+          name: string
+          owner: string
+          phase?: number
+          updated_at?: string
+        }
+        Update: {
+          blockers?: string[]
+          brand?: string
+          client_id?: number
+          created_at?: string
+          days_in_phase?: number
+          id?: string
+          name?: string
+          owner?: string
+          phase?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          brand: string
+          client_id: number
+          client_name: string
+          client_reviewed: boolean
+          created_at: string
+          delivered_date: string | null
+          id: string
+          metric_applications: number
+          metric_appointments: number
+          metric_closed_deals: number
+          metric_cpl: number
+          metric_leads: number
+          metric_pipeline_value: number
+          metric_spend: number
+          month: string
+          status: Database["public"]["Enums"]["report_status"]
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          client_id: number
+          client_name: string
+          client_reviewed?: boolean
+          created_at?: string
+          delivered_date?: string | null
+          id?: string
+          metric_applications?: number
+          metric_appointments?: number
+          metric_closed_deals?: number
+          metric_cpl?: number
+          metric_leads?: number
+          metric_pipeline_value?: number
+          metric_spend?: number
+          month: string
+          status?: Database["public"]["Enums"]["report_status"]
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          client_id?: number
+          client_name?: string
+          client_reviewed?: boolean
+          created_at?: string
+          delivered_date?: string | null
+          id?: string
+          metric_applications?: number
+          metric_appointments?: number
+          metric_closed_deals?: number
+          metric_cpl?: number
+          metric_leads?: number
+          metric_pipeline_value?: number
+          metric_spend?: number
+          month?: string
+          status?: Database["public"]["Enums"]["report_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          access_level: string
+          created_at: string
+          id: string
+          member_status: string
+          name: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          access_level: string
+          created_at?: string
+          id?: string
+          member_status?: string
+          name: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          access_level?: string
+          created_at?: string
+          id?: string
+          member_status?: string
+          name?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +380,10 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      bm_type: "Own BM" | "Agency BM"
+      campaign_status: "active" | "paused"
+      client_status: "GREEN" | "YELLOW" | "RED" | "BLOCKED"
+      report_status: "draft" | "ready" | "delivered"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +510,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      bm_type: ["Own BM", "Agency BM"],
+      campaign_status: ["active", "paused"],
+      client_status: ["GREEN", "YELLOW", "RED", "BLOCKED"],
+      report_status: ["draft", "ready", "delivered"],
+    },
   },
 } as const

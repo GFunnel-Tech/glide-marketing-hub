@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { clients } from "@/data/mockData";
+import { useClients } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
 import { Send, Bot, User, ExternalLink, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
@@ -37,12 +37,8 @@ function getResponse(input: string): string {
   return mockResponses.default;
 }
 
-function detectClient(input: string) {
-  const lower = input.toLowerCase();
-  return clients.find(c => lower.includes(c.name.toLowerCase()) || lower.includes(c.brand.toLowerCase()));
-}
-
 export default function AiAssistant() {
+  const { data: clients = [] } = useClients();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,6 +46,11 @@ export default function AiAssistant() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const detectClient = (text: string) => {
+    const lower = text.toLowerCase();
+    return clients.find(c => lower.includes(c.name.toLowerCase()) || lower.includes(c.brand.toLowerCase()));
+  };
 
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -79,7 +80,6 @@ export default function AiAssistant() {
 
   return (
     <div className="flex gap-6 h-[calc(100vh-8rem)]">
-      {/* Chat Panel (65%) */}
       <div className="flex-[65] flex flex-col rounded-lg border border-border bg-card overflow-hidden">
         <div className="flex items-center gap-3 border-b border-border px-5 py-3">
           <Bot className="h-5 w-5 text-primary" />
@@ -114,9 +114,7 @@ export default function AiAssistant() {
                       <div className="prose prose-sm dark:prose-invert max-w-none [&_table]:w-full [&_table]:text-xs [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:border-b [&_th]:border-border [&_td]:px-2 [&_td]:py-1 [&_td]:border-b [&_td]:border-border">
                         {msg.content.split("\n").map((line, i) => {
                           if (line.startsWith("**") && line.endsWith("**")) return <p key={i} className="font-semibold">{line.replace(/\*\*/g, "")}</p>;
-                          if (line.startsWith("| ")) {
-                            return null; // Simplified - render as text
-                          }
+                          if (line.startsWith("| ")) return null;
                           if (line.startsWith("- ") || line.startsWith("1.")) return <p key={i} className="ml-2">{line}</p>;
                           return <p key={i}>{line.replace(/\*\*/g, "")}</p>;
                         })}
@@ -155,7 +153,6 @@ export default function AiAssistant() {
         </div>
       </div>
 
-      {/* Context Panel (35%) */}
       <div className="flex-[35] space-y-4">
         {detectedClient ? (
           <div className="rounded-lg border border-border bg-card p-5">

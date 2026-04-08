@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { teamMembers } from "@/data/mockData";
+import { useTeamMembers } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
 import { Copy, ExternalLink, Check, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ const notifications = [
 ];
 
 export default function Settings() {
+  const { data: teamMembers = [] } = useTeamMembers();
   const [copied, setCopied] = useState(false);
   const [enabledNotifs, setEnabledNotifs] = useState<Record<string, boolean>>({ cpl_alert: true, double_count: true, weekly_summary: true });
 
@@ -133,8 +134,8 @@ export default function Settings() {
                   <tr key={m.id} className="border-b border-border hover:bg-accent/30">
                     <td className="px-4 py-3 font-medium text-foreground">{m.name}</td>
                     <td className="px-4 py-3"><span className="rounded bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">{m.role}</span></td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">{m.accessLevel}</td>
-                    <td className="px-4 py-3"><span className="rounded-full bg-success/15 text-success px-2 py-0.5 text-xs font-medium">{m.status}</span></td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{m.access_level}</td>
+                    <td className="px-4 py-3"><span className="rounded-full bg-success/15 text-success px-2 py-0.5 text-xs font-medium">{m.member_status}</span></td>
                     <td className="px-4 py-3"><button className="text-xs text-primary hover:underline">Edit</button></td>
                   </tr>
                 ))}

@@ -1,5 +1,6 @@
 import { X, ExternalLink } from "lucide-react";
-import { Client, campaigns, notes, mockLeads } from "@/data/mockData";
+import { Client, campaigns, notes } from "@/data/mockData";
+import { useLeads } from "@/hooks/useDatabase";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -19,7 +20,8 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
   const [showScaleDialog, setShowScaleDialog] = useState(false);
   const [pauseInput, setPauseInput] = useState("");
 
-  const clientLeads = mockLeads.filter(l => l.clientId === String(client.id));
+  const { data: allLeads = [] } = useLeads();
+  const clientLeads = allLeads.filter(l => l.client_id === client.id);
 
   return (
     <>
@@ -41,7 +43,6 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                 </Tooltip>
               )}
             </div>
-            {/* Quick stat pills */}
             <div className="flex flex-wrap gap-1.5 mt-2 text-xs text-muted-foreground">
               <span className="bg-accent rounded px-1.5 py-0.5">${client.cpl} CPL</span>
               <span className="bg-accent rounded px-1.5 py-0.5">{client.leads} leads</span>
@@ -195,7 +196,6 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                 Add Note
               </button>
 
-              {/* Open Full Profile link */}
               <Link to={`/client/${client.id}`} className="w-full rounded-lg border border-primary text-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/10 transition-colors flex items-center justify-center gap-2" onClick={onClose}>
                 Open Full Profile <ExternalLink className="h-3.5 w-3.5" />
               </Link>

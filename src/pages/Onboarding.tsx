@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { onboardingClients } from "@/data/mockData";
+import { useOnboarding } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
-import { UserPlus, AlertTriangle, CheckCircle, X } from "lucide-react";
+import { UserPlus, CheckCircle, X } from "lucide-react";
 
 const phases = [
   { num: 1, label: "Access", color: "border-t-blue-500" },
@@ -21,13 +21,27 @@ const phaseChecklist: Record<number, string[]> = {
   6: ["A/B test launched", "Form variant test", "Audience split test", "Results analyzed", "Final report"],
 };
 
+interface OnboardingClient {
+  id: string;
+  client_id: number;
+  name: string;
+  brand: string;
+  phase: number;
+  days_in_phase: number;
+  owner: string;
+  blockers: string[];
+}
+
 export default function Onboarding() {
-  const [selectedClient, setSelectedClient] = useState<typeof onboardingClients[0] | null>(null);
+  const { data: onboardingClients = [], isLoading } = useOnboarding();
+  const [selectedClient, setSelectedClient] = useState<OnboardingClient | null>(null);
 
   const totalOnboarding = onboardingClients.length;
   const blocked = onboardingClients.filter(c => c.blockers.length > 0).length;
   const onTrack = onboardingClients.filter(c => c.blockers.length === 0).length;
-  const avgDays = Math.round(onboardingClients.reduce((s, c) => s + c.daysInPhase, 0) / totalOnboarding);
+  const avgDays = totalOnboarding > 0 ? Math.round(onboardingClients.reduce((s, c) => s + c.days_in_phase, 0) / totalOnboarding) : 0;
+
+  if (isLoading) return <div className="text-center py-10 text-muted-foreground">Loading...</div>;
 
   return (
     <div className="space-y-6">
@@ -38,7 +52,6 @@ export default function Onboarding() {
         </button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         {[
           { label: "Total Onboarding", value: totalOnboarding },
@@ -53,7 +66,6 @@ export default function Onboarding() {
         ))}
       </div>
 
-      {/* Kanban */}
       <div className="flex gap-4 overflow-x-auto pb-4">
         {phases.map(phase => {
           const clientsInPhase = onboardingClients.filter(c => c.phase === phase.num);
@@ -74,7 +86,7 @@ export default function Onboarding() {
                     <p className="text-xs text-muted-foreground">{client.brand}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs bg-accent rounded px-1.5 py-0.5 text-muted-foreground">{client.owner}</span>
-                      <span className="text-xs text-muted-foreground">Day {client.daysInPhase}</span>
+                      <span className="text-xs text-muted-foreground">Day {client.days_in_phase}</span>
                     </div>
                     {client.blockers.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
@@ -96,7 +108,6 @@ export default function Onboarding() {
         })}
       </div>
 
-      {/* Client checklist modal */}
       {selectedClient && (
         <>
           <div className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm" onClick={() => setSelectedClient(null)} />

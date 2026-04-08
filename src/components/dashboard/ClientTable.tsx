@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
-import { clients, Client } from "@/data/mockData";
+import { useClients } from "@/hooks/useDatabase";
 import { StatusBadge } from "./StatusBadge";
 import { ClientDrawer } from "./ClientDrawer";
 import { cn } from "@/lib/utils";
 import { ArrowUpDown, Building2, User, MoreHorizontal, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
+import type { Client } from "@/data/mockData";
 
 type StatusFilter = "ALL" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
 type SortKey = keyof Client;
@@ -32,6 +33,7 @@ function getFreqColor(f: number) {
 }
 
 export function ClientTable() {
+  const { data: clients = [], isLoading } = useClients();
   const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("status");
@@ -52,7 +54,7 @@ export function ClientTable() {
       if (typeof aVal === "number" && typeof bVal === "number") return sortDir === "asc" ? aVal - bVal : bVal - aVal;
       return sortDir === "asc" ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
     });
-  }, [filter, search, sortKey, sortDir]);
+  }, [clients, filter, search, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -60,6 +62,8 @@ export function ClientTable() {
   };
 
   const filters: StatusFilter[] = ["ALL", "GREEN", "YELLOW", "RED", "BLOCKED"];
+
+  if (isLoading) return <div className="text-center py-10 text-muted-foreground">Loading clients...</div>;
 
   return (
     <div className="space-y-4">
