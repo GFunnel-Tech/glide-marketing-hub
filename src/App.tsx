@@ -13,12 +13,19 @@ import Settings from "./pages/Settings";
 import Onboarding from "./pages/Onboarding";
 import AiAssistant from "./pages/AiAssistant";
 import NotFound from "./pages/NotFound";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 const queryClient = new QueryClient();
+
+function RealtimeProvider({ children }: { children: React.ReactNode }) {
+  useRealtimeSync();
+  return <>{children}</>;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <RealtimeProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
@@ -37,6 +44,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </RealtimeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
