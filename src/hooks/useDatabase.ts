@@ -161,7 +161,7 @@ export function toReport(r: DbReport) {
 
 // Queries
 async function fetchTable<T>(table: string): Promise<T[]> {
-  const { data, error } = await supabase.from(table).select("*");
+  const { data, error } = await (supabase as any).from(table).select("*");
   if (error) throw error;
   return (data || []) as T[];
 }
