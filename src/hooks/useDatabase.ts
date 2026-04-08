@@ -178,7 +178,7 @@ export function useClient(id: number) {
   return useQuery({
     queryKey: ["clients", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("clients").select("*").eq("id", id).single();
+      const { data, error } = await (supabase as any).from("clients").select("*").eq("id", id).single();
       if (error) throw error;
       return toClient(data as DbClient);
     },
