@@ -1,6 +1,6 @@
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { portfolioKPIs } from "@/data/mockData";
+import { useClients } from "@/hooks/useDatabase";
 
 interface KPITileProps {
   label: string;
@@ -48,14 +48,21 @@ function KPITile({ label, value, delta, highlight }: KPITileProps) {
 }
 
 export function KPIStrip() {
-  const k = portfolioKPIs;
+  const { data: clients = [] } = useClients();
+  
+  const totalClients = clients.length;
+  const totalLeads = clients.reduce((s, c) => s + c.leads, 0);
+  const totalSpend = clients.reduce((s, c) => s + c.spend, 0);
+  const blendedCpl = totalLeads > 0 ? totalSpend / totalLeads : 0;
+  const closedDeals = 21; // From reports data - could be fetched separately
+
   return (
     <div className="grid grid-cols-5 gap-4">
-      <KPITile label="Total Active Clients" value={String(k.totalActiveClients)} />
-      <KPITile label="Total Leads (MTD)" value={k.totalLeadsThisMonth.value.toLocaleString()} delta={k.totalLeadsThisMonth.delta} />
-      <KPITile label="Blended CPL" value={`$${k.blendedCPL.value.toFixed(2)}`} delta={k.blendedCPL.delta} />
-      <KPITile label="Total Ad Spend (MTD)" value={`$${k.totalAdSpend.value.toLocaleString()}`} delta={k.totalAdSpend.delta} />
-      <KPITile label="Closed Deals (MTD)" value={String(k.closedDeals.value)} delta={k.closedDeals.delta} highlight />
+      <KPITile label="Total Active Clients" value={String(totalClients)} />
+      <KPITile label="Total Leads (MTD)" value={totalLeads.toLocaleString()} delta={22.1} />
+      <KPITile label="Blended CPL" value={`$${blendedCpl.toFixed(2)}`} delta={-12.3} />
+      <KPITile label="Total Ad Spend (MTD)" value={`$${totalSpend.toLocaleString()}`} delta={8.5} />
+      <KPITile label="Closed Deals (MTD)" value={String(closedDeals)} delta={16} highlight />
     </div>
   );
 }

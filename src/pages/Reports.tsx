@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { monthlyReports, clients } from "@/data/mockData";
+import { useReports, useClients } from "@/hooks/useDatabase";
+import { cplTrendData } from "@/data/mockData";
 import { cn } from "@/lib/utils";
-import { FileText, Download, Send, Eye, Loader2, CheckCircle, Clock, X } from "lucide-react";
+import { Download, Send, Eye, Loader2, CheckCircle, Clock, X } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { cplTrendData } from "@/data/mockData";
 
 const statusConfig = {
   draft: { label: "Draft", className: "bg-muted text-muted-foreground", icon: null },
@@ -15,6 +15,8 @@ const statusConfig = {
 };
 
 export default function Reports() {
+  const { data: monthlyReports = [], isLoading } = useReports();
+  const { data: clients = [] } = useClients();
   const [loading, setLoading] = useState<string | null>(null);
   const [previewReport, setPreviewReport] = useState<typeof monthlyReports[0] | null>(null);
   const [genClient, setGenClient] = useState("");
@@ -49,6 +51,8 @@ export default function Reports() {
     setTimeout(() => setGenProgress(null), 2000);
   };
 
+  if (isLoading) return <div className="text-center py-10 text-muted-foreground">Loading reports...</div>;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -58,7 +62,6 @@ export default function Reports() {
         </button>
       </div>
 
-      {/* Stat cards */}
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: "Reports Delivered", value: delivered, color: "text-success" },
@@ -72,7 +75,6 @@ export default function Reports() {
         ))}
       </div>
 
-      {/* Reports table */}
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -115,7 +117,6 @@ export default function Reports() {
         </table>
       </div>
 
-      {/* Generate card */}
       <div className="rounded-lg border border-border bg-card p-5">
         <h3 className="text-sm font-semibold text-foreground mb-3">Generate New Report</h3>
         <div className="flex items-end gap-3">
@@ -141,7 +142,6 @@ export default function Reports() {
         {genProgress && <p className="text-sm text-primary mt-3 animate-pulse">{genProgress}</p>}
       </div>
 
-      {/* Preview slide-over */}
       {previewReport && (
         <>
           <div className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm" onClick={() => setPreviewReport(null)} />

@@ -1,13 +1,13 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { clients, campaignData, cplTrendData, pipelineData, auditResults, activityLog, mockLeads } from "@/data/mockData";
+import { useClient, useCampaigns, useActivityLog, useLeads } from "@/hooks/useDatabase";
+import { cplTrendData, pipelineData, auditResults } from "@/data/mockData";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, ExternalLink, RefreshCw, Pencil, AlertTriangle, CheckCircle, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -27,22 +27,25 @@ function StatusPill({ value }: { value: "Good" | "Watch" | "Fix" }) {
 
 export default function ClientProfile() {
   const { id } = useParams();
-  const client = clients.find(c => c.id === Number(id));
+  const { data: client, isLoading } = useClient(Number(id));
+  const { data: allCampaigns = [] } = useCampaigns();
+  const { data: allActivity = [] } = useActivityLog();
+  const { data: allLeads = [] } = useLeads();
   const [loading, setLoading] = useState<string | null>(null);
   const [showPause, setShowPause] = useState(false);
-  const [pauseInput, setPauseInput] = useState("");
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [actFilter, setActFilter] = useState("All");
 
+  if (isLoading) return <div className="p-10 text-center text-muted-foreground">Loading...</div>;
   if (!client) return <div className="p-10 text-center text-muted-foreground">Client not found</div>;
 
-  const clientCampaigns = campaignData.filter(c => c.clientId === String(client.id));
+  const clientCampaigns = allCampaigns.filter(c => c.clientId === String(client.id));
   const activeCampaigns = clientCampaigns.filter(c => c.status === "active");
   const audit = auditResults.find(a => a.clientId === String(client.id));
   const clientPipeline = pipelineData.find(p => p.clientId === String(client.id));
-  const clientActivity = activityLog.filter(a => a.clientId === String(client.id));
-  const clientLeads = mockLeads.filter(l => l.clientId === String(client.id));
+  const clientActivity = allActivity.filter(a => a.client_id === client.id);
+  const clientLeads = allLeads.filter(l => l.client_id === client.id);
   const filteredActivity = actFilter === "All" ? clientActivity : clientActivity.filter(a => a.type === actFilter.toLowerCase());
 
   const metrics = [
@@ -101,7 +104,6 @@ export default function ClientProfile() {
       <div className="grid grid-cols-5 gap-6">
         {/* LEFT COLUMN (3/5) */}
         <div className="col-span-3 space-y-6">
-          {/* Double Count Warning */}
           {client.doubleCount && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 flex items-start gap-3">
               <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
@@ -111,7 +113,6 @@ export default function ClientProfile() {
             </div>
           )}
 
-          {/* Performance Snapshot */}
           <div className="rounded-lg border border-border bg-card p-5">
             <h3 className="text-sm font-semibold text-foreground mb-3">Performance Snapshot</h3>
             <table className="w-full text-sm">
@@ -136,7 +137,6 @@ export default function ClientProfile() {
             </table>
           </div>
 
-          {/* CPL Trend */}
           <div className="rounded-lg border border-border bg-card p-5">
             <h3 className="text-sm font-semibold text-foreground mb-3">30-Day CPL Trend</h3>
             <div className="h-48">
@@ -158,7 +158,6 @@ export default function ClientProfile() {
             </div>
           </div>
 
-          {/* Active Campaigns */}
           <div className="rounded-lg border border-border bg-card p-5">
             <div className="flex items-center gap-2 mb-4">
               <h3 className="text-sm font-semibold text-foreground">Active Campaigns</h3>
@@ -202,7 +201,6 @@ export default function ClientProfile() {
             </div>
           </div>
 
-          {/* Pipeline Funnel */}
           {clientPipeline && (
             <div className="rounded-lg border border-border bg-card p-5">
               <h3 className="text-sm font-semibold text-foreground mb-4">Lead Pipeline</h3>
@@ -227,7 +225,6 @@ export default function ClientProfile() {
 
         {/* RIGHT COLUMN (2/5) */}
         <div className="col-span-2 space-y-6">
-          {/* Path to Green */}
           {audit && (
             <div className={cn("rounded-lg border-2 p-5", audit.status === "RED" ? "border-destructive" : audit.status === "YELLOW" ? "border-warning" : "border-success")}>
               <h3 className="text-sm font-semibold text-foreground mb-3">Path to Green</h3>
@@ -254,7 +251,6 @@ export default function ClientProfile() {
             </div>
           )}
 
-          {/* Action Panel */}
           <div className="rounded-lg border border-border bg-card p-5 space-y-2">
             <h3 className="text-sm font-semibold text-foreground mb-3">Actions</h3>
             <button onClick={() => handleAction("Form Swap", () => api.swapForm(String(client.id)))} className="w-full rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all">
@@ -288,42 +284,70 @@ export default function ClientProfile() {
             </div>
           </div>
 
-          {/* Activity Log */}
-          <div className="rounded-lg border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-foreground">Activity Log</h3>
-              <select value={actFilter} onChange={e => setActFilter(e.target.value)} className="rounded border border-border bg-accent px-2 py-1 text-xs">
-                {["All", "Audit", "Tracking", "Campaign", "Budget"].map(f => <option key={f}>{f}</option>)}
-              </select>
-            </div>
-            {filteredActivity.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic">No activity yet</p>
-            ) : (
-              <div className="space-y-3">
-                {filteredActivity.map(a => (
-                  <div key={a.id} className="border-l-2 border-primary/30 pl-3">
-                    <p className="text-xs text-muted-foreground">{a.timestamp} · <span className="font-medium text-foreground">{a.author}</span></p>
-                    <p className="text-sm text-foreground">{a.action}</p>
-                    <p className="text-xs text-muted-foreground">{a.result}</p>
+          {/* Leads */}
+          {clientLeads.length > 0 && (
+            <div className="rounded-lg border border-border bg-card p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Recent Leads</h3>
+              <div className="space-y-2">
+                {clientLeads.slice(0, 5).map(l => (
+                  <div key={l.id} className="flex items-center justify-between text-sm border-b border-border pb-2">
+                    <div>
+                      <p className="font-medium text-foreground">{l.name}</p>
+                      <p className="text-xs text-muted-foreground">{l.date} · {l.stage}</p>
+                    </div>
+                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium",
+                      l.status === "closed" ? "bg-success/15 text-success" :
+                      l.status === "new" ? "bg-primary/15 text-primary" :
+                      "bg-accent text-muted-foreground"
+                    )}>{l.status}</span>
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Activity */}
+          <div className="rounded-lg border border-border bg-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-foreground">Activity Log</h3>
+              <div className="flex gap-1">
+                {["All", "Audit", "Budget", "Campaign", "Tracking"].map(f => (
+                  <button key={f} onClick={() => setActFilter(f)} className={cn("px-2 py-0.5 rounded text-xs", actFilter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>{f}</button>
+                ))}
+              </div>
+            </div>
+            {filteredActivity.length > 0 ? (
+              <div className="space-y-3">
+                {filteredActivity.map(a => (
+                  <div key={a.id} className="border-b border-border pb-2">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{a.timestamp}</span>
+                      <span>·</span>
+                      <span className="font-medium text-foreground">{a.author}</span>
+                    </div>
+                    <p className="text-sm text-foreground mt-0.5">{a.action}</p>
+                    {a.result && <p className="text-xs text-muted-foreground mt-0.5">{a.result}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">No activity logged yet</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Pause Dialog */}
       <AlertDialog open={showPause} onOpenChange={setShowPause}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive">Pause All Campaigns</AlertDialogTitle>
-            <AlertDialogDescription>This will pause all active campaigns for {client.name}. Type <strong>PAUSE</strong> to confirm.</AlertDialogDescription>
+            <AlertDialogDescription>This will pause all active campaigns for {client.name}.</AlertDialogDescription>
           </AlertDialogHeader>
-          <Input value={pauseInput} onChange={e => setPauseInput(e.target.value)} placeholder="Type PAUSE" />
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPauseInput("")}>Cancel</AlertDialogCancel>
-            <AlertDialogAction disabled={pauseInput !== "PAUSE"} onClick={() => { handleAction("Pause", () => api.pauseCampaigns(String(client.id), clientCampaigns.map(c => c.id))); setPauseInput(""); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Confirm Pause</AlertDialogAction>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleAction("Pause", () => api.pauseCampaigns(String(client.id), clientCampaigns.map(c => c.id)))} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirm Pause
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

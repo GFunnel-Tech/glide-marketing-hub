@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { campaignData, clients } from "@/data/mockData";
+import { useClients, useCampaigns } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Search, Loader2, ExternalLink, X, MoreHorizontal } from "lucide-react";
+import { AlertTriangle, Search, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -20,6 +20,8 @@ function getCPLColor(cpl: number) {
 }
 
 export default function Campaigns() {
+  const { data: clients = [] } = useClients();
+  const { data: campaignData = [], isLoading } = useCampaigns();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [search, setSearch] = useState("");
   const [dcDismissed, setDcDismissed] = useState(false);
@@ -35,7 +37,7 @@ export default function Campaigns() {
     if (statusFilter === "Issues Only") list = list.filter(c => c.doubleCount || c.trueCpl > 60);
     if (search) list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || getClient(c.clientId)?.name.toLowerCase().includes(search.toLowerCase()));
     return list;
-  }, [statusFilter, search]);
+  }, [campaignData, clients, statusFilter, search]);
 
   const dcCampaigns = campaignData.filter(c => c.doubleCount);
   const flaggedForPause = campaignData.filter(c => c.trueCpl > 60 && c.status === "active");
@@ -51,6 +53,8 @@ export default function Campaigns() {
     finally { setLoading(null); setPauseTarget(null); }
   };
 
+  if (isLoading) return <div className="text-center py-10 text-muted-foreground">Loading campaigns...</div>;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -60,7 +64,6 @@ export default function Campaigns() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         {(["All", "Active", "Paused", "Issues Only"] as StatusFilter[]).map(f => (
           <button key={f} onClick={() => setStatusFilter(f)} className={cn("rounded-md px-3 py-1.5 text-xs font-medium transition-colors", statusFilter === f ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground hover:text-foreground")}>{f}</button>
@@ -71,7 +74,6 @@ export default function Campaigns() {
         </div>
       </div>
 
-      {/* DC Alert */}
       {dcCampaigns.length > 0 && !dcDismissed && (
         <div className="flex items-center gap-3 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3">
           <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
@@ -80,7 +82,6 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* Campaign Cards */}
       {filtered.length === 0 ? (
         <div className="text-center py-10 text-muted-foreground">
           <p>No campaigns match your filters</p>
@@ -113,7 +114,6 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* Flagged for Pause */}
       {flaggedForPause.length > 0 && (
         <div className="rounded-lg border border-border bg-card">
           <div className="px-5 py-3 border-b border-border flex items-center gap-2">
