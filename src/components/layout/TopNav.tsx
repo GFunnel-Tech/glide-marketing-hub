@@ -1,11 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Search, Bell, Moon, Sun
+  Bot, Settings, Moon, Sun
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
-import { Input } from "@/components/ui/input";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
+import { UserMenu } from "./UserMenu";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -22,7 +23,31 @@ export function TopNav() {
   const { isDark, toggle } = useTheme();
 
   return (
-    <header className="border-b border-border bg-card">
+    <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
+      {/* Top row: brand + workspace + user */}
+      <div className="flex h-14 items-center justify-between px-6 border-b border-border/60">
+        <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary text-primary-foreground font-bold text-sm shadow-card">
+              E
+            </div>
+            <span className="text-sm font-semibold tracking-tight hidden sm:inline">Expert Mortgage Marketing</span>
+          </Link>
+          <div className="h-6 w-px bg-border mx-2" />
+          <WorkspaceSwitcher />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggle}
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            aria-label="Toggle theme"
+          >
+            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+          <UserMenu />
+        </div>
+      </div>
 
       {/* Nav row */}
       <nav className="flex items-center gap-1 px-6 overflow-x-auto">
@@ -31,7 +56,6 @@ export function TopNav() {
             location.pathname === item.path ||
             (item.path !== "/" && location.pathname.startsWith(item.path));
           const Icon = item.icon;
-
           return (
             <Link
               key={item.path}
@@ -46,7 +70,7 @@ export function TopNav() {
               <Icon className="h-4 w-4 shrink-0" />
               <span>{item.label}</span>
               {item.badge && (
-                <span className="text-[10px] bg-primary text-primary-foreground rounded px-1.5 py-0.5 font-medium leading-none">
+                <span className="text-[10px] bg-gradient-primary text-primary-foreground rounded px-1.5 py-0.5 font-medium leading-none">
                   {item.badge}
                 </span>
               )}
