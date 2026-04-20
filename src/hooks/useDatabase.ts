@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export interface DbClient {
   id: number;
@@ -95,7 +96,6 @@ export interface DbTeamMember {
   member_status: string;
 }
 
-// Adapters to map DB shape → legacy mock shape for minimal component changes
 export function toClient(c: DbClient) {
   return {
     id: c.id,
@@ -159,73 +159,123 @@ export function toReport(r: DbReport) {
   };
 }
 
-// Queries
-async function fetchTable<T>(table: string): Promise<T[]> {
-  const { data, error } = await (supabase as any).from(table).select("*");
+// Workspace-scoped fetch
+async function fetchScoped<T>(table: string, workspaceId: string | null): Promise<T[]> {
+  if (!workspaceId) return [];
+  const { data, error } = await (supabase as any)
+    .from(table)
+    .select("*")
+    .eq("workspace_id", workspaceId);
   if (error) throw error;
   return (data || []) as T[];
 }
 
 export function useClients() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
   return useQuery({
-    queryKey: ["clients"],
-    queryFn: () => fetchTable<DbClient>("clients"),
+    queryKey: ["clients", wsId],
+    queryFn: () => fetchScoped<DbClient>("clients", wsId),
     select: (data) => data.map(toClient),
+    enabled: !!wsId,
   });
 }
 
 export function useClient(id: number) {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
   return useQuery({
-    queryKey: ["clients", id],
+    queryKey: ["clients", wsId, id],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("clients").select("*").eq("id", id).single();
+      const { data, error } = await (supabase as any)
+        .from("clients").select("*")
+        .eq("id", id).eq("workspace_id", wsId).single();
       if (error) throw error;
       return toClient(data as DbClient);
     },
-    enabled: !!id,
+    enabled: !!id && !!wsId,
   });
 }
 
 export function useCampaigns() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
   return useQuery({
-    queryKey: ["campaigns"],
-    queryFn: () => fetchTable<DbCampaign>("campaigns"),
+    queryKey: ["campaigns", wsId],
+    queryFn: () => fetchScoped<DbCampaign>("campaigns", wsId),
     select: (data) => data.map(toCampaign),
+    enabled: !!wsId,
   });
 }
 
 export function useReports() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
   return useQuery({
-    queryKey: ["reports"],
-    queryFn: () => fetchTable<DbReport>("reports"),
+    queryKey: ["reports", wsId],
+    queryFn: () => fetchScoped<DbReport>("reports", wsId),
     select: (data) => data.map(toReport),
+    enabled: !!wsId,
   });
 }
 
 export function useActivityLog() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
   return useQuery({
-    queryKey: ["activity_log"],
-    queryFn: () => fetchTable<DbActivityLog>("activity_log"),
+    queryKey: ["activity_log", wsId],
+    queryFn: () => fetchScoped<DbActivityLog>("activity_log", wsId),
+    enabled: !!wsId,
   });
 }
 
 export function useOnboarding() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
   return useQuery({
-    queryKey: ["onboarding"],
-    queryFn: () => fetchTable<DbOnboarding>("onboarding"),
+    queryKey: ["onboarding", wsId],
+    queryFn: () => fetchScoped<DbOnboarding>("onboarding", wsId),
+    enabled: !!wsId,
   });
 }
 
 export function useLeads() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
   return useQuery({
-    queryKey: ["leads"],
-    queryFn: () => fetchTable<DbLead>("leads"),
+    queryKey: ["leads", wsId],
+    queryFn: () => fetchScoped<DbLead>("leads", wsId),
+    enabled: !!wsId,
   });
 }
 
 export function useTeamMembers() {
   return useQuery({
     queryKey: ["team_members"],
-    queryFn: () => fetchTable<DbTeamMember>("team_members"),
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("team_members").select("*");
+      if (error) throw error;
+      return (data || []) as DbTeamMember[];
+    },
+  });
+}
+
+export interface DbAdAccount {
+  id: string;
+  workspace_id: string;
+  provider: string;
+  external_account_id: string;
+  account_name: string | null;
+  status: string;
+  created_at: string;
+}
+
+export function useAdAccounts() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
+  return useQuery({
+    queryKey: ["ad_accounts", wsId],
+    queryFn: () => fetchScoped<DbAdAccount>("ad_accounts", wsId),
+    enabled: !!wsId,
   });
 }
