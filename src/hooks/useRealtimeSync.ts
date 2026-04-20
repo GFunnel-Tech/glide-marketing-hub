@@ -10,12 +10,14 @@ const WATCHED_TABLES = [
   "leads",
   "activity_log",
   "team_members",
+  "ad_accounts",
+  "workspace_members",
 ] as const;
 
 /**
  * Subscribes to Postgres changes on all core tables and
- * invalidates the matching React-Query cache so the UI
- * refreshes automatically.
+ * invalidates the matching React-Query cache (by table name prefix)
+ * so the UI refreshes automatically.
  */
 export function useRealtimeSync() {
   const queryClient = useQueryClient();
@@ -28,6 +30,7 @@ export function useRealtimeSync() {
         "postgres_changes" as any,
         { event: "*", schema: "public", table },
         () => {
+          // queries are now keyed as [table, workspaceId, ...] — invalidate by prefix
           queryClient.invalidateQueries({ queryKey: [table] });
         }
       );
