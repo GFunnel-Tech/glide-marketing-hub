@@ -1,10 +1,7 @@
-import { Search, Bell, Moon, Sun } from "lucide-react";
+import { Search, Bell } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useTheme } from "@/hooks/useTheme";
 
 export function TopBar() {
-  const { isDark, toggle } = useTheme();
-
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-card px-6">
       <div className="relative w-80">
@@ -21,13 +18,6 @@ export function TopBar() {
           <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
             3
           </span>
-        </button>
-
-        <button
-          onClick={toggle}
-          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-        >
-          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
       </div>
     </header>
