@@ -81,8 +81,21 @@ export default function ClientProfile() {
           <div className="flex items-center gap-3">
             <Link to="/clients" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">{client.name}</h1>
-              <p className="text-sm text-muted-foreground">{client.brand}</p>
+              {client.bmId ? (
+                <a
+                  href={`https://business.facebook.com/home/accounts?business_id=${client.bmId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center gap-1.5 hover:text-primary transition-colors"
+                  title="Open in Meta Business Manager"
+                >
+                  <h1 className="text-2xl font-semibold text-foreground group-hover:text-primary">{client.name}</h1>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                </a>
+              ) : (
+                <h1 className="text-2xl font-semibold text-foreground">{client.name}</h1>
+              )}
+              <p className="text-sm text-muted-foreground">{client.bmAccountName || client.brand}</p>
             </div>
             <StatusBadge status={client.status} />
             <span className="text-xs text-muted-foreground">{client.bmType}</span>

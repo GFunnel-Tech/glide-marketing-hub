@@ -192,6 +192,8 @@ export type Database = {
       }
       clients: {
         Row: {
+          bm_account_name: string | null
+          bm_id: string | null
           bm_type: Database["public"]["Enums"]["bm_type"]
           brand: string
           cpl: number
@@ -214,6 +216,8 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          bm_account_name?: string | null
+          bm_id?: string | null
           bm_type?: Database["public"]["Enums"]["bm_type"]
           brand: string
           cpl?: number
@@ -236,6 +240,8 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          bm_account_name?: string | null
+          bm_id?: string | null
           bm_type?: Database["public"]["Enums"]["bm_type"]
           brand?: string
           cpl?: number
