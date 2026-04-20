@@ -27,13 +27,6 @@ export function TopNav() {
       {/* Top row: brand + workspace + user */}
       <div className="flex h-14 items-center justify-between px-6 border-b border-border/60">
         <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary text-primary-foreground font-bold text-sm shadow-card">
-              M
-            </div>
-            <span className="text-sm font-semibold tracking-tight hidden sm:inline">Marketing Hub</span>
-          </Link>
-          <div className="h-6 w-px bg-border mx-2" />
           <WorkspaceSwitcher />
         </div>
 
