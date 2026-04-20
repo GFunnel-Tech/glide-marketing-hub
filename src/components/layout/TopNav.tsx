@@ -29,7 +29,7 @@ export function TopNav() {
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary text-primary-foreground font-bold text-sm shadow-card">
-              E
+              M
             </div>
             <span className="text-sm font-semibold tracking-tight hidden sm:inline">Marketing Hub</span>
           </Link>
