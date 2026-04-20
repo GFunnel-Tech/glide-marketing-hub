@@ -31,7 +31,7 @@ export function TopNav() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary text-primary-foreground font-bold text-sm shadow-card">
               E
             </div>
-            <span className="text-sm font-semibold tracking-tight hidden sm:inline">Expert Mortgage Marketing</span>
+            <span className="text-sm font-semibold tracking-tight hidden sm:inline">Marketing Hub</span>
           </Link>
           <div className="h-6 w-px bg-border mx-2" />
           <WorkspaceSwitcher />
