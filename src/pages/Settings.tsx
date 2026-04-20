@@ -54,8 +54,8 @@ export default function Settings() {
           <div className="grid grid-cols-2 gap-6">
             <div className="rounded-lg border border-border bg-card p-5 space-y-4">
               <h3 className="text-sm font-semibold text-foreground">Agency Info</h3>
-              <div><label className="text-xs text-muted-foreground">Agency Name</label><Input defaultValue="Expert Mortgage Marketing" className="mt-1" /></div>
-              <div><label className="text-xs text-muted-foreground">Contact Email</label><Input defaultValue="cam@expertmortgagemarketing.com" className="mt-1" /></div>
+              <div><label className="text-xs text-muted-foreground">Agency Name</label><Input defaultValue="" placeholder="Your agency name" className="mt-1" /></div>
+              <div><label className="text-xs text-muted-foreground">Contact Email</label><Input defaultValue="" placeholder="contact@youragency.com" className="mt-1" /></div>
               <div><label className="text-xs text-muted-foreground">Timezone</label>
                 <select className="w-full mt-1 rounded-md border border-border bg-accent px-3 py-2 text-sm">
                   <option>America/New_York (EST)</option>
