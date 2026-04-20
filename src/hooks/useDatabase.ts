@@ -20,6 +20,8 @@ export interface DbClient {
   reported_leads: number;
   true_leads: number;
   last_audit: string | null;
+  bm_id?: string | null;
+  bm_account_name?: string | null;
 }
 
 export interface DbCampaign {
@@ -115,6 +117,8 @@ export function toClient(c: DbClient) {
     reportedLeads: c.reported_leads,
     trueLeads: c.true_leads,
     lastAudit: c.last_audit || "",
+    bmId: c.bm_id || "",
+    bmAccountName: c.bm_account_name || "",
   };
 }
 
