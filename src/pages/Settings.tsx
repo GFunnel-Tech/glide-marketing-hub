@@ -138,20 +138,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="notifications">
-          <div className="rounded-lg border border-border bg-card p-5 space-y-4">
-            {notifications.map(n => (
-              <div key={n.key} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{n.label}</p>
-                  <p className="text-xs text-muted-foreground">{n.description}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  {n.hasInput && enabledNotifs[n.key] && <Input placeholder={n.inputLabel} className="h-7 w-24 text-xs" />}
-                  <Switch checked={!!enabledNotifs[n.key]} onCheckedChange={v => setEnabledNotifs(p => ({ ...p, [n.key]: v }))} />
-                </div>
-              </div>
-            ))}
-          </div>
+          <NotificationPreferencesPanel />
         </TabsContent>
       </Tabs>
     </div>
