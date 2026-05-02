@@ -581,30 +581,29 @@ export function MetaConnectionsPanel() {
                     Use a long-lived user or system-user token with <span className="font-mono">ads_read</span> and <span className="font-mono">read_insights</span> permissions.
                   </p>
                 )}
-                {verifyResult && (
-                  verifyResult.ok ? (
-                    <div className="rounded-md border border-success/40 bg-success/10 p-2 text-xs text-foreground flex items-start gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
-                      <div className="space-y-0.5">
-                        <p className="font-medium text-success">Token verified</p>
-                        <p className="text-muted-foreground">
-                          {verifyResult.metaUserName ? <>Authorized as <span className="text-foreground font-medium">{verifyResult.metaUserName}</span> · </> : null}
-                          {verifyResult.adAccountCount} ad account{verifyResult.adAccountCount === 1 ? "" : "s"} accessible
-                        </p>
-                        {verifyResult.grantedScopes.length > 0 && (
-                          <p className="text-muted-foreground">Scopes: <span className="font-mono">{verifyResult.grantedScopes.join(", ")}</span></p>
-                        )}
-                      </div>
+                {verifyResult && verifyResult.ok === true && (
+                  <div className="rounded-md border border-success/40 bg-success/10 p-2 text-xs text-foreground flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="font-medium text-success">Token verified</p>
+                      <p className="text-muted-foreground">
+                        {verifyResult.metaUserName ? <>Authorized as <span className="text-foreground font-medium">{verifyResult.metaUserName}</span> · </> : null}
+                        {verifyResult.adAccountCount} ad account{verifyResult.adAccountCount === 1 ? "" : "s"} accessible
+                      </p>
+                      {verifyResult.grantedScopes.length > 0 && (
+                        <p className="text-muted-foreground">Scopes: <span className="font-mono">{verifyResult.grantedScopes.join(", ")}</span></p>
+                      )}
                     </div>
-                  ) : (
-                    <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive flex items-start gap-2">
-                      <XCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium">Verification failed</p>
-                        <p className="break-words">{verifyResult.error}</p>
-                      </div>
+                  </div>
+                )}
+                {verifyResult && verifyResult.ok === false && (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive flex items-start gap-2">
+                    <XCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Verification failed</p>
+                      <p className="break-words">{verifyResult.error}</p>
                     </div>
-                  )
+                  </div>
                 )}
               </div>
             );
