@@ -119,7 +119,7 @@ export function MetaConnectionsPanel() {
   const handleManualConnect = async () => {
     if (!currentWorkspace) return;
     const validated = validateMetaToken(manualToken);
-    if (!validated.ok) {
+    if (validated.ok === false) {
       setManualTokenError(validated.error);
       toast.error(validated.error);
       return;
