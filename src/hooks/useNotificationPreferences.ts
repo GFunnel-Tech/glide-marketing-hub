@@ -115,3 +115,22 @@ export function useRealtimeEnabledEvents(): {
   const anyRealtime = NOTIFICATION_EVENTS.some(e => realtimeFor(e.key));
   return { ready, realtimeFor, anyRealtime };
 }
+
+/**
+ * Returns the set of event types the current user wants to see in-app.
+ * Defaults to all known events when preferences haven't loaded yet.
+ */
+export function useInAppEnabledEventTypes(): {
+  ready: boolean;
+  enabledTypes: NotificationEventType[];
+} {
+  const { data, isLoading } = useNotificationPreferences();
+  const ready = !isLoading;
+  const enabledTypes = NOTIFICATION_EVENTS
+    .filter(e => {
+      const row = data?.find(p => p.event_type === e.key);
+      return row?.in_app_enabled ?? true;
+    })
+    .map(e => e.key);
+  return { ready, enabledTypes };
+}

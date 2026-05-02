@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tansta
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useInAppEnabledEventTypes } from "./useNotificationPreferences";
 
 export interface Notification {
   id: string;
@@ -32,20 +33,23 @@ const queryRetryDelay = (attempt: number) => Math.min(1000 * 2 ** attempt, 8000)
 
 export function useNotifications() {
   const { user } = useAuth();
+  const { ready: prefsReady, enabledTypes } = useInAppEnabledEventTypes();
   return useQuery({
-    queryKey: ["notifications", user?.id],
+    queryKey: ["notifications", user?.id, enabledTypes],
     queryFn: async () => {
       if (!user) return [];
+      if (enabledTypes.length === 0) return [];
       const { data, error } = await (supabase as any)
         .from("notifications")
         .select("*")
         .eq("user_id", user.id)
+        .in("type", enabledTypes)
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
       return (data ?? []) as Notification[];
     },
-    enabled: !!user,
+    enabled: !!user && prefsReady,
     retry: queryRetry,
     retryDelay: queryRetryDelay,
   });
@@ -55,15 +59,18 @@ const PAGE_SIZE = 25;
 
 export function useInfiniteNotifications(pageSize: number = PAGE_SIZE) {
   const { user } = useAuth();
+  const { ready: prefsReady, enabledTypes } = useInAppEnabledEventTypes();
   return useInfiniteQuery({
-    queryKey: ["notifications_infinite", user?.id, pageSize],
-    enabled: !!user,
+    queryKey: ["notifications_infinite", user?.id, pageSize, enabledTypes],
+    enabled: !!user && prefsReady,
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }: { pageParam: string | null }) => {
+      if (enabledTypes.length === 0) return [] as Notification[];
       let q = (supabase as any)
         .from("notifications")
         .select("*")
         .eq("user_id", user!.id)
+        .in("type", enabledTypes)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .limit(pageSize);
