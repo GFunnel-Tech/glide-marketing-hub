@@ -46,22 +46,48 @@ Deno.serve(async (req) => {
 
     for (const acc of accounts ?? []) {
       try {
-        // List lead gen forms for this ad account
-        const formsRes = await fetch(
-          `https://graph.facebook.com/v21.0/${acc.act_id}/leadgen_forms?fields=id,name&limit=200&access_token=${encodeURIComponent(conn.access_token)}`
-        );
-        const formsJson = await formsRes.json();
-        if (!formsRes.ok) {
-          errors.push({ act_id: acc.act_id, scope: "forms", error: formsJson });
+        // Lead-gen forms live on Pages, not ad accounts. We discover the
+        // forms used by this ad account by listing its lead-gen ads, then
+        // fetch leads from each unique form id.
+        // Filter to ads with objective LEAD_GENERATION when possible; fall
+        // back to all ads (cheap, the form list is what matters).
+        const since = Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
+
+        const adsUrl =
+          `https://graph.facebook.com/v21.0/${acc.act_id}/ads` +
+          `?fields=id,name,adset_id,campaign_id,campaign{name},adset{name},leadgen_form{id,name}` +
+          `&limit=500&access_token=${encodeURIComponent(conn.access_token)}`;
+
+        const adsRes = await fetch(adsUrl);
+        const adsJson = await adsRes.json();
+        if (!adsRes.ok) {
+          errors.push({ act_id: acc.act_id, scope: "ads", error: adsJson });
           continue;
         }
-        const forms = formsJson.data ?? [];
 
-        for (const form of forms) {
-          // last 90 days
-          const since = Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
+        // Build form_id -> { name, ads: [{id,name,adset,campaign}] }
+        const formMap = new Map<string, {
+          name: string | null;
+          ads: { id: string; name: string | null; adset_id: string | null; adset_name: string | null; campaign_id: string | null; campaign_name: string | null }[];
+        }>();
+
+        for (const ad of (adsJson.data ?? []) as any[]) {
+          const f = ad.leadgen_form;
+          if (!f?.id) continue;
+          if (!formMap.has(f.id)) formMap.set(f.id, { name: f.name ?? null, ads: [] });
+          formMap.get(f.id)!.ads.push({
+            id: ad.id,
+            name: ad.name ?? null,
+            adset_id: ad.adset_id ?? null,
+            adset_name: ad.adset?.name ?? null,
+            campaign_id: ad.campaign_id ?? null,
+            campaign_name: ad.campaign?.name ?? null,
+          });
+        }
+
+        for (const [formId, info] of formMap.entries()) {
           const url =
-            `https://graph.facebook.com/v21.0/${form.id}/leads` +
+            `https://graph.facebook.com/v21.0/${formId}/leads` +
             `?fields=id,created_time,field_data,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,form_id` +
             `&filtering=[{"field":"time_created","operator":"GREATER_THAN","value":${since}}]` +
             `&limit=200&access_token=${encodeURIComponent(conn.access_token)}`;
@@ -69,11 +95,13 @@ Deno.serve(async (req) => {
           const leadsRes = await fetch(url);
           const leadsJson = await leadsRes.json();
           if (!leadsRes.ok) {
-            errors.push({ form: form.id, error: leadsJson });
+            errors.push({ form: formId, act_id: acc.act_id, error: leadsJson });
             continue;
           }
           const leads = leadsJson.data ?? [];
           if (!leads.length) continue;
+
+          const adById = new Map(info.ads.map((a) => [a.id, a]));
 
           const rows = leads.map((l: any) => {
             const fd = (l.field_data ?? []) as { name: string; values: string[] }[];
@@ -83,19 +111,20 @@ Deno.serve(async (req) => {
               );
               return item?.values?.[0] ?? null;
             };
+            const adRef = l.ad_id ? adById.get(l.ad_id) : undefined;
             return {
               workspace_id: acc.workspace_id,
               ad_account_id: acc.id,
               client_id: acc.client_id,
               lead_id: l.id,
-              form_id: l.form_id ?? form.id,
-              form_name: form.name ?? null,
-              campaign_id: l.campaign_id ?? null,
-              campaign_name: l.campaign_name ?? null,
-              adset_id: l.adset_id ?? null,
-              adset_name: l.adset_name ?? null,
+              form_id: l.form_id ?? formId,
+              form_name: info.name,
+              campaign_id: l.campaign_id ?? adRef?.campaign_id ?? null,
+              campaign_name: l.campaign_name ?? adRef?.campaign_name ?? null,
+              adset_id: l.adset_id ?? adRef?.adset_id ?? null,
+              adset_name: l.adset_name ?? adRef?.adset_name ?? null,
               ad_id: l.ad_id ?? null,
-              ad_name: l.ad_name ?? null,
+              ad_name: l.ad_name ?? adRef?.name ?? null,
               created_time: l.created_time ?? null,
               full_name: find(["full_name", "name"]),
               email: find(["email"]),
@@ -109,7 +138,7 @@ Deno.serve(async (req) => {
             .from("meta_leads")
             .upsert(rows, { onConflict: "ad_account_id,lead_id" });
           if (upErr) {
-            errors.push({ form: form.id, error: upErr.message });
+            errors.push({ form: formId, error: upErr.message });
           } else {
             totalLeads += rows.length;
           }
