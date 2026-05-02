@@ -139,10 +139,24 @@ export function MetaConnectionsPanel() {
               {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               <span className="ml-1">Sync now</span>
             </Button>
-            <Button size="sm" onClick={handleOAuthConnect} disabled={connecting}>
-              {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-              <span className="ml-1">Connect with Meta</span>
-            </Button>
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" onClick={handleOAuthConnect} disabled={connecting}>
+                    {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                    <span className="ml-1">Connect with Meta</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p className="font-semibold mb-1">What gets connected</p>
+                  <ul className="text-xs space-y-0.5 list-disc pl-4">
+                    <li>Ad accounts in your Business Manager</li>
+                    <li>Campaigns, ad sets & ads</li>
+                    <li>Performance metrics (spend, impressions, clicks, conversions)</li>
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
