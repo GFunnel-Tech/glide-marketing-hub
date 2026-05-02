@@ -46,6 +46,7 @@ export function MetaConnectionsPanel() {
   const { data: clients = [] } = useClients();
   const [connections, setConnections] = useState<MetaConnection[]>([]);
   const [accounts, setAccounts] = useState<MetaAdAccount[]>([]);
+  const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -58,12 +59,14 @@ export function MetaConnectionsPanel() {
   const refresh = async () => {
     if (!currentWorkspace) return;
     setLoading(true);
-    const [c, a] = await Promise.all([
+    const [c, a, l] = await Promise.all([
       (supabase as any).from("meta_connections").select("*").eq("workspace_id", currentWorkspace.id).order("created_at", { ascending: false }),
       (supabase as any).from("meta_ad_accounts").select("*").eq("workspace_id", currentWorkspace.id).order("account_name"),
+      (supabase as any).from("meta_sync_log").select("*").eq("workspace_id", currentWorkspace.id).order("started_at", { ascending: false }).limit(200),
     ]);
     setConnections(c.data ?? []);
     setAccounts(a.data ?? []);
+    setSyncLogs(l.data ?? []);
     setLoading(false);
   };
 
