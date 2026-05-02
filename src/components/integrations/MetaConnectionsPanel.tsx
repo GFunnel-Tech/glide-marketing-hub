@@ -4,7 +4,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useClients } from "@/hooks/useDatabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info, RotateCw, AlertTriangle, KeyRound, X } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info, RotateCw, AlertTriangle, KeyRound, X, CheckCircle2, XCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,18 @@ interface MetaConnection {
   status: string;
   token_expires_at: string | null;
   created_at: string;
+  last_error: string | null;
+}
+
+interface SyncLogEntry {
+  id: string;
+  connection_id: string | null;
+  status: string;
+  trigger: string;
+  rows_synced: number | null;
+  error_message: string | null;
+  started_at: string;
+  finished_at: string | null;
 }
 
 interface MetaAdAccount {
@@ -34,6 +46,7 @@ export function MetaConnectionsPanel() {
   const { data: clients = [] } = useClients();
   const [connections, setConnections] = useState<MetaConnection[]>([]);
   const [accounts, setAccounts] = useState<MetaAdAccount[]>([]);
+  const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -46,12 +59,14 @@ export function MetaConnectionsPanel() {
   const refresh = async () => {
     if (!currentWorkspace) return;
     setLoading(true);
-    const [c, a] = await Promise.all([
+    const [c, a, l] = await Promise.all([
       (supabase as any).from("meta_connections").select("*").eq("workspace_id", currentWorkspace.id).order("created_at", { ascending: false }),
       (supabase as any).from("meta_ad_accounts").select("*").eq("workspace_id", currentWorkspace.id).order("account_name"),
+      (supabase as any).from("meta_sync_log").select("*").eq("workspace_id", currentWorkspace.id).order("started_at", { ascending: false }).limit(200),
     ]);
     setConnections(c.data ?? []);
     setAccounts(a.data ?? []);
+    setSyncLogs(l.data ?? []);
     setLoading(false);
   };
 
@@ -138,6 +153,14 @@ export function MetaConnectionsPanel() {
     } finally {
       setReconnectingId(null);
     }
+  };
+
+  const syncInfoFor = (connectionId: string) => {
+    const forConn = syncLogs.filter(l => l.connection_id === connectionId);
+    const lastSuccess = forConn.find(l => l.status === "success");
+    const lastError = forConn.find(l => l.status === "error" || l.status === "failed");
+    const lastAny = forConn[0];
+    return { lastSuccess, lastError, lastAny };
   };
 
   const tokenState = (c: MetaConnection): { label: string; tone: "ok" | "warn" | "bad" } => {
@@ -257,6 +280,8 @@ export function MetaConnectionsPanel() {
             const ts = tokenState(c);
             const needsAction = ts.tone !== "ok";
             const isReconnecting = reconnectingId === c.id;
+            const { lastSuccess, lastError, lastAny } = syncInfoFor(c.id);
+            const showError = lastError && (!lastSuccess || new Date(lastError.started_at) > new Date(lastSuccess.started_at));
             return (
               <div key={c.id} className="rounded border border-border bg-accent/30 px-3 py-2 space-y-2">
                 <div className="flex items-center justify-between gap-3">
@@ -348,6 +373,43 @@ export function MetaConnectionsPanel() {
                   </div>
                 )}
 
+                <div className="pl-5 space-y-1 text-xs">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
+                    <span>Last successful sync:</span>
+                    {lastSuccess ? (
+                      <span className="text-foreground">
+                        {new Date(lastSuccess.started_at).toLocaleString()}
+                        {typeof lastSuccess.rows_synced === "number" && (
+                          <span className="text-muted-foreground"> · {lastSuccess.rows_synced} rows</span>
+                        )}
+                        <span className="text-muted-foreground"> · {lastSuccess.trigger}</span>
+                      </span>
+                    ) : (
+                      <span className="italic">never</span>
+                    )}
+                  </div>
+                  {(showError || c.last_error) && (
+                    <div className="flex items-start gap-1.5 text-destructive">
+                      <XCircle className="h-3 w-3 shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <span className="font-medium">Last error</span>
+                        {showError && (
+                          <span className="text-muted-foreground"> · {new Date(lastError!.started_at).toLocaleString()}</span>
+                        )}
+                        <span className="text-foreground">: </span>
+                        <span className="break-words">
+                          {showError ? lastError!.error_message ?? "Unknown error" : c.last_error}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {!lastSuccess && !showError && !c.last_error && lastAny && (
+                    <p className="text-muted-foreground italic">
+                      Sync {lastAny.status} · {new Date(lastAny.started_at).toLocaleString()}
+                    </p>
+                  )}
+                </div>
                 {needsAction && (
                   <p className="text-xs text-muted-foreground pl-5">
                     {ts.tone === "bad"
