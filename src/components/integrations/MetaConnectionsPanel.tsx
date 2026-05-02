@@ -373,7 +373,44 @@ export function MetaConnectionsPanel() {
                   </div>
                 )}
 
-                {needsAction && (
+                <div className="pl-5 space-y-1 text-xs">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
+                    <span>Last successful sync:</span>
+                    {lastSuccess ? (
+                      <span className="text-foreground">
+                        {new Date(lastSuccess.started_at).toLocaleString()}
+                        {typeof lastSuccess.rows_synced === "number" && (
+                          <span className="text-muted-foreground"> · {lastSuccess.rows_synced} rows</span>
+                        )}
+                        <span className="text-muted-foreground"> · {lastSuccess.trigger}</span>
+                      </span>
+                    ) : (
+                      <span className="italic">never</span>
+                    )}
+                  </div>
+                  {(showError || c.last_error) && (
+                    <div className="flex items-start gap-1.5 text-destructive">
+                      <XCircle className="h-3 w-3 shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <span className="font-medium">Last error</span>
+                        {showError && (
+                          <span className="text-muted-foreground"> · {new Date(lastError!.started_at).toLocaleString()}</span>
+                        )}
+                        <span className="text-foreground">: </span>
+                        <span className="break-words">
+                          {showError ? lastError!.error_message ?? "Unknown error" : c.last_error}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {!lastSuccess && !showError && !c.last_error && lastAny && (
+                    <p className="text-muted-foreground italic">
+                      Sync {lastAny.status} · {new Date(lastAny.started_at).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+
                   <p className="text-xs text-muted-foreground pl-5">
                     {ts.tone === "bad"
                       ? "This connection is no longer syncing. Reconnect to restore data flow."
