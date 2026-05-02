@@ -116,11 +116,18 @@ export function MetaConnectionsPanel() {
   };
 
   const handleManualConnect = async () => {
-    if (!currentWorkspace || !manualToken.trim()) return;
+    if (!currentWorkspace) return;
+    const validated = validateMetaToken(manualToken);
+    if (!validated.ok) {
+      setManualTokenError(validated.error);
+      toast.error(validated.error);
+      return;
+    }
+    setManualTokenError(null);
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke("meta-connect-manual", {
-        body: { workspaceId: currentWorkspace.id, accessToken: manualToken.trim() },
+        body: { workspaceId: currentWorkspace.id, accessToken: validated.value },
       });
       if (error) throw error;
       toast.success(`Connected — ${data.accountsDiscovered} ad accounts discovered`);
@@ -128,7 +135,9 @@ export function MetaConnectionsPanel() {
       setShowManual(false);
       refresh();
     } catch (e: any) {
-      toast.error(e.message || "Failed to connect");
+      const msg = e?.message || "Failed to connect";
+      setManualTokenError(/token|auth|permission|invalid/i.test(msg) ? msg : null);
+      toast.error(msg);
     } finally {
       setConnecting(false);
     }
