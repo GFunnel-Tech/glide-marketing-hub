@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
       return json({ error: "code and state required" }, 400);
     }
 
-    let parsed: { u: string; w: string; n: string; t: number };
+    let parsed: { u: string; w: string; n: string; t: number; r?: string | null };
     try {
       parsed = JSON.parse(atob(state));
     } catch {
@@ -91,22 +91,49 @@ Deno.serve(async (req) => {
       }
     } catch (_) { /* non-fatal */ }
 
-    const { data: conn, error: connErr } = await admin
-      .from("meta_connections")
-      .insert({
-        workspace_id: parsed.w,
-        connected_by: parsed.u,
-        connection_type: "oauth",
-        meta_user_id: me.id ?? null,
-        meta_user_name: me.name ?? null,
-        access_token: accessToken,
-        token_expires_at: expiresAt,
-        scopes: grantedScopes,
-        status: "active",
-      })
-      .select()
-      .single();
-    if (connErr) return json({ error: "store connection failed", details: connErr }, 500);
+    let conn: any;
+    let connErr: any;
+    if (parsed.r) {
+      // Reconnect: update existing connection in place (preserves id and ad-account mappings)
+      const upd = await admin
+        .from("meta_connections")
+        .update({
+          connection_type: "oauth",
+          meta_user_id: me.id ?? null,
+          meta_user_name: me.name ?? null,
+          access_token: accessToken,
+          token_expires_at: expiresAt,
+          scopes: grantedScopes,
+          status: "active",
+          last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", parsed.r)
+        .eq("workspace_id", parsed.w)
+        .select()
+        .single();
+      conn = upd.data;
+      connErr = upd.error;
+    } else {
+      const ins = await admin
+        .from("meta_connections")
+        .insert({
+          workspace_id: parsed.w,
+          connected_by: parsed.u,
+          connection_type: "oauth",
+          meta_user_id: me.id ?? null,
+          meta_user_name: me.name ?? null,
+          access_token: accessToken,
+          token_expires_at: expiresAt,
+          scopes: grantedScopes,
+          status: "active",
+        })
+        .select()
+        .single();
+      conn = ins.data;
+      connErr = ins.error;
+    }
+    if (connErr || !conn) return json({ error: "store connection failed", details: connErr }, 500);
 
     // 5) Discover ad accounts
     const accountsRes = await fetch(

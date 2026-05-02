@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const workspaceId: string | undefined = body.workspaceId;
+    const reconnectId: string | undefined = body.reconnectId;
     if (!workspaceId) {
       return new Response(JSON.stringify({ error: "workspaceId required" }), {
         status: 400,
@@ -53,13 +54,14 @@ Deno.serve(async (req) => {
     }
 
     const appId = Deno.env.get("META_APP_ID")!;
-    // state encodes user + workspace + nonce; verified on callback
+    // state encodes user + workspace + nonce + optional reconnect target; verified on callback
     const nonce = crypto.randomUUID();
     const state = btoa(JSON.stringify({
       u: userData.user.id,
       w: workspaceId,
       n: nonce,
       t: Date.now(),
+      r: reconnectId ?? null,
     }));
 
     const url = new URL("https://www.facebook.com/v21.0/dialog/oauth");

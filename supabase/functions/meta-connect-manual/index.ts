@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return json({ error: "Unauthorized" }, 401);
 
-    const { workspaceId, accessToken } = await req.json();
+    const { workspaceId, accessToken, reconnectId } = await req.json();
     if (!workspaceId || !accessToken) return json({ error: "workspaceId and accessToken required" }, 400);
 
     // Validate token by calling /me
@@ -37,16 +37,34 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: conn, error: connErr } = await admin.from("meta_connections").insert({
-      workspace_id: workspaceId,
-      connected_by: userData.user.id,
-      connection_type: "manual",
-      meta_user_id: me.id,
-      meta_user_name: me.name,
-      access_token: accessToken,
-      status: "active",
-    }).select().single();
-    if (connErr) return json({ error: connErr.message }, 500);
+    let conn: any;
+    let connErr: any;
+    if (reconnectId) {
+      const upd = await admin.from("meta_connections").update({
+        connection_type: "manual",
+        meta_user_id: me.id,
+        meta_user_name: me.name,
+        access_token: accessToken,
+        status: "active",
+        last_error: null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", reconnectId).eq("workspace_id", workspaceId).select().single();
+      conn = upd.data;
+      connErr = upd.error;
+    } else {
+      const ins = await admin.from("meta_connections").insert({
+        workspace_id: workspaceId,
+        connected_by: userData.user.id,
+        connection_type: "manual",
+        meta_user_id: me.id,
+        meta_user_name: me.name,
+        access_token: accessToken,
+        status: "active",
+      }).select().single();
+      conn = ins.data;
+      connErr = ins.error;
+    }
+    if (connErr || !conn) return json({ error: connErr?.message || "store failed" }, 500);
 
     const accountsRes = await fetch(
       `https://graph.facebook.com/v21.0/me/adaccounts?fields=account_id,name,currency,timezone_name,account_status,business{id,name}&limit=200&access_token=${encodeURIComponent(accessToken)}`,
