@@ -169,13 +169,20 @@ export function MetaConnectionsPanel() {
   };
 
   const handleManualReconnect = async (id: string) => {
-    if (!currentWorkspace || !manualReconnectToken.trim()) return;
+    if (!currentWorkspace) return;
+    const validated = validateMetaToken(manualReconnectToken);
+    if (validated.ok === false) {
+      setManualReconnectError(validated.error);
+      toast.error(validated.error);
+      return;
+    }
+    setManualReconnectError(null);
     setReconnectingId(id);
     try {
       const { data, error } = await supabase.functions.invoke("meta-connect-manual", {
         body: {
           workspaceId: currentWorkspace.id,
-          accessToken: manualReconnectToken.trim(),
+          accessToken: validated.value,
           reconnectId: id,
         },
       });
@@ -185,7 +192,9 @@ export function MetaConnectionsPanel() {
       setManualReconnectToken("");
       refresh();
     } catch (e: any) {
-      toast.error(e.message || "Failed to refresh token");
+      const msg = e?.message || "Failed to refresh token";
+      setManualReconnectError(/token|auth|permission|invalid/i.test(msg) ? msg : null);
+      toast.error(msg);
     } finally {
       setReconnectingId(null);
     }
