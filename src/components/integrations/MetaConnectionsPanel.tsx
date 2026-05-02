@@ -174,10 +174,14 @@ export function MetaConnectionsPanel() {
         body: { workspaceId: currentWorkspace.id, accessToken: validated.value },
       });
       if (error) throw error;
-      toast.success(`Connected — ${data.accountsDiscovered} ad accounts discovered`);
+      // Edge function returns { error } in the body for validation failures (no HTTP error)
+      if (data?.error) throw new Error(data.error);
+      if (!data?.ok || !data?.connectionId) throw new Error("Connection was not saved. Please try again.");
+      toast.success(`Connected — ${data.accountsDiscovered} ad account${data.accountsDiscovered === 1 ? "" : "s"} discovered`);
       setManualToken("");
       setShowManual(false);
-      refresh();
+      setVerifyResult(null);
+      await refresh();
     } catch (e: any) {
       const msg = e?.message || "Failed to connect";
       setManualTokenError(/token|auth|permission|invalid/i.test(msg) ? msg : null);
@@ -230,10 +234,12 @@ export function MetaConnectionsPanel() {
         },
       });
       if (error) throw error;
-      toast.success(`Token refreshed — ${data.accountsDiscovered} ad accounts available`);
+      if (data?.error) throw new Error(data.error);
+      if (!data?.ok) throw new Error("Token refresh did not persist. Please try again.");
+      toast.success(`Token refreshed — ${data.accountsDiscovered} ad account${data.accountsDiscovered === 1 ? "" : "s"} available`);
       setManualReconnectId(null);
       setManualReconnectToken("");
-      refresh();
+      await refresh();
     } catch (e: any) {
       const msg = e?.message || "Failed to refresh token";
       setManualReconnectError(/token|auth|permission|invalid/i.test(msg) ? msg : null);
