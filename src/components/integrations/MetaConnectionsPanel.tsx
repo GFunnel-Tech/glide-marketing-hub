@@ -100,6 +100,56 @@ export function MetaConnectionsPanel() {
     refresh();
   };
 
+  const handleReconnectOAuth = async (id: string) => {
+    if (!currentWorkspace) return;
+    setReconnectingId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke("meta-oauth-start", {
+        body: { workspaceId: currentWorkspace.id, reconnectId: id },
+      });
+      if (error) throw error;
+      window.open(data.url, "_blank", "width=600,height=700");
+      toast.info("Re-authorize in the popup, then refresh this page.");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to start reconnect");
+    } finally {
+      setReconnectingId(null);
+    }
+  };
+
+  const handleManualReconnect = async (id: string) => {
+    if (!currentWorkspace || !manualReconnectToken.trim()) return;
+    setReconnectingId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke("meta-connect-manual", {
+        body: {
+          workspaceId: currentWorkspace.id,
+          accessToken: manualReconnectToken.trim(),
+          reconnectId: id,
+        },
+      });
+      if (error) throw error;
+      toast.success(`Token refreshed — ${data.accountsDiscovered} ad accounts available`);
+      setManualReconnectId(null);
+      setManualReconnectToken("");
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to refresh token");
+    } finally {
+      setReconnectingId(null);
+    }
+  };
+
+  const tokenState = (c: MetaConnection): { label: string; tone: "ok" | "warn" | "bad" } => {
+    if (c.status !== "active") return { label: "needs reconnect", tone: "bad" };
+    if (!c.token_expires_at) return { label: "no expiry", tone: "ok" };
+    const ms = new Date(c.token_expires_at).getTime() - Date.now();
+    const days = Math.floor(ms / 86_400_000);
+    if (days < 0) return { label: "expired", tone: "bad" };
+    if (days < 7) return { label: `expires in ${days}d`, tone: "warn" };
+    return { label: `expires in ${days}d`, tone: "ok" };
+  };
+
   const handleSync = async () => {
     if (!currentWorkspace) return;
     setSyncing(true);
