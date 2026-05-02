@@ -155,6 +155,14 @@ export function MetaConnectionsPanel() {
     }
   };
 
+  const syncInfoFor = (connectionId: string) => {
+    const forConn = syncLogs.filter(l => l.connection_id === connectionId);
+    const lastSuccess = forConn.find(l => l.status === "success");
+    const lastError = forConn.find(l => l.status === "error" || l.status === "failed");
+    const lastAny = forConn[0];
+    return { lastSuccess, lastError, lastAny };
+  };
+
   const tokenState = (c: MetaConnection): { label: string; tone: "ok" | "warn" | "bad" } => {
     if (c.status !== "active") return { label: "needs reconnect", tone: "bad" };
     if (!c.token_expires_at) return { label: "no expiry", tone: "ok" };
