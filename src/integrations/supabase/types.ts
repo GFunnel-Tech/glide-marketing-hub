@@ -69,6 +69,7 @@ export type Database = {
         Row: {
           access_token: string | null
           account_name: string | null
+          client_id: number | null
           connected_by: string | null
           created_at: string
           external_account_id: string
@@ -82,6 +83,7 @@ export type Database = {
         Insert: {
           access_token?: string | null
           account_name?: string | null
+          client_id?: number | null
           connected_by?: string | null
           created_at?: string
           external_account_id: string
@@ -95,6 +97,7 @@ export type Database = {
         Update: {
           access_token?: string | null
           account_name?: string | null
+          client_id?: number | null
           connected_by?: string | null
           created_at?: string
           external_account_id?: string
@@ -106,6 +109,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ad_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ad_accounts_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -317,6 +327,271 @@ export type Database = {
           },
           {
             foreignKeyName: "leads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_ad_accounts: {
+        Row: {
+          account_name: string | null
+          account_status: number | null
+          act_id: string
+          business_id: string | null
+          business_name: string | null
+          client_id: number | null
+          connection_id: string
+          created_at: string
+          currency: string | null
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          timezone_name: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          account_status?: number | null
+          act_id: string
+          business_id?: string | null
+          business_name?: string | null
+          client_id?: number | null
+          connection_id: string
+          created_at?: string
+          currency?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          timezone_name?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          account_name?: string | null
+          account_status?: number | null
+          act_id?: string
+          business_id?: string | null
+          business_name?: string | null
+          client_id?: number | null
+          connection_id?: string
+          created_at?: string
+          currency?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          timezone_name?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ad_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_ad_accounts_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "meta_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_ad_accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_connections: {
+        Row: {
+          access_token: string
+          connected_by: string
+          connection_type: string
+          created_at: string
+          id: string
+          last_error: string | null
+          meta_user_id: string | null
+          meta_user_name: string | null
+          scopes: string[] | null
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          access_token: string
+          connected_by: string
+          connection_type?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          meta_user_id?: string | null
+          meta_user_name?: string | null
+          scopes?: string[] | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string
+          connected_by?: string
+          connection_type?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          meta_user_id?: string | null
+          meta_user_name?: string | null
+          scopes?: string[] | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_connections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_insights_daily: {
+        Row: {
+          ad_account_id: string
+          clicks: number
+          cpl: number
+          cpm: number
+          created_at: string
+          ctr: number
+          date: string
+          frequency: number
+          id: string
+          impressions: number
+          leads: number
+          raw: Json | null
+          reach: number
+          spend: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_account_id: string
+          clicks?: number
+          cpl?: number
+          cpm?: number
+          created_at?: string
+          ctr?: number
+          date: string
+          frequency?: number
+          id?: string
+          impressions?: number
+          leads?: number
+          raw?: Json | null
+          reach?: number
+          spend?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_account_id?: string
+          clicks?: number
+          cpl?: number
+          cpm?: number
+          created_at?: string
+          ctr?: number
+          date?: string
+          frequency?: number
+          id?: string
+          impressions?: number
+          leads?: number
+          raw?: Json | null
+          reach?: number
+          spend?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_insights_daily_ad_account_id_fkey"
+            columns: ["ad_account_id"]
+            isOneToOne: false
+            referencedRelation: "meta_ad_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_insights_daily_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_sync_log: {
+        Row: {
+          ad_account_id: string | null
+          connection_id: string | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          rows_synced: number | null
+          started_at: string
+          status: string
+          trigger: string
+          workspace_id: string | null
+        }
+        Insert: {
+          ad_account_id?: string | null
+          connection_id?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          rows_synced?: number | null
+          started_at?: string
+          status?: string
+          trigger?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          ad_account_id?: string | null
+          connection_id?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          rows_synced?: number | null
+          started_at?: string
+          status?: string
+          trigger?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_sync_log_ad_account_id_fkey"
+            columns: ["ad_account_id"]
+            isOneToOne: false
+            referencedRelation: "meta_ad_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_sync_log_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "meta_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_sync_log_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
