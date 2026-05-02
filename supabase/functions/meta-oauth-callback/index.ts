@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
       return json({ error: "code and state required" }, 400);
     }
 
-    let parsed: { u: string; w: string; n: string; t: number };
+    let parsed: { u: string; w: string; n: string; t: number; r?: string | null };
     try {
       parsed = JSON.parse(atob(state));
     } catch {
