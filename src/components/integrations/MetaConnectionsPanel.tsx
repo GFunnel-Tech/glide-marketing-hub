@@ -82,6 +82,49 @@ export function MetaConnectionsPanel() {
   const [manualReconnectToken, setManualReconnectToken] = useState("");
   const [manualTokenError, setManualTokenError] = useState<string | null>(null);
   const [manualReconnectError, setManualReconnectError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<
+    | { ok: true; metaUserName: string | null; adAccountCount: number; grantedScopes: string[] }
+    | { ok: false; error: string }
+    | null
+  >(null);
+
+  const handleVerifyToken = async () => {
+    const validated = validateMetaToken(manualToken);
+    if (validated.ok === false) {
+      setManualTokenError(validated.error);
+      setVerifyResult({ ok: false, error: validated.error });
+      return;
+    }
+    setManualTokenError(null);
+    setVerifyResult(null);
+    setVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("meta-verify-token", {
+        body: { accessToken: validated.value },
+      });
+      if (error) throw error;
+      if (data?.ok) {
+        setVerifyResult({
+          ok: true,
+          metaUserName: data.metaUserName,
+          adAccountCount: data.adAccountCount,
+          grantedScopes: data.grantedScopes ?? [],
+        });
+        toast.success(`Token verified — ${data.adAccountCount} ad account${data.adAccountCount === 1 ? "" : "s"} accessible`);
+      } else {
+        const msg = data?.error || "Token verification failed.";
+        setVerifyResult({ ok: false, error: msg });
+        toast.error(msg);
+      }
+    } catch (e: any) {
+      const msg = e?.message || "Verification request failed.";
+      setVerifyResult({ ok: false, error: msg });
+      toast.error(msg);
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const refresh = async () => {
     if (!currentWorkspace) return;
