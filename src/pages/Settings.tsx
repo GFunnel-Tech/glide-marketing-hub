@@ -19,20 +19,9 @@ const integrations = [
   { name: "n8n Webhooks", type: "display", connected: true, lastSync: "Live", url: "https://apihub.gfunnel.com/webhook" },
 ];
 
-const notifications = [
-  { key: "cpl_alert", label: "CPL Alert", description: "When CPL exceeds threshold", hasInput: true, inputLabel: "Threshold ($)" },
-  { key: "frequency_alert", label: "Frequency Alert", description: "When ad frequency gets too high" },
-  { key: "zero_spend", label: "Zero Spend Alert", description: "Campaign with zero spend detected" },
-  { key: "double_count", label: "Double Count Detected", description: "Lead duplication confirmed" },
-  { key: "weekly_summary", label: "Weekly Portfolio Summary", description: "Sent every Monday", hasInput: true, inputLabel: "Email" },
-  { key: "monthly_reminder", label: "Monthly Report Reminder", description: "Reminder to generate reports" },
-  { key: "bm_quality", label: "Agency BM Quality Alert", description: "When BM quality drops" },
-];
-
 export default function Settings() {
   const { data: teamMembers = [] } = useTeamMembers();
   const [copied, setCopied] = useState(false);
-  const [enabledNotifs, setEnabledNotifs] = useState<Record<string, boolean>>({ cpl_alert: true, double_count: true, weekly_summary: true });
 
   const copyUrl = (url: string) => {
     navigator.clipboard.writeText(url);
