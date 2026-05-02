@@ -65,6 +65,7 @@ const App = () => (
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="ai" element={<AiAssistant />} />
                   <Route path="notifications" element={<Notifications />} />
+                  <Route path="messages" element={<Messages />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
