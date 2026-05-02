@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Check, Trash2, Bell, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import {
   useInfiniteNotifications,
