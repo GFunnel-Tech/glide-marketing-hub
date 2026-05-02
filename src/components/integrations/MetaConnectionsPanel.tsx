@@ -8,6 +8,30 @@ import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info, RotateCw, Aler
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { z } from "zod";
+
+// Meta user/system-user access tokens are opaque strings.
+// They are typically 100–500 chars of URL-safe base64-ish characters.
+// We validate shape only — the server still verifies the token with Graph API.
+const META_TOKEN_REGEX = /^[A-Za-z0-9_\-|.]+$/;
+const metaTokenSchema = z
+  .string()
+  .trim()
+  .min(1, { message: "Access token is required." })
+  .min(50, { message: "This doesn't look like a Meta token — it's too short (expected 50+ characters)." })
+  .max(2000, { message: "Access token is too long (max 2000 characters)." })
+  .refine(v => !/\s/.test(v), { message: "Token must not contain spaces or line breaks." })
+  .refine(v => !/^bearer\s+/i.test(v), { message: "Remove the \"Bearer \" prefix — paste only the token itself." })
+  .refine(v => !/^["'].*["']$/.test(v), { message: "Remove the surrounding quotes — paste only the token itself." })
+  .refine(v => META_TOKEN_REGEX.test(v), {
+    message: "Token contains invalid characters. Copy it directly from Meta's Graph API Explorer or Business Settings.",
+  });
+
+function validateMetaToken(raw: string): { ok: true; value: string } | { ok: false; error: string } {
+  const result = metaTokenSchema.safeParse(raw);
+  if (result.success) return { ok: true, value: result.data };
+  return { ok: false, error: result.error.issues[0]?.message ?? "Invalid token." };
+}
 
 interface MetaConnection {
   id: string;
