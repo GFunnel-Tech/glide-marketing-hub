@@ -75,7 +75,7 @@ export default function Auth() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xl shadow-glow">
             M
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Marketing Hub</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Meta Hub</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {mode === "signup" ? "Create your workspace to get started" : "Welcome back"}
           </p>
