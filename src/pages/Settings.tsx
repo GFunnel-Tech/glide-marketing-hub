@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useTeamMembers } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
-import { Copy, ExternalLink, Check, Loader2, UserPlus } from "lucide-react";
+import { Copy, ExternalLink, Check, Loader2, UserPlus, Bell, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaConnectionsPanel } from "@/components/integrations/MetaConnectionsPanel";
+import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 const integrations = [
   { name: "Meta Ads API", type: "oauth", connected: true, lastSync: "2 min ago" },
