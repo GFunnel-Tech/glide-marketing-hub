@@ -191,11 +191,31 @@ export function MetaConnectionsPanel() {
     }
   };
 
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
+
   const handleDisconnect = async (id: string) => {
-    if (!confirm("Disconnect this Meta account? Linked ad accounts will be removed.")) return;
-    await (supabase as any).from("meta_connections").delete().eq("id", id);
-    toast.success("Disconnected");
-    refresh();
+    const conn = connections.find(c => c.id === id);
+    const label = conn?.connection_type === "manual" ? "manually connected Meta account" : "Meta account";
+    if (!confirm(`Disconnect this ${label}? Linked ad accounts and their mappings will be removed. Synced historical insights will be retained.`)) return;
+    setDisconnectingId(id);
+    try {
+      // Remove dependent ad accounts first (no FK cascade defined)
+      await (supabase as any).from("meta_ad_accounts").delete().eq("connection_id", id);
+      const { error } = await (supabase as any).from("meta_connections").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Meta account disconnected");
+      // Reset any open manual-reconnect UI for this connection
+      if (manualReconnectId === id) {
+        setManualReconnectId(null);
+        setManualReconnectToken("");
+        setManualReconnectError(null);
+      }
+      await refresh();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to disconnect");
+    } finally {
+      setDisconnectingId(null);
+    }
   };
 
   const handleReconnectOAuth = async (id: string) => {
