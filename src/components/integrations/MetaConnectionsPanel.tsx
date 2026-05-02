@@ -4,7 +4,8 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useClients } from "@/hooks/useDatabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -138,10 +139,24 @@ export function MetaConnectionsPanel() {
               {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               <span className="ml-1">Sync now</span>
             </Button>
-            <Button size="sm" onClick={handleOAuthConnect} disabled={connecting}>
-              {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-              <span className="ml-1">Connect with Meta</span>
-            </Button>
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" onClick={handleOAuthConnect} disabled={connecting}>
+                    {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                    <span className="ml-1">Connect with Meta</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p className="font-semibold mb-1">What gets connected</p>
+                  <ul className="text-xs space-y-0.5 list-disc pl-4">
+                    <li>Ad accounts in your Business Manager</li>
+                    <li>Campaigns, ad sets & ads</li>
+                    <li>Performance metrics (spend, impressions, clicks, conversions)</li>
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
@@ -156,10 +171,25 @@ export function MetaConnectionsPanel() {
                 Connect your Meta Business Manager to {currentWorkspace?.name ?? "this workspace"} to start syncing ad data.
               </p>
             </div>
-            <Button size="lg" onClick={handleOAuthConnect} disabled={connecting} className="mx-auto">
-              {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Facebook className="h-4 w-4 mr-2" />}
-              Connect with Meta
-            </Button>
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="lg" onClick={handleOAuthConnect} disabled={connecting} className="mx-auto">
+                    {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Facebook className="h-4 w-4 mr-2" />}
+                    Connect with Meta
+                    <Info className="h-3.5 w-3.5 ml-2 opacity-70" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p className="font-semibold mb-1">What gets connected</p>
+                  <ul className="text-xs space-y-0.5 list-disc pl-4">
+                    <li>Ad accounts in your Business Manager</li>
+                    <li>Campaigns, ad sets & ads</li>
+                    <li>Performance metrics (spend, impressions, clicks, conversions)</li>
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <button
               onClick={() => setShowManual(true)}
               className="block mx-auto text-xs text-primary hover:underline"
