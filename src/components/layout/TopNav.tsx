@@ -1,12 +1,17 @@
 import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Moon, Sun
+  Bot, Settings, Moon, Sun, MessageSquare, Bell, Facebook, Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { UserMenu } from "./UserMenu";
+import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -21,6 +26,26 @@ const navItems = [
 export function TopNav() {
   const location = useLocation();
   const { isDark, toggle } = useTheme();
+  const { hasConnection } = useHasActiveMetaConnection();
+  const { currentWorkspace } = useWorkspace();
+  const [connecting, setConnecting] = useState(false);
+
+  const connectMeta = async () => {
+    if (!currentWorkspace) return;
+    setConnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("meta-oauth-start", {
+        body: { workspaceId: currentWorkspace.id },
+      });
+      if (error) throw error;
+      window.open(data.url, "_blank", "width=600,height=700");
+      toast.info("Complete sign-in in the popup, then refresh.");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to start OAuth");
+    } finally {
+      setConnecting(false);
+    }
+  };
 
   return (
     <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
@@ -31,6 +56,31 @@ export function TopNav() {
         </div>
 
         <div className="flex items-center gap-2">
+          {!hasConnection && (
+            <button
+              onClick={connectMeta}
+              disabled={connecting}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+            >
+              {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Facebook className="h-3.5 w-3.5" />}
+              Connect Meta
+            </button>
+          )}
+
+          <button
+            className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            aria-label="Messages"
+          >
+            <MessageSquare className="h-4 w-4" />
+          </button>
+
+          <button
+            className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            aria-label="Notifications"
+          >
+            <Bell className="h-4 w-4" />
+          </button>
+
           <button
             onClick={toggle}
             className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
