@@ -393,30 +393,52 @@ export function MetaConnectionsPanel() {
                   </div>
                 </div>
 
-                {manualReconnectId === c.id && (
-                  <div className="flex gap-2 pl-5">
-                    <Input
-                      value={manualReconnectToken}
-                      onChange={e => setManualReconnectToken(e.target.value)}
-                      placeholder="Paste new Meta access token"
-                      className="text-xs"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => handleManualReconnect(c.id)}
-                      disabled={isReconnecting || !manualReconnectToken.trim()}
-                    >
-                      {isReconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Update"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => { setManualReconnectId(null); setManualReconnectToken(""); }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
+                {manualReconnectId === c.id && (() => {
+                  const reconnectValid = manualReconnectToken.trim().length === 0
+                    ? null
+                    : validateMetaToken(manualReconnectToken);
+                  const reconnectInvalid = reconnectValid?.ok === false;
+                  const reconnectInlineError = manualReconnectError ?? (reconnectInvalid ? reconnectValid!.error : null);
+                  return (
+                    <div className="pl-5 space-y-1">
+                      <div className="flex gap-2">
+                        <Input
+                          value={manualReconnectToken}
+                          onChange={e => { setManualReconnectToken(e.target.value); setManualReconnectError(null); }}
+                          onBlur={() => {
+                            if (manualReconnectToken.trim() && reconnectInvalid) {
+                              setManualReconnectError(reconnectValid!.error);
+                            }
+                          }}
+                          placeholder="Paste new Meta access token"
+                          aria-invalid={!!reconnectInlineError}
+                          aria-describedby={reconnectInlineError ? `reconnect-err-${c.id}` : undefined}
+                          className={cn("text-xs", reconnectInlineError && "border-destructive focus-visible:ring-destructive")}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleManualReconnect(c.id)}
+                          disabled={isReconnecting || !manualReconnectToken.trim() || reconnectInvalid}
+                        >
+                          {isReconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Update"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => { setManualReconnectId(null); setManualReconnectToken(""); setManualReconnectError(null); }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      {reconnectInlineError && (
+                        <p id={`reconnect-err-${c.id}`} className="text-xs text-destructive flex items-start gap-1">
+                          <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                          <span>{reconnectInlineError}</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="pl-5 space-y-1 text-xs">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
