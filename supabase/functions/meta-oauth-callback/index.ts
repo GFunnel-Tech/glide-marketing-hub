@@ -77,6 +77,20 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!memberCheck) return json({ error: "not a workspace member" }, 403);
 
+    // Fetch granted permissions for verification status
+    let grantedScopes: string[] = [];
+    let declinedScopes: string[] = [];
+    try {
+      const permsRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/permissions?access_token=${encodeURIComponent(accessToken)}`,
+      );
+      const perms = await permsRes.json();
+      for (const p of perms.data ?? []) {
+        if (p.status === "granted") grantedScopes.push(p.permission);
+        else declinedScopes.push(p.permission);
+      }
+    } catch (_) { /* non-fatal */ }
+
     const { data: conn, error: connErr } = await admin
       .from("meta_connections")
       .insert({
@@ -87,7 +101,7 @@ Deno.serve(async (req) => {
         meta_user_name: me.name ?? null,
         access_token: accessToken,
         token_expires_at: expiresAt,
-        scopes: [],
+        scopes: grantedScopes,
         status: "active",
       })
       .select()
@@ -127,7 +141,20 @@ Deno.serve(async (req) => {
       finished_at: new Date().toISOString(),
     });
 
-    return json({ ok: true, accountsDiscovered: rows.length });
+    return json({
+      ok: true,
+      accountsDiscovered: rows.length,
+      accounts: rows.slice(0, 10).map((r: any) => ({
+        name: r.account_name,
+        currency: r.currency,
+        business_name: r.business_name,
+      })),
+      metaUserName: me.name ?? null,
+      grantedScopes,
+      declinedScopes,
+      tokenExpiresAt: expiresAt,
+      syncStartsAt: new Date(Date.now() + 60_000).toISOString(),
+    });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
