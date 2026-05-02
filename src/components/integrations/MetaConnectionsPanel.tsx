@@ -546,8 +546,30 @@ export function MetaConnectionsPanel() {
             const liveValid = manualToken.trim().length === 0 ? null : validateMetaToken(manualToken);
             const liveInvalid = liveValid?.ok === false;
             const inlineError = manualTokenError ?? (liveInvalid ? liveValid!.error : null);
+            const isEmpty = manualToken.trim().length === 0;
+            const busy = connecting || verifying;
             return (
-              <div className="mt-2 space-y-2">
+              <div className="mt-3 space-y-3 rounded-md border border-border bg-muted/30 p-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <KeyRound className="h-3.5 w-3.5 text-primary" />
+                    Connect with a manual access token
+                  </p>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Use this when OAuth isn't available — for example, a system-user token from Business Settings.
+                    Paste a long-lived token with <span className="font-mono">ads_read</span> and <span className="font-mono">read_insights</span>.
+                    {" "}
+                    <a
+                      href="https://developers.facebook.com/tools/explorer/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Open Graph API Explorer ↗
+                    </a>
+                  </p>
+                </div>
+
                 <div className="flex gap-2">
                   <Input
                     value={manualToken}
@@ -555,38 +577,63 @@ export function MetaConnectionsPanel() {
                     onBlur={() => {
                       if (manualToken.trim() && liveInvalid) setManualTokenError(liveValid!.error);
                     }}
-                    placeholder="Paste Meta access token (from Graph API Explorer or Business Settings)"
+                    placeholder="EAAG... (paste your Meta access token)"
+                    disabled={busy}
                     aria-invalid={!!inlineError}
                     aria-describedby={inlineError ? "manual-token-err" : "manual-token-help"}
-                    className={cn("text-xs", inlineError && "border-destructive focus-visible:ring-destructive")}
+                    className={cn("text-xs font-mono", inlineError && "border-destructive focus-visible:ring-destructive")}
                   />
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={handleVerifyToken}
-                    disabled={verifying || connecting || !manualToken.trim() || liveInvalid}
+                    disabled={busy || isEmpty || liveInvalid}
                     title="Test the token against Meta without saving it"
                   >
-                    {verifying ? <Loader2 className="h-3 w-3 animate-spin" /> : "Verify"}
+                    {verifying ? (
+                      <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Verifying…</>
+                    ) : "Verify"}
                   </Button>
                   <Button
                     size="sm"
                     onClick={handleManualConnect}
-                    disabled={connecting || verifying || !manualToken.trim() || liveInvalid}
+                    disabled={busy || isEmpty || liveInvalid}
+                    aria-busy={connecting}
                   >
-                    {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Connect"}
+                    {connecting ? (
+                      <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Connecting…</>
+                    ) : "Connect"}
                   </Button>
                 </div>
+
                 {inlineError ? (
                   <p id="manual-token-err" className="text-xs text-destructive flex items-start gap-1">
                     <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
                     <span>{inlineError}</span>
                   </p>
+                ) : isEmpty ? (
+                  <p id="manual-token-help" className="text-[11px] text-muted-foreground italic">
+                    Paste a token above, then click <span className="text-foreground">Verify</span> to test it or <span className="text-foreground">Connect</span> to save it to this workspace.
+                  </p>
                 ) : (
                   <p id="manual-token-help" className="text-[11px] text-muted-foreground">
-                    Use a long-lived user or system-user token with <span className="font-mono">ads_read</span> and <span className="font-mono">read_insights</span> permissions.
+                    Token looks well-formed. Click <span className="text-foreground">Verify</span> to confirm permissions before connecting.
                   </p>
                 )}
+
+                {connecting && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground rounded border border-border bg-background/60 px-2 py-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                    <span>Saving connection and discovering ad accounts…</span>
+                  </div>
+                )}
+                {verifying && !connecting && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground rounded border border-border bg-background/60 px-2 py-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                    <span>Checking token with Meta…</span>
+                  </div>
+                )}
+
                 {verifyResult && verifyResult.ok === true && (
                   <div className="rounded-md border border-success/40 bg-success/10 p-2 text-xs text-foreground flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
