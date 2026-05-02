@@ -1,6 +1,6 @@
 // Exchanges the OAuth code for a long-lived token, stores connection,
-// discovers ad accounts. Called by the metahub.gfunnel.com landing page
-// after Meta redirects back.
+// discovers ad accounts (as PENDING / inactive), and returns the discovered
+// list so the user can pick which ones to sync via meta-confirm-accounts.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       return json({ error: "token exchange failed", details: tok }, 400);
     }
 
-    // 2) Exchange for long-lived token (~60 days)
+    // 2) Long-lived token (~60 days)
     const longUrl = new URL("https://graph.facebook.com/v21.0/oauth/access_token");
     longUrl.searchParams.set("grant_type", "fb_exchange_token");
     longUrl.searchParams.set("client_id", appId);
@@ -56,19 +56,18 @@ Deno.serve(async (req) => {
     const expiresIn: number | undefined = long.expires_in ?? tok.expires_in;
     const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null;
 
-    // 3) Get Meta user identity
+    // 3) Meta user identity
     const meRes = await fetch(
       `https://graph.facebook.com/v21.0/me?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
     );
     const me = await meRes.json();
 
-    // 4) Store connection (service role to bypass RLS, but enforce ownership from state)
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // verify the workspace member relationship
+    // verify membership
     const { data: memberCheck } = await admin
       .from("workspace_members")
       .select("role")
@@ -77,7 +76,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!memberCheck) return json({ error: "not a workspace member" }, 403);
 
-    // Fetch granted permissions for verification status
+    // granted permissions
     let grantedScopes: string[] = [];
     let declinedScopes: string[] = [];
     try {
@@ -91,10 +90,10 @@ Deno.serve(async (req) => {
       }
     } catch (_) { /* non-fatal */ }
 
+    // upsert connection (insert or reconnect)
     let conn: any;
     let connErr: any;
     if (parsed.r) {
-      // Reconnect: update existing connection in place (preserves id and ad-account mappings)
       const upd = await admin
         .from("meta_connections")
         .update({
@@ -135,12 +134,12 @@ Deno.serve(async (req) => {
     }
     if (connErr || !conn) return json({ error: "store connection failed", details: connErr }, 500);
 
-    // 5) Discover ad accounts
+    // Discover ad accounts (insert as inactive — selection step decides what's active)
     const accountsRes = await fetch(
       `https://graph.facebook.com/v21.0/me/adaccounts?fields=account_id,name,currency,timezone_name,account_status,business{id,name}&limit=200&access_token=${encodeURIComponent(accessToken)}`,
     );
     const accounts = await accountsRes.json();
-    const rows = (accounts.data ?? []).map((a: any) => ({
+    const discovered = (accounts.data ?? []).map((a: any) => ({
       workspace_id: parsed.w,
       connection_id: conn.id,
       act_id: `act_${a.account_id}`,
@@ -150,37 +149,50 @@ Deno.serve(async (req) => {
       business_id: a.business?.id ?? null,
       business_name: a.business?.name ?? null,
       account_status: a.account_status ?? null,
-      is_active: true,
+      is_active: false, // pending selection
     }));
 
-    if (rows.length) {
+    if (discovered.length) {
+      // For reconnect, do NOT clobber existing is_active state — only insert new ones.
+      // Do this with two passes: fetch existing act_ids for this connection, then
+      // upsert metadata for known ones (preserving is_active) and insert new with is_active=false.
+      const { data: existing } = await admin
+        .from("meta_ad_accounts")
+        .select("act_id,is_active")
+        .eq("workspace_id", parsed.w)
+        .eq("connection_id", conn.id);
+      const existingMap = new Map((existing ?? []).map((e: any) => [e.act_id, e.is_active]));
+
+      const rowsToUpsert = discovered.map((r: any) => ({
+        ...r,
+        // Keep prior is_active if account already existed; new ones default to false (pending picker)
+        is_active: existingMap.has(r.act_id) ? existingMap.get(r.act_id) : false,
+      }));
+
       await admin
         .from("meta_ad_accounts")
-        .upsert(rows, { onConflict: "workspace_id,act_id" });
+        .upsert(rowsToUpsert, { onConflict: "workspace_id,act_id" });
     }
 
-    await admin.from("meta_sync_log").insert({
-      workspace_id: parsed.w,
-      connection_id: conn.id,
-      trigger: "oauth_connect",
-      status: "success",
-      rows_synced: rows.length,
-      finished_at: new Date().toISOString(),
-    });
+    // Read back accounts (with selection state) to send to client picker
+    const { data: pickable } = await admin
+      .from("meta_ad_accounts")
+      .select("id,act_id,account_name,business_name,currency,account_status,is_active")
+      .eq("workspace_id", parsed.w)
+      .eq("connection_id", conn.id)
+      .order("account_name", { ascending: true });
 
     return json({
       ok: true,
-      accountsDiscovered: rows.length,
-      accounts: rows.slice(0, 10).map((r: any) => ({
-        name: r.account_name,
-        currency: r.currency,
-        business_name: r.business_name,
-      })),
+      connectionId: conn.id,
+      workspaceId: parsed.w,
+      accountsDiscovered: discovered.length,
+      accounts: pickable ?? [],
       metaUserName: me.name ?? null,
       grantedScopes,
       declinedScopes,
       tokenExpiresAt: expiresAt,
-      syncStartsAt: new Date(Date.now() + 60_000).toISOString(),
+      isReconnect: !!parsed.r,
     });
   } catch (e) {
     return json({ error: String(e) }, 500);
