@@ -253,23 +253,111 @@ export function MetaConnectionsPanel() {
         )}
 
         <div className="space-y-2">
-          {connections.map(c => (
-            <div key={c.id} className="flex items-center justify-between rounded border border-border bg-accent/30 px-3 py-2">
-              <div className="flex items-center gap-3">
-                <span className={cn("h-2 w-2 rounded-full", c.status === "active" ? "bg-success" : "bg-destructive")} />
-                <div>
-                  <p className="text-sm font-medium text-foreground">{c.meta_user_name || "Unknown user"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {c.connection_type === "oauth" ? "OAuth" : "Manual token"} · {c.status}
-                    {c.token_expires_at && ` · expires ${new Date(c.token_expires_at).toLocaleDateString()}`}
-                  </p>
+          {connections.map(c => {
+            const ts = tokenState(c);
+            const needsAction = ts.tone !== "ok";
+            const isReconnecting = reconnectingId === c.id;
+            return (
+              <div key={c.id} className="rounded border border-border bg-accent/30 px-3 py-2 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className={cn(
+                      "h-2 w-2 rounded-full shrink-0",
+                      ts.tone === "ok" ? "bg-success" : ts.tone === "warn" ? "bg-warning" : "bg-destructive",
+                    )} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{c.meta_user_name || "Unknown user"}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+                        <span>{c.connection_type === "oauth" ? "OAuth" : "Manual token"}</span>
+                        <span>·</span>
+                        <span className={cn(
+                          ts.tone === "warn" && "text-warning",
+                          ts.tone === "bad" && "text-destructive",
+                        )}>
+                          {needsAction && <AlertTriangle className="h-3 w-3 inline mr-0.5" />}
+                          {ts.label}
+                        </span>
+                        {c.token_expires_at && (
+                          <>
+                            <span>·</span>
+                            <span>{new Date(c.token_expires_at).toLocaleDateString()}</span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {c.connection_type === "oauth" ? (
+                      <Button
+                        size="sm"
+                        variant={needsAction ? "default" : "outline"}
+                        onClick={() => handleReconnectOAuth(c.id)}
+                        disabled={isReconnecting}
+                      >
+                        {isReconnecting
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : <RotateCw className="h-3 w-3" />}
+                        <span className="ml-1">Reconnect</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant={needsAction ? "default" : "outline"}
+                        onClick={() => {
+                          setManualReconnectId(manualReconnectId === c.id ? null : c.id);
+                          setManualReconnectToken("");
+                        }}
+                        disabled={isReconnecting}
+                      >
+                        <KeyRound className="h-3 w-3" />
+                        <span className="ml-1">Refresh token</span>
+                      </Button>
+                    )}
+                    <button
+                      onClick={() => handleDisconnect(c.id)}
+                      className="text-muted-foreground hover:text-destructive p-1"
+                      title="Disconnect"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
+
+                {manualReconnectId === c.id && (
+                  <div className="flex gap-2 pl-5">
+                    <Input
+                      value={manualReconnectToken}
+                      onChange={e => setManualReconnectToken(e.target.value)}
+                      placeholder="Paste new Meta access token"
+                      className="text-xs"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleManualReconnect(c.id)}
+                      disabled={isReconnecting || !manualReconnectToken.trim()}
+                    >
+                      {isReconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Update"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => { setManualReconnectId(null); setManualReconnectToken(""); }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+
+                {needsAction && (
+                  <p className="text-xs text-muted-foreground pl-5">
+                    {ts.tone === "bad"
+                      ? "This connection is no longer syncing. Reconnect to restore data flow."
+                      : "Token expires soon. Reconnect now to avoid sync interruptions."}
+                  </p>
+                )}
               </div>
-              <button onClick={() => handleDisconnect(c.id)} className="text-muted-foreground hover:text-destructive">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-3 pt-3 border-t border-border">
