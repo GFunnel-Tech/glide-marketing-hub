@@ -72,6 +72,24 @@ export default function Notifications() {
       <div className="rounded-lg border border-border bg-card divide-y divide-border">
         {isLoading ? (
           <div className="p-8 text-center text-sm text-muted-foreground">Loading…</div>
+        ) : isError && notifications.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <AlertCircle className="h-8 w-8 text-destructive mx-auto" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">Couldn't load notifications</p>
+              <p className="text-xs text-muted-foreground">
+                {(error as Error)?.message ?? "Something went wrong. Please try again."}
+              </p>
+            </div>
+            <button
+              onClick={() => refetch()}
+              disabled={isRefetching}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
+            >
+              {isRefetching ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              Retry
+            </button>
+          </div>
         ) : notifications.length === 0 ? (
           <div className="p-12 text-center space-y-2">
             <Bell className="h-8 w-8 text-muted-foreground mx-auto" />
