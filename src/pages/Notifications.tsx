@@ -27,6 +27,13 @@ export default function Notifications() {
   const markAll = useMarkAllNotificationsRead();
   const del = useDeleteNotification();
 
+  // Toast on next-page errors (only when we already have items rendered).
+  useEffect(() => {
+    if (isError && (data?.pages?.length ?? 0) > 0) {
+      toast.error((error as Error)?.message ?? "Couldn't load more notifications");
+    }
+  }, [isError, error, data?.pages?.length]);
+
   const notifications = useMemo(
     () => (data?.pages ?? []).flat(),
     [data],
