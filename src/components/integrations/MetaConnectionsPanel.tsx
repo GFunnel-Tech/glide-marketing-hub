@@ -234,10 +234,12 @@ export function MetaConnectionsPanel() {
         },
       });
       if (error) throw error;
-      toast.success(`Token refreshed — ${data.accountsDiscovered} ad accounts available`);
+      if (data?.error) throw new Error(data.error);
+      if (!data?.ok) throw new Error("Token refresh did not persist. Please try again.");
+      toast.success(`Token refreshed — ${data.accountsDiscovered} ad account${data.accountsDiscovered === 1 ? "" : "s"} available`);
       setManualReconnectId(null);
       setManualReconnectToken("");
-      refresh();
+      await refresh();
     } catch (e: any) {
       const msg = e?.message || "Failed to refresh token";
       setManualReconnectError(/token|auth|permission|invalid/i.test(msg) ? msg : null);
