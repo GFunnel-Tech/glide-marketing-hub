@@ -79,7 +79,7 @@ export function useMarkNotificationRead() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", user?.id] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications", user?.id] }); qc.invalidateQueries({ queryKey: ["notifications_infinite", user?.id] }); },
   });
 }
 
@@ -96,7 +96,7 @@ export function useMarkAllNotificationsRead() {
         .is("read_at", null);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", user?.id] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications", user?.id] }); qc.invalidateQueries({ queryKey: ["notifications_infinite", user?.id] }); },
   });
 }
 
@@ -108,6 +108,6 @@ export function useDeleteNotification() {
       const { error } = await (supabase as any).from("notifications").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", user?.id] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications", user?.id] }); qc.invalidateQueries({ queryKey: ["notifications_infinite", user?.id] }); },
   });
 }
