@@ -410,7 +410,7 @@ export function MetaConnectionsPanel() {
                     </p>
                   )}
                 </div>
-
+                {needsAction && (
                   <p className="text-xs text-muted-foreground pl-5">
                     {ts.tone === "bad"
                       ? "This connection is no longer syncing. Reconnect to restore data flow."
