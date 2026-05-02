@@ -29,6 +29,7 @@ export function useNotificationsRealtime() {
           const eventType = (payload?.new?.type ?? payload?.old?.type) as string | undefined;
           if (eventType && !realtimeFor(eventType as any)) return;
           qc.invalidateQueries({ queryKey: ["notifications", user.id] });
+          qc.invalidateQueries({ queryKey: ["notifications_infinite", user.id] });
         },
       )
       .subscribe();
