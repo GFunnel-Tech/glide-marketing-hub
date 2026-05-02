@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MetaConnectionsPanel } from "@/components/integrations/MetaConnectionsPanel";
 
 const integrations = [
   { name: "Meta Ads API", type: "oauth", connected: true, lastSync: "2 min ago" },
@@ -87,7 +88,8 @@ export default function Settings() {
           </div>
         </TabsContent>
 
-        <TabsContent value="integrations">
+        <TabsContent value="integrations" className="space-y-6">
+          <MetaConnectionsPanel />
           <div className="grid grid-cols-2 gap-4">
             {integrations.map(int => (
               <div key={int.name} className={cn("rounded-lg border p-5 space-y-3", int.connected ? "border-border bg-card" : "border-destructive/30 bg-card")}>
