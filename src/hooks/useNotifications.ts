@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -34,6 +34,32 @@ export function useNotifications() {
   });
 }
 
+const PAGE_SIZE = 25;
+
+export function useInfiniteNotifications(pageSize: number = PAGE_SIZE) {
+  const { user } = useAuth();
+  return useInfiniteQuery({
+    queryKey: ["notifications_infinite", user?.id, pageSize],
+    enabled: !!user,
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }: { pageParam: string | null }) => {
+      let q = (supabase as any)
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(pageSize);
+      if (pageParam) q = q.lt("created_at", pageParam);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as Notification[];
+    },
+    getNextPageParam: (last) =>
+      last.length < pageSize ? undefined : last[last.length - 1].created_at,
+  });
+}
+
 export function useUnreadNotificationCount() {
   const q = useNotifications();
   return {
@@ -53,7 +79,7 @@ export function useMarkNotificationRead() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", user?.id] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications", user?.id] }); qc.invalidateQueries({ queryKey: ["notifications_infinite", user?.id] }); },
   });
 }
 
@@ -70,7 +96,7 @@ export function useMarkAllNotificationsRead() {
         .is("read_at", null);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", user?.id] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications", user?.id] }); qc.invalidateQueries({ queryKey: ["notifications_infinite", user?.id] }); },
   });
 }
 
@@ -82,6 +108,6 @@ export function useDeleteNotification() {
       const { error } = await (supabase as any).from("notifications").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications", user?.id] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["notifications", user?.id] }); qc.invalidateQueries({ queryKey: ["notifications_infinite", user?.id] }); },
   });
 }
