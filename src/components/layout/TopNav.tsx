@@ -1,5 +1,6 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useUnreadMessageCount } from "@/hooks/useMessages";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
   Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox
@@ -27,9 +28,11 @@ const navItems = [
 
 export function TopNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isDark, toggle } = useTheme();
   const { hasConnection } = useHasActiveMetaConnection();
   const { currentWorkspace } = useWorkspace();
+  const { data: unreadMessages = 0 } = useUnreadMessageCount();
   const [connecting, setConnecting] = useState(false);
 
   const connectMeta = async () => {
@@ -70,10 +73,16 @@ export function TopNav() {
           )}
 
           <button
+            onClick={() => navigate("/messages")}
             className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            aria-label="Messages"
+            aria-label={`Messages${unreadMessages ? `, ${unreadMessages} unread` : ""}`}
           >
             <MessageSquare className="h-4 w-4" />
+            {unreadMessages > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                {unreadMessages > 99 ? "99+" : unreadMessages}
+              </span>
+            )}
           </button>
 
           <NotificationsBell />
