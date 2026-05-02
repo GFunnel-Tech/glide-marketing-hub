@@ -17,17 +17,20 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Leads from "./pages/Leads";
 import Notifications from "./pages/Notifications";
+import Messages from "./pages/Messages";
 import Onboarding from "./pages/Onboarding";
 import AiAssistant from "./pages/AiAssistant";
 import NotFound from "./pages/NotFound";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
+import { useConversationsRealtime } from "@/hooks/useMessages";
 
 const queryClient = new QueryClient();
 
 function RealtimeProvider({ children }: { children: React.ReactNode }) {
   useRealtimeSync();
   useNotificationsRealtime();
+  useConversationsRealtime();
   return <>{children}</>;
 }
 
