@@ -4,6 +4,7 @@ import { Check, Trash2, Bell, Loader2, AlertCircle, RefreshCw } from "lucide-rea
 import {
   useInfiniteNotifications,
   useMarkNotificationRead,
+  useMarkNotificationsRead,
   useMarkAllNotificationsRead,
   useDeleteNotification,
 } from "@/hooks/useNotifications";
@@ -25,6 +26,7 @@ export default function Notifications() {
     isRefetching,
   } = useInfiniteNotifications();
   const markRead = useMarkNotificationRead();
+  const markReadBulk = useMarkNotificationsRead();
   const markAll = useMarkAllNotificationsRead();
   const del = useDeleteNotification();
 
