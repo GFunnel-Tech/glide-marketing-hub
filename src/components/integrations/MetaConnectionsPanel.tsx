@@ -79,6 +79,8 @@ export function MetaConnectionsPanel() {
   const [reconnectingId, setReconnectingId] = useState<string | null>(null);
   const [manualReconnectId, setManualReconnectId] = useState<string | null>(null);
   const [manualReconnectToken, setManualReconnectToken] = useState("");
+  const [manualTokenError, setManualTokenError] = useState<string | null>(null);
+  const [manualReconnectError, setManualReconnectError] = useState<string | null>(null);
 
   const refresh = async () => {
     if (!currentWorkspace) return;
