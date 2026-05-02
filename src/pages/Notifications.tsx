@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Check, Trash2, Bell, Loader2 } from "lucide-react";
+import { Check, Trash2, Bell, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import {
   useInfiniteNotifications,
   useMarkNotificationRead,
@@ -8,6 +8,7 @@ import {
   useDeleteNotification,
 } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const fmt = (s: string) => new Date(s).toLocaleString();
 
@@ -18,10 +19,21 @@ export default function Notifications() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isError,
+    error,
+    refetch,
+    isRefetching,
   } = useInfiniteNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
   const del = useDeleteNotification();
+
+  // Toast on next-page errors (only when we already have items rendered).
+  useEffect(() => {
+    if (isError && (data?.pages?.length ?? 0) > 0) {
+      toast.error((error as Error)?.message ?? "Couldn't load more notifications");
+    }
+  }, [isError, error, data?.pages?.length]);
 
   const notifications = useMemo(
     () => (data?.pages ?? []).flat(),
@@ -68,6 +80,24 @@ export default function Notifications() {
       <div className="rounded-lg border border-border bg-card divide-y divide-border">
         {isLoading ? (
           <div className="p-8 text-center text-sm text-muted-foreground">Loading…</div>
+        ) : isError && notifications.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <AlertCircle className="h-8 w-8 text-destructive mx-auto" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">Couldn't load notifications</p>
+              <p className="text-xs text-muted-foreground">
+                {(error as Error)?.message ?? "Something went wrong. Please try again."}
+              </p>
+            </div>
+            <button
+              onClick={() => refetch()}
+              disabled={isRefetching}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
+            >
+              {isRefetching ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              Retry
+            </button>
+          </div>
         ) : notifications.length === 0 ? (
           <div className="p-12 text-center space-y-2">
             <Bell className="h-8 w-8 text-muted-foreground mx-auto" />
@@ -124,9 +154,23 @@ export default function Notifications() {
               </div>
             ))}
 
-            {/* Sentinel + load-more fallback */}
+            {/* Sentinel + load-more / retry fallback */}
             <div ref={sentinelRef} className="p-4 flex items-center justify-center">
-              {hasNextPage ? (
+              {isError && hasNextPage ? (
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-xs text-destructive inline-flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> Failed to load more
+                  </span>
+                  <button
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
+                  >
+                    {isFetchingNextPage ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                    Retry
+                  </button>
+                </div>
+              ) : hasNextPage ? (
                 <button
                   onClick={() => fetchNextPage()}
                   disabled={isFetchingNextPage}
@@ -146,6 +190,7 @@ export default function Notifications() {
                 </span>
               )}
             </div>
+
           </>
         )}
       </div>
