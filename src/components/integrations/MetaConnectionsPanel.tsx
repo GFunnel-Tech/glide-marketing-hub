@@ -16,6 +16,18 @@ interface MetaConnection {
   status: string;
   token_expires_at: string | null;
   created_at: string;
+  last_error: string | null;
+}
+
+interface SyncLogEntry {
+  id: string;
+  connection_id: string | null;
+  status: string;
+  trigger: string;
+  rows_synced: number | null;
+  error_message: string | null;
+  started_at: string;
+  finished_at: string | null;
 }
 
 interface MetaAdAccount {
