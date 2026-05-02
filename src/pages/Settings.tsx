@@ -144,3 +144,90 @@ export default function Settings() {
     </div>
   );
 }
+
+function NotificationPreferencesPanel() {
+  const { currentWorkspace } = useWorkspace();
+  const { isLoading, getPref, upsert } = useNotificationPreferences();
+
+  if (!currentWorkspace) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+        Select a workspace to manage notification preferences.
+      </div>
+    );
+  }
+
+  const handleToggle = async (
+    eventType: NotificationEventType,
+    field: "in_app_enabled" | "realtime_enabled",
+    value: boolean,
+  ) => {
+    try {
+      await upsert.mutateAsync({ eventType, [field]: value });
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to update preference");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-border bg-card p-5">
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-foreground">Notification preferences</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Choose which events create notifications and which arrive in realtime. Preferences are
+            scoped to <span className="text-foreground font-medium">{currentWorkspace.name}</span>.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 gap-y-1 items-center text-xs text-muted-foreground pb-2 border-b border-border">
+          <span>Event</span>
+          <span className="flex items-center gap-1 justify-end"><Bell className="h-3 w-3" /> In-app</span>
+          <span className="flex items-center gap-1 justify-end"><Zap className="h-3 w-3" /> Realtime</span>
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading preferences…
+          </div>
+        ) : (
+          NOTIFICATION_EVENTS.map(evt => {
+            const pref = getPref(evt.key);
+            return (
+              <div
+                key={evt.key}
+                className="grid grid-cols-[1fr_auto_auto] gap-x-6 items-center py-3 border-b border-border last:border-0"
+              >
+                <div>
+                  <p className="text-sm font-medium text-foreground">{evt.label}</p>
+                  <p className="text-xs text-muted-foreground">{evt.description}</p>
+                </div>
+                <div className="flex justify-end">
+                  <Switch
+                    checked={pref.in_app_enabled}
+                    onCheckedChange={v => handleToggle(evt.key, "in_app_enabled", v)}
+                    disabled={upsert.isPending}
+                    aria-label={`Enable in-app notifications for ${evt.label}`}
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Switch
+                    checked={pref.realtime_enabled && pref.in_app_enabled}
+                    onCheckedChange={v => handleToggle(evt.key, "realtime_enabled", v)}
+                    disabled={upsert.isPending || !pref.in_app_enabled}
+                    aria-label={`Enable realtime updates for ${evt.label}`}
+                  />
+                </div>
+              </div>
+            );
+          })
+        )}
+
+        <p className="text-xs text-muted-foreground mt-4">
+          When in-app is off, no notification is created for that event. When realtime is off, the
+          bell will refresh on next page load instead of pushing live.
+        </p>
+      </div>
+    </div>
+  );
+}
