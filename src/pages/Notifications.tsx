@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Check, Trash2, Bell, Loader2 } from "lucide-react";
+import { Check, Trash2, Bell, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import {
   useInfiniteNotifications,
   useMarkNotificationRead,
@@ -18,6 +18,10 @@ export default function Notifications() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isError,
+    error,
+    refetch,
+    isRefetching,
   } = useInfiniteNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
