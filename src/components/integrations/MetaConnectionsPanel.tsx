@@ -27,10 +27,11 @@ const metaTokenSchema = z
     message: "Token contains invalid characters. Copy it directly from Meta's Graph API Explorer or Business Settings.",
   });
 
-function validateMetaToken(raw: string): { ok: true; value: string } | { ok: false; error: string } {
+type ValidationResult = { ok: true; value: string } | { ok: false; error: string };
+function validateMetaToken(raw: string): ValidationResult {
   const result = metaTokenSchema.safeParse(raw);
-  if (result.success) return { ok: true, value: result.data };
-  return { ok: false, error: result.error.issues[0]?.message ?? "Invalid token." };
+  if (result.success) return { ok: true as const, value: result.data };
+  return { ok: false as const, error: result.error.issues[0]?.message ?? "Invalid token." };
 }
 
 interface MetaConnection {
