@@ -43,6 +43,41 @@ export default function Notifications() {
   );
   const unread = notifications.filter((n) => !n.read_at).length;
 
+  // Auto-mark currently-rendered unread notifications as read whenever
+  // the user lands on / returns to this page (mount, tab focus, browser
+  // back). Keeps the bell badge accurate without requiring per-row clicks.
+  // Guarded by a ref to avoid resending the same ids on every render.
+  const sweptIdsRef = useRef<Set<string>>(new Set());
+  const sweepUnread = useMemo(
+    () => () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      const ids = notifications
+        .filter((n) => !n.read_at && !sweptIdsRef.current.has(n.id))
+        .map((n) => n.id);
+      if (!ids.length) return;
+      ids.forEach((id) => sweptIdsRef.current.add(id));
+      markReadBulk.mutate(ids);
+    },
+    [notifications, markReadBulk],
+  );
+
+  useEffect(() => {
+    sweepUnread();
+  }, [sweepUnread]);
+
+  useEffect(() => {
+    const onFocus = () => sweepUnread();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") sweepUnread();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [sweepUnread]);
+
   // IntersectionObserver sentinel for auto-loading the next page.
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
