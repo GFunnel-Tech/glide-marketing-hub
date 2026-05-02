@@ -154,9 +154,23 @@ export default function Notifications() {
               </div>
             ))}
 
-            {/* Sentinel + load-more fallback */}
+            {/* Sentinel + load-more / retry fallback */}
             <div ref={sentinelRef} className="p-4 flex items-center justify-center">
-              {hasNextPage ? (
+              {isError && hasNextPage ? (
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-xs text-destructive inline-flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> Failed to load more
+                  </span>
+                  <button
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
+                  >
+                    {isFetchingNextPage ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                    Retry
+                  </button>
+                </div>
+              ) : hasNextPage ? (
                 <button
                   onClick={() => fetchNextPage()}
                   disabled={isFetchingNextPage}
@@ -176,6 +190,7 @@ export default function Notifications() {
                 </span>
               )}
             </div>
+
           </>
         )}
       </div>
