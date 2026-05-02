@@ -765,6 +765,39 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          in_app_enabled: boolean
+          realtime_enabled: boolean
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          in_app_enabled?: boolean
+          realtime_enabled?: boolean
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          in_app_enabled?: boolean
+          realtime_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
@@ -1136,6 +1169,10 @@ export type Database = {
       }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      notif_pref_enabled: {
+        Args: { _event_type: string; _user_id: string; _workspace_id: string }
         Returns: boolean
       }
       workspace_role_of: {
