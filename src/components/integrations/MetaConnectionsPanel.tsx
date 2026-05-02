@@ -541,11 +541,11 @@ export function MetaConnectionsPanel() {
             const liveInvalid = liveValid?.ok === false;
             const inlineError = manualTokenError ?? (liveInvalid ? liveValid!.error : null);
             return (
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-2">
                 <div className="flex gap-2">
                   <Input
                     value={manualToken}
-                    onChange={e => { setManualToken(e.target.value); setManualTokenError(null); }}
+                    onChange={e => { setManualToken(e.target.value); setManualTokenError(null); setVerifyResult(null); }}
                     onBlur={() => {
                       if (manualToken.trim() && liveInvalid) setManualTokenError(liveValid!.error);
                     }}
@@ -556,8 +556,17 @@ export function MetaConnectionsPanel() {
                   />
                   <Button
                     size="sm"
+                    variant="outline"
+                    onClick={handleVerifyToken}
+                    disabled={verifying || connecting || !manualToken.trim() || liveInvalid}
+                    title="Test the token against Meta without saving it"
+                  >
+                    {verifying ? <Loader2 className="h-3 w-3 animate-spin" /> : "Verify"}
+                  </Button>
+                  <Button
+                    size="sm"
                     onClick={handleManualConnect}
-                    disabled={connecting || !manualToken.trim() || liveInvalid}
+                    disabled={connecting || verifying || !manualToken.trim() || liveInvalid}
                   >
                     {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Connect"}
                   </Button>
@@ -571,6 +580,31 @@ export function MetaConnectionsPanel() {
                   <p id="manual-token-help" className="text-[11px] text-muted-foreground">
                     Use a long-lived user or system-user token with <span className="font-mono">ads_read</span> and <span className="font-mono">read_insights</span> permissions.
                   </p>
+                )}
+                {verifyResult && (
+                  verifyResult.ok ? (
+                    <div className="rounded-md border border-success/40 bg-success/10 p-2 text-xs text-foreground flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <p className="font-medium text-success">Token verified</p>
+                        <p className="text-muted-foreground">
+                          {verifyResult.metaUserName ? <>Authorized as <span className="text-foreground font-medium">{verifyResult.metaUserName}</span> · </> : null}
+                          {verifyResult.adAccountCount} ad account{verifyResult.adAccountCount === 1 ? "" : "s"} accessible
+                        </p>
+                        {verifyResult.grantedScopes.length > 0 && (
+                          <p className="text-muted-foreground">Scopes: <span className="font-mono">{verifyResult.grantedScopes.join(", ")}</span></p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive flex items-start gap-2">
+                      <XCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium">Verification failed</p>
+                        <p className="break-words">{verifyResult.error}</p>
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
             );
