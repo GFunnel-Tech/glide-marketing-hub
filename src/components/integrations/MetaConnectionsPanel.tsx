@@ -452,13 +452,32 @@ export function MetaConnectionsPanel() {
                         <span className="ml-1">Refresh token</span>
                       </Button>
                     )}
-                    <button
-                      onClick={() => handleDisconnect(c.id)}
-                      className="text-muted-foreground hover:text-destructive p-1"
-                      title="Disconnect"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {c.connection_type === "manual" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDisconnect(c.id)}
+                        disabled={disconnectingId === c.id || isReconnecting}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                        title="Disconnect this manually connected Meta account"
+                      >
+                        {disconnectingId === c.id
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : <Trash2 className="h-3 w-3" />}
+                        <span className="ml-1">Disconnect</span>
+                      </Button>
+                    ) : (
+                      <button
+                        onClick={() => handleDisconnect(c.id)}
+                        disabled={disconnectingId === c.id}
+                        className="text-muted-foreground hover:text-destructive p-1 disabled:opacity-50"
+                        title="Disconnect"
+                      >
+                        {disconnectingId === c.id
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Trash2 className="h-4 w-4" />}
+                      </button>
+                    )}
                   </div>
                 </div>
 
