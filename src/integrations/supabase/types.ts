@@ -538,6 +538,78 @@ export type Database = {
           },
         ]
       }
+      meta_leads: {
+        Row: {
+          ad_account_id: string
+          ad_id: string | null
+          ad_name: string | null
+          adset_id: string | null
+          adset_name: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          client_id: number | null
+          created_at: string
+          created_time: string | null
+          email: string | null
+          field_data: Json | null
+          form_id: string | null
+          form_name: string | null
+          full_name: string | null
+          id: string
+          lead_id: string
+          phone: string | null
+          raw: Json | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_account_id: string
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: number | null
+          created_at?: string
+          created_time?: string | null
+          email?: string | null
+          field_data?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          lead_id: string
+          phone?: string | null
+          raw?: Json | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_account_id?: string
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: number | null
+          created_at?: string
+          created_time?: string | null
+          email?: string | null
+          field_data?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          lead_id?: string
+          phone?: string | null
+          raw?: Json | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       meta_sync_log: {
         Row: {
           ad_account_id: string | null
