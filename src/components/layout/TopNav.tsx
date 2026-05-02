@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Moon, Sun, MessageSquare, Bell, Facebook, Loader2, Inbox
+  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
@@ -12,6 +12,7 @@ import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -75,12 +76,7 @@ export function TopNav() {
             <MessageSquare className="h-4 w-4" />
           </button>
 
-          <button
-            className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="h-4 w-4" />
-          </button>
+          <NotificationsBell />
 
           <button
             onClick={toggle}

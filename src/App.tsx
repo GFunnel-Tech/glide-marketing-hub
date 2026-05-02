@@ -16,15 +16,18 @@ import Campaigns from "./pages/Campaigns";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Leads from "./pages/Leads";
+import Notifications from "./pages/Notifications";
 import Onboarding from "./pages/Onboarding";
 import AiAssistant from "./pages/AiAssistant";
 import NotFound from "./pages/NotFound";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
 
 const queryClient = new QueryClient();
 
 function RealtimeProvider({ children }: { children: React.ReactNode }) {
   useRealtimeSync();
+  useNotificationsRealtime();
   return <>{children}</>;
 }
 
@@ -58,6 +61,7 @@ const App = () => (
                   <Route path="settings" element={<Settings />} />
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="ai" element={<AiAssistant />} />
+                  <Route path="notifications" element={<Notifications />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
