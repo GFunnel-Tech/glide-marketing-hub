@@ -160,6 +160,12 @@ export function MetaConnectionsPanel() {
               {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Facebook className="h-4 w-4 mr-2" />}
               Connect with Meta
             </Button>
+            <button
+              onClick={() => setShowManual(true)}
+              className="block mx-auto text-xs text-primary hover:underline"
+            >
+              Connect with a manual access token instead
+            </button>
           </div>
         )}
 
