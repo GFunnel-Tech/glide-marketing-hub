@@ -8,6 +8,31 @@ import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info, RotateCw, Aler
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { z } from "zod";
+
+// Meta user/system-user access tokens are opaque strings.
+// They are typically 100–500 chars of URL-safe base64-ish characters.
+// We validate shape only — the server still verifies the token with Graph API.
+const META_TOKEN_REGEX = /^[A-Za-z0-9_\-|.]+$/;
+const metaTokenSchema = z
+  .string()
+  .trim()
+  .min(1, { message: "Access token is required." })
+  .min(50, { message: "This doesn't look like a Meta token — it's too short (expected 50+ characters)." })
+  .max(2000, { message: "Access token is too long (max 2000 characters)." })
+  .refine(v => !/\s/.test(v), { message: "Token must not contain spaces or line breaks." })
+  .refine(v => !/^bearer\s+/i.test(v), { message: "Remove the \"Bearer \" prefix — paste only the token itself." })
+  .refine(v => !/^["'].*["']$/.test(v), { message: "Remove the surrounding quotes — paste only the token itself." })
+  .refine(v => META_TOKEN_REGEX.test(v), {
+    message: "Token contains invalid characters. Copy it directly from Meta's Graph API Explorer or Business Settings.",
+  });
+
+type ValidationResult = { ok: true; value: string } | { ok: false; error: string };
+function validateMetaToken(raw: string): ValidationResult {
+  const result = metaTokenSchema.safeParse(raw);
+  if (result.success) return { ok: true as const, value: result.data };
+  return { ok: false as const, error: result.error.issues[0]?.message ?? "Invalid token." };
+}
 
 interface MetaConnection {
   id: string;
@@ -55,6 +80,8 @@ export function MetaConnectionsPanel() {
   const [reconnectingId, setReconnectingId] = useState<string | null>(null);
   const [manualReconnectId, setManualReconnectId] = useState<string | null>(null);
   const [manualReconnectToken, setManualReconnectToken] = useState("");
+  const [manualTokenError, setManualTokenError] = useState<string | null>(null);
+  const [manualReconnectError, setManualReconnectError] = useState<string | null>(null);
 
   const refresh = async () => {
     if (!currentWorkspace) return;
@@ -90,11 +117,18 @@ export function MetaConnectionsPanel() {
   };
 
   const handleManualConnect = async () => {
-    if (!currentWorkspace || !manualToken.trim()) return;
+    if (!currentWorkspace) return;
+    const validated = validateMetaToken(manualToken);
+    if (validated.ok === false) {
+      setManualTokenError(validated.error);
+      toast.error(validated.error);
+      return;
+    }
+    setManualTokenError(null);
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke("meta-connect-manual", {
-        body: { workspaceId: currentWorkspace.id, accessToken: manualToken.trim() },
+        body: { workspaceId: currentWorkspace.id, accessToken: validated.value },
       });
       if (error) throw error;
       toast.success(`Connected — ${data.accountsDiscovered} ad accounts discovered`);
@@ -102,7 +136,9 @@ export function MetaConnectionsPanel() {
       setShowManual(false);
       refresh();
     } catch (e: any) {
-      toast.error(e.message || "Failed to connect");
+      const msg = e?.message || "Failed to connect";
+      setManualTokenError(/token|auth|permission|invalid/i.test(msg) ? msg : null);
+      toast.error(msg);
     } finally {
       setConnecting(false);
     }
@@ -133,13 +169,20 @@ export function MetaConnectionsPanel() {
   };
 
   const handleManualReconnect = async (id: string) => {
-    if (!currentWorkspace || !manualReconnectToken.trim()) return;
+    if (!currentWorkspace) return;
+    const validated = validateMetaToken(manualReconnectToken);
+    if (validated.ok === false) {
+      setManualReconnectError(validated.error);
+      toast.error(validated.error);
+      return;
+    }
+    setManualReconnectError(null);
     setReconnectingId(id);
     try {
       const { data, error } = await supabase.functions.invoke("meta-connect-manual", {
         body: {
           workspaceId: currentWorkspace.id,
-          accessToken: manualReconnectToken.trim(),
+          accessToken: validated.value,
           reconnectId: id,
         },
       });
@@ -149,7 +192,9 @@ export function MetaConnectionsPanel() {
       setManualReconnectToken("");
       refresh();
     } catch (e: any) {
-      toast.error(e.message || "Failed to refresh token");
+      const msg = e?.message || "Failed to refresh token";
+      setManualReconnectError(/token|auth|permission|invalid/i.test(msg) ? msg : null);
+      toast.error(msg);
     } finally {
       setReconnectingId(null);
     }
@@ -348,30 +393,52 @@ export function MetaConnectionsPanel() {
                   </div>
                 </div>
 
-                {manualReconnectId === c.id && (
-                  <div className="flex gap-2 pl-5">
-                    <Input
-                      value={manualReconnectToken}
-                      onChange={e => setManualReconnectToken(e.target.value)}
-                      placeholder="Paste new Meta access token"
-                      className="text-xs"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => handleManualReconnect(c.id)}
-                      disabled={isReconnecting || !manualReconnectToken.trim()}
-                    >
-                      {isReconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Update"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => { setManualReconnectId(null); setManualReconnectToken(""); }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
+                {manualReconnectId === c.id && (() => {
+                  const reconnectValid = manualReconnectToken.trim().length === 0
+                    ? null
+                    : validateMetaToken(manualReconnectToken);
+                  const reconnectInvalid = reconnectValid?.ok === false;
+                  const reconnectInlineError = manualReconnectError ?? (reconnectInvalid ? reconnectValid!.error : null);
+                  return (
+                    <div className="pl-5 space-y-1">
+                      <div className="flex gap-2">
+                        <Input
+                          value={manualReconnectToken}
+                          onChange={e => { setManualReconnectToken(e.target.value); setManualReconnectError(null); }}
+                          onBlur={() => {
+                            if (manualReconnectToken.trim() && reconnectInvalid) {
+                              setManualReconnectError(reconnectValid!.error);
+                            }
+                          }}
+                          placeholder="Paste new Meta access token"
+                          aria-invalid={!!reconnectInlineError}
+                          aria-describedby={reconnectInlineError ? `reconnect-err-${c.id}` : undefined}
+                          className={cn("text-xs", reconnectInlineError && "border-destructive focus-visible:ring-destructive")}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleManualReconnect(c.id)}
+                          disabled={isReconnecting || !manualReconnectToken.trim() || reconnectInvalid}
+                        >
+                          {isReconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Update"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => { setManualReconnectId(null); setManualReconnectToken(""); setManualReconnectError(null); }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      {reconnectInlineError && (
+                        <p id={`reconnect-err-${c.id}`} className="text-xs text-destructive flex items-start gap-1">
+                          <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                          <span>{reconnectInlineError}</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="pl-5 space-y-1 text-xs">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -426,19 +493,45 @@ export function MetaConnectionsPanel() {
           <button onClick={() => setShowManual(s => !s)} className="text-xs text-primary hover:underline">
             {showManual ? "Hide" : "Use a manual access token instead"}
           </button>
-          {showManual && (
-            <div className="mt-2 flex gap-2">
-              <Input
-                value={manualToken}
-                onChange={e => setManualToken(e.target.value)}
-                placeholder="Paste Meta access token"
-                className="text-xs"
-              />
-              <Button size="sm" onClick={handleManualConnect} disabled={connecting || !manualToken.trim()}>
-                Connect
-              </Button>
-            </div>
-          )}
+          {showManual && (() => {
+            const liveValid = manualToken.trim().length === 0 ? null : validateMetaToken(manualToken);
+            const liveInvalid = liveValid?.ok === false;
+            const inlineError = manualTokenError ?? (liveInvalid ? liveValid!.error : null);
+            return (
+              <div className="mt-2 space-y-1">
+                <div className="flex gap-2">
+                  <Input
+                    value={manualToken}
+                    onChange={e => { setManualToken(e.target.value); setManualTokenError(null); }}
+                    onBlur={() => {
+                      if (manualToken.trim() && liveInvalid) setManualTokenError(liveValid!.error);
+                    }}
+                    placeholder="Paste Meta access token (from Graph API Explorer or Business Settings)"
+                    aria-invalid={!!inlineError}
+                    aria-describedby={inlineError ? "manual-token-err" : "manual-token-help"}
+                    className={cn("text-xs", inlineError && "border-destructive focus-visible:ring-destructive")}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleManualConnect}
+                    disabled={connecting || !manualToken.trim() || liveInvalid}
+                  >
+                    {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Connect"}
+                  </Button>
+                </div>
+                {inlineError ? (
+                  <p id="manual-token-err" className="text-xs text-destructive flex items-start gap-1">
+                    <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                    <span>{inlineError}</span>
+                  </p>
+                ) : (
+                  <p id="manual-token-help" className="text-[11px] text-muted-foreground">
+                    Use a long-lived user or system-user token with <span className="font-mono">ads_read</span> and <span className="font-mono">read_insights</span> permissions.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
