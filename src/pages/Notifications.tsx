@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Check, Trash2, Bell, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import {
   useInfiniteNotifications,
   useMarkNotificationRead,
+  useMarkNotificationsRead,
   useMarkAllNotificationsRead,
   useDeleteNotification,
 } from "@/hooks/useNotifications";
@@ -25,8 +26,10 @@ export default function Notifications() {
     isRefetching,
   } = useInfiniteNotifications();
   const markRead = useMarkNotificationRead();
+  const markReadBulk = useMarkNotificationsRead();
   const markAll = useMarkAllNotificationsRead();
   const del = useDeleteNotification();
+  const navigate = useNavigate();
 
   // Toast on next-page errors (only when we already have items rendered).
   useEffect(() => {
@@ -40,6 +43,41 @@ export default function Notifications() {
     [data],
   );
   const unread = notifications.filter((n) => !n.read_at).length;
+
+  // Auto-mark currently-rendered unread notifications as read whenever
+  // the user lands on / returns to this page (mount, tab focus, browser
+  // back). Keeps the bell badge accurate without requiring per-row clicks.
+  // Guarded by a ref to avoid resending the same ids on every render.
+  const sweptIdsRef = useRef<Set<string>>(new Set());
+  const sweepUnread = useMemo(
+    () => () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      const ids = notifications
+        .filter((n) => !n.read_at && !sweptIdsRef.current.has(n.id))
+        .map((n) => n.id);
+      if (!ids.length) return;
+      ids.forEach((id) => sweptIdsRef.current.add(id));
+      markReadBulk.mutate(ids);
+    },
+    [notifications, markReadBulk],
+  );
+
+  useEffect(() => {
+    sweepUnread();
+  }, [sweepUnread]);
+
+  useEffect(() => {
+    const onFocus = () => sweepUnread();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") sweepUnread();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [sweepUnread]);
 
   // IntersectionObserver sentinel for auto-loading the next page.
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -105,54 +143,61 @@ export default function Notifications() {
           </div>
         ) : (
           <>
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={cn(
-                  "flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors",
-                  !n.read_at && "bg-primary/5"
-                )}
-              >
-                <span className={cn("mt-2 h-2 w-2 rounded-full shrink-0", !n.read_at ? "bg-primary" : "bg-muted")} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      {n.link ? (
-                        <Link
-                          to={n.link}
-                          onClick={() => !n.read_at && markRead.mutate(n.id)}
-                          className="text-sm font-semibold text-foreground hover:text-primary"
-                        >
+            {notifications.map((n) => {
+              const handleRowActivate = () => {
+                if (!n.read_at) markRead.mutate(n.id);
+                if (n.link) navigate(n.link);
+              };
+              return (
+                <div
+                  key={n.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={handleRowActivate}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleRowActivate();
+                    }
+                  }}
+                  className={cn(
+                    "flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors cursor-pointer outline-none focus-visible:bg-accent/40",
+                    !n.read_at && "bg-primary/5"
+                  )}
+                >
+                  <span className={cn("mt-2 h-2 w-2 rounded-full shrink-0", !n.read_at ? "bg-primary" : "bg-muted")} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className={cn("text-sm font-semibold text-foreground", n.link && "hover:text-primary")}>
                           {n.title}
-                        </Link>
-                      ) : (
-                        <span className="text-sm font-semibold text-foreground">{n.title}</span>
-                      )}
-                      {n.body && <p className="text-sm text-muted-foreground mt-0.5">{n.body}</p>}
-                      <p className="text-xs text-muted-foreground mt-1">{fmt(n.created_at)}</p>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {!n.read_at && (
+                        </span>
+                        {n.body && <p className="text-sm text-muted-foreground mt-0.5">{n.body}</p>}
+                        <p className="text-xs text-muted-foreground mt-1">{fmt(n.created_at)}</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {!n.read_at && (
+                          <button
+                            onClick={() => markRead.mutate(n.id)}
+                            className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent"
+                            title="Mark as read"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
-                          onClick={() => markRead.mutate(n.id)}
-                          className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent"
-                          title="Mark as read"
+                          onClick={() => del.mutate(n.id)}
+                          className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          title="Delete"
                         >
-                          <Check className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                      )}
-                      <button
-                        onClick={() => del.mutate(n.id)}
-                        className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Sentinel + load-more / retry fallback */}
             <div ref={sentinelRef} className="p-4 flex items-center justify-center">

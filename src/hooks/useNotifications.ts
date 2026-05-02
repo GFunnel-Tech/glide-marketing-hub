@@ -110,6 +110,25 @@ export function useMarkNotificationRead() {
   });
 }
 
+export function useMarkNotificationsRead() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (!ids.length) return;
+      const { error } = await (supabase as any)
+        .from("notifications")
+        .update({ read_at: new Date().toISOString() })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    retry: 2,
+    retryDelay: queryRetryDelay,
+    onSuccess: () => invalidateAll(qc, user?.id),
+    // Silent: this is used for background "mark visible as read" sweeps.
+  });
+}
+
 export function useMarkAllNotificationsRead() {
   const qc = useQueryClient();
   const { user } = useAuth();
