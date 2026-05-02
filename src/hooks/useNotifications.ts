@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -31,6 +31,32 @@ export function useNotifications() {
       return (data ?? []) as Notification[];
     },
     enabled: !!user,
+  });
+}
+
+const PAGE_SIZE = 25;
+
+export function useInfiniteNotifications(pageSize: number = PAGE_SIZE) {
+  const { user } = useAuth();
+  return useInfiniteQuery({
+    queryKey: ["notifications_infinite", user?.id, pageSize],
+    enabled: !!user,
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }: { pageParam: string | null }) => {
+      let q = (supabase as any)
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(pageSize);
+      if (pageParam) q = q.lt("created_at", pageParam);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as Notification[];
+    },
+    getNextPageParam: (last) =>
+      last.length < pageSize ? undefined : last[last.length - 1].created_at,
   });
 }
 
