@@ -8,6 +8,7 @@ import { ArrowLeft, ExternalLink, RefreshCw, Pencil, AlertTriangle, CheckCircle,
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { LeadsByClient } from "@/components/leads/LeadsByClient";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -234,6 +235,9 @@ export default function ClientProfile() {
               </div>
             </div>
           )}
+
+          {/* Meta Leads */}
+          <LeadsByClient clientId={client.id} />
         </div>
 
         {/* RIGHT COLUMN (2/5) */}
