@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ClientPortal from "./pages/ClientPortal";
+import MetaCallback from "./pages/MetaCallback";
 import ClientProfile from "./pages/ClientProfile";
 import Campaigns from "./pages/Campaigns";
 import Reports from "./pages/Reports";
@@ -37,6 +38,7 @@ const App = () => (
               <Sonner />
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/meta/callback" element={<MetaCallback />} />
                 <Route path="/client-portal/:id" element={<ClientPortal />} />
                 <Route
                   path="/"
