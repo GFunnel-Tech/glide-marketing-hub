@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Moon, Sun, MessageSquare, Bell, Facebook, Loader2
+  Bot, Settings, Moon, Sun, MessageSquare, Bell, Facebook, Loader2, Inbox
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
@@ -17,6 +17,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: Users, label: "Clients", path: "/clients" },
   { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
+  { icon: Inbox, label: "Leads", path: "/leads" },
   { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
   { icon: FileBarChart, label: "Reports", path: "/reports" },
   { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },

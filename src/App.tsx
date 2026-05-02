@@ -15,6 +15,7 @@ import ClientProfile from "./pages/ClientProfile";
 import Campaigns from "./pages/Campaigns";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import Leads from "./pages/Leads";
 import Onboarding from "./pages/Onboarding";
 import AiAssistant from "./pages/AiAssistant";
 import NotFound from "./pages/NotFound";
@@ -52,6 +53,7 @@ const App = () => (
                   <Route path="clients" element={<Index />} />
                   <Route path="client/:id" element={<ClientProfile />} />
                   <Route path="campaigns" element={<Campaigns />} />
+                  <Route path="leads" element={<Leads />} />
                   <Route path="reports" element={<Reports />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="onboarding" element={<Onboarding />} />
