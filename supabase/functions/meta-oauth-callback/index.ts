@@ -141,7 +141,20 @@ Deno.serve(async (req) => {
       finished_at: new Date().toISOString(),
     });
 
-    return json({ ok: true, accountsDiscovered: rows.length });
+    return json({
+      ok: true,
+      accountsDiscovered: rows.length,
+      accounts: rows.slice(0, 10).map((r: any) => ({
+        name: r.account_name,
+        currency: r.currency,
+        business_name: r.business_name,
+      })),
+      metaUserName: me.name ?? null,
+      grantedScopes,
+      declinedScopes,
+      tokenExpiresAt: expiresAt,
+      syncStartsAt: new Date(Date.now() + 60_000).toISOString(),
+    });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
