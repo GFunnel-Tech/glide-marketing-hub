@@ -493,19 +493,45 @@ export function MetaConnectionsPanel() {
           <button onClick={() => setShowManual(s => !s)} className="text-xs text-primary hover:underline">
             {showManual ? "Hide" : "Use a manual access token instead"}
           </button>
-          {showManual && (
-            <div className="mt-2 flex gap-2">
-              <Input
-                value={manualToken}
-                onChange={e => setManualToken(e.target.value)}
-                placeholder="Paste Meta access token"
-                className="text-xs"
-              />
-              <Button size="sm" onClick={handleManualConnect} disabled={connecting || !manualToken.trim()}>
-                Connect
-              </Button>
-            </div>
-          )}
+          {showManual && (() => {
+            const liveValid = manualToken.trim().length === 0 ? null : validateMetaToken(manualToken);
+            const liveInvalid = liveValid?.ok === false;
+            const inlineError = manualTokenError ?? (liveInvalid ? liveValid!.error : null);
+            return (
+              <div className="mt-2 space-y-1">
+                <div className="flex gap-2">
+                  <Input
+                    value={manualToken}
+                    onChange={e => { setManualToken(e.target.value); setManualTokenError(null); }}
+                    onBlur={() => {
+                      if (manualToken.trim() && liveInvalid) setManualTokenError(liveValid!.error);
+                    }}
+                    placeholder="Paste Meta access token (from Graph API Explorer or Business Settings)"
+                    aria-invalid={!!inlineError}
+                    aria-describedby={inlineError ? "manual-token-err" : "manual-token-help"}
+                    className={cn("text-xs", inlineError && "border-destructive focus-visible:ring-destructive")}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleManualConnect}
+                    disabled={connecting || !manualToken.trim() || liveInvalid}
+                  >
+                    {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Connect"}
+                  </Button>
+                </div>
+                {inlineError ? (
+                  <p id="manual-token-err" className="text-xs text-destructive flex items-start gap-1">
+                    <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                    <span>{inlineError}</span>
+                  </p>
+                ) : (
+                  <p id="manual-token-help" className="text-[11px] text-muted-foreground">
+                    Use a long-lived user or system-user token with <span className="font-mono">ads_read</span> and <span className="font-mono">read_insights</span> permissions.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
