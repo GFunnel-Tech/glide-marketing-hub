@@ -146,8 +146,20 @@ export function MetaConnectionsPanel() {
         </div>
 
         {connections.length === 0 && !loading && (
-          <div className="rounded border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            No Meta accounts connected yet. Click <strong>Connect with Meta</strong> to start.
+          <div className="rounded-lg border border-dashed border-border p-8 text-center space-y-4">
+            <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Facebook className="h-6 w-6 text-primary" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">No Meta accounts connected yet</p>
+              <p className="text-xs text-muted-foreground">
+                Connect your Meta Business Manager to {currentWorkspace?.name ?? "this workspace"} to start syncing ad data.
+              </p>
+            </div>
+            <Button size="lg" onClick={handleOAuthConnect} disabled={connecting} className="mx-auto">
+              {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Facebook className="h-4 w-4 mr-2" />}
+              Connect with Meta
+            </Button>
           </div>
         )}
 
