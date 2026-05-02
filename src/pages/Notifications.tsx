@@ -8,6 +8,7 @@ import {
   useDeleteNotification,
 } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const fmt = (s: string) => new Date(s).toLocaleString();
 
