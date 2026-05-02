@@ -4,7 +4,8 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useClients } from "@/hooks/useDatabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
