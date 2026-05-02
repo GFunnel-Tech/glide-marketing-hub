@@ -1,18 +1,50 @@
+import { useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Check, Trash2, Bell } from "lucide-react";
+import { Check, Trash2, Bell, Loader2 } from "lucide-react";
 import {
-  useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, useDeleteNotification,
+  useInfiniteNotifications,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  useDeleteNotification,
 } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 
 const fmt = (s: string) => new Date(s).toLocaleString();
 
 export default function Notifications() {
-  const { data: notifications = [], isLoading } = useNotifications();
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
   const del = useDeleteNotification();
+
+  const notifications = useMemo(
+    () => (data?.pages ?? []).flat(),
+    [data],
+  );
   const unread = notifications.filter((n) => !n.read_at).length;
+
+  // IntersectionObserver sentinel for auto-loading the next page.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || !hasNextPage) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "200px 0px" },
+    );
+    obs.observe(node);
+    return () => obs.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <div className="space-y-4 max-w-3xl">
@@ -42,54 +74,79 @@ export default function Notifications() {
             <p className="text-sm text-muted-foreground">No notifications yet</p>
           </div>
         ) : (
-          notifications.map((n) => (
-            <div
-              key={n.id}
-              className={cn(
-                "flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors",
-                !n.read_at && "bg-primary/5"
-              )}
-            >
-              <span className={cn("mt-2 h-2 w-2 rounded-full shrink-0", !n.read_at ? "bg-primary" : "bg-muted")} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    {n.link ? (
-                      <Link
-                        to={n.link}
-                        onClick={() => !n.read_at && markRead.mutate(n.id)}
-                        className="text-sm font-semibold text-foreground hover:text-primary"
-                      >
-                        {n.title}
-                      </Link>
-                    ) : (
-                      <span className="text-sm font-semibold text-foreground">{n.title}</span>
-                    )}
-                    {n.body && <p className="text-sm text-muted-foreground mt-0.5">{n.body}</p>}
-                    <p className="text-xs text-muted-foreground mt-1">{fmt(n.created_at)}</p>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {!n.read_at && (
+          <>
+            {notifications.map((n) => (
+              <div
+                key={n.id}
+                className={cn(
+                  "flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors",
+                  !n.read_at && "bg-primary/5"
+                )}
+              >
+                <span className={cn("mt-2 h-2 w-2 rounded-full shrink-0", !n.read_at ? "bg-primary" : "bg-muted")} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      {n.link ? (
+                        <Link
+                          to={n.link}
+                          onClick={() => !n.read_at && markRead.mutate(n.id)}
+                          className="text-sm font-semibold text-foreground hover:text-primary"
+                        >
+                          {n.title}
+                        </Link>
+                      ) : (
+                        <span className="text-sm font-semibold text-foreground">{n.title}</span>
+                      )}
+                      {n.body && <p className="text-sm text-muted-foreground mt-0.5">{n.body}</p>}
+                      <p className="text-xs text-muted-foreground mt-1">{fmt(n.created_at)}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!n.read_at && (
+                        <button
+                          onClick={() => markRead.mutate(n.id)}
+                          className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent"
+                          title="Mark as read"
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
-                        onClick={() => markRead.mutate(n.id)}
-                        className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent"
-                        title="Mark as read"
+                        onClick={() => del.mutate(n.id)}
+                        className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        title="Delete"
                       >
-                        <Check className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
-                    )}
-                    <button
-                      onClick={() => del.mutate(n.id)}
-                      className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))}
+
+            {/* Sentinel + load-more fallback */}
+            <div ref={sentinelRef} className="p-4 flex items-center justify-center">
+              {hasNextPage ? (
+                <button
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
+                >
+                  {isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" /> Loading more…
+                    </>
+                  ) : (
+                    "Load more"
+                  )}
+                </button>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {notifications.length} notification{notifications.length === 1 ? "" : "s"} · end of list
+                </span>
+              )}
             </div>
-          ))
+          </>
         )}
       </div>
     </div>
