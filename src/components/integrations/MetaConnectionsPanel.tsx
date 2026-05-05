@@ -159,7 +159,17 @@ export function MetaConnectionsPanel() {
   useEffect(() => { refresh(); }, [currentWorkspace?.id]);
 
   const handleOAuthConnect = async () => {
-    if (!currentWorkspace) return;
+    if (workspaceLoading) {
+      toast.info("Loading your workspace — please wait a moment and try again.");
+      return;
+    }
+    if (!currentWorkspace) {
+      toast.error("No workspace available", {
+        description:
+          "We couldn't load your workspace. Refresh the page or sign out and back in. If this keeps happening, your account may not be a member of any workspace.",
+      });
+      return;
+    }
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke("meta-oauth-start", {
