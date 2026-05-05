@@ -473,11 +473,23 @@ export function MetaConnectionsPanel() {
         {!workspaceLoading && !currentWorkspace && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-            <div className="space-y-1">
+            <div className="space-y-2 flex-1">
               <p className="font-semibold">Workspace not loaded</p>
               <p className="text-destructive/90">
-                We couldn't load your workspace context, so connecting a Meta account is disabled. Try refreshing the page or signing out and back in. If the issue persists, your account may not yet be a member of any workspace.
+                We couldn't load your workspace context, so connecting a Meta account is disabled. Click Retry to reload your workspace and try connecting again. If the issue persists, your account may not be a member of any workspace.
               </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleRetryWorkspaceAndConnect}
+                disabled={retryingWorkspace || connecting}
+                className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                {retryingWorkspace || connecting
+                  ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                  : <RotateCw className="h-3 w-3 mr-1.5" />}
+                Retry & connect
+              </Button>
             </div>
           </div>
         )}
