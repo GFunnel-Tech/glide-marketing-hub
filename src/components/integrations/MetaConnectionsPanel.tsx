@@ -738,7 +738,9 @@ export function MetaConnectionsPanel() {
         </div>
       </div>
 
-      {accounts.length > 0 && (
+      {accounts.length > 0 && (() => {
+        const unmappedCount = accounts.filter(a => !a.client_id).length;
+        return (
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="px-5 py-3 border-b border-border">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -746,6 +748,15 @@ export function MetaConnectionsPanel() {
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">Map each ad account to a client. Multiple ad accounts can roll up to one client.</p>
           </div>
+          {unmappedCount > 0 && (
+            <div className="px-5 py-2.5 bg-warning/10 border-b border-warning/30 flex items-start gap-2 text-xs">
+              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+              <div>
+                <span className="font-medium text-foreground">{unmappedCount} ad account{unmappedCount === 1 ? "" : "s"} unmapped.</span>
+                <span className="text-muted-foreground"> Insights are syncing, but will not appear on client dashboards until each account is linked to a client (or used to create one).</span>
+              </div>
+            </div>
+          )}
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-accent/50">
@@ -764,16 +775,31 @@ export function MetaConnectionsPanel() {
                   <td className="px-4 py-2 text-muted-foreground text-xs">{a.business_name || "—"}</td>
                   <td className="px-4 py-2 text-muted-foreground text-xs">{a.currency || "—"}</td>
                   <td className="px-4 py-2">
-                    <select
-                      value={a.client_id ?? ""}
-                      onChange={e => handleMap(a.id, e.target.value ? Number(e.target.value) : null)}
-                      className="rounded border border-border bg-background px-2 py-1 text-xs"
-                    >
-                      <option value="">— Unmapped —</option>
-                      {clients.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <select
+                        value={a.client_id ?? ""}
+                        onChange={e => handleMap(a.id, e.target.value ? Number(e.target.value) : null)}
+                        className="rounded border border-border bg-background px-2 py-1 text-xs"
+                      >
+                        <option value="">— Unmapped —</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                      {!a.client_id && (
+                        <button
+                          onClick={() => handleCreateClientFromAccount(a)}
+                          disabled={creatingClientFor === a.id}
+                          className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-60"
+                          title="Create a new client from this ad account and link it"
+                        >
+                          {creatingClientFor === a.id
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <Plus className="h-3 w-3" />}
+                          New client
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-2 text-xs text-muted-foreground">
                     {a.last_synced_at ? new Date(a.last_synced_at).toLocaleString() : "Never"}
@@ -783,7 +809,8 @@ export function MetaConnectionsPanel() {
             </tbody>
           </table>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
