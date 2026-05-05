@@ -845,6 +845,82 @@ export function MetaConnectionsPanel() {
         </div>
         );
       })()}
+
+      <Dialog open={!!createDialogAccount} onOpenChange={(open) => !open && setCreateDialogAccount(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create client from ad account</DialogTitle>
+            <DialogDescription>
+              {createDialogAccount && (
+                <>
+                  Linking <span className="font-mono">{createDialogAccount.act_id}</span>
+                  {createDialogAccount.account_name ? ` (${createDialogAccount.account_name})` : ""}.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="new-client-name">Client name</Label>
+              <Input
+                id="new-client-name"
+                value={newClientName}
+                onChange={(e) => setNewClientName(e.target.value)}
+                placeholder="Acme Co."
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-client-brand">Brand</Label>
+              <Input
+                id="new-client-brand"
+                value={newClientBrand}
+                onChange={(e) => setNewClientBrand(e.target.value)}
+                placeholder="Brand name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={newClientStatus} onValueChange={(v) => setNewClientStatus(v as any)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GREEN">Green</SelectItem>
+                    <SelectItem value="YELLOW">Yellow</SelectItem>
+                    <SelectItem value="RED">Red</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>BM type</Label>
+                <Select value={newClientBmType} onValueChange={(v) => setNewClientBmType(v as any)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Agency BM">Agency BM</SelectItem>
+                    <SelectItem value="Client BM">Client BM</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateDialogAccount(null)}
+              disabled={!!creatingClientFor}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateClientSubmit}
+              disabled={!!creatingClientFor || !newClientName.trim()}
+            >
+              {creatingClientFor ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Create & link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
