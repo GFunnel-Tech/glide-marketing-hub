@@ -329,21 +329,39 @@ export function MetaConnectionsPanel() {
   };
 
   const [creatingClientFor, setCreatingClientFor] = useState<string | null>(null);
-  const handleCreateClientFromAccount = async (a: MetaAdAccount) => {
-    if (!currentWorkspace) return;
-    const suggestedName = a.business_name || a.account_name || a.act_id;
-    const name = window.prompt("Create a new client from this ad account.\n\nClient name:", suggestedName);
-    if (!name || !name.trim()) return;
+  const [createDialogAccount, setCreateDialogAccount] = useState<MetaAdAccount | null>(null);
+  const [newClientName, setNewClientName] = useState("");
+  const [newClientBrand, setNewClientBrand] = useState("");
+  const [newClientStatus, setNewClientStatus] = useState<"GREEN" | "YELLOW" | "RED">("GREEN");
+  const [newClientBmType, setNewClientBmType] = useState<"Agency BM" | "Client BM">("Agency BM");
+
+  const openCreateClientDialog = (a: MetaAdAccount) => {
+    const suggested = a.business_name || a.account_name || a.act_id;
+    setCreateDialogAccount(a);
+    setNewClientName(suggested);
+    setNewClientBrand(a.business_name || suggested);
+    setNewClientStatus("GREEN");
+    setNewClientBmType("Agency BM");
+  };
+
+  const handleCreateClientSubmit = async () => {
+    if (!currentWorkspace || !createDialogAccount) return;
+    const name = newClientName.trim();
+    if (!name) {
+      toast.error("Client name is required");
+      return;
+    }
+    const a = createDialogAccount;
     setCreatingClientFor(a.id);
     try {
       const { data: created, error: insErr } = await (supabase as any)
         .from("clients")
         .insert({
           workspace_id: currentWorkspace.id,
-          name: name.trim(),
-          brand: a.business_name || name.trim(),
-          status: "GREEN",
-          bm_type: "Agency BM",
+          name,
+          brand: newClientBrand.trim() || name,
+          status: newClientStatus,
+          bm_type: newClientBmType,
         })
         .select("id")
         .single();
@@ -352,9 +370,9 @@ export function MetaConnectionsPanel() {
         body: { adAccountId: a.id, clientId: created.id },
       });
       if (mapErr) throw mapErr;
-      toast.success(`Created "${name.trim()}" and linked this ad account`);
-      // Trigger a sync rollup so the new client gets metrics immediately
+      toast.success(`Created "${name}" and linked this ad account`);
       supabase.functions.invoke("meta-sync", { body: { workspaceId: currentWorkspace.id } }).catch(() => {});
+      setCreateDialogAccount(null);
       refresh();
     } catch (e: any) {
       toast.error(e?.message || "Failed to create client");
