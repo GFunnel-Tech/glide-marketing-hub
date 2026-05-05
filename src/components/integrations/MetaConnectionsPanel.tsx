@@ -312,6 +312,41 @@ export function MetaConnectionsPanel() {
     else { toast.success("Updated mapping"); refresh(); }
   };
 
+  const [creatingClientFor, setCreatingClientFor] = useState<string | null>(null);
+  const handleCreateClientFromAccount = async (a: MetaAdAccount) => {
+    if (!currentWorkspace) return;
+    const suggestedName = a.business_name || a.account_name || a.act_id;
+    const name = window.prompt("Create a new client from this ad account.\n\nClient name:", suggestedName);
+    if (!name || !name.trim()) return;
+    setCreatingClientFor(a.id);
+    try {
+      const { data: created, error: insErr } = await (supabase as any)
+        .from("clients")
+        .insert({
+          workspace_id: currentWorkspace.id,
+          name: name.trim(),
+          brand: a.business_name || name.trim(),
+          status: "GREEN",
+          bm_type: "Agency BM",
+        })
+        .select("id")
+        .single();
+      if (insErr) throw insErr;
+      const { error: mapErr } = await supabase.functions.invoke("meta-map-account", {
+        body: { adAccountId: a.id, clientId: created.id },
+      });
+      if (mapErr) throw mapErr;
+      toast.success(`Created "${name.trim()}" and linked this ad account`);
+      // Trigger a sync rollup so the new client gets metrics immediately
+      supabase.functions.invoke("meta-sync", { body: { workspaceId: currentWorkspace.id } }).catch(() => {});
+      refresh();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to create client");
+    } finally {
+      setCreatingClientFor(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-border bg-card p-5">
