@@ -83,7 +83,8 @@ interface MetaAdAccount {
 }
 
 export function MetaConnectionsPanel() {
-  const { currentWorkspace, loading: workspaceLoading } = useWorkspace();
+  const { currentWorkspace, loading: workspaceLoading, refresh: refreshWorkspaces } = useWorkspace();
+  const [retryingWorkspace, setRetryingWorkspace] = useState(false);
   const { data: clients = [] } = useClients();
   const [connections, setConnections] = useState<MetaConnection[]>([]);
   const [accounts, setAccounts] = useState<MetaAdAccount[]>([]);
