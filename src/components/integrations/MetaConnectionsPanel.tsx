@@ -4,6 +4,22 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useClients } from "@/hooks/useDatabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info, RotateCw, AlertTriangle, KeyRound, X, CheckCircle2, XCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -313,21 +329,39 @@ export function MetaConnectionsPanel() {
   };
 
   const [creatingClientFor, setCreatingClientFor] = useState<string | null>(null);
-  const handleCreateClientFromAccount = async (a: MetaAdAccount) => {
-    if (!currentWorkspace) return;
-    const suggestedName = a.business_name || a.account_name || a.act_id;
-    const name = window.prompt("Create a new client from this ad account.\n\nClient name:", suggestedName);
-    if (!name || !name.trim()) return;
+  const [createDialogAccount, setCreateDialogAccount] = useState<MetaAdAccount | null>(null);
+  const [newClientName, setNewClientName] = useState("");
+  const [newClientBrand, setNewClientBrand] = useState("");
+  const [newClientStatus, setNewClientStatus] = useState<"GREEN" | "YELLOW" | "RED">("GREEN");
+  const [newClientBmType, setNewClientBmType] = useState<"Agency BM" | "Client BM">("Agency BM");
+
+  const openCreateClientDialog = (a: MetaAdAccount) => {
+    const suggested = a.business_name || a.account_name || a.act_id;
+    setCreateDialogAccount(a);
+    setNewClientName(suggested);
+    setNewClientBrand(a.business_name || suggested);
+    setNewClientStatus("GREEN");
+    setNewClientBmType("Agency BM");
+  };
+
+  const handleCreateClientSubmit = async () => {
+    if (!currentWorkspace || !createDialogAccount) return;
+    const name = newClientName.trim();
+    if (!name) {
+      toast.error("Client name is required");
+      return;
+    }
+    const a = createDialogAccount;
     setCreatingClientFor(a.id);
     try {
       const { data: created, error: insErr } = await (supabase as any)
         .from("clients")
         .insert({
           workspace_id: currentWorkspace.id,
-          name: name.trim(),
-          brand: a.business_name || name.trim(),
-          status: "GREEN",
-          bm_type: "Agency BM",
+          name,
+          brand: newClientBrand.trim() || name,
+          status: newClientStatus,
+          bm_type: newClientBmType,
         })
         .select("id")
         .single();
@@ -336,9 +370,9 @@ export function MetaConnectionsPanel() {
         body: { adAccountId: a.id, clientId: created.id },
       });
       if (mapErr) throw mapErr;
-      toast.success(`Created "${name.trim()}" and linked this ad account`);
-      // Trigger a sync rollup so the new client gets metrics immediately
+      toast.success(`Created "${name}" and linked this ad account`);
       supabase.functions.invoke("meta-sync", { body: { workspaceId: currentWorkspace.id } }).catch(() => {});
+      setCreateDialogAccount(null);
       refresh();
     } catch (e: any) {
       toast.error(e?.message || "Failed to create client");
@@ -788,7 +822,7 @@ export function MetaConnectionsPanel() {
                       </select>
                       {!a.client_id && (
                         <button
-                          onClick={() => handleCreateClientFromAccount(a)}
+                          onClick={() => openCreateClientDialog(a)}
                           disabled={creatingClientFor === a.id}
                           className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-60"
                           title="Create a new client from this ad account and link it"
@@ -811,6 +845,82 @@ export function MetaConnectionsPanel() {
         </div>
         );
       })()}
+
+      <Dialog open={!!createDialogAccount} onOpenChange={(open) => !open && setCreateDialogAccount(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create client from ad account</DialogTitle>
+            <DialogDescription>
+              {createDialogAccount && (
+                <>
+                  Linking <span className="font-mono">{createDialogAccount.act_id}</span>
+                  {createDialogAccount.account_name ? ` (${createDialogAccount.account_name})` : ""}.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="new-client-name">Client name</Label>
+              <Input
+                id="new-client-name"
+                value={newClientName}
+                onChange={(e) => setNewClientName(e.target.value)}
+                placeholder="Acme Co."
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-client-brand">Brand</Label>
+              <Input
+                id="new-client-brand"
+                value={newClientBrand}
+                onChange={(e) => setNewClientBrand(e.target.value)}
+                placeholder="Brand name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={newClientStatus} onValueChange={(v) => setNewClientStatus(v as any)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GREEN">Green</SelectItem>
+                    <SelectItem value="YELLOW">Yellow</SelectItem>
+                    <SelectItem value="RED">Red</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>BM type</Label>
+                <Select value={newClientBmType} onValueChange={(v) => setNewClientBmType(v as any)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Agency BM">Agency BM</SelectItem>
+                    <SelectItem value="Client BM">Client BM</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateDialogAccount(null)}
+              disabled={!!creatingClientFor}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateClientSubmit}
+              disabled={!!creatingClientFor || !newClientName.trim()}
+            >
+              {creatingClientFor ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Create & link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
