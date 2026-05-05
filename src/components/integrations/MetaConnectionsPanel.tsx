@@ -411,7 +411,7 @@ export function MetaConnectionsPanel() {
             <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="sm" onClick={handleOAuthConnect} disabled={connecting}>
+                  <Button size="sm" onClick={handleOAuthConnect} disabled={connecting || workspaceLoading || !currentWorkspace}>
                     {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
                     <span className="ml-1">Connect with Meta</span>
                   </Button>
