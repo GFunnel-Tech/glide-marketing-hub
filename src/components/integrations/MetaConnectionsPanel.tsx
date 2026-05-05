@@ -83,7 +83,8 @@ interface MetaAdAccount {
 }
 
 export function MetaConnectionsPanel() {
-  const { currentWorkspace, loading: workspaceLoading } = useWorkspace();
+  const { currentWorkspace, loading: workspaceLoading, refresh: refreshWorkspaces } = useWorkspace();
+  const [retryingWorkspace, setRetryingWorkspace] = useState(false);
   const { data: clients = [] } = useClients();
   const [connections, setConnections] = useState<MetaConnection[]>([]);
   const [accounts, setAccounts] = useState<MetaAdAccount[]>([]);
@@ -158,22 +159,11 @@ export function MetaConnectionsPanel() {
 
   useEffect(() => { refresh(); }, [currentWorkspace?.id]);
 
-  const handleOAuthConnect = async () => {
-    if (workspaceLoading) {
-      toast.info("Loading your workspace — please wait a moment and try again.");
-      return;
-    }
-    if (!currentWorkspace) {
-      toast.error("No workspace available", {
-        description:
-          "We couldn't load your workspace. Refresh the page or sign out and back in. If this keeps happening, your account may not be a member of any workspace.",
-      });
-      return;
-    }
+  const startOAuthForWorkspace = async (workspaceId: string) => {
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke("meta-oauth-start", {
-        body: { workspaceId: currentWorkspace.id },
+        body: { workspaceId },
       });
       if (error) throw error;
       window.open(data.url, "_blank", "width=600,height=700");
@@ -182,6 +172,57 @@ export function MetaConnectionsPanel() {
       toast.error(e.message || "Failed to start OAuth");
     } finally {
       setConnecting(false);
+    }
+  };
+
+  const handleOAuthConnect = async () => {
+    if (workspaceLoading) {
+      toast.info("Loading your workspace — please wait a moment and try again.");
+      return;
+    }
+    if (!currentWorkspace) {
+      toast.error("No workspace available", {
+        description:
+          "We couldn't load your workspace. Try the Retry button to reload it, or refresh the page.",
+      });
+      return;
+    }
+    await startOAuthForWorkspace(currentWorkspace.id);
+  };
+
+  const handleRetryWorkspaceAndConnect = async () => {
+    setRetryingWorkspace(true);
+    try {
+      await refreshWorkspaces();
+      // Re-read latest workspace from localStorage / freshly loaded list via context.
+      // The context state updates async; poll briefly for currentWorkspace to populate.
+      const stored = localStorage.getItem("emm-current-workspace");
+      let ws: { id: string } | null = currentWorkspace;
+      for (let i = 0; i < 20 && !ws; i++) {
+        await new Promise(r => setTimeout(r, 100));
+        // currentWorkspace from closure won't update mid-call; rely on a re-render.
+        // Best-effort: query workspace_members directly to grab a workspace id.
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) break;
+        const { data } = await supabase
+          .from("workspace_members")
+          .select("workspace_id")
+          .eq("user_id", user.id)
+          .limit(1);
+        const wsId = stored || data?.[0]?.workspace_id;
+        if (wsId) { ws = { id: wsId }; break; }
+      }
+      if (!ws) {
+        toast.error("Still couldn't load a workspace", {
+          description: "Your account may not be a member of any workspace. Contact your admin or sign out and back in.",
+        });
+        return;
+      }
+      await startOAuthForWorkspace(ws.id);
+    } catch (e: any) {
+      toast.error(e?.message || "Retry failed");
+    } finally {
+      setRetryingWorkspace(false);
     }
   };
 
@@ -432,11 +473,23 @@ export function MetaConnectionsPanel() {
         {!workspaceLoading && !currentWorkspace && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-            <div className="space-y-1">
+            <div className="space-y-2 flex-1">
               <p className="font-semibold">Workspace not loaded</p>
               <p className="text-destructive/90">
-                We couldn't load your workspace context, so connecting a Meta account is disabled. Try refreshing the page or signing out and back in. If the issue persists, your account may not yet be a member of any workspace.
+                We couldn't load your workspace context, so connecting a Meta account is disabled. Click Retry to reload your workspace and try connecting again. If the issue persists, your account may not be a member of any workspace.
               </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleRetryWorkspaceAndConnect}
+                disabled={retryingWorkspace || connecting}
+                className="border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                {retryingWorkspace || connecting
+                  ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                  : <RotateCw className="h-3 w-3 mr-1.5" />}
+                Retry & connect
+              </Button>
             </div>
           </div>
         )}
