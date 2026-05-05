@@ -83,7 +83,7 @@ interface MetaAdAccount {
 }
 
 export function MetaConnectionsPanel() {
-  const { currentWorkspace } = useWorkspace();
+  const { currentWorkspace, loading: workspaceLoading } = useWorkspace();
   const { data: clients = [] } = useClients();
   const [connections, setConnections] = useState<MetaConnection[]>([]);
   const [accounts, setAccounts] = useState<MetaAdAccount[]>([]);
@@ -159,7 +159,17 @@ export function MetaConnectionsPanel() {
   useEffect(() => { refresh(); }, [currentWorkspace?.id]);
 
   const handleOAuthConnect = async () => {
-    if (!currentWorkspace) return;
+    if (workspaceLoading) {
+      toast.info("Loading your workspace — please wait a moment and try again.");
+      return;
+    }
+    if (!currentWorkspace) {
+      toast.error("No workspace available", {
+        description:
+          "We couldn't load your workspace. Refresh the page or sign out and back in. If this keeps happening, your account may not be a member of any workspace.",
+      });
+      return;
+    }
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke("meta-oauth-start", {
@@ -401,7 +411,7 @@ export function MetaConnectionsPanel() {
             <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="sm" onClick={handleOAuthConnect} disabled={connecting}>
+                  <Button size="sm" onClick={handleOAuthConnect} disabled={connecting || workspaceLoading || !currentWorkspace}>
                     {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
                     <span className="ml-1">Connect with Meta</span>
                   </Button>
@@ -419,6 +429,18 @@ export function MetaConnectionsPanel() {
           </div>
         </div>
 
+        {!workspaceLoading && !currentWorkspace && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-semibold">Workspace not loaded</p>
+              <p className="text-destructive/90">
+                We couldn't load your workspace context, so connecting a Meta account is disabled. Try refreshing the page or signing out and back in. If the issue persists, your account may not yet be a member of any workspace.
+              </p>
+            </div>
+          </div>
+        )}
+
         {connections.length === 0 && !loading && (
           <div className="rounded-lg border border-dashed border-border p-8 text-center space-y-4">
             <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -433,7 +455,7 @@ export function MetaConnectionsPanel() {
             <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="lg" onClick={handleOAuthConnect} disabled={connecting} className="mx-auto">
+                  <Button size="lg" onClick={handleOAuthConnect} disabled={connecting || workspaceLoading || !currentWorkspace} className="mx-auto">
                     {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Facebook className="h-4 w-4 mr-2" />}
                     Connect with Meta
                     <Info className="h-3.5 w-3.5 ml-2 opacity-70" />
