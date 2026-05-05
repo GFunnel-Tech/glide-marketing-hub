@@ -822,7 +822,7 @@ export function MetaConnectionsPanel() {
                       </select>
                       {!a.client_id && (
                         <button
-                          onClick={() => handleCreateClientFromAccount(a)}
+                          onClick={() => openCreateClientDialog(a)}
                           disabled={creatingClientFor === a.id}
                           className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-60"
                           title="Create a new client from this ad account and link it"
