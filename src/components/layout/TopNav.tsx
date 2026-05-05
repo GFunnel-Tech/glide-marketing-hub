@@ -3,8 +3,9 @@ import { useState } from "react";
 import { useUnreadMessageCount } from "@/hooks/useMessages";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox
+  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield
 } from "lucide-react";
+import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
@@ -33,7 +34,11 @@ export function TopNav() {
   const { hasConnection } = useHasActiveMetaConnection();
   const { currentWorkspace } = useWorkspace();
   const { data: unreadMessages = 0 } = useUnreadMessageCount();
+  const { data: isSuperAdmin } = useIsSuperAdmin();
   const [connecting, setConnecting] = useState(false);
+  const items = isSuperAdmin
+    ? [...navItems, { icon: Shield, label: "Admin", path: "/admin" }]
+    : navItems;
 
   const connectMeta = async () => {
     if (!currentWorkspace) return;
@@ -100,7 +105,7 @@ export function TopNav() {
 
       {/* Nav row */}
       <nav className="flex items-center gap-1 px-6 overflow-x-auto">
-        {navItems.map((item) => {
+        {items.map((item: any) => {
           const isActive =
             location.pathname === item.path ||
             (item.path !== "/" && location.pathname.startsWith(item.path));

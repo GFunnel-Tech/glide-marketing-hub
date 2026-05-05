@@ -345,6 +345,36 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonation_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          meta: Json | null
+          super_admin_id: string
+          target_user_id: string | null
+          target_workspace_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          super_admin_id: string
+          target_user_id?: string | null
+          target_workspace_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          super_admin_id?: string
+          target_user_id?: string | null
+          target_workspace_id?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           client_id: number
@@ -1167,6 +1197,7 @@ export type Database = {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -1181,7 +1212,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "super_admin"
       bm_type: "Own BM" | "Agency BM"
       campaign_status: "active" | "paused"
       client_status: "GREEN" | "YELLOW" | "RED" | "BLOCKED"
@@ -1314,7 +1345,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "super_admin"],
       bm_type: ["Own BM", "Agency BM"],
       campaign_status: ["active", "paused"],
       client_status: ["GREEN", "YELLOW", "RED", "BLOCKED"],
