@@ -429,6 +429,18 @@ export function MetaConnectionsPanel() {
           </div>
         </div>
 
+        {!workspaceLoading && !currentWorkspace && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-semibold">Workspace not loaded</p>
+              <p className="text-destructive/90">
+                We couldn't load your workspace context, so connecting a Meta account is disabled. Try refreshing the page or signing out and back in. If the issue persists, your account may not yet be a member of any workspace.
+              </p>
+            </div>
+          </div>
+        )}
+
         {connections.length === 0 && !loading && (
           <div className="rounded-lg border border-dashed border-border p-8 text-center space-y-4">
             <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
