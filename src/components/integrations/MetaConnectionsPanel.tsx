@@ -455,7 +455,7 @@ export function MetaConnectionsPanel() {
             <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button size="lg" onClick={handleOAuthConnect} disabled={connecting} className="mx-auto">
+                  <Button size="lg" onClick={handleOAuthConnect} disabled={connecting || workspaceLoading || !currentWorkspace} className="mx-auto">
                     {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Facebook className="h-4 w-4 mr-2" />}
                     Connect with Meta
                     <Info className="h-3.5 w-3.5 ml-2 opacity-70" />
