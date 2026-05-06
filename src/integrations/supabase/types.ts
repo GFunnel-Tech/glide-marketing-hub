@@ -206,12 +206,14 @@ export type Database = {
           bm_id: string | null
           bm_type: Database["public"]["Enums"]["bm_type"]
           brand: string
+          clickup_list_id: string | null
           cpl: number
           cpm: number
           created_at: string
           double_count: boolean
           form_cvr: number
           frequency: number
+          ghl_location_id: string | null
           id: number
           last_audit: string | null
           leads: number
@@ -230,12 +232,14 @@ export type Database = {
           bm_id?: string | null
           bm_type?: Database["public"]["Enums"]["bm_type"]
           brand: string
+          clickup_list_id?: string | null
           cpl?: number
           cpm?: number
           created_at?: string
           double_count?: boolean
           form_cvr?: number
           frequency?: number
+          ghl_location_id?: string | null
           id?: number
           last_audit?: string | null
           leads?: number
@@ -254,12 +258,14 @@ export type Database = {
           bm_id?: string | null
           bm_type?: Database["public"]["Enums"]["bm_type"]
           brand?: string
+          clickup_list_id?: string | null
           cpl?: number
           cpm?: number
           created_at?: string
           double_count?: boolean
           form_cvr?: number
           frequency?: number
+          ghl_location_id?: string | null
           id?: number
           last_audit?: string | null
           leads?: number
@@ -372,6 +378,36 @@ export type Database = {
           super_admin_id?: string
           target_user_id?: string | null
           target_workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      integration_configs: {
+        Row: {
+          clickup_api_token: string | null
+          clickup_default_list_id: string | null
+          created_at: string
+          ghl_api_key: string | null
+          id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          clickup_api_token?: string | null
+          clickup_default_list_id?: string | null
+          created_at?: string
+          ghl_api_key?: string | null
+          id?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          clickup_api_token?: string | null
+          clickup_default_list_id?: string | null
+          created_at?: string
+          ghl_api_key?: string | null
+          id?: string
+          updated_at?: string
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -671,6 +707,7 @@ export type Database = {
           adset_name: string | null
           campaign_id: string | null
           campaign_name: string | null
+          clickup_task_id: string | null
           client_id: number | null
           created_at: string
           created_time: string | null
@@ -679,6 +716,8 @@ export type Database = {
           form_id: string | null
           form_name: string | null
           full_name: string | null
+          ghl_check_status: string | null
+          ghl_checked_at: string | null
           id: string
           lead_id: string
           phone: string | null
@@ -694,6 +733,7 @@ export type Database = {
           adset_name?: string | null
           campaign_id?: string | null
           campaign_name?: string | null
+          clickup_task_id?: string | null
           client_id?: number | null
           created_at?: string
           created_time?: string | null
@@ -702,6 +742,8 @@ export type Database = {
           form_id?: string | null
           form_name?: string | null
           full_name?: string | null
+          ghl_check_status?: string | null
+          ghl_checked_at?: string | null
           id?: string
           lead_id: string
           phone?: string | null
@@ -717,6 +759,7 @@ export type Database = {
           adset_name?: string | null
           campaign_id?: string | null
           campaign_name?: string | null
+          clickup_task_id?: string | null
           client_id?: number | null
           created_at?: string
           created_time?: string | null
@@ -725,6 +768,8 @@ export type Database = {
           form_id?: string | null
           form_name?: string | null
           full_name?: string | null
+          ghl_check_status?: string | null
+          ghl_checked_at?: string | null
           id?: string
           lead_id?: string
           phone?: string | null
