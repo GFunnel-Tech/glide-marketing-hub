@@ -181,6 +181,62 @@ async function rollupClients(admin: any, workspaceFilter: string | null) {
   }
 }
 
+async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise<number> {
+  // 1. List campaigns for the ad account
+  const campFields = "id,name,status,effective_status,objective,daily_budget,lifetime_budget";
+  const campUrl = `https://graph.facebook.com/v21.0/${acc.act_id}/campaigns?fields=${campFields}&limit=200&access_token=${encodeURIComponent(accessToken)}`;
+  const campRes = await fetch(campUrl);
+  const campJson = await campRes.json();
+  if (!campRes.ok) throw new Error("campaigns: " + JSON.stringify(campJson));
+  const campaigns = campJson.data ?? [];
+  if (!campaigns.length) return 0;
+
+  // 2. Pull last-30d insights at campaign level for the whole account in one call
+  const insFields = "campaign_id,spend,impressions,clicks,cpm,ctr,frequency,actions";
+  const insUrl = `https://graph.facebook.com/v21.0/${acc.act_id}/insights?fields=${insFields}&level=campaign&date_preset=last_30d&limit=500&access_token=${encodeURIComponent(accessToken)}`;
+  const insRes = await fetch(insUrl);
+  const insJson = await insRes.json();
+  const insightsByCampaign = new Map<string, any>();
+  if (insRes.ok) {
+    for (const row of insJson.data ?? []) {
+      insightsByCampaign.set(row.campaign_id, row);
+    }
+  }
+
+  // 3. Upsert into the existing public.campaigns table
+  const rows = campaigns.map((c: any) => {
+    const ins = insightsByCampaign.get(c.id) ?? {};
+    const leadAction = (ins.actions ?? []).find((a: any) =>
+      a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped"
+    );
+    const leads = leadAction ? Number(leadAction.value) : 0;
+    const spend = Number(ins.spend ?? 0);
+    const status = (c.effective_status === "ACTIVE" || c.status === "ACTIVE") ? "active" : "paused";
+    return {
+      id: c.id, // Meta's campaign id (text PK)
+      client_id: acc.client_id,
+      workspace_id: acc.workspace_id,
+      name: c.name,
+      status,
+      spend,
+      leads,
+      true_leads: leads,
+      cpl: leads > 0 ? spend / leads : 0,
+      true_cpl: leads > 0 ? spend / leads : 0,
+      cpm: Number(ins.cpm ?? 0),
+      frequency: Number(ins.frequency ?? 0),
+      ad_sets: 0,
+      ads: 0,
+      double_count: false,
+      updated_at: new Date().toISOString(),
+    };
+  });
+
+  const { error } = await admin.from("campaigns").upsert(rows, { onConflict: "id" });
+  if (error) throw new Error("campaigns upsert: " + error.message);
+  return rows.length;
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
