@@ -351,6 +351,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ghl_locations: {
+        Row: {
+          address: string | null
+          business_name: string | null
+          created_at: string
+          id: string
+          last_synced_at: string
+          location_id: string
+          name: string | null
+          raw: Json | null
+          timezone: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          address?: string | null
+          business_name?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string
+          location_id: string
+          name?: string | null
+          raw?: Json | null
+          timezone?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          address?: string | null
+          business_name?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string
+          location_id?: string
+          name?: string | null
+          raw?: Json | null
+          timezone?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       impersonation_log: {
         Row: {
           action: string
