@@ -100,17 +100,23 @@ Deno.serve(async (req) => {
           if (upErr) throw upErr;
         }
 
+        // ---- Campaigns sync (per ad account) ----
+        let campaignRows = 0;
+        if (acc.client_id) {
+          campaignRows = await syncCampaigns(admin, acc, conn.access_token);
+        }
+
         await admin.from("meta_ad_accounts")
           .update({ last_synced_at: new Date().toISOString() })
           .eq("id", acc.id);
 
         await admin.from("meta_sync_log").update({
           status: "success",
-          rows_synced: rows.length,
+          rows_synced: rows.length + campaignRows,
           finished_at: new Date().toISOString(),
         }).eq("id", log.data!.id);
 
-        totalRows += rows.length;
+        totalRows += rows.length + campaignRows;
       } catch (e) {
         errors.push({ account: acc.act_id, error: String(e) });
         await admin.from("meta_sync_log").update({
