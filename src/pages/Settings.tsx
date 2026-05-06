@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaConnectionsPanel } from "@/components/integrations/MetaConnectionsPanel";
 import { GhlClickupPanel } from "@/components/integrations/GhlClickupPanel";
+import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -83,6 +84,7 @@ export default function Settings() {
         <TabsContent value="integrations" className="space-y-6">
           <MetaConnectionsPanel />
           <GhlClickupPanel />
+          <IntegrationMapper />
           <div className="grid grid-cols-2 gap-4">
             {integrations.map(int => (
               <div key={int.name} className={cn("rounded-lg border p-5 space-y-3", int.connected ? "border-border bg-card" : "border-destructive/30 bg-card")}>
