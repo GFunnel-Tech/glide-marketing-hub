@@ -94,16 +94,20 @@ Deno.serve(async (req) => {
             clickup_task_id: taskId,
           }).eq("id", lead.id);
 
-          // In-app notification for workspace members
-          await admin.from("notifications").insert({
-            user_id: null,
-            workspace_id: wsId,
-            type: "info",
-            title: `Lead missing from GHL${client ? ` — ${client.name}` : ""}`,
-            body: `${lead.full_name || lead.email || lead.phone || "Unknown lead"} did not appear in GoHighLevel within 4 hours.`,
-            link: lead.client_id ? `/client/${lead.client_id}` : "/leads",
-            meta: { lead_id: lead.id, clickup_task_id: taskId },
-          }).select(); // ignore failure (user_id null may violate; handled below)
+          // In-app notification — one per workspace member
+          const { data: members } = await admin
+            .from("workspace_members").select("user_id").eq("workspace_id", wsId);
+          if (members?.length) {
+            await admin.from("notifications").insert(members.map(m => ({
+              user_id: m.user_id,
+              workspace_id: wsId,
+              type: "info",
+              title: `Lead missing from GHL${client ? ` — ${client.name}` : ""}`,
+              body: `${lead.full_name || lead.email || lead.phone || "Unknown lead"} did not appear in GoHighLevel within 4 hours.`,
+              link: lead.client_id ? `/client/${lead.client_id}` : "/leads",
+              meta: { lead_id: lead.id, clickup_task_id: taskId },
+            })));
+          }
 
           taskId ? stats.flagged++ : stats.missing++;
         }
