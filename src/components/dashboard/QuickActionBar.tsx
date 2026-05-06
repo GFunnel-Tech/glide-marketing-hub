@@ -24,7 +24,7 @@ export function QuickActionBar() {
     { key: "Run Portfolio Audit", icon: Search, className: "bg-purple text-purple-foreground hover:bg-purple/90", fn: () => api.runAudit("all") },
     { key: "Export Monthly Reports", icon: FileText, className: "bg-primary text-primary-foreground hover:bg-primary/90", fn: () => api.exportAllReports() },
     { key: "Sync All Accounts", icon: RefreshCw, className: "bg-success text-success-foreground hover:bg-success/90", fn: () => api.syncAllAccounts() },
-    { key: "Add New Client", icon: UserPlus, className: "bg-primary text-primary-foreground hover:bg-primary/90", fn: async () => navigate("/onboarding") },
+    { key: "Add New Client", icon: UserPlus, className: "bg-primary text-primary-foreground hover:bg-primary/90", fn: async () => { window.open("https://forms.clickup.com/9014197198/f/8cmkeye-3094/RKUHI8R4POC323J6DY", "_blank", "noopener,noreferrer"); } },
   ];
 
   return (
