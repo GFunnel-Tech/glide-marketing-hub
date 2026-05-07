@@ -106,6 +106,9 @@ Deno.serve(async (req) => {
           campaignRows = await syncCampaigns(admin, acc, conn.access_token);
         }
 
+        // ---- Granular daily insights (campaign + adset + ad) ----
+        const granularRows = await syncGranularInsights(admin, acc, conn.access_token);
+
         await admin.from("meta_ad_accounts")
           .update({ last_synced_at: new Date().toISOString() })
           .eq("id", acc.id);
