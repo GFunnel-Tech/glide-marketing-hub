@@ -819,6 +819,16 @@ export function MetaConnectionsPanel() {
                   <p id="manual-token-help" className="text-[11px] text-muted-foreground italic">
                     Paste a token above, then click <span className="text-foreground">Verify</span> to test it or <span className="text-foreground">Connect</span> to save it to this workspace.
                   </p>
+                ) : warnings.length > 0 ? (
+                  <div id="manual-token-help" className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs text-foreground space-y-1">
+                    <p className="font-medium text-warning flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Heads up before you verify
+                    </p>
+                    <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
+                      {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                    </ul>
+                    <p className="text-[11px] text-muted-foreground italic">You can still click Verify — Meta will tell us for sure.</p>
+                  </div>
                 ) : (
                   <p id="manual-token-help" className="text-[11px] text-muted-foreground">
                     Token looks well-formed. Click <span className="text-foreground">Verify</span> to confirm permissions before connecting.
