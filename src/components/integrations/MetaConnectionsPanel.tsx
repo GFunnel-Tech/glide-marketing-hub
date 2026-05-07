@@ -811,6 +811,67 @@ export function MetaConnectionsPanel() {
                   </div>
                 </div>
 
+                {testResults[c.id] && (() => {
+                  const r = testResults[c.id];
+                  const tone = r.ok
+                    ? "border-success/40 bg-success/10"
+                    : "border-destructive/40 bg-destructive/10";
+                  return (
+                    <div className={cn("rounded-md border p-2 text-xs space-y-1.5", tone)}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-1.5 min-w-0">
+                          {r.ok
+                            ? <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
+                            : <XCircle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />}
+                          <div className="min-w-0">
+                            <p className={cn("font-medium", r.ok ? "text-success" : "text-destructive")}>
+                              {r.ok ? "Connection healthy" : "Connection issue"}
+                            </p>
+                            <p className="text-muted-foreground break-words">{r.summary}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setTestResults(prev => { const n = { ...prev }; delete n[c.id]; return n; })}
+                          className="text-muted-foreground hover:text-foreground p-0.5"
+                          title="Dismiss"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      {r.missingRequired && r.missingRequired.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {r.missingRequired.map(s => (
+                            <span key={s} className="rounded bg-destructive/20 px-1.5 py-0.5 font-mono text-[10px] text-destructive">
+                              missing required: {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {r.missingRecommended && r.missingRecommended.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {r.missingRecommended.map(s => (
+                            <span key={s} className="rounded bg-warning/20 px-1.5 py-0.5 font-mono text-[10px] text-warning">
+                              missing optional: {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {r.grantedScopes && r.grantedScopes.length > 0 && (
+                        <details className="text-[11px] text-muted-foreground">
+                          <summary className="cursor-pointer hover:text-foreground">
+                            {r.grantedScopes.length} granted scope{r.grantedScopes.length === 1 ? "" : "s"}
+                            {typeof r.adAccountCount === "number" && <> · {r.adAccountCount} ad account{r.adAccountCount === 1 ? "" : "s"}</>}
+                          </summary>
+                          <p className="mt-1 font-mono break-words">{r.grantedScopes.join(", ")}</p>
+                        </details>
+                      )}
+                      {r.checkedAt && (
+                        <p className="text-[10px] text-muted-foreground">Checked {new Date(r.checkedAt).toLocaleTimeString()}</p>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {manualReconnectId === c.id && (() => {
                   const reconnectValid = manualReconnectToken.trim().length === 0
                     ? null
