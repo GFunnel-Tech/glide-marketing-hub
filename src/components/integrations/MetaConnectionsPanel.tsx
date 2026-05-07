@@ -25,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+import { MetaTokenGuide } from "./MetaTokenGuide";
 
 // Meta user/system-user access tokens are opaque strings.
 // They are typically 100–500 chars of URL-safe base64-ish characters.
