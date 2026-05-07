@@ -758,6 +758,7 @@ export function MetaConnectionsPanel() {
             const liveInvalid = liveValid?.ok === false;
             const inlineError = manualTokenError ?? (liveInvalid ? liveValid!.error : null);
             const isEmpty = manualToken.trim().length === 0;
+            const warnings = !inlineError && !isEmpty ? getTokenWarnings(manualToken) : [];
             const busy = connecting || verifying;
             return (
               <div className="mt-3 space-y-3 rounded-md border border-border bg-muted/30 p-3">
