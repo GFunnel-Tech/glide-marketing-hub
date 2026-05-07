@@ -961,15 +961,55 @@ export function MetaConnectionsPanel() {
                     </div>
                   </div>
                 )}
-                {verifyResult && verifyResult.ok === false && (
-                  <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive flex items-start gap-2">
-                    <XCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Verification failed</p>
-                      <p className="break-words">{verifyResult.error}</p>
+                {verifyResult && verifyResult.ok === false && (() => {
+                  const dx = diagnoseTokenError(verifyResult.error);
+                  return (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs space-y-2">
+                      <div className="flex items-start gap-2">
+                        <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-destructive">{dx.title}</p>
+                          <p className="text-muted-foreground">{dx.summary}</p>
+                        </div>
+                      </div>
+                      {dx.missingScopes && dx.missingScopes.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {dx.missingScopes.map(s => (
+                            <span key={s} className="rounded bg-destructive/20 px-1.5 py-0.5 font-mono text-[10px] text-destructive">
+                              missing: {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Likely causes</p>
+                        <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
+                          {dx.causes.map((c, i) => <li key={i}>{c}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">How to fix</p>
+                        <ul className="space-y-1">
+                          {dx.fixes.map((f, i) => (
+                            <li key={i} className="text-foreground">
+                              {f.href ? (
+                                <a href={f.href} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                                  → {f.label}
+                                </a>
+                              ) : (
+                                <span>→ {f.label}</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <details className="text-[11px] text-muted-foreground">
+                        <summary className="cursor-pointer hover:text-foreground">Raw error from Meta</summary>
+                        <p className="mt-1 break-words font-mono bg-background/60 p-1.5 rounded">{verifyResult.error}</p>
+                      </details>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })()}
