@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { useMetaAds, classifyAd, type AdClass } from "@/hooks/useMetaAds";
+import { useMetaAds, classifyAd, type AdClass, type MetaAd } from "@/hooks/useMetaAds";
 import { useClients } from "@/hooks/useDatabase";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { ConnectMetaPrompt } from "@/components/dashboard/ConnectMetaPrompt";
 import { CreativeCard } from "@/components/creatives/CreativeCard";
 import { BreakdownTable } from "@/components/creatives/BreakdownTable";
+import { AdDetailDrawer } from "@/components/creatives/AdDetailDrawer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sparkles, AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ export default function Creatives() {
   const { data: ads = [], isLoading } = useMetaAds();
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [selected, setSelected] = useState<{ ad: MetaAd; klass: AdClass; clientName: string | null } | null>(null);
 
   // For now use sensible defaults; can be wired to kpi_threshold_presets later
   const greenCpl = 30;
@@ -93,9 +95,9 @@ export default function Creatives() {
         </div>
       ) : (
         <>
-          <ColumnSection title="Best performers" icon={Sparkles} tone="success" items={grouped.best} />
-          <ColumnSection title="Learning" icon={Loader2} tone="warning" items={grouped.learning} spin />
-          <ColumnSection title="Worst performers" icon={AlertTriangle} tone="destructive" items={grouped.worst} />
+          <ColumnSection title="Best performers" icon={Sparkles} tone="success" items={grouped.best} onSelect={setSelected} />
+          <ColumnSection title="Learning" icon={Loader2} tone="warning" items={grouped.learning} spin onSelect={setSelected} />
+          <ColumnSection title="Worst performers" icon={AlertTriangle} tone="destructive" items={grouped.worst} onSelect={setSelected} />
 
           <div className="pt-4">
             <h2 className="text-lg font-semibold text-foreground mb-3">What's working — by element</h2>
@@ -122,6 +124,14 @@ export default function Creatives() {
           </div>
         </>
       )}
+
+      <AdDetailDrawer
+        ad={selected?.ad ?? null}
+        klass={selected?.klass ?? "unclassified"}
+        clientName={selected?.clientName ?? null}
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+      />
     </div>
   );
 }
@@ -132,12 +142,14 @@ function ColumnSection({
   tone,
   items,
   spin,
+  onSelect,
 }: {
   title: string;
   icon: any;
   tone: "success" | "warning" | "destructive";
-  items: { ad: any; klass: AdClass; clientName: string | null }[];
+  items: { ad: MetaAd; klass: AdClass; clientName: string | null }[];
   spin?: boolean;
+  onSelect: (item: { ad: MetaAd; klass: AdClass; clientName: string | null }) => void;
 }) {
   if (!items.length) return null;
   const toneClass =
@@ -151,7 +163,7 @@ function ColumnSection({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {items.slice(0, 12).map((it) => (
-          <CreativeCard key={it.ad.id} ad={it.ad} klass={it.klass} clientName={it.clientName} />
+          <CreativeCard key={it.ad.id} ad={it.ad} klass={it.klass} clientName={it.clientName} onClick={() => onSelect(it)} />
         ))}
       </div>
     </section>
