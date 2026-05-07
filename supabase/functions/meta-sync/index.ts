@@ -106,17 +106,22 @@ Deno.serve(async (req) => {
         // ---- Granular daily insights (campaign + adset + ad) ----
         const granularRows = await syncGranularInsights(admin, acc, conn.access_token);
 
+        // ---- Ad-level creatives + 30d performance (for the Creatives page) ----
+        let adRows = 0;
+        try { adRows = await syncAds(admin, acc, conn.access_token); }
+        catch (e) { errors.push({ account: acc.act_id, scope: "ads", error: String(e) }); }
+
         await admin.from("meta_ad_accounts")
           .update({ last_synced_at: new Date().toISOString() })
           .eq("id", acc.id);
 
         await admin.from("meta_sync_log").update({
           status: "success",
-          rows_synced: rows.length + campaignRows + granularRows,
+          rows_synced: rows.length + campaignRows + granularRows + adRows,
           finished_at: new Date().toISOString(),
         }).eq("id", log.data!.id);
 
-        totalRows += rows.length + campaignRows + granularRows;
+        totalRows += rows.length + campaignRows + granularRows + adRows;
       } catch (e) {
         errors.push({ account: acc.act_id, error: String(e) });
         await admin.from("meta_sync_log").update({
