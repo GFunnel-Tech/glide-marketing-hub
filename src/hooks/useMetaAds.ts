@@ -56,25 +56,29 @@ export function useMetaAds(clientId?: number) {
 
 export type AdClass = "best" | "worst" | "learning" | "unclassified";
 
-export function classifyAd(
-  ad: MetaAd,
-  thresholds: { greenCpl: number; redCpl: number },
-): AdClass {
-  // Learning: Meta says so, OR very new, OR not enough data
+export interface ClassifyRules {
+  greenCpl: number;
+  redCpl: number;
+  minLeadsBest: number;
+  minSpendBest: number;
+  minSpendWorst: number;
+  learningMaxDays: number;
+  learningMinLeads: number;
+}
+
+export function classifyAd(ad: MetaAd, r: ClassifyRules): AdClass {
   if (
     ad.effective_status === "IN_PROCESS" ||
     ad.effective_status === "PENDING_REVIEW" ||
-    ad.days_active < 7 ||
-    ad.leads < 5
+    ad.days_active < r.learningMaxDays ||
+    ad.leads < r.learningMinLeads
   ) {
     return "learning";
   }
-  // Worst: spent meaningfully with no leads, or CPL above red
-  if ((ad.spend >= 200 && ad.leads === 0) || (ad.cpl > 0 && ad.cpl >= thresholds.redCpl)) {
+  if ((ad.spend >= r.minSpendWorst && ad.leads === 0) || (ad.cpl > 0 && ad.cpl >= r.redCpl)) {
     return "worst";
   }
-  // Best: enough spend to trust the number AND CPL at/under green
-  if (ad.spend >= 50 && ad.leads >= 5 && ad.cpl > 0 && ad.cpl <= thresholds.greenCpl) {
+  if (ad.spend >= r.minSpendBest && ad.leads >= r.minLeadsBest && ad.cpl > 0 && ad.cpl <= r.greenCpl) {
     return "best";
   }
   return "unclassified";
