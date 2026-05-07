@@ -25,6 +25,7 @@ export default function Campaigns() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [search, setSearch] = useState("");
   const [dcDismissed, setDcDismissed] = useState(false);
+  const [rejDismissed, setRejDismissed] = useState(false);
   const [pauseTarget, setPauseTarget] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
 
