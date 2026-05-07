@@ -240,6 +240,33 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
   return rows.length;
 }
 
+// Pick the most accurate "lead" count from Meta's actions array.
+// Meta returns multiple action_types; using find() picks whichever comes first
+// and the aggregate "lead" bucket can include misconfigured pixel events
+// (page views, clicks, video plays mislabeled as "Lead"). We prefer precise
+// Lead Ads form submissions, then the standard pixel Lead event, and only
+// fall back to the aggregate "lead" bucket as a last resort.
+function extractLeads(actions: any[] | undefined | null): number {
+  if (!Array.isArray(actions) || !actions.length) return 0;
+  const byType = new Map<string, number>();
+  for (const a of actions) {
+    if (!a?.action_type) continue;
+    byType.set(a.action_type, Number(a.value ?? 0));
+  }
+  // Priority order: native Lead Ads form > pixel Lead > offline > aggregate.
+  const priority = [
+    "onsite_conversion.lead_grouped", // Instant Forms (Meta Lead Ads)
+    "leadgen.other",
+    "offsite_conversion.fb_pixel_lead", // Website pixel Lead event
+    "offline_conversion.lead",
+    "lead", // Aggregate — least trustworthy, may include mislabeled events
+  ];
+  for (const t of priority) {
+    if (byType.has(t)) return byType.get(t) || 0;
+  }
+  return 0;
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
