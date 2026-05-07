@@ -51,6 +51,33 @@ function validateMetaToken(raw: string): ValidationResult {
   return { ok: false as const, error: result.error.issues[0]?.message ?? "Invalid token." };
 }
 
+// Non-blocking heuristic warnings for common paste mistakes.
+// These do NOT prevent Verify/Connect — they just flag likely problems early.
+function getTokenWarnings(raw: string): string[] {
+  const t = raw.trim();
+  if (!t) return [];
+  const warnings: string[] = [];
+  if (/access_token=/i.test(t) || /^https?:\/\//i.test(t)) {
+    warnings.push("This looks like a full URL or query string. Paste only the token value (the part after access_token=).");
+  }
+  if (/^eyJ[A-Za-z0-9_-]+\./.test(t)) {
+    warnings.push("This looks like a JWT (Google/Supabase token), not a Meta token. Meta tokens start with \"EAA\".");
+  }
+  if (/^\d+\|[A-Za-z0-9_\-]+$/.test(t)) {
+    warnings.push("This looks like an App Access Token (APP_ID|APP_SECRET). Use a User or System User token instead — app tokens cannot read ad accounts.");
+  }
+  if (!/^EAA/.test(t) && !/^\d+\|/.test(t)) {
+    warnings.push("Meta access tokens normally start with \"EAA\". Double-check you copied the right value.");
+  }
+  if (/^EAA/.test(t) && t.length < 100) {
+    warnings.push("Token is unusually short. Short-lived tokens from the Graph API Explorer expire in ~1 hour — extend it or use a System User token.");
+  }
+  if (/\.\.\.|•|…|\*{3,}/.test(t)) {
+    warnings.push("Token contains placeholder characters (…, •, or ***). Make sure you copied the full token, not a masked preview.");
+  }
+  return warnings;
+}
+
 interface MetaConnection {
   id: string;
   meta_user_name: string | null;
