@@ -744,6 +744,18 @@ export function MetaConnectionsPanel() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleTestConnection(c.id)}
+                      disabled={testingId === c.id}
+                      title="Ping Meta and check that this token still has the required scopes"
+                    >
+                      {testingId === c.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <Link2 className="h-3 w-3" />}
+                      <span className="ml-1">Test</span>
+                    </Button>
                     {c.connection_type === "oauth" ? (
                       <Button
                         size="sm"
