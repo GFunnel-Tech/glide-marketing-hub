@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { useMetaAds, classifyAd, type AdClass } from "@/hooks/useMetaAds";
+import { useMetaAds, classifyAd, type AdClass, type MetaAd } from "@/hooks/useMetaAds";
 import { useClients } from "@/hooks/useDatabase";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { ConnectMetaPrompt } from "@/components/dashboard/ConnectMetaPrompt";
 import { CreativeCard } from "@/components/creatives/CreativeCard";
 import { BreakdownTable } from "@/components/creatives/BreakdownTable";
+import { AdDetailDrawer } from "@/components/creatives/AdDetailDrawer";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sparkles, AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ export default function Creatives() {
   const { data: ads = [], isLoading } = useMetaAds();
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [selected, setSelected] = useState<{ ad: MetaAd; klass: AdClass; clientName: string | null } | null>(null);
 
   // For now use sensible defaults; can be wired to kpi_threshold_presets later
   const greenCpl = 30;
@@ -93,9 +95,9 @@ export default function Creatives() {
         </div>
       ) : (
         <>
-          <ColumnSection title="Best performers" icon={Sparkles} tone="success" items={grouped.best} />
-          <ColumnSection title="Learning" icon={Loader2} tone="warning" items={grouped.learning} spin />
-          <ColumnSection title="Worst performers" icon={AlertTriangle} tone="destructive" items={grouped.worst} />
+          <ColumnSection title="Best performers" icon={Sparkles} tone="success" items={grouped.best} onSelect={setSelected} />
+          <ColumnSection title="Learning" icon={Loader2} tone="warning" items={grouped.learning} spin onSelect={setSelected} />
+          <ColumnSection title="Worst performers" icon={AlertTriangle} tone="destructive" items={grouped.worst} onSelect={setSelected} />
 
           <div className="pt-4">
             <h2 className="text-lg font-semibold text-foreground mb-3">What's working — by element</h2>
