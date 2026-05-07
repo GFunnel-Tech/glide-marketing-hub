@@ -95,6 +95,16 @@ export default function Campaigns() {
         </div>
       )}
 
+      {rejectedCampaigns.length > 0 && !rejDismissed && (
+        <div className="flex items-center gap-3 rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+          <p className="flex-1 text-sm text-destructive">
+            <strong>Ad rejected by Meta</strong> on {rejectedCampaigns.length} campaign{rejectedCampaigns.length === 1 ? "" : "s"}. Delivery may be paused — review and edit the ad to comply with Meta's policies.
+          </p>
+          <button onClick={() => setRejDismissed(true)}><X className="h-4 w-4 text-destructive/60 hover:text-destructive" /></button>
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <div className="text-center py-10 text-muted-foreground">
           <p>No campaigns match your filters</p>
