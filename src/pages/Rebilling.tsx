@@ -31,13 +31,17 @@ export default function Rebilling() {
   const { data: clients = [] } = useClients();
   const { data: configs = [] } = useRebillConfigs();
   const { data: invoices = [] } = useRebillInvoices();
+  const { data: wallets = [] } = useWallets();
   const generate = useGenerateInvoice();
   const updateStatus = useUpdateInvoiceStatus();
 
   const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
+  const [walletFor, setWalletFor] = useState<{ id: number; name: string } | null>(null);
   const [genFor, setGenFor] = useState<{ id: number; name: string } | null>(null);
   const [periodStart, setPeriodStart] = useState(firstOfMonth());
   const [periodEnd, setPeriodEnd] = useState(lastOfMonth());
+
+  const walletByClient = new Map(wallets.map((w) => [w.client_id, w]));
 
   const configByClient = new Map(configs.map((c) => [c.client_id, c]));
 
