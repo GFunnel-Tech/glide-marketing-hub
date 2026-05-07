@@ -740,6 +740,63 @@ export type Database = {
           },
         ]
       }
+      meta_insights_granular_daily: {
+        Row: {
+          ad_account_id: string
+          clicks: number
+          created_at: string
+          date: string
+          id: string
+          impressions: number
+          leads: number
+          level: Database["public"]["Enums"]["rebill_assignment_level"]
+          object_id: string
+          object_name: string | null
+          parent_adset_id: string | null
+          parent_campaign_id: string | null
+          raw: Json | null
+          spend: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_account_id: string
+          clicks?: number
+          created_at?: string
+          date: string
+          id?: string
+          impressions?: number
+          leads?: number
+          level: Database["public"]["Enums"]["rebill_assignment_level"]
+          object_id: string
+          object_name?: string | null
+          parent_adset_id?: string | null
+          parent_campaign_id?: string | null
+          raw?: Json | null
+          spend?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_account_id?: string
+          clicks?: number
+          created_at?: string
+          date?: string
+          id?: string
+          impressions?: number
+          leads?: number
+          level?: Database["public"]["Enums"]["rebill_assignment_level"]
+          object_id?: string
+          object_name?: string | null
+          parent_adset_id?: string | null
+          parent_campaign_id?: string | null
+          raw?: Json | null
+          spend?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       meta_leads: {
         Row: {
           ad_account_id: string
