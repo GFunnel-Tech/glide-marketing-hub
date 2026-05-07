@@ -39,6 +39,7 @@ export interface DbCampaign {
   ad_sets: number;
   ads: number;
   double_count: boolean;
+  issues_status?: string | null;
 }
 
 export interface DbReport {
@@ -138,6 +139,7 @@ export function toCampaign(c: DbCampaign) {
     adSets: c.ad_sets,
     ads: c.ads,
     doubleCount: c.double_count,
+    issuesStatus: c.issues_status ?? null,
   };
 }
 

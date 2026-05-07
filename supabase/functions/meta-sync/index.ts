@@ -209,6 +209,17 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
     const leads = extractLeads(ins.actions);
     const spend = Number(ins.spend ?? 0);
     const status = (c.effective_status === "ACTIVE" || c.status === "ACTIVE") ? "active" : "paused";
+    // Surface ad-delivery problems Meta flags at campaign level.
+    // Common values: DISAPPROVED, WITH_ISSUES, PENDING_REVIEW, PENDING_BILLING_INFO,
+    // CAMPAIGN_PAUSED (when an ad inside is rejected and Meta paused delivery).
+    const ISSUE_STATUSES = new Set([
+      "DISAPPROVED",
+      "WITH_ISSUES",
+      "PENDING_REVIEW",
+      "PENDING_BILLING_INFO",
+      "IN_PROCESS",
+    ]);
+    const issues_status = ISSUE_STATUSES.has(c.effective_status) ? c.effective_status : null;
     return {
       id: c.id, // Meta's campaign id (text PK)
       client_id: acc.client_id,
@@ -225,6 +236,7 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
       ad_sets: 0,
       ads: 0,
       double_count: false,
+      issues_status,
       updated_at: new Date().toISOString(),
     };
   });

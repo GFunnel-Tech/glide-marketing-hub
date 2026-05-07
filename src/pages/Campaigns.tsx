@@ -19,12 +19,24 @@ function getCPLColor(cpl: number) {
   return "text-destructive";
 }
 
+const ISSUE_LABELS: Record<string, string> = {
+  DISAPPROVED: "Ad rejected",
+  WITH_ISSUES: "Ads with issues",
+  PENDING_REVIEW: "Pending review",
+  PENDING_BILLING_INFO: "Billing issue",
+  IN_PROCESS: "Processing",
+};
+function isRejected(c: { issuesStatus?: string | null }) {
+  return !!c.issuesStatus && c.issuesStatus in ISSUE_LABELS;
+}
+
 export default function Campaigns() {
   const { data: clients = [] } = useClients();
   const { data: campaignData = [], isLoading } = useCampaigns();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [search, setSearch] = useState("");
   const [dcDismissed, setDcDismissed] = useState(false);
+  const [rejDismissed, setRejDismissed] = useState(false);
   const [pauseTarget, setPauseTarget] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -34,12 +46,13 @@ export default function Campaigns() {
     let list = campaignData;
     if (statusFilter === "Active") list = list.filter(c => c.status === "active");
     if (statusFilter === "Paused") list = list.filter(c => c.status !== "active");
-    if (statusFilter === "Issues Only") list = list.filter(c => c.doubleCount || c.trueCpl > 60);
+    if (statusFilter === "Issues Only") list = list.filter(c => c.doubleCount || c.trueCpl > 60 || isRejected(c));
     if (search) list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || getClient(c.clientId)?.name.toLowerCase().includes(search.toLowerCase()));
     return list;
   }, [campaignData, clients, statusFilter, search]);
 
   const dcCampaigns = campaignData.filter(c => c.doubleCount);
+  const rejectedCampaigns = campaignData.filter(isRejected);
   const flaggedForPause = campaignData.filter(c => c.trueCpl > 60 && c.status === "active");
 
   const handlePause = async (campaignId: string) => {
@@ -82,6 +95,16 @@ export default function Campaigns() {
         </div>
       )}
 
+      {rejectedCampaigns.length > 0 && !rejDismissed && (
+        <div className="flex items-center gap-3 rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+          <p className="flex-1 text-sm text-destructive">
+            <strong>Ad rejected by Meta</strong> on {rejectedCampaigns.length} campaign{rejectedCampaigns.length === 1 ? "" : "s"}. Delivery may be paused — review and edit the ad to comply with Meta's policies.
+          </p>
+          <button onClick={() => setRejDismissed(true)}><X className="h-4 w-4 text-destructive/60 hover:text-destructive" /></button>
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <div className="text-center py-10 text-muted-foreground">
           <p>No campaigns match your filters</p>
@@ -107,6 +130,11 @@ export default function Campaigns() {
                   <div><span className="text-muted-foreground">CPM</span><p className="font-semibold text-foreground">${c.cpm.toFixed(2)}</p></div>
                   <div><span className="text-muted-foreground">Freq</span><p className="font-semibold text-foreground">{c.frequency}</p></div>
                 </div>
+                {isRejected(c) && (
+                  <p className="text-xs text-destructive font-medium mt-2 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" /> {ISSUE_LABELS[c.issuesStatus as string]}
+                  </p>
+                )}
                 {c.doubleCount && <p className="text-xs text-destructive font-medium mt-2">⚠ True CPL: ${c.trueCpl.toFixed(2)}</p>}
               </Link>
             );
