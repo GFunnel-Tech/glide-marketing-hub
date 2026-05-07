@@ -25,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+import { MetaTokenGuide } from "./MetaTokenGuide";
 
 // Meta user/system-user access tokens are opaque strings.
 // They are typically 100–500 chars of URL-safe base64-ish characters.
@@ -740,18 +741,10 @@ export function MetaConnectionsPanel() {
                   </p>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
                     Use this when OAuth isn't available — for example, a system-user token from Business Settings.
-                    Paste a long-lived token with <span className="font-mono">ads_read</span> and <span className="font-mono">read_insights</span>.
-                    {" "}
-                    <a
-                      href="https://developers.facebook.com/tools/explorer/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      Open Graph API Explorer ↗
-                    </a>
                   </p>
                 </div>
+
+                <MetaTokenGuide />
 
                 <div className="flex gap-2">
                   <Input
