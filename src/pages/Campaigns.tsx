@@ -130,6 +130,11 @@ export default function Campaigns() {
                   <div><span className="text-muted-foreground">CPM</span><p className="font-semibold text-foreground">${c.cpm.toFixed(2)}</p></div>
                   <div><span className="text-muted-foreground">Freq</span><p className="font-semibold text-foreground">{c.frequency}</p></div>
                 </div>
+                {isRejected(c) && (
+                  <p className="text-xs text-destructive font-medium mt-2 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" /> {ISSUE_LABELS[c.issuesStatus as string]}
+                  </p>
+                )}
                 {c.doubleCount && <p className="text-xs text-destructive font-medium mt-2">⚠ True CPL: ${c.trueCpl.toFixed(2)}</p>}
               </Link>
             );
