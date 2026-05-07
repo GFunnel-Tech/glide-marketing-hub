@@ -337,3 +337,106 @@ async function syncGranularInsights(admin: any, acc: any, accessToken: string): 
   }
   return total;
 }
+
+// Pull every ad in the account with its creative + targeting + last-30d
+// performance, and upsert into meta_ads for the Creatives page.
+async function syncAds(admin: any, acc: any, accessToken: string): Promise<number> {
+  const adFields = [
+    "id","name","status","effective_status","created_time",
+    "campaign_id","campaign{name}","adset_id","adset{name,targeting}",
+    "creative{id,thumbnail_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id}",
+  ].join(",");
+
+  const ads: any[] = [];
+  let next: string | null =
+    `https://graph.facebook.com/v21.0/${acc.act_id}/ads?fields=${adFields}&limit=200&access_token=${encodeURIComponent(accessToken)}`;
+  // safety cap: 5 pages = 1000 ads per account
+  let page = 0;
+  while (next && page < 5) {
+    const r = await fetch(next);
+    const j = await r.json();
+    if (!r.ok) throw new Error("ads list: " + JSON.stringify(j));
+    for (const a of j.data ?? []) ads.push(a);
+    next = j.paging?.next ?? null;
+    page++;
+  }
+  if (!ads.length) return 0;
+
+  // Pull last-30d insights at ad level in one call
+  const insFields = "ad_id,spend,impressions,clicks,ctr,actions";
+  const insMap = new Map<string, any>();
+  let insNext: string | null =
+    `https://graph.facebook.com/v21.0/${acc.act_id}/insights?fields=${insFields}&level=ad&date_preset=last_30d&limit=500&access_token=${encodeURIComponent(accessToken)}`;
+  let ip = 0;
+  while (insNext && ip < 10) {
+    const r = await fetch(insNext);
+    const j = await r.json();
+    if (!r.ok) break;
+    for (const row of j.data ?? []) insMap.set(row.ad_id, row);
+    insNext = j.paging?.next ?? null;
+    ip++;
+  }
+
+  const now = Date.now();
+  const rows = ads.map((a: any) => {
+    const ins = insMap.get(a.id) ?? {};
+    const leads = extractLeads(ins.actions);
+    const spend = Number(ins.spend ?? 0);
+    const cre = a.creative ?? {};
+    const story = cre.object_story_spec ?? {};
+    const linkData = story.link_data ?? story.video_data ?? {};
+
+    // body/title may live either directly on creative or inside object_story_spec
+    const body = cre.body ?? linkData.message ?? linkData.description ?? null;
+    const title = cre.title ?? linkData.name ?? null;
+    const cta = cre.call_to_action_type ?? linkData.call_to_action?.type ?? null;
+    const linkUrl = linkData.link ?? null;
+
+    // creative_hash: image_hash if available, else video_id, else creative_id —
+    // lets us group "same visual reused across ads".
+    const creativeHash = cre.image_hash ?? cre.video_id ?? cre.id ?? null;
+
+    const createdAt = a.created_time ? new Date(a.created_time) : null;
+    const daysActive = createdAt
+      ? Math.max(0, Math.floor((now - createdAt.getTime()) / 86_400_000))
+      : 0;
+
+    return {
+      id: a.id,
+      workspace_id: acc.workspace_id,
+      client_id: acc.client_id,
+      ad_account_id: acc.id,
+      campaign_id: a.campaign_id ?? null,
+      campaign_name: a.campaign?.name ?? null,
+      adset_id: a.adset_id ?? null,
+      adset_name: a.adset?.name ?? null,
+      name: a.name ?? null,
+      effective_status: a.effective_status ?? a.status ?? null,
+      creative_id: cre.id ?? null,
+      creative_hash: creativeHash,
+      thumbnail_url: cre.thumbnail_url ?? null,
+      video_id: cre.video_id ?? null,
+      title,
+      body,
+      call_to_action_type: cta,
+      link_url: linkUrl,
+      targeting_summary: a.adset?.targeting ?? null,
+      spend,
+      impressions: Number(ins.impressions ?? 0),
+      clicks: Number(ins.clicks ?? 0),
+      leads,
+      ctr: Number(ins.ctr ?? 0),
+      cpl: leads > 0 ? spend / leads : 0,
+      days_active: daysActive,
+      first_seen_at: createdAt ? createdAt.toISOString() : null,
+      updated_at: new Date().toISOString(),
+    };
+  });
+
+  for (let i = 0; i < rows.length; i += 500) {
+    const chunk = rows.slice(i, i + 500);
+    const { error } = await admin.from("meta_ads").upsert(chunk, { onConflict: "id" });
+    if (error) throw new Error("meta_ads upsert: " + error.message);
+  }
+  return rows.length;
+}
