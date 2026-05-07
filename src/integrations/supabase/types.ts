@@ -1038,6 +1038,165 @@ export type Database = {
         }
         Relationships: []
       }
+      rebill_assignments: {
+        Row: {
+          ad_account_id: string
+          client_id: number
+          created_at: string
+          excluded: boolean
+          id: string
+          level: Database["public"]["Enums"]["rebill_assignment_level"]
+          object_id: string
+          object_name: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_account_id: string
+          client_id: number
+          created_at?: string
+          excluded?: boolean
+          id?: string
+          level: Database["public"]["Enums"]["rebill_assignment_level"]
+          object_id: string
+          object_name?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_account_id?: string
+          client_id?: number
+          created_at?: string
+          excluded?: boolean
+          id?: string
+          level?: Database["public"]["Enums"]["rebill_assignment_level"]
+          object_id?: string
+          object_name?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      rebill_configs: {
+        Row: {
+          cadence: Database["public"]["Enums"]["rebill_cadence"]
+          client_id: number
+          created_at: string
+          currency: string
+          enabled: boolean
+          fixed_fee: number
+          id: string
+          markup_pct: number
+          monthly_minimum: number
+          notes: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          cadence?: Database["public"]["Enums"]["rebill_cadence"]
+          client_id: number
+          created_at?: string
+          currency?: string
+          enabled?: boolean
+          fixed_fee?: number
+          id?: string
+          markup_pct?: number
+          monthly_minimum?: number
+          notes?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          cadence?: Database["public"]["Enums"]["rebill_cadence"]
+          client_id?: number
+          created_at?: string
+          currency?: string
+          enabled?: boolean
+          fixed_fee?: number
+          id?: string
+          markup_pct?: number
+          monthly_minimum?: number
+          notes?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      rebill_invoices: {
+        Row: {
+          client_id: number
+          created_at: string
+          currency: string
+          fixed_fee: number
+          id: string
+          invoice_number: string | null
+          line_items: Json
+          markup_pct: number
+          monthly_minimum: number
+          notes: string | null
+          paid_at: string | null
+          pdf_url: string | null
+          period_end: string
+          period_start: string
+          raw_spend: number
+          sent_at: string | null
+          status: Database["public"]["Enums"]["rebill_invoice_status"]
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
+          total_due: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          currency?: string
+          fixed_fee?: number
+          id?: string
+          invoice_number?: string | null
+          line_items?: Json
+          markup_pct?: number
+          monthly_minimum?: number
+          notes?: string | null
+          paid_at?: string | null
+          pdf_url?: string | null
+          period_end: string
+          period_start: string
+          raw_spend?: number
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["rebill_invoice_status"]
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          total_due?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          currency?: string
+          fixed_fee?: number
+          id?: string
+          invoice_number?: string | null
+          line_items?: Json
+          markup_pct?: number
+          monthly_minimum?: number
+          notes?: string | null
+          paid_at?: string | null
+          pdf_url?: string | null
+          period_end?: string
+          period_start?: string
+          raw_spend?: number
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["rebill_invoice_status"]
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          total_due?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           brand: string
@@ -1303,6 +1462,9 @@ export type Database = {
       bm_type: "Own BM" | "Agency BM"
       campaign_status: "active" | "paused"
       client_status: "GREEN" | "YELLOW" | "RED" | "BLOCKED"
+      rebill_assignment_level: "account" | "campaign" | "adset" | "ad"
+      rebill_cadence: "monthly" | "weekly" | "custom"
+      rebill_invoice_status: "draft" | "sent" | "paid" | "void"
       report_status: "draft" | "ready" | "delivered"
       workspace_role: "owner" | "admin" | "member" | "viewer"
     }
@@ -1436,6 +1598,9 @@ export const Constants = {
       bm_type: ["Own BM", "Agency BM"],
       campaign_status: ["active", "paused"],
       client_status: ["GREEN", "YELLOW", "RED", "BLOCKED"],
+      rebill_assignment_level: ["account", "campaign", "adset", "ad"],
+      rebill_cadence: ["monthly", "weekly", "custom"],
+      rebill_invoice_status: ["draft", "sent", "paid", "void"],
       report_status: ["draft", "ready", "delivered"],
       workspace_role: ["owner", "admin", "member", "viewer"],
     },
