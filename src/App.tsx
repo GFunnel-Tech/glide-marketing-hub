@@ -21,6 +21,7 @@ import Messages from "./pages/Messages";
 import Onboarding from "./pages/Onboarding";
 import AiAssistant from "./pages/AiAssistant";
 import SuperAdmin from "./pages/SuperAdmin";
+import Rebilling from "./pages/Rebilling";
 import NotFound from "./pages/NotFound";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
@@ -64,6 +65,7 @@ const App = () => (
                   <Route path="reports" element={<Reports />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="onboarding" element={<Onboarding />} />
+                  <Route path="rebilling" element={<Rebilling />} />
                   <Route path="ai" element={<AiAssistant />} />
                   <Route path="notifications" element={<Notifications />} />
                   <Route path="messages" element={<Messages />} />
