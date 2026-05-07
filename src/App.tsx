@@ -13,6 +13,7 @@ import ClientPortal from "./pages/ClientPortal";
 import MetaCallback from "./pages/MetaCallback";
 import ClientProfile from "./pages/ClientProfile";
 import Campaigns from "./pages/Campaigns";
+import Creatives from "./pages/Creatives";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Leads from "./pages/Leads";
