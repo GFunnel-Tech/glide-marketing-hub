@@ -16,9 +16,8 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 const integrations = [
   { name: "Meta Ads API", type: "oauth", connected: true, lastSync: "2 min ago" },
   { name: "GoHighLevel", type: "apikey", connected: true, lastSync: "5 min ago" },
-  { name: "Plai", type: "apikey", connected: true, lastSync: "1 hr ago", extra: "28/32 accounts connected" },
+  { name: "Plai", type: "apikey", connected: true, lastSync: "1 hr ago", extra: "28/32 accounts connected", docUrl: "https://plai.io" },
   { name: "ClickUp", type: "oauth", connected: false, lastSync: null },
-  { name: "Play.ai", type: "apikey", connected: false, lastSync: null, docUrl: "https://docs.play.ai/api-reference/agents/introduction" },
   { name: "n8n Webhooks", type: "display", connected: true, lastSync: "Live", url: "https://apihub.gfunnel.com/webhook" },
 ];
 
