@@ -200,6 +200,44 @@ export type Database = {
           },
         ]
       }
+      client_kpi_overrides: {
+        Row: {
+          client_id: number
+          created_at: string
+          id: string
+          overrides: Json
+          preset_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          id?: string
+          overrides?: Json
+          preset_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          id?: string
+          overrides?: Json
+          preset_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_kpi_overrides_preset_id_fkey"
+            columns: ["preset_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_threshold_presets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_wallets: {
         Row: {
           auto_topup_enabled: boolean
@@ -498,6 +536,39 @@ export type Database = {
           id?: string
           updated_at?: string
           workspace_id?: string
+        }
+        Relationships: []
+      }
+      kpi_threshold_presets: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_default: boolean
+          kpis: Json
+          name: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          kpis?: Json
+          name: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          kpis?: Json
+          name?: string
+          updated_at?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1522,6 +1593,47 @@ export type Database = {
           },
         ]
       }
+      workspace_kpi_settings: {
+        Row: {
+          created_at: string
+          green_score_min: number
+          id: string
+          overrides: Json
+          preset_id: string | null
+          updated_at: string
+          workspace_id: string
+          yellow_score_min: number
+        }
+        Insert: {
+          created_at?: string
+          green_score_min?: number
+          id?: string
+          overrides?: Json
+          preset_id?: string | null
+          updated_at?: string
+          workspace_id: string
+          yellow_score_min?: number
+        }
+        Update: {
+          created_at?: string
+          green_score_min?: number
+          id?: string
+          overrides?: Json
+          preset_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+          yellow_score_min?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_kpi_settings_preset_id_fkey"
+            columns: ["preset_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_threshold_presets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           created_at: string
@@ -1590,6 +1702,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      compute_client_status: { Args: { _client_id: number }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1610,6 +1723,11 @@ export type Database = {
         Args: { _event_type: string; _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      recompute_all_client_statuses: {
+        Args: { _workspace_id: string }
+        Returns: number
+      }
+      resolve_client_kpi_config: { Args: { _client_id: number }; Returns: Json }
       workspace_role_of: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: Database["public"]["Enums"]["workspace_role"]
