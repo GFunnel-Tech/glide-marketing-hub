@@ -206,10 +206,7 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
   // 3. Upsert into the existing public.campaigns table
   const rows = campaigns.map((c: any) => {
     const ins = insightsByCampaign.get(c.id) ?? {};
-    const leadAction = (ins.actions ?? []).find((a: any) =>
-      a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped"
-    );
-    const leads = leadAction ? Number(leadAction.value) : 0;
+    const leads = extractLeads(ins.actions);
     const spend = Number(ins.spend ?? 0);
     const status = (c.effective_status === "ACTIVE" || c.status === "ACTIVE") ? "active" : "paused";
     return {
