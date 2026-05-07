@@ -20,6 +20,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: Users, label: "Clients", path: "/clients" },
   { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
+  { icon: Sparkles, label: "Creatives", path: "/creatives", badge: "NEW" },
   { icon: Inbox, label: "Leads", path: "/leads" },
   { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
   { icon: FileBarChart, label: "Reports", path: "/reports" },
