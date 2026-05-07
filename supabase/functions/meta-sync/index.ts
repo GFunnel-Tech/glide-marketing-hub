@@ -71,10 +71,7 @@ Deno.serve(async (req) => {
         if (!res.ok) throw new Error(JSON.stringify(json_));
 
         const rows = (json_.data ?? []).map((d: any) => {
-          const leadAction = (d.actions ?? []).find((a: any) =>
-            a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped"
-          );
-          const leads = leadAction ? Number(leadAction.value) : 0;
+          const leads = extractLeads(d.actions);
           const spend = Number(d.spend ?? 0);
           return {
             workspace_id: acc.workspace_id,
@@ -209,10 +206,7 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
   // 3. Upsert into the existing public.campaigns table
   const rows = campaigns.map((c: any) => {
     const ins = insightsByCampaign.get(c.id) ?? {};
-    const leadAction = (ins.actions ?? []).find((a: any) =>
-      a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped"
-    );
-    const leads = leadAction ? Number(leadAction.value) : 0;
+    const leads = extractLeads(ins.actions);
     const spend = Number(ins.spend ?? 0);
     const status = (c.effective_status === "ACTIVE" || c.status === "ACTIVE") ? "active" : "paused";
     return {
@@ -240,6 +234,33 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
   return rows.length;
 }
 
+// Pick the most accurate "lead" count from Meta's actions array.
+// Meta returns multiple action_types; using find() picks whichever comes first
+// and the aggregate "lead" bucket can include misconfigured pixel events
+// (page views, clicks, video plays mislabeled as "Lead"). We prefer precise
+// Lead Ads form submissions, then the standard pixel Lead event, and only
+// fall back to the aggregate "lead" bucket as a last resort.
+function extractLeads(actions: any[] | undefined | null): number {
+  if (!Array.isArray(actions) || !actions.length) return 0;
+  const byType = new Map<string, number>();
+  for (const a of actions) {
+    if (!a?.action_type) continue;
+    byType.set(a.action_type, Number(a.value ?? 0));
+  }
+  // Priority order: native Lead Ads form > pixel Lead > offline > aggregate.
+  const priority = [
+    "onsite_conversion.lead_grouped", // Instant Forms (Meta Lead Ads)
+    "leadgen.other",
+    "offsite_conversion.fb_pixel_lead", // Website pixel Lead event
+    "offline_conversion.lead",
+    "lead", // Aggregate — least trustworthy, may include mislabeled events
+  ];
+  for (const t of priority) {
+    if (byType.has(t)) return byType.get(t) || 0;
+  }
+  return 0;
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -263,9 +284,7 @@ async function syncGranularInsights(admin: any, acc: any, accessToken: string): 
       const j = await res.json();
       if (!res.ok) break;
       for (const d of j.data ?? []) {
-        const leadAction = (d.actions ?? []).find((a: any) =>
-          a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped"
-        );
+        const leads = extractLeads(d.actions);
         const objectId = level === "campaign" ? d.campaign_id : level === "adset" ? d.adset_id : d.ad_id;
         const objectName = level === "campaign" ? d.campaign_name : level === "adset" ? d.adset_name : d.ad_name;
         if (!objectId) continue;
@@ -281,7 +300,7 @@ async function syncGranularInsights(admin: any, acc: any, accessToken: string): 
           spend: Number(d.spend ?? 0),
           impressions: Number(d.impressions ?? 0),
           clicks: Number(d.clicks ?? 0),
-          leads: leadAction ? Number(leadAction.value) : 0,
+          leads,
           raw: d,
         });
       }
