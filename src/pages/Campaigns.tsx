@@ -19,6 +19,17 @@ function getCPLColor(cpl: number) {
   return "text-destructive";
 }
 
+const ISSUE_LABELS: Record<string, string> = {
+  DISAPPROVED: "Ad rejected",
+  WITH_ISSUES: "Ads with issues",
+  PENDING_REVIEW: "Pending review",
+  PENDING_BILLING_INFO: "Billing issue",
+  IN_PROCESS: "Processing",
+};
+function isRejected(c: { issuesStatus?: string | null }) {
+  return !!c.issuesStatus && c.issuesStatus in ISSUE_LABELS;
+}
+
 export default function Campaigns() {
   const { data: clients = [] } = useClients();
   const { data: campaignData = [], isLoading } = useCampaigns();
