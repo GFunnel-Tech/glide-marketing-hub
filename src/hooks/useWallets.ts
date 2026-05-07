@@ -61,7 +61,7 @@ export function useWallet(clientId?: number) {
         .eq("workspace_id", currentWorkspace!.id)
         .eq("client_id", clientId!).maybeSingle();
       if (error) throw error;
-      return data as ClientWallet | null;
+      return (data as any) as ClientWallet | null;
     },
   });
 }
