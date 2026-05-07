@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { Settings, FileText, Loader2, Receipt } from "lucide-react";
+import { Settings, Loader2, Receipt, Wallet as WalletIcon } from "lucide-react";
 import { useClients } from "@/hooks/useDatabase";
 import {
   useRebillConfigs, useRebillInvoices, useGenerateInvoice, useUpdateInvoiceStatus,
 } from "@/hooks/useRebilling";
+import { useWallets } from "@/hooks/useWallets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -16,6 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RebillConfigDialog } from "@/components/rebilling/RebillConfigDialog";
 import { AssignmentManager } from "@/components/rebilling/AssignmentManager";
+import { WalletPanel } from "@/components/rebilling/WalletPanel";
 import { cn } from "@/lib/utils";
 
 function firstOfMonth(d = new Date()) {
