@@ -136,6 +136,7 @@ export type Database = {
           double_count: boolean
           frequency: number
           id: string
+          issues_status: string | null
           leads: number
           name: string
           spend: number
@@ -155,6 +156,7 @@ export type Database = {
           double_count?: boolean
           frequency?: number
           id?: string
+          issues_status?: string | null
           leads?: number
           name: string
           spend?: number
@@ -174,6 +176,7 @@ export type Database = {
           double_count?: boolean
           frequency?: number
           id?: string
+          issues_status?: string | null
           leads?: number
           name?: string
           spend?: number
