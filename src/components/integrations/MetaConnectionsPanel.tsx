@@ -78,6 +78,104 @@ function getTokenWarnings(raw: string): string[] {
   return warnings;
 }
 
+// Map raw Meta/Graph error messages into a friendly diagnosis with likely causes + fixes.
+const REQUIRED_SCOPES = ["ads_read", "ads_management", "business_management", "read_insights", "leads_retrieval"];
+function diagnoseTokenError(rawError: string, grantedScopes?: string[]): {
+  title: string;
+  summary: string;
+  causes: string[];
+  fixes: { label: string; href?: string }[];
+  missingScopes?: string[];
+} {
+  const e = (rawError || "").toLowerCase();
+  const missing = grantedScopes
+    ? REQUIRED_SCOPES.filter(s => !grantedScopes.includes(s))
+    : undefined;
+
+  if (/expired|session has expired|code 463|error validating access token/.test(e)) {
+    return {
+      title: "Token has expired",
+      summary: "Meta says this token is no longer valid.",
+      causes: [
+        "Short-lived Graph API Explorer tokens expire after ~1 hour.",
+        "User changed their Facebook password or logged out everywhere.",
+        "Token was revoked from Settings → Business Integrations.",
+      ],
+      fixes: [
+        { label: "Use a System User token (never expires)", href: "https://business.facebook.com/settings/system-users" },
+        { label: "Or extend the user token to 60 days via the Access Token Debugger", href: "https://developers.facebook.com/tools/debug/accesstoken/" },
+      ],
+    };
+  }
+  if (/application does not have permission|app access token/.test(e)) {
+    return {
+      title: "Wrong token type",
+      summary: "This appears to be an App Access Token. App tokens cannot read ad accounts.",
+      causes: ["Token was generated as APP_ID|APP_SECRET instead of a User or System User token."],
+      fixes: [{ label: "Generate a System User token in Business Settings", href: "https://business.facebook.com/settings/system-users" }],
+    };
+  }
+  if (/permission|scope|insufficient|#200|#10\b/.test(e)) {
+    return {
+      title: "Missing permissions",
+      summary: "The token is valid but doesn't have the scopes we need to read ad data.",
+      causes: [
+        missing && missing.length
+          ? `Missing scopes: ${missing.join(", ")}.`
+          : "One or more required scopes were not granted when the token was created.",
+        "If using a System User token, the System User may not be assigned to the ad accounts.",
+      ],
+      fixes: [
+        { label: "Re-generate the token with ads_read, read_insights, ads_management, business_management, leads_retrieval", href: "https://business.facebook.com/settings/system-users" },
+        { label: "Assign the System User to your ad accounts (Business Settings → Ad Accounts → Add People)", href: "https://business.facebook.com/settings/ad-accounts" },
+      ],
+      missingScopes: missing,
+    };
+  }
+  if (/rate limit|too many calls|#17|#4\b/.test(e)) {
+    return {
+      title: "Rate limited by Meta",
+      summary: "Meta is throttling requests for this token.",
+      causes: ["Too many calls in a short window from this user/app."],
+      fixes: [{ label: "Wait a few minutes and try Verify again" }],
+    };
+  }
+  if (/malformed|invalid oauth access token|cannot parse|invalid format/.test(e)) {
+    return {
+      title: "Token is malformed",
+      summary: "Meta couldn't parse this string as an access token.",
+      causes: [
+        "The token was truncated, contains a masked preview (•••), or includes extra characters.",
+        "You may have pasted a URL instead of just the token value.",
+      ],
+      fixes: [{ label: "Re-copy the full token from Business Settings or the Graph API Explorer", href: "https://developers.facebook.com/tools/explorer/" }],
+    };
+  }
+  if (/checkpoint|two.?factor|2fa|review the information/.test(e)) {
+    return {
+      title: "Account is in checkpoint",
+      summary: "Meta has flagged the underlying Facebook account and requires action.",
+      causes: ["Suspicious activity, unverified login, or 2FA challenge pending."],
+      fixes: [
+        { label: "Log in to Facebook on the web and clear any prompts", href: "https://www.facebook.com/" },
+        { label: "Then re-generate the token" },
+      ],
+    };
+  }
+  return {
+    title: "Verification failed",
+    summary: rawError || "Meta rejected the token.",
+    causes: [
+      "Token may be invalid, expired, or for a different app.",
+      "The user/system user may lack access to any ad accounts.",
+    ],
+    fixes: [
+      { label: "Open the step-by-step token guide above and re-generate" },
+      { label: "Test the token in the Access Token Debugger", href: "https://developers.facebook.com/tools/debug/accesstoken/" },
+    ],
+  };
+}
+
 interface MetaConnection {
   id: string;
   meta_user_name: string | null;
@@ -863,15 +961,55 @@ export function MetaConnectionsPanel() {
                     </div>
                   </div>
                 )}
-                {verifyResult && verifyResult.ok === false && (
-                  <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive flex items-start gap-2">
-                    <XCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">Verification failed</p>
-                      <p className="break-words">{verifyResult.error}</p>
+                {verifyResult && verifyResult.ok === false && (() => {
+                  const dx = diagnoseTokenError(verifyResult.error);
+                  return (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs space-y-2">
+                      <div className="flex items-start gap-2">
+                        <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-destructive">{dx.title}</p>
+                          <p className="text-muted-foreground">{dx.summary}</p>
+                        </div>
+                      </div>
+                      {dx.missingScopes && dx.missingScopes.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {dx.missingScopes.map(s => (
+                            <span key={s} className="rounded bg-destructive/20 px-1.5 py-0.5 font-mono text-[10px] text-destructive">
+                              missing: {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Likely causes</p>
+                        <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
+                          {dx.causes.map((c, i) => <li key={i}>{c}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">How to fix</p>
+                        <ul className="space-y-1">
+                          {dx.fixes.map((f, i) => (
+                            <li key={i} className="text-foreground">
+                              {f.href ? (
+                                <a href={f.href} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                                  → {f.label}
+                                </a>
+                              ) : (
+                                <span>→ {f.label}</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <details className="text-[11px] text-muted-foreground">
+                        <summary className="cursor-pointer hover:text-foreground">Raw error from Meta</summary>
+                        <p className="mt-1 break-words font-mono bg-background/60 p-1.5 rounded">{verifyResult.error}</p>
+                      </details>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })()}
