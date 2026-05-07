@@ -139,6 +139,7 @@ export function toCampaign(c: DbCampaign) {
     adSets: c.ad_sets,
     ads: c.ads,
     doubleCount: c.double_count,
+    issuesStatus: c.issues_status ?? null,
   };
 }
 
