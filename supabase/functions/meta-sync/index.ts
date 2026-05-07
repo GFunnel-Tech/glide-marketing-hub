@@ -284,9 +284,7 @@ async function syncGranularInsights(admin: any, acc: any, accessToken: string): 
       const j = await res.json();
       if (!res.ok) break;
       for (const d of j.data ?? []) {
-        const leadAction = (d.actions ?? []).find((a: any) =>
-          a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped"
-        );
+        const leads = extractLeads(d.actions);
         const objectId = level === "campaign" ? d.campaign_id : level === "adset" ? d.adset_id : d.ad_id;
         const objectName = level === "campaign" ? d.campaign_name : level === "adset" ? d.adset_name : d.ad_name;
         if (!objectId) continue;
