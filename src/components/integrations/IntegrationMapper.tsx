@@ -74,13 +74,32 @@ export function IntegrationMapper() {
 
   const syncGhl = async () => {
     setSyncing(true);
-    const { data, error } = await supabase.functions.invoke("ghl-locations-sync", {
-      body: { workspace_id: wsId, autoLink: true, threshold: 0.9 },
-    });
-    setSyncing(false);
-    if (error) return toast.error(error.message);
-    toast.success(`Synced ${data?.locations ?? 0} locations · auto-linked ${data?.linked ?? 0}`);
-    load();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await fetch(
+        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ghl-locations-sync`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token ?? ""}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ workspace_id: wsId, autoLink: true, threshold: 0.9 }),
+        },
+      );
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        const detail = data?.detail || data?.error || `HTTP ${resp.status}`;
+        const hint = data?.hint ? ` — ${data.hint}` : "";
+        toast.error(`GHL sync failed: ${detail}${hint}`, { duration: 10000 });
+        return;
+      }
+      toast.success(`Synced ${data?.locations ?? 0} locations · auto-linked ${data?.linked ?? 0}`);
+      load();
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const linkGhl = async (clientId: number, locationId: string | null) => {
