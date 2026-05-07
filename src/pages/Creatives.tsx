@@ -81,9 +81,12 @@ export default function Creatives() {
             {s === "all" ? "All" : s}
           </button>
         ))}
-        <span className="ml-auto text-xs text-muted-foreground">
-          {filtered.length} of {enriched.length} ads · last 30 days
-        </span>
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            {filtered.length} of {enriched.length} ads · last 30 days
+          </span>
+          <ClassificationSettings rules={rules} onChange={setRules} onReset={reset} />
+        </div>
       </div>
 
       {isLoading ? (
