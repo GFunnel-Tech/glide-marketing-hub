@@ -246,3 +246,58 @@ function json(body: unknown, status = 200) {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
+
+async function syncGranularInsights(admin: any, acc: any, accessToken: string): Promise<number> {
+  const fields = [
+    "campaign_id","campaign_name","adset_id","adset_name","ad_id","ad_name",
+    "spend","impressions","clicks","actions",
+  ].join(",");
+
+  let total = 0;
+  for (const level of ["campaign", "adset", "ad"] as const) {
+    const url = `https://graph.facebook.com/v21.0/${acc.act_id}/insights?fields=${fields}&level=${level}&time_increment=1&date_preset=last_30d&limit=500&access_token=${encodeURIComponent(accessToken)}`;
+    let next: string | null = url;
+    const rows: any[] = [];
+    while (next) {
+      const res = await fetch(next);
+      const j = await res.json();
+      if (!res.ok) break;
+      for (const d of j.data ?? []) {
+        const leadAction = (d.actions ?? []).find((a: any) =>
+          a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped"
+        );
+        const objectId = level === "campaign" ? d.campaign_id : level === "adset" ? d.adset_id : d.ad_id;
+        const objectName = level === "campaign" ? d.campaign_name : level === "adset" ? d.adset_name : d.ad_name;
+        if (!objectId) continue;
+        rows.push({
+          workspace_id: acc.workspace_id,
+          ad_account_id: acc.id,
+          level,
+          object_id: objectId,
+          object_name: objectName,
+          parent_campaign_id: d.campaign_id ?? null,
+          parent_adset_id: d.adset_id ?? null,
+          date: d.date_start,
+          spend: Number(d.spend ?? 0),
+          impressions: Number(d.impressions ?? 0),
+          clicks: Number(d.clicks ?? 0),
+          leads: leadAction ? Number(leadAction.value) : 0,
+          raw: d,
+        });
+      }
+      next = j.paging?.next ?? null;
+    }
+    if (rows.length) {
+      // chunk to avoid payload limits
+      for (let i = 0; i < rows.length; i += 500) {
+        const chunk = rows.slice(i, i + 500);
+        const { error } = await admin
+          .from("meta_insights_granular_daily")
+          .upsert(chunk, { onConflict: "ad_account_id,level,object_id,date" });
+        if (error) throw new Error(`granular ${level}: ${error.message}`);
+      }
+      total += rows.length;
+    }
+  }
+  return total;
+}
