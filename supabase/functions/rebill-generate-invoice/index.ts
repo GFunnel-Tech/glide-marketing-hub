@@ -166,6 +166,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Auto-debit wallet if one exists for this client
+    const { data: wallet } = await supabase
+      .from("client_wallets").select("id").eq("client_id", clientId).maybeSingle();
+    if (wallet && totalDue > 0) {
+      await supabase.from("wallet_transactions").insert({
+        wallet_id: wallet.id,
+        workspace_id: client.workspace_id,
+        client_id: clientId,
+        type: "invoice_charge",
+        amount: totalDue,
+        balance_after: 0, // overwritten by trigger
+        description: `Invoice ${invoiceNumber}`,
+        invoice_id: invoice.id,
+        created_by: userData.user.id,
+      });
+    }
+
     return new Response(JSON.stringify({ success: true, invoice }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

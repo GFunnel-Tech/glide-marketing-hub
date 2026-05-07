@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { Settings, FileText, Loader2, Receipt } from "lucide-react";
+import { Settings, Loader2, Receipt, Wallet as WalletIcon } from "lucide-react";
 import { useClients } from "@/hooks/useDatabase";
 import {
   useRebillConfigs, useRebillInvoices, useGenerateInvoice, useUpdateInvoiceStatus,
 } from "@/hooks/useRebilling";
+import { useWallets } from "@/hooks/useWallets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -16,6 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RebillConfigDialog } from "@/components/rebilling/RebillConfigDialog";
 import { AssignmentManager } from "@/components/rebilling/AssignmentManager";
+import { WalletPanel } from "@/components/rebilling/WalletPanel";
 import { cn } from "@/lib/utils";
 
 function firstOfMonth(d = new Date()) {
@@ -29,13 +31,17 @@ export default function Rebilling() {
   const { data: clients = [] } = useClients();
   const { data: configs = [] } = useRebillConfigs();
   const { data: invoices = [] } = useRebillInvoices();
+  const { data: wallets = [] } = useWallets();
   const generate = useGenerateInvoice();
   const updateStatus = useUpdateInvoiceStatus();
 
   const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
+  const [walletFor, setWalletFor] = useState<{ id: number; name: string } | null>(null);
   const [genFor, setGenFor] = useState<{ id: number; name: string } | null>(null);
   const [periodStart, setPeriodStart] = useState(firstOfMonth());
   const [periodEnd, setPeriodEnd] = useState(lastOfMonth());
+
+  const walletByClient = new Map(wallets.map((w) => [w.client_id, w]));
 
   const configByClient = new Map(configs.map((c) => [c.client_id, c]));
 
@@ -73,6 +79,7 @@ export default function Rebilling() {
                   <th className="text-right px-4 py-2">Fixed fee</th>
                   <th className="text-right px-4 py-2">Min</th>
                   <th className="text-left px-4 py-2">Cadence</th>
+                  <th className="text-right px-4 py-2">Wallet</th>
                   <th className="text-left px-4 py-2">Status</th>
                   <th className="text-right px-4 py-2">Actions</th>
                 </tr>
@@ -80,6 +87,8 @@ export default function Rebilling() {
               <tbody>
                 {clients.map((c) => {
                   const cfg = configByClient.get(c.id);
+                  const wallet = walletByClient.get(c.id);
+                  const isLow = wallet && Number(wallet.balance) < Number(wallet.low_balance_threshold);
                   return (
                     <tr key={c.id} className="border-t border-border">
                       <td className="px-4 py-2 font-medium">{c.name}</td>
@@ -88,6 +97,13 @@ export default function Rebilling() {
                       <td className="px-4 py-2 text-right">{cfg ? `$${Number(cfg.fixed_fee).toFixed(2)}` : "—"}</td>
                       <td className="px-4 py-2 text-right">{cfg ? `$${Number(cfg.monthly_minimum).toFixed(2)}` : "—"}</td>
                       <td className="px-4 py-2">{cfg?.cadence ?? "—"}</td>
+                      <td className={cn(
+                        "px-4 py-2 text-right font-mono text-xs",
+                        wallet && Number(wallet.balance) < 0 && "text-destructive",
+                        isLow && Number(wallet!.balance) >= 0 && "text-warning",
+                      )}>
+                        {wallet ? `$${Number(wallet.balance).toFixed(2)}` : "—"}
+                      </td>
                       <td className="px-4 py-2">
                         <span className={cn(
                           "rounded-full px-2 py-0.5 text-xs font-medium",
@@ -101,20 +117,35 @@ export default function Rebilling() {
                           <Settings className="h-3.5 w-3.5 mr-1" /> Config
                         </Button>
                         {cfg?.enabled && (
-                          <Button size="sm" variant="ghost" onClick={() => setGenFor({ id: c.id, name: c.name })}>
-                            <Receipt className="h-3.5 w-3.5 mr-1" /> Generate
-                          </Button>
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => setWalletFor({ id: c.id, name: c.name })}>
+                              <WalletIcon className="h-3.5 w-3.5 mr-1" /> Wallet
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setGenFor({ id: c.id, name: c.name })}>
+                              <Receipt className="h-3.5 w-3.5 mr-1" /> Generate
+                            </Button>
+                          </>
                         )}
                       </td>
                     </tr>
                   );
                 })}
                 {clients.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No clients yet.</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">No clients yet.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+
+          {walletFor && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Wallet — {walletFor.name}</h3>
+                <button onClick={() => setWalletFor(null)} className="text-xs text-muted-foreground hover:underline">Close</button>
+              </div>
+              <WalletPanel clientId={walletFor.id} clientName={walletFor.name} />
+            </div>
+          )}
 
           {editing && (
             <div className="rounded-lg border border-border bg-card p-4 space-y-3">

@@ -200,6 +200,54 @@ export type Database = {
           },
         ]
       }
+      client_wallets: {
+        Row: {
+          auto_topup_enabled: boolean
+          balance: number
+          client_id: number
+          created_at: string
+          currency: string
+          id: string
+          last_transaction_at: string | null
+          low_balance_threshold: number
+          stripe_customer_id: string | null
+          stripe_payment_method_id: string | null
+          topup_amount: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          auto_topup_enabled?: boolean
+          balance?: number
+          client_id: number
+          created_at?: string
+          currency?: string
+          id?: string
+          last_transaction_at?: string | null
+          low_balance_threshold?: number
+          stripe_customer_id?: string | null
+          stripe_payment_method_id?: string | null
+          topup_amount?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          auto_topup_enabled?: boolean
+          balance?: number
+          client_id?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          last_transaction_at?: string | null
+          low_balance_threshold?: number
+          stripe_customer_id?: string | null
+          stripe_payment_method_id?: string | null
+          topup_amount?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           bm_account_name: string | null
@@ -1383,6 +1431,59 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          client_id: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          invoice_id: string | null
+          stripe_payment_intent_id: string | null
+          type: Database["public"]["Enums"]["wallet_txn_type"]
+          wallet_id: string
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          client_id: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          type: Database["public"]["Enums"]["wallet_txn_type"]
+          wallet_id: string
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          client_id?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          type?: Database["public"]["Enums"]["wallet_txn_type"]
+          wallet_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "client_wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invitations: {
         Row: {
           accepted_at: string | null
@@ -1523,6 +1624,13 @@ export type Database = {
       rebill_cadence: "monthly" | "weekly" | "custom"
       rebill_invoice_status: "draft" | "sent" | "paid" | "void"
       report_status: "draft" | "ready" | "delivered"
+      wallet_txn_type:
+        | "topup"
+        | "invoice_charge"
+        | "manual_credit"
+        | "manual_debit"
+        | "refund"
+        | "adjustment"
       workspace_role: "owner" | "admin" | "member" | "viewer"
     }
     CompositeTypes: {
@@ -1659,6 +1767,14 @@ export const Constants = {
       rebill_cadence: ["monthly", "weekly", "custom"],
       rebill_invoice_status: ["draft", "sent", "paid", "void"],
       report_status: ["draft", "ready", "delivered"],
+      wallet_txn_type: [
+        "topup",
+        "invoice_charge",
+        "manual_credit",
+        "manual_debit",
+        "refund",
+        "adjustment",
+      ],
       workspace_role: ["owner", "admin", "member", "viewer"],
     },
   },
