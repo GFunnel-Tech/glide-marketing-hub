@@ -35,12 +35,13 @@ export default function Campaigns() {
     let list = campaignData;
     if (statusFilter === "Active") list = list.filter(c => c.status === "active");
     if (statusFilter === "Paused") list = list.filter(c => c.status !== "active");
-    if (statusFilter === "Issues Only") list = list.filter(c => c.doubleCount || c.trueCpl > 60);
+    if (statusFilter === "Issues Only") list = list.filter(c => c.doubleCount || c.trueCpl > 60 || isRejected(c));
     if (search) list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || getClient(c.clientId)?.name.toLowerCase().includes(search.toLowerCase()));
     return list;
   }, [campaignData, clients, statusFilter, search]);
 
   const dcCampaigns = campaignData.filter(c => c.doubleCount);
+  const rejectedCampaigns = campaignData.filter(isRejected);
   const flaggedForPause = campaignData.filter(c => c.trueCpl > 60 && c.status === "active");
 
   const handlePause = async (campaignId: string) => {
