@@ -66,16 +66,53 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "GHL API key not configured" }), { status: 400, headers: corsHeaders });
     }
 
-    // Fetch locations from GHL v1 API
-    const resp = await fetch("https://rest.gohighlevel.com/v1/locations/", {
-      headers: { Authorization: `Bearer ${cfg.ghl_api_key}` },
-    });
-    if (!resp.ok) {
-      const t = await resp.text();
-      return new Response(JSON.stringify({ error: "GHL API error", detail: t }), { status: 502, headers: corsHeaders });
+    // Try GHL v2 first (new token format), fall back to v1 legacy.
+    let locations: any[] = [];
+    let lastErr = "";
+
+    // v2: needs companyId. Decode JWT to find it (PIT/OAuth tokens are JWTs).
+    let companyId: string | null = null;
+    try {
+      const parts = cfg.ghl_api_key.split(".");
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+        companyId = payload.company_id ?? payload.companyId ?? null;
+      }
+    } catch (_) { /* not a JWT */ }
+
+    if (companyId) {
+      const v2 = await fetch(
+        `https://services.leadconnectorhq.com/locations/search?companyId=${encodeURIComponent(companyId)}&limit=500`,
+        { headers: {
+            Authorization: `Bearer ${cfg.ghl_api_key}`,
+            Version: "2021-07-28",
+            Accept: "application/json",
+        } },
+      );
+      if (v2.ok) {
+        const j = await v2.json();
+        locations = j.locations || j.data || [];
+      } else {
+        lastErr = `v2 ${v2.status}: ${await v2.text()}`;
+      }
     }
-    const json = await resp.json();
-    const locations: any[] = json.locations || json.data || [];
+
+    // Fallback to v1 if v2 produced nothing.
+    if (locations.length === 0) {
+      const v1 = await fetch("https://rest.gohighlevel.com/v1/locations/", {
+        headers: { Authorization: `Bearer ${cfg.ghl_api_key}` },
+      });
+      if (v1.ok) {
+        const j = await v1.json();
+        locations = j.locations || j.data || [];
+      } else {
+        const t = await v1.text();
+        return new Response(
+          JSON.stringify({ error: "GHL API error", detail: t, v2_error: lastErr, hint: companyId ? null : "Token is not an agency JWT — needs an Agency Private Integration Token with locations.readonly scope." }),
+          { status: 502, headers: corsHeaders },
+        );
+      }
+    }
 
     // Upsert cache
     const rows = locations.map((l) => ({
