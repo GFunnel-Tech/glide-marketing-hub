@@ -115,11 +115,11 @@ Deno.serve(async (req) => {
 
         await admin.from("meta_sync_log").update({
           status: "success",
-          rows_synced: rows.length + campaignRows,
+          rows_synced: rows.length + campaignRows + granularRows,
           finished_at: new Date().toISOString(),
         }).eq("id", log.data!.id);
 
-        totalRows += rows.length + campaignRows;
+        totalRows += rows.length + campaignRows + granularRows;
       } catch (e) {
         errors.push({ account: acc.act_id, error: String(e) });
         await admin.from("meta_sync_log").update({
