@@ -108,16 +108,16 @@ export default function Creatives() {
                 <TabsTrigger value="audience">Audiences</TabsTrigger>
               </TabsList>
               <TabsContent value="creative" className="mt-3">
-                <BreakdownTable ads={filtered.map((e) => e.ad)} dim="creative" greenCpl={greenCpl} redCpl={redCpl} />
+                <BreakdownTable ads={filtered.map((e) => e.ad)} dim="creative" greenCpl={rules.greenCpl} redCpl={rules.redCpl} />
               </TabsContent>
               <TabsContent value="title" className="mt-3">
-                <BreakdownTable ads={filtered.map((e) => e.ad)} dim="title" greenCpl={greenCpl} redCpl={redCpl} />
+                <BreakdownTable ads={filtered.map((e) => e.ad)} dim="title" greenCpl={rules.greenCpl} redCpl={rules.redCpl} />
               </TabsContent>
               <TabsContent value="body" className="mt-3">
-                <BreakdownTable ads={filtered.map((e) => e.ad)} dim="body" greenCpl={greenCpl} redCpl={redCpl} />
+                <BreakdownTable ads={filtered.map((e) => e.ad)} dim="body" greenCpl={rules.greenCpl} redCpl={rules.redCpl} />
               </TabsContent>
               <TabsContent value="audience" className="mt-3">
-                <BreakdownTable ads={filtered.map((e) => e.ad)} dim="audience" greenCpl={greenCpl} redCpl={redCpl} />
+                <BreakdownTable ads={filtered.map((e) => e.ad)} dim="audience" greenCpl={rules.greenCpl} redCpl={rules.redCpl} />
               </TabsContent>
             </Tabs>
           </div>
