@@ -79,6 +79,7 @@ export default function Rebilling() {
                   <th className="text-right px-4 py-2">Fixed fee</th>
                   <th className="text-right px-4 py-2">Min</th>
                   <th className="text-left px-4 py-2">Cadence</th>
+                  <th className="text-right px-4 py-2">Wallet</th>
                   <th className="text-left px-4 py-2">Status</th>
                   <th className="text-right px-4 py-2">Actions</th>
                 </tr>
@@ -86,6 +87,8 @@ export default function Rebilling() {
               <tbody>
                 {clients.map((c) => {
                   const cfg = configByClient.get(c.id);
+                  const wallet = walletByClient.get(c.id);
+                  const isLow = wallet && Number(wallet.balance) < Number(wallet.low_balance_threshold);
                   return (
                     <tr key={c.id} className="border-t border-border">
                       <td className="px-4 py-2 font-medium">{c.name}</td>
@@ -94,6 +97,13 @@ export default function Rebilling() {
                       <td className="px-4 py-2 text-right">{cfg ? `$${Number(cfg.fixed_fee).toFixed(2)}` : "—"}</td>
                       <td className="px-4 py-2 text-right">{cfg ? `$${Number(cfg.monthly_minimum).toFixed(2)}` : "—"}</td>
                       <td className="px-4 py-2">{cfg?.cadence ?? "—"}</td>
+                      <td className={cn(
+                        "px-4 py-2 text-right font-mono text-xs",
+                        wallet && Number(wallet.balance) < 0 && "text-destructive",
+                        isLow && Number(wallet!.balance) >= 0 && "text-warning",
+                      )}>
+                        {wallet ? `$${Number(wallet.balance).toFixed(2)}` : "—"}
+                      </td>
                       <td className="px-4 py-2">
                         <span className={cn(
                           "rounded-full px-2 py-0.5 text-xs font-medium",
@@ -107,20 +117,35 @@ export default function Rebilling() {
                           <Settings className="h-3.5 w-3.5 mr-1" /> Config
                         </Button>
                         {cfg?.enabled && (
-                          <Button size="sm" variant="ghost" onClick={() => setGenFor({ id: c.id, name: c.name })}>
-                            <Receipt className="h-3.5 w-3.5 mr-1" /> Generate
-                          </Button>
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => setWalletFor({ id: c.id, name: c.name })}>
+                              <WalletIcon className="h-3.5 w-3.5 mr-1" /> Wallet
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setGenFor({ id: c.id, name: c.name })}>
+                              <Receipt className="h-3.5 w-3.5 mr-1" /> Generate
+                            </Button>
+                          </>
                         )}
                       </td>
                     </tr>
                   );
                 })}
                 {clients.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No clients yet.</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">No clients yet.</td></tr>
                 )}
               </tbody>
             </table>
           </div>
+
+          {walletFor && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Wallet — {walletFor.name}</h3>
+                <button onClick={() => setWalletFor(null)} className="text-xs text-muted-foreground hover:underline">Close</button>
+              </div>
+              <WalletPanel clientId={walletFor.id} clientName={walletFor.name} />
+            </div>
+          )}
 
           {editing && (
             <div className="rounded-lg border border-border bg-card p-4 space-y-3">
