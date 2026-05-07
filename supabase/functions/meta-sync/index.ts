@@ -71,10 +71,7 @@ Deno.serve(async (req) => {
         if (!res.ok) throw new Error(JSON.stringify(json_));
 
         const rows = (json_.data ?? []).map((d: any) => {
-          const leadAction = (d.actions ?? []).find((a: any) =>
-            a.action_type === "lead" || a.action_type === "onsite_conversion.lead_grouped"
-          );
-          const leads = leadAction ? Number(leadAction.value) : 0;
+          const leads = extractLeads(d.actions);
           const spend = Number(d.spend ?? 0);
           return {
             workspace_id: acc.workspace_id,
