@@ -470,6 +470,54 @@ export function MetaConnectionsPanel() {
     return { lastSuccess, lastError, lastAny };
   };
 
+  type ConnTestResult = {
+    ok: boolean;
+    summary: string;
+    metaUserName?: string | null;
+    adAccountCount?: number;
+    grantedScopes?: string[];
+    missingRequired?: string[];
+    missingRecommended?: string[];
+    adAccountError?: string | null;
+    checkedAt?: string;
+    error?: string;
+  };
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, ConnTestResult>>({});
+
+  const handleTestConnection = async (id: string) => {
+    setTestingId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke("meta-test-connection", {
+        body: { connectionId: id },
+      });
+      if (error) throw error;
+      const result: ConnTestResult = {
+        ok: !!data?.ok,
+        summary: data?.summary || data?.error || (data?.ok ? "Connection healthy" : "Test failed"),
+        metaUserName: data?.metaUserName ?? null,
+        adAccountCount: data?.adAccountCount ?? 0,
+        grantedScopes: data?.grantedScopes ?? [],
+        missingRequired: data?.missingRequired ?? [],
+        missingRecommended: data?.missingRecommended ?? [],
+        adAccountError: data?.adAccountError ?? null,
+        checkedAt: data?.checkedAt ?? new Date().toISOString(),
+        error: data?.error,
+      };
+      setTestResults(prev => ({ ...prev, [id]: result }));
+      if (result.ok) toast.success(result.summary);
+      else toast.error(result.summary);
+      // Refresh to pick up status/last_error changes
+      refresh();
+    } catch (e: any) {
+      const msg = e?.message || "Test failed";
+      setTestResults(prev => ({ ...prev, [id]: { ok: false, summary: msg, error: msg } }));
+      toast.error(msg);
+    } finally {
+      setTestingId(null);
+    }
+  };
+
   const tokenState = (c: MetaConnection): { label: string; tone: "ok" | "warn" | "bad" } => {
     if (c.status !== "active") return { label: "needs reconnect", tone: "bad" };
     if (!c.token_expires_at) return { label: "no expiry", tone: "ok" };
