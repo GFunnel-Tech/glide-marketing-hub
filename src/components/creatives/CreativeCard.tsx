@@ -13,15 +13,20 @@ export function CreativeCard({
   ad,
   klass,
   clientName,
+  onClick,
 }: {
   ad: MetaAd;
   klass: AdClass;
   clientName?: string | null;
+  onClick?: () => void;
 }) {
   const s = STATUS[klass];
   const Icon = s.Icon;
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden hover:border-primary/40 transition-colors flex flex-col">
+    <div
+      onClick={onClick}
+      className="rounded-lg border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-md transition-all flex flex-col cursor-pointer text-left"
+    >
       <div className="relative aspect-video bg-muted/40 flex items-center justify-center overflow-hidden">
         {ad.thumbnail_url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -59,6 +64,7 @@ export function CreativeCard({
           href={ad.link_url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
           className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground hover:text-primary border-t border-border py-1.5"
         >
           View landing page <ExternalLink className="h-3 w-3" />
