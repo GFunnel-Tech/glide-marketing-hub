@@ -19,10 +19,21 @@ type Step = {
   link?: { href: string; label: string };
 };
 
+type TabKey = "system" | "user";
+const TAB_STORAGE_KEY = "metahub:meta-token-guide:last-tab";
+
 export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
-  const [tab, setTab] = useState<"system" | "user">("system");
+  const [tab, setTab] = useState<TabKey>(() => {
+    if (typeof window === "undefined") return "system";
+    const stored = window.localStorage.getItem(TAB_STORAGE_KEY);
+    return stored === "user" || stored === "system" ? stored : "system";
+  });
   const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    try { window.localStorage.setItem(TAB_STORAGE_KEY, tab); } catch { /* ignore */ }
+  }, [tab]);
 
   const copy = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
