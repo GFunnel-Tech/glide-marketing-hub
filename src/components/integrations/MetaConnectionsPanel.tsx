@@ -51,6 +51,33 @@ function validateMetaToken(raw: string): ValidationResult {
   return { ok: false as const, error: result.error.issues[0]?.message ?? "Invalid token." };
 }
 
+// Non-blocking heuristic warnings for common paste mistakes.
+// These do NOT prevent Verify/Connect — they just flag likely problems early.
+function getTokenWarnings(raw: string): string[] {
+  const t = raw.trim();
+  if (!t) return [];
+  const warnings: string[] = [];
+  if (/access_token=/i.test(t) || /^https?:\/\//i.test(t)) {
+    warnings.push("This looks like a full URL or query string. Paste only the token value (the part after access_token=).");
+  }
+  if (/^eyJ[A-Za-z0-9_-]+\./.test(t)) {
+    warnings.push("This looks like a JWT (Google/Supabase token), not a Meta token. Meta tokens start with \"EAA\".");
+  }
+  if (/^\d+\|[A-Za-z0-9_\-]+$/.test(t)) {
+    warnings.push("This looks like an App Access Token (APP_ID|APP_SECRET). Use a User or System User token instead — app tokens cannot read ad accounts.");
+  }
+  if (!/^EAA/.test(t) && !/^\d+\|/.test(t)) {
+    warnings.push("Meta access tokens normally start with \"EAA\". Double-check you copied the right value.");
+  }
+  if (/^EAA/.test(t) && t.length < 100) {
+    warnings.push("Token is unusually short. Short-lived tokens from the Graph API Explorer expire in ~1 hour — extend it or use a System User token.");
+  }
+  if (/\.\.\.|•|…|\*{3,}/.test(t)) {
+    warnings.push("Token contains placeholder characters (…, •, or ***). Make sure you copied the full token, not a masked preview.");
+  }
+  return warnings;
+}
+
 interface MetaConnection {
   id: string;
   meta_user_name: string | null;
@@ -731,6 +758,7 @@ export function MetaConnectionsPanel() {
             const liveInvalid = liveValid?.ok === false;
             const inlineError = manualTokenError ?? (liveInvalid ? liveValid!.error : null);
             const isEmpty = manualToken.trim().length === 0;
+            const warnings = !inlineError && !isEmpty ? getTokenWarnings(manualToken) : [];
             const busy = connecting || verifying;
             return (
               <div className="mt-3 space-y-3 rounded-md border border-border bg-muted/30 p-3">
@@ -791,6 +819,16 @@ export function MetaConnectionsPanel() {
                   <p id="manual-token-help" className="text-[11px] text-muted-foreground italic">
                     Paste a token above, then click <span className="text-foreground">Verify</span> to test it or <span className="text-foreground">Connect</span> to save it to this workspace.
                   </p>
+                ) : warnings.length > 0 ? (
+                  <div id="manual-token-help" className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs text-foreground space-y-1">
+                    <p className="font-medium text-warning flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Heads up before you verify
+                    </p>
+                    <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
+                      {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                    </ul>
+                    <p className="text-[11px] text-muted-foreground italic">You can still click Verify — Meta will tell us for sure.</p>
+                  </div>
                 ) : (
                   <p id="manual-token-help" className="text-[11px] text-muted-foreground">
                     Token looks well-formed. Click <span className="text-foreground">Verify</span> to confirm permissions before connecting.
