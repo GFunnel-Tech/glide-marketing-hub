@@ -124,6 +124,14 @@ export default function Creatives() {
           </div>
         </>
       )}
+
+      <AdDetailDrawer
+        ad={selected?.ad ?? null}
+        klass={selected?.klass ?? "unclassified"}
+        clientName={selected?.clientName ?? null}
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+      />
     </div>
   );
 }
@@ -134,12 +142,14 @@ function ColumnSection({
   tone,
   items,
   spin,
+  onSelect,
 }: {
   title: string;
   icon: any;
   tone: "success" | "warning" | "destructive";
-  items: { ad: any; klass: AdClass; clientName: string | null }[];
+  items: { ad: MetaAd; klass: AdClass; clientName: string | null }[];
   spin?: boolean;
+  onSelect: (item: { ad: MetaAd; klass: AdClass; clientName: string | null }) => void;
 }) {
   if (!items.length) return null;
   const toneClass =
@@ -153,7 +163,7 @@ function ColumnSection({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {items.slice(0, 12).map((it) => (
-          <CreativeCard key={it.ad.id} ad={it.ad} klass={it.klass} clientName={it.clientName} />
+          <CreativeCard key={it.ad.id} ad={it.ad} klass={it.klass} clientName={it.clientName} onClick={() => onSelect(it)} />
         ))}
       </div>
     </section>
