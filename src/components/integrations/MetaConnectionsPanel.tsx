@@ -78,6 +78,104 @@ function getTokenWarnings(raw: string): string[] {
   return warnings;
 }
 
+// Map raw Meta/Graph error messages into a friendly diagnosis with likely causes + fixes.
+const REQUIRED_SCOPES = ["ads_read", "ads_management", "business_management", "read_insights", "leads_retrieval"];
+function diagnoseTokenError(rawError: string, grantedScopes?: string[]): {
+  title: string;
+  summary: string;
+  causes: string[];
+  fixes: { label: string; href?: string }[];
+  missingScopes?: string[];
+} {
+  const e = (rawError || "").toLowerCase();
+  const missing = grantedScopes
+    ? REQUIRED_SCOPES.filter(s => !grantedScopes.includes(s))
+    : undefined;
+
+  if (/expired|session has expired|code 463|error validating access token/.test(e)) {
+    return {
+      title: "Token has expired",
+      summary: "Meta says this token is no longer valid.",
+      causes: [
+        "Short-lived Graph API Explorer tokens expire after ~1 hour.",
+        "User changed their Facebook password or logged out everywhere.",
+        "Token was revoked from Settings → Business Integrations.",
+      ],
+      fixes: [
+        { label: "Use a System User token (never expires)", href: "https://business.facebook.com/settings/system-users" },
+        { label: "Or extend the user token to 60 days via the Access Token Debugger", href: "https://developers.facebook.com/tools/debug/accesstoken/" },
+      ],
+    };
+  }
+  if (/application does not have permission|app access token/.test(e)) {
+    return {
+      title: "Wrong token type",
+      summary: "This appears to be an App Access Token. App tokens cannot read ad accounts.",
+      causes: ["Token was generated as APP_ID|APP_SECRET instead of a User or System User token."],
+      fixes: [{ label: "Generate a System User token in Business Settings", href: "https://business.facebook.com/settings/system-users" }],
+    };
+  }
+  if (/permission|scope|insufficient|#200|#10\b/.test(e)) {
+    return {
+      title: "Missing permissions",
+      summary: "The token is valid but doesn't have the scopes we need to read ad data.",
+      causes: [
+        missing && missing.length
+          ? `Missing scopes: ${missing.join(", ")}.`
+          : "One or more required scopes were not granted when the token was created.",
+        "If using a System User token, the System User may not be assigned to the ad accounts.",
+      ],
+      fixes: [
+        { label: "Re-generate the token with ads_read, read_insights, ads_management, business_management, leads_retrieval", href: "https://business.facebook.com/settings/system-users" },
+        { label: "Assign the System User to your ad accounts (Business Settings → Ad Accounts → Add People)", href: "https://business.facebook.com/settings/ad-accounts" },
+      ],
+      missingScopes: missing,
+    };
+  }
+  if (/rate limit|too many calls|#17|#4\b/.test(e)) {
+    return {
+      title: "Rate limited by Meta",
+      summary: "Meta is throttling requests for this token.",
+      causes: ["Too many calls in a short window from this user/app."],
+      fixes: [{ label: "Wait a few minutes and try Verify again" }],
+    };
+  }
+  if (/malformed|invalid oauth access token|cannot parse|invalid format/.test(e)) {
+    return {
+      title: "Token is malformed",
+      summary: "Meta couldn't parse this string as an access token.",
+      causes: [
+        "The token was truncated, contains a masked preview (•••), or includes extra characters.",
+        "You may have pasted a URL instead of just the token value.",
+      ],
+      fixes: [{ label: "Re-copy the full token from Business Settings or the Graph API Explorer", href: "https://developers.facebook.com/tools/explorer/" }],
+    };
+  }
+  if (/checkpoint|two.?factor|2fa|review the information/.test(e)) {
+    return {
+      title: "Account is in checkpoint",
+      summary: "Meta has flagged the underlying Facebook account and requires action.",
+      causes: ["Suspicious activity, unverified login, or 2FA challenge pending."],
+      fixes: [
+        { label: "Log in to Facebook on the web and clear any prompts", href: "https://www.facebook.com/" },
+        { label: "Then re-generate the token" },
+      ],
+    };
+  }
+  return {
+    title: "Verification failed",
+    summary: rawError || "Meta rejected the token.",
+    causes: [
+      "Token may be invalid, expired, or for a different app.",
+      "The user/system user may lack access to any ad accounts.",
+    ],
+    fixes: [
+      { label: "Open the step-by-step token guide above and re-generate" },
+      { label: "Test the token in the Access Token Debugger", href: "https://developers.facebook.com/tools/debug/accesstoken/" },
+    ],
+  };
+}
+
 interface MetaConnection {
   id: string;
   meta_user_name: string | null;
