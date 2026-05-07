@@ -222,7 +222,113 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
               </a>
             </Button>
           </div>
+
+          <Troubleshooting />
         </div>
+      )}
+    </div>
+  );
+}
+
+const TROUBLESHOOTING: { issue: string; fix: React.ReactNode }[] = [
+  {
+    issue: "“Invalid OAuth access token” or token rejected immediately",
+    fix: (
+      <>
+        You probably copied a masked preview (with •••) or extra whitespace. Re-open Business Settings,
+        click <span className="font-medium text-foreground">Show</span> on the token, and copy the full string.
+      </>
+    ),
+  },
+  {
+    issue: "Verify says “missing required permissions: ads_read”",
+    fix: (
+      <>
+        The token was generated without the right scopes. Re-generate it and tick{" "}
+        <span className="font-mono">ads_read</span> + <span className="font-mono">read_insights</span> at minimum.
+      </>
+    ),
+  },
+  {
+    issue: "Connected, but 0 ad accounts discovered",
+    fix: (
+      <>
+        The System User isn't assigned to any ad accounts. Open{" "}
+        <a className="text-primary hover:underline" href="https://business.facebook.com/settings/system-users" target="_blank" rel="noreferrer">
+          System Users
+        </a>{" "}
+        → click the user → <span className="font-medium text-foreground">Add Assets → Ad Accounts</span> and tick the accounts you want to sync.
+      </>
+    ),
+  },
+  {
+    issue: "“Session has expired” or error code 463/190",
+    fix: (
+      <>
+        User tokens expire (~1 hour, or 60 days if extended). Use a System User token for permanent access,
+        or extend with the{" "}
+        <a className="text-primary hover:underline" href="https://developers.facebook.com/tools/debug/accesstoken/" target="_blank" rel="noreferrer">
+          Access Token Debugger
+        </a>.
+      </>
+    ),
+  },
+  {
+    issue: "“Application does not have permission” / app token error",
+    fix: (
+      <>
+        You pasted an App Access Token (looks like <span className="font-mono">APP_ID|APP_SECRET</span>).
+        Use a User or System User token instead — app tokens cannot read ad data.
+      </>
+    ),
+  },
+  {
+    issue: "Verify works, but sync fails later",
+    fix: (
+      <>
+        The user who generated the token may have lost ad-account access, or the password changed.
+        Click <span className="font-medium text-foreground">Test</span> on the connection to see Meta's exact error,
+        then re-generate the token if needed.
+      </>
+    ),
+  },
+  {
+    issue: "“Feature unavailable” when starting OAuth",
+    fix: (
+      <>
+        The Facebook account opening the popup isn't listed as a developer/tester on the app, or the app
+        is in Development mode. Add the user under{" "}
+        <a className="text-primary hover:underline" href={`https://developers.facebook.com/apps/${APP_ID}/roles/roles/`} target="_blank" rel="noreferrer">
+          App Roles
+        </a>{" "}
+        — or just use the manual token flow above.
+      </>
+    ),
+  },
+];
+
+function Troubleshooting() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded border border-border bg-muted/20">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted/40 transition-colors rounded"
+      >
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        <LifeBuoy className="h-3 w-3 text-warning" />
+        <span>Troubleshooting common errors</span>
+        <span className="ml-auto text-[10px] text-muted-foreground">{TROUBLESHOOTING.length} fixes</span>
+      </button>
+      {open && (
+        <ul className="border-t border-border p-2.5 space-y-2.5">
+          {TROUBLESHOOTING.map((t, i) => (
+            <li key={i} className="text-[11px] leading-relaxed">
+              <p className="font-medium text-foreground">{t.issue}</p>
+              <p className="text-muted-foreground mt-0.5">{t.fix}</p>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
