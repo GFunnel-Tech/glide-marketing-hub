@@ -72,19 +72,8 @@ export default function Settings() {
                 </div>
               </div>
             </div>
-            <div className="rounded-lg border border-border bg-card p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Performance Thresholds</h3>
-              {[
-                { label: "DSCR CPL Target", min: 0, max: 100, defaultVal: 30, unit: "$" },
-                { label: "Canadian Refi CPL", min: 0, max: 30, defaultVal: 15, unit: "$" },
-                { label: "Frequency Alert", min: 1, max: 5, defaultVal: 3.5, unit: "" },
-                { label: "Double-count Threshold", min: 0, max: 100, defaultVal: 20, unit: "%" },
-              ].map(t => (
-                <div key={t.label}>
-                  <div className="flex justify-between"><label className="text-xs text-muted-foreground">{t.label}</label><span className="text-xs font-medium text-foreground">{t.unit}{t.defaultVal}{t.unit === "%" ? "%" : ""}</span></div>
-                  <input type="range" min={t.min} max={t.max} step={t.unit === "" ? 0.1 : 1} defaultValue={t.defaultVal} className="w-full mt-1 accent-primary" />
-                </div>
-              ))}
+            <div className="rounded-lg border border-dashed border-border bg-card/50 p-5 text-sm text-muted-foreground">
+              Performance thresholds have moved to the <span className="font-medium text-foreground">KPI Thresholds</span> tab, where you can configure them per workspace, vertical, or individual client.
             </div>
           </div>
         </TabsContent>
