@@ -300,7 +300,7 @@ async function syncGranularInsights(admin: any, acc: any, accessToken: string): 
           spend: Number(d.spend ?? 0),
           impressions: Number(d.impressions ?? 0),
           clicks: Number(d.clicks ?? 0),
-          leads: leadAction ? Number(leadAction.value) : 0,
+          leads,
           raw: d,
         });
       }
