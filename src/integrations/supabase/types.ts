@@ -734,6 +734,102 @@ export type Database = {
           },
         ]
       }
+      meta_ads: {
+        Row: {
+          ad_account_id: string
+          adset_id: string | null
+          adset_name: string | null
+          body: string | null
+          call_to_action_type: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          clicks: number
+          client_id: number | null
+          cpl: number
+          created_at: string
+          creative_hash: string | null
+          creative_id: string | null
+          ctr: number
+          days_active: number
+          effective_status: string | null
+          first_seen_at: string | null
+          id: string
+          impressions: number
+          leads: number
+          link_url: string | null
+          name: string | null
+          spend: number
+          targeting_summary: Json | null
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string
+          video_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          ad_account_id: string
+          adset_id?: string | null
+          adset_name?: string | null
+          body?: string | null
+          call_to_action_type?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          clicks?: number
+          client_id?: number | null
+          cpl?: number
+          created_at?: string
+          creative_hash?: string | null
+          creative_id?: string | null
+          ctr?: number
+          days_active?: number
+          effective_status?: string | null
+          first_seen_at?: string | null
+          id: string
+          impressions?: number
+          leads?: number
+          link_url?: string | null
+          name?: string | null
+          spend?: number
+          targeting_summary?: Json | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          video_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          ad_account_id?: string
+          adset_id?: string | null
+          adset_name?: string | null
+          body?: string | null
+          call_to_action_type?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          clicks?: number
+          client_id?: number | null
+          cpl?: number
+          created_at?: string
+          creative_hash?: string | null
+          creative_id?: string | null
+          ctr?: number
+          days_active?: number
+          effective_status?: string | null
+          first_seen_at?: string | null
+          id?: string
+          impressions?: number
+          leads?: number
+          link_url?: string | null
+          name?: string | null
+          spend?: number
+          targeting_summary?: Json | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          video_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       meta_connections: {
         Row: {
           access_token: string
