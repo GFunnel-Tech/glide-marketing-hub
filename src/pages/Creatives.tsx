@@ -2,10 +2,12 @@ import { useMemo, useState } from "react";
 import { useMetaAds, classifyAd, type AdClass, type MetaAd } from "@/hooks/useMetaAds";
 import { useClients } from "@/hooks/useDatabase";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
+import { useCreativeRules } from "@/hooks/useCreativeRules";
 import { ConnectMetaPrompt } from "@/components/dashboard/ConnectMetaPrompt";
 import { CreativeCard } from "@/components/creatives/CreativeCard";
 import { BreakdownTable } from "@/components/creatives/BreakdownTable";
 import { AdDetailDrawer } from "@/components/creatives/AdDetailDrawer";
+import { ClassificationSettings } from "@/components/creatives/ClassificationSettings";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sparkles, AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,21 +18,18 @@ export default function Creatives() {
   const { hasConnection, isLoading: connLoading } = useHasActiveMetaConnection();
   const { data: clients = [] } = useClients();
   const { data: ads = [], isLoading } = useMetaAds();
+  const { rules, setRules, reset } = useCreativeRules();
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selected, setSelected] = useState<{ ad: MetaAd; klass: AdClass; clientName: string | null } | null>(null);
 
-  // For now use sensible defaults; can be wired to kpi_threshold_presets later
-  const greenCpl = 30;
-  const redCpl = 60;
-
   const enriched = useMemo(() => {
     return ads.map((ad) => ({
       ad,
-      klass: classifyAd(ad, { greenCpl, redCpl }),
+      klass: classifyAd(ad, rules),
       clientName: clients.find((c) => c.id === ad.client_id)?.name ?? null,
     }));
-  }, [ads, clients]);
+  }, [ads, clients, rules]);
 
   const filtered = useMemo(() => {
     return enriched.filter((e) => {
