@@ -111,12 +111,29 @@ Deno.serve(async (req) => {
       });
     }
 
-    granularAssignments.forEach((a) => {
-      lineItems.push({
-        level: a.level, object_id: a.object_id, object_name: a.object_name,
-        spend: 0, note: "granular spend sync not yet implemented — enter manually",
+    if (granularAssignments.length > 0) {
+      const objectIds = granularAssignments.map((a) => a.object_id);
+      const { data: gins } = await supabase
+        .from("meta_insights_granular_daily")
+        .select("level, object_id, object_name, spend, date")
+        .in("object_id", objectIds)
+        .gte("date", periodStart).lte("date", periodEnd);
+
+      const byObj = new Map<string, number>();
+      (gins ?? []).forEach((row: any) => {
+        const k = `${row.level}:${row.object_id}`;
+        byObj.set(k, (byObj.get(k) ?? 0) + Number(row.spend ?? 0));
       });
-    });
+
+      granularAssignments.forEach((a) => {
+        const spend = byObj.get(`${a.level}:${a.object_id}`) ?? 0;
+        rawSpend += spend;
+        lineItems.push({
+          level: a.level, object_id: a.object_id, object_name: a.object_name,
+          spend, note: spend === 0 ? "no spend recorded for this period" : "auto-calculated from granular sync",
+        });
+      });
+    }
 
     const markup = Number(config.markup_pct);
     const fixedFee = Number(config.fixed_fee);
