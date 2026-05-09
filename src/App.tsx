@@ -51,6 +51,7 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/meta/callback" element={<MetaCallback />} />
                 <Route path="/client-portal/:id" element={<ClientPortal />} />
+                <Route path="/demo/gfunnel" element={<DemoGfunnel />} />
                 <Route
                   path="/"
                   element={
