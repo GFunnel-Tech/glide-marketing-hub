@@ -23,6 +23,7 @@ import Onboarding from "./pages/Onboarding";
 import AiAssistant from "./pages/AiAssistant";
 import SuperAdmin from "./pages/SuperAdmin";
 import Rebilling from "./pages/Rebilling";
+import DemoGfunnel from "./pages/DemoGfunnel";
 import NotFound from "./pages/NotFound";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
@@ -50,6 +51,7 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/meta/callback" element={<MetaCallback />} />
                 <Route path="/client-portal/:id" element={<ClientPortal />} />
+                <Route path="/demo/gfunnel" element={<DemoGfunnel />} />
                 <Route
                   path="/"
                   element={
