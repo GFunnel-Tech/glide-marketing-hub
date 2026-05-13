@@ -61,11 +61,47 @@ Deno.serve(async (req) => {
 
     if (action === "set_role") {
       const { user_id, role, enabled } = body;
+      const ALLOWED = new Set(["user", "admin", "moderator", "super_admin"]);
+      if (!ALLOWED.has(role)) return json({ error: "Unknown role" }, 400);
+
+      // Don't let an admin modify their own role assignments through this surface
+      if (user_id === caller.id) {
+        return json({ error: "You cannot change your own roles" }, 403);
+      }
+
+      if (role === "super_admin") {
+        if (enabled) {
+          // Cap total number of super admins to prevent runaway escalation
+          const { count } = await admin
+            .from("user_roles")
+            .select("user_id", { count: "exact", head: true })
+            .eq("role", "super_admin");
+          if ((count ?? 0) >= 5) {
+            return json({ error: "Super admin limit reached (max 5). Remove one first." }, 403);
+          }
+        } else {
+          // Never allow removing the last super admin
+          const { count } = await admin
+            .from("user_roles")
+            .select("user_id", { count: "exact", head: true })
+            .eq("role", "super_admin");
+          if ((count ?? 0) <= 1) {
+            return json({ error: "Cannot remove the last super admin" }, 403);
+          }
+        }
+      }
+
       if (enabled) {
         await admin.from("user_roles").upsert({ user_id, role }, { onConflict: "user_id,role" });
       } else {
         await admin.from("user_roles").delete().eq("user_id", user_id).eq("role", role);
       }
+      await admin.from("impersonation_log").insert({
+        super_admin_id: caller.id,
+        target_user_id: user_id,
+        action: enabled ? "grant_role" : "revoke_role",
+        meta: { role },
+      });
       return json({ ok: true });
     }
 
