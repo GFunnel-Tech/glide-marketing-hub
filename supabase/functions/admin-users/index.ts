@@ -105,8 +105,19 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // Helper: prevent acting on self or on other super admins (ban/delete)
+    const guardTarget = async (user_id: string) => {
+      if (user_id === caller.id) return "You cannot perform this action on yourself";
+      const { data: r } = await admin
+        .from("user_roles").select("role").eq("user_id", user_id).eq("role", "super_admin").maybeSingle();
+      if (r) return "Cannot perform this action on another super admin";
+      return null;
+    };
+
     if (action === "ban") {
-      const { user_id, duration } = body; // e.g. "876000h" forever, or "none"
+      const { user_id, duration } = body;
+      const blocked = await guardTarget(user_id);
+      if (blocked) return json({ error: blocked }, 403);
       const { error } = await admin.auth.admin.updateUserById(user_id, {
         ban_duration: duration ?? "876000h",
       } as any);
@@ -116,6 +127,7 @@ Deno.serve(async (req) => {
 
     if (action === "unban") {
       const { user_id } = body;
+      if (user_id === caller.id) return json({ error: "Cannot unban yourself" }, 403);
       const { error } = await admin.auth.admin.updateUserById(user_id, { ban_duration: "none" } as any);
       if (error) throw error;
       return json({ ok: true });
@@ -123,6 +135,8 @@ Deno.serve(async (req) => {
 
     if (action === "delete_user") {
       const { user_id } = body;
+      const blocked = await guardTarget(user_id);
+      if (blocked) return json({ error: blocked }, 403);
       const { error } = await admin.auth.admin.deleteUser(user_id);
       if (error) throw error;
       return json({ ok: true });
