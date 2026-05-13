@@ -23,15 +23,51 @@ Deno.serve(async (req) => {
     if (!caller) return json({ error: "Unauthorized" }, 401);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const { data: roleRow } = await admin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .eq("role", "super_admin")
-      .maybeSingle();
-    if (!roleRow) return json({ error: "Forbidden" }, 403);
+    const body = await req.json();
+    const { target_user_id, reason, action } = body;
 
-    const { target_user_id, reason } = await req.json();
+    // For "start" we require super_admin. For "end" the caller is the impersonated
+    // user, so we authorize via the existence of an open start record (handled below).
+    if (action !== "end") {
+      const { data: roleRow } = await admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      if (!roleRow) return json({ error: "Forbidden" }, 403);
+    }
+
+
+    // ---- END action: log when an admin exits an impersonation session.
+    // The caller here IS the impersonated user (the session has been swapped),
+    // so we resolve the originating super admin from the most recent open start. ----
+    if (action === "end") {
+      const { data: lastStart } = await admin
+        .from("impersonation_log")
+        .select("id, created_at, meta, super_admin_id, target_user_id")
+        .eq("target_user_id", caller.id)
+        .eq("action", "start")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!lastStart) return json({ ok: true, skipped: "no open session" });
+
+      const durationMs = Date.now() - new Date(lastStart.created_at).getTime();
+      await admin.from("impersonation_log").insert({
+        super_admin_id: lastStart.super_admin_id,
+        target_user_id: lastStart.target_user_id,
+        action: "end",
+        meta: {
+          start_id: lastStart.id,
+          duration_ms: durationMs,
+          email: (lastStart.meta as any)?.email ?? null,
+        },
+      });
+      return json({ ok: true });
+    }
+
     if (!target_user_id) return json({ error: "target_user_id required" }, 400);
     if (target_user_id === caller.id) return json({ error: "You cannot impersonate yourself" }, 400);
 

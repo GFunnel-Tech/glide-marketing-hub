@@ -19,6 +19,10 @@ export function ImpersonationBanner() {
   const exit = async () => {
     setExiting(true);
     try {
+      // Log the end of the impersonation session BEFORE we swap the session back
+      // (so the edge function can resolve the impersonated identity from the JWT).
+      try { await supabase.functions.invoke("admin-impersonate", { body: { action: "end" } }); } catch {}
+
       const raw = localStorage.getItem("impersonation.original_session");
       if (!raw) {
         await supabase.auth.signOut();
