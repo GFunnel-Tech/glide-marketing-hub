@@ -29,7 +29,15 @@ Deno.serve(async (req) => {
       .eq("user_id", caller.id)
       .eq("role", "super_admin")
       .maybeSingle();
-    if (!roleRow) return json({ error: "Forbidden" }, 403);
+    if (!roleRow) {
+      // Log denied access attempt for the audit trail
+      await admin.from("impersonation_log").insert({
+        super_admin_id: caller.id,
+        action: "denied_admin_access",
+        meta: { endpoint: "admin-users", email: caller.email ?? null },
+      }).then(() => {}, () => {});
+      return json({ error: "Forbidden" }, 403);
+    }
 
     const body = await req.json().catch(() => ({}));
     const action = body.action as string;
