@@ -35,7 +35,15 @@ Deno.serve(async (req) => {
         .eq("user_id", caller.id)
         .eq("role", "super_admin")
         .maybeSingle();
-      if (!roleRow) return json({ error: "Forbidden" }, 403);
+      if (!roleRow) {
+        await admin.from("impersonation_log").insert({
+          super_admin_id: caller.id,
+          target_user_id: target_user_id ?? null,
+          action: "denied_impersonation",
+          meta: { endpoint: "admin-impersonate", email: caller.email ?? null },
+        }).then(() => {}, () => {});
+        return json({ error: "Forbidden" }, 403);
+      }
     }
 
 
