@@ -23,15 +23,21 @@ Deno.serve(async (req) => {
     if (!caller) return json({ error: "Unauthorized" }, 401);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const { data: roleRow } = await admin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .eq("role", "super_admin")
-      .maybeSingle();
-    if (!roleRow) return json({ error: "Forbidden" }, 403);
+    const body = await req.json();
+    const { target_user_id, reason, action } = body;
 
-    const { target_user_id, reason, action } = await req.json();
+    // For "start" we require super_admin. For "end" the caller is the impersonated
+    // user, so we authorize via the existence of an open start record (handled below).
+    if (action !== "end") {
+      const { data: roleRow } = await admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      if (!roleRow) return json({ error: "Forbidden" }, 403);
+    }
+
 
     // ---- END action: log when an admin exits an impersonation session.
     // The caller here IS the impersonated user (the session has been swapped),
