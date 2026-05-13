@@ -31,11 +31,45 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!roleRow) return json({ error: "Forbidden" }, 403);
 
-    const { target_user_id } = await req.json();
+    const { target_user_id, reason } = await req.json();
     if (!target_user_id) return json({ error: "target_user_id required" }, 400);
+    if (target_user_id === caller.id) return json({ error: "You cannot impersonate yourself" }, 400);
 
     const { data: target, error: gErr } = await admin.auth.admin.getUserById(target_user_id);
     if (gErr || !target?.user?.email) throw gErr ?? new Error("User missing email");
+
+    // Block impersonating banned/suspended accounts
+    const bannedUntil = (target.user as any).banned_until;
+    if (bannedUntil && new Date(bannedUntil) > new Date()) {
+      return json({ error: "Cannot impersonate a suspended user" }, 403);
+    }
+
+    // SAFETY: never impersonate another super admin (privilege parity / audit clarity)
+    const { data: targetRoles } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", target_user_id);
+    const roles = (targetRoles ?? []).map((r: any) => r.role);
+    if (roles.includes("super_admin")) {
+      return json({ error: "Impersonating another super admin is not allowed" }, 403);
+    }
+    // Configurable allow-list of impersonatable roles. 'user' is implicit when no role rows exist.
+    const ALLOWED_ROLES = new Set(["user", "admin", "moderator"]);
+    const disallowed = roles.filter((r: string) => !ALLOWED_ROLES.has(r));
+    if (disallowed.length > 0) {
+      return json({ error: `Role not allowed for impersonation: ${disallowed.join(", ")}` }, 403);
+    }
+
+    // Rate limit: max 10 impersonation starts per super admin per hour
+    const { count: recent } = await admin
+      .from("impersonation_log")
+      .select("id", { count: "exact", head: true })
+      .eq("super_admin_id", caller.id)
+      .eq("action", "start")
+      .gte("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString());
+    if ((recent ?? 0) >= 10) {
+      return json({ error: "Impersonation rate limit reached (10/hour). Try again later." }, 429);
+    }
 
     const { data: link, error: lErr } = await admin.auth.admin.generateLink({
       type: "magiclink",
