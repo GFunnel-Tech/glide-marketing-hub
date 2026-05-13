@@ -48,14 +48,17 @@ export default function SuperAdmin() {
   const load = async () => {
     setLoading(true);
     try {
-      const [u, w] = await Promise.all([
+      const [u, w, a] = await Promise.all([
         supabase.functions.invoke("admin-users", { body: { action: "list" } }),
         supabase.functions.invoke("admin-users", { body: { action: "list_workspaces" } }),
+        supabase.functions.invoke("admin-users", { body: { action: "list_audit", limit: 200 } }),
       ]);
       if (u.error) throw u.error;
       if (w.error) throw w.error;
+      if (a.error) throw a.error;
       setUsers(u.data?.users ?? []);
       setWorkspaces(w.data?.workspaces ?? []);
+      setAudit(a.data?.entries ?? []);
     } catch (e: any) {
       toast.error(e.message ?? "Failed to load");
     } finally {
