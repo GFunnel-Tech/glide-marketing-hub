@@ -165,6 +165,28 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === "list_audit") {
+      const { limit = 200 } = body;
+      const { data: rows, error } = await admin
+        .from("impersonation_log")
+        .select("id, super_admin_id, target_user_id, action, meta, created_at")
+        .order("created_at", { ascending: false })
+        .limit(Math.min(Math.max(limit, 1), 500));
+      if (error) throw error;
+
+      const ids = Array.from(new Set((rows ?? []).flatMap((r: any) => [r.super_admin_id, r.target_user_id]).filter(Boolean)));
+      const { data: profiles } = await admin.from("profiles").select("id, email, display_name").in("id", ids);
+      const byId = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+
+      return json({
+        entries: (rows ?? []).map((r: any) => ({
+          ...r,
+          super_admin: byId.get(r.super_admin_id) ?? null,
+          target_user: byId.get(r.target_user_id) ?? null,
+        })),
+      });
+    }
+
     return json({ error: "Unknown action" }, 400);
   } catch (e: any) {
     console.error(e);
