@@ -124,7 +124,7 @@ export default function SuperAdmin() {
       </div>
 
       <div className="flex gap-1 border-b border-border">
-        {(["users", "workspaces"] as const).map((t) => (
+        {(["users", "workspaces", "audit"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
