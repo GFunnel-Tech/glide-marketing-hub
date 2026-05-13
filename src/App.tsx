@@ -24,6 +24,8 @@ import AiAssistant from "./pages/AiAssistant";
 import SuperAdmin from "./pages/SuperAdmin";
 import Rebilling from "./pages/Rebilling";
 import DemoGfunnel from "./pages/DemoGfunnel";
+import BillingPage from "./pages/BillingPage";
+import AffiliatePage from "./pages/AffiliatePage";
 import NotFound from "./pages/NotFound";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
