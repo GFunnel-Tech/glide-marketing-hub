@@ -247,6 +247,83 @@ export default function SuperAdmin() {
           </table>
         </div>
       )}
+
+      {tab === "audit" && (
+        <div className="rounded-lg border border-border overflow-hidden">
+          <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-2">
+            <History className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Impersonation audit log</span>
+            <span className="text-xs text-muted-foreground ml-auto">Last {audit.length} events</span>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left">
+              <tr>
+                <th className="p-3">When</th>
+                <th className="p-3">Event</th>
+                <th className="p-3">Super admin</th>
+                <th className="p-3">Target</th>
+                <th className="p-3">Duration</th>
+                <th className="p-3">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {audit
+                .filter((e) =>
+                  !query ||
+                  e.super_admin?.email?.toLowerCase().includes(query.toLowerCase()) ||
+                  e.target_user?.email?.toLowerCase().includes(query.toLowerCase()) ||
+                  e.action.toLowerCase().includes(query.toLowerCase())
+                )
+                .map((e) => {
+                  const ms = e.meta?.duration_ms as number | undefined;
+                  const duration = ms != null
+                    ? ms < 60000 ? `${Math.round(ms / 1000)}s`
+                    : ms < 3600000 ? `${Math.round(ms / 60000)}m`
+                    : `${(ms / 3600000).toFixed(1)}h`
+                    : "—";
+                  const isStart = e.action === "start";
+                  const isEnd = e.action === "end";
+                  return (
+                    <tr key={e.id} className="border-t border-border hover:bg-muted/30">
+                      <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(e.created_at).toLocaleString()}
+                      </td>
+                      <td className="p-3">
+                        <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
+                          isStart ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                          : isEnd ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                          : "bg-muted"
+                        }`}>
+                          {isStart ? <LogIn className="h-3 w-3" /> : isEnd ? <LogOutIcon className="h-3 w-3" /> : null}
+                          {e.action}
+                        </span>
+                      </td>
+                      <td className="p-3 text-xs">
+                        <div className="font-medium">{e.super_admin?.display_name || e.super_admin?.email || e.super_admin_id}</div>
+                        {e.super_admin?.email && e.super_admin?.display_name && (
+                          <div className="text-muted-foreground">{e.super_admin.email}</div>
+                        )}
+                      </td>
+                      <td className="p-3 text-xs">
+                        <div className="font-medium">{e.target_user?.display_name || e.target_user?.email || e.meta?.email || e.target_user_id || "—"}</div>
+                        {e.target_user?.email && e.target_user?.display_name && (
+                          <div className="text-muted-foreground">{e.target_user.email}</div>
+                        )}
+                      </td>
+                      <td className="p-3 text-xs text-muted-foreground">{isEnd ? duration : "—"}</td>
+                      <td className="p-3 text-xs text-muted-foreground max-w-xs truncate">
+                        {e.meta?.reason || (e.meta?.role ? `role: ${e.meta.role}` : "")}
+                      </td>
+                    </tr>
+                  );
+                })}
+              {audit.length === 0 && (
+                <tr><td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">No impersonation events recorded yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
