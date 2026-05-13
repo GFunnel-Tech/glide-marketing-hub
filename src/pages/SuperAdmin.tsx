@@ -25,11 +25,23 @@ type AdminWorkspace = {
   workspace_members: { count: number }[];
 };
 
+type AuditEntry = {
+  id: string;
+  super_admin_id: string;
+  target_user_id: string | null;
+  action: string;
+  meta: any;
+  created_at: string;
+  super_admin: { email?: string; display_name?: string } | null;
+  target_user: { email?: string; display_name?: string } | null;
+};
+
 export default function SuperAdmin() {
   const { data: isSuper, isLoading: checking } = useIsSuperAdmin();
-  const [tab, setTab] = useState<"users" | "workspaces">("users");
+  const [tab, setTab] = useState<"users" | "workspaces" | "audit">("users");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [workspaces, setWorkspaces] = useState<AdminWorkspace[]>([]);
+  const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
 
