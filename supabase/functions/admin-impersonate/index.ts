@@ -33,29 +33,30 @@ Deno.serve(async (req) => {
 
     const { target_user_id, reason, action } = await req.json();
 
-    // ---- END action: log when an admin exits an impersonation session ----
+    // ---- END action: log when an admin exits an impersonation session.
+    // The caller here IS the impersonated user (the session has been swapped),
+    // so we resolve the originating super admin from the most recent open start. ----
     if (action === "end") {
-      if (!target_user_id) return json({ error: "target_user_id required" }, 400);
-      // find the most recent open "start" by this admin against this target
       const { data: lastStart } = await admin
         .from("impersonation_log")
-        .select("id, created_at, meta")
-        .eq("super_admin_id", caller.id)
-        .eq("target_user_id", target_user_id)
+        .select("id, created_at, meta, super_admin_id, target_user_id")
+        .eq("target_user_id", caller.id)
         .eq("action", "start")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      const durationMs = lastStart ? Date.now() - new Date(lastStart.created_at).getTime() : null;
+      if (!lastStart) return json({ ok: true, skipped: "no open session" });
+
+      const durationMs = Date.now() - new Date(lastStart.created_at).getTime();
       await admin.from("impersonation_log").insert({
-        super_admin_id: caller.id,
-        target_user_id,
+        super_admin_id: lastStart.super_admin_id,
+        target_user_id: lastStart.target_user_id,
         action: "end",
         meta: {
-          start_id: lastStart?.id ?? null,
+          start_id: lastStart.id,
           duration_ms: durationMs,
-          email: (lastStart?.meta as any)?.email ?? null,
+          email: (lastStart.meta as any)?.email ?? null,
         },
       });
       return json({ ok: true });
