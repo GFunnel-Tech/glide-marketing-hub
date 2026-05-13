@@ -31,7 +31,36 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!roleRow) return json({ error: "Forbidden" }, 403);
 
-    const { target_user_id, reason } = await req.json();
+    const { target_user_id, reason, action } = await req.json();
+
+    // ---- END action: log when an admin exits an impersonation session ----
+    if (action === "end") {
+      if (!target_user_id) return json({ error: "target_user_id required" }, 400);
+      // find the most recent open "start" by this admin against this target
+      const { data: lastStart } = await admin
+        .from("impersonation_log")
+        .select("id, created_at, meta")
+        .eq("super_admin_id", caller.id)
+        .eq("target_user_id", target_user_id)
+        .eq("action", "start")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const durationMs = lastStart ? Date.now() - new Date(lastStart.created_at).getTime() : null;
+      await admin.from("impersonation_log").insert({
+        super_admin_id: caller.id,
+        target_user_id,
+        action: "end",
+        meta: {
+          start_id: lastStart?.id ?? null,
+          duration_ms: durationMs,
+          email: (lastStart?.meta as any)?.email ?? null,
+        },
+      });
+      return json({ ok: true });
+    }
+
     if (!target_user_id) return json({ error: "target_user_id required" }, 400);
     if (target_user_id === caller.id) return json({ error: "You cannot impersonate yourself" }, 400);
 
