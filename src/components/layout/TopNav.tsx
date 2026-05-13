@@ -26,6 +26,8 @@ const navItems = [
   { icon: FileBarChart, label: "Reports", path: "/reports" },
   { icon: Receipt, label: "Rebilling", path: "/rebilling" },
   { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
+  { icon: CreditCard, label: "Billing", path: "/billing" },
+  { icon: Coins, label: "Affiliate", path: "/affiliate" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
