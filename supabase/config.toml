@@ -1,1 +1,9 @@
 project_id = "kkuvdoejqruszisyojap"
+
+# Admin endpoints: require a valid Supabase JWT at the gateway. The function
+# code then additionally enforces the super_admin role.
+[functions.admin-users]
+verify_jwt = true
+
+[functions.admin-impersonate]
+verify_jwt = true
