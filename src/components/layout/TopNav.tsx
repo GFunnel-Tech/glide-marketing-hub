@@ -136,11 +136,61 @@ export function TopNav() {
 
       {/* Nav row */}
       <nav className="flex items-center gap-1 px-6 overflow-x-auto">
-        {items.map((item: any) => {
+        {items.map((item) => {
+          const Icon = item.icon;
+
+          if (isGroup(item)) {
+            const isActive = item.children.some(
+              (c) => location.pathname === c.path || (c.path !== "/" && location.pathname.startsWith(c.path))
+            );
+            return (
+              <DropdownMenu key={item.label}>
+                <DropdownMenuTrigger
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 whitespace-nowrap outline-none",
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[180px]">
+                  {item.children.map((child) => {
+                    const ChildIcon = child.icon;
+                    const childActive =
+                      location.pathname === child.path ||
+                      (child.path !== "/" && location.pathname.startsWith(child.path));
+                    return (
+                      <DropdownMenuItem key={child.path} asChild>
+                        <Link
+                          to={child.path}
+                          className={cn(
+                            "flex items-center gap-2 cursor-pointer",
+                            childActive && "text-primary font-medium"
+                          )}
+                        >
+                          <ChildIcon className="h-4 w-4 shrink-0" />
+                          <span className="flex-1">{child.label}</span>
+                          {child.badge && (
+                            <span className="text-[10px] bg-gradient-primary text-primary-foreground rounded px-1.5 py-0.5 font-medium leading-none">
+                              {child.badge}
+                            </span>
+                          )}
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          }
+
           const isActive =
             location.pathname === item.path ||
             (item.path !== "/" && location.pathname.startsWith(item.path));
-          const Icon = item.icon;
           return (
             <Link
               key={item.path}
