@@ -28,12 +28,7 @@ const isGroup = (e: NavEntry): e is NavGroup => "children" in e;
 
 const navItems: NavEntry[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  {
-    icon: Users, label: "Clients", children: [
-      { icon: Users, label: "All Clients", path: "/clients" },
-      { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
-    ]
-  },
+  { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
   {
     icon: Megaphone, label: "Marketing", children: [
       { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
