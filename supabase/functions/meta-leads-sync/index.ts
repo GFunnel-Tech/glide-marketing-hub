@@ -53,17 +53,36 @@ Deno.serve(async (req) => {
         // back to all ads (cheap, the form list is what matters).
         const since = Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
 
-        const adsUrl =
-          `https://graph.facebook.com/v21.0/${acc.act_id}/ads` +
-          `?fields=id,name,adset_id,campaign_id,campaign{name},adset{name},leadgen_form{id,name}` +
-          `&limit=500&access_token=${encodeURIComponent(conn.access_token)}`;
+        const adFields = [
+          "id",
+          "name",
+          "adset_id",
+          "campaign_id",
+          "campaign{name}",
+          "adset{name}",
+          "leadgen_form{id,name}",
+          "creative{id,object_story_spec}",
+        ].join(",");
 
-        const adsRes = await fetch(adsUrl);
-        const adsJson = await adsRes.json();
-        if (!adsRes.ok) {
-          errors.push({ act_id: acc.act_id, scope: "ads", error: adsJson });
-          continue;
+        const ads: any[] = [];
+        let adsUrl: string | null =
+          `https://graph.facebook.com/v21.0/${acc.act_id}/ads` +
+          `?fields=${encodeURIComponent(adFields)}` +
+          `&limit=200&access_token=${encodeURIComponent(conn.access_token)}`;
+        let adsPage = 0;
+
+        while (adsUrl && adsPage < 10) {
+          const adsRes = await fetch(adsUrl);
+          const adsJson = await adsRes.json();
+          if (!adsRes.ok) {
+            errors.push({ act_id: acc.act_id, scope: "ads", error: adsJson });
+            break;
+          }
+          ads.push(...(adsJson.data ?? []));
+          adsUrl = adsJson.paging?.next ?? null;
+          adsPage++;
         }
+        if (!ads.length) continue;
 
         // Build form_id -> { name, ads: [{id,name,adset,campaign}] }
         const formMap = new Map<string, {
@@ -71,18 +90,20 @@ Deno.serve(async (req) => {
           ads: { id: string; name: string | null; adset_id: string | null; adset_name: string | null; campaign_id: string | null; campaign_name: string | null }[];
         }>();
 
-        for (const ad of (adsJson.data ?? []) as any[]) {
-          const f = ad.leadgen_form;
-          if (!f?.id) continue;
-          if (!formMap.has(f.id)) formMap.set(f.id, { name: f.name ?? null, ads: [] });
-          formMap.get(f.id)!.ads.push({
-            id: ad.id,
-            name: ad.name ?? null,
-            adset_id: ad.adset_id ?? null,
-            adset_name: ad.adset?.name ?? null,
-            campaign_id: ad.campaign_id ?? null,
-            campaign_name: ad.campaign?.name ?? null,
-          });
+        for (const ad of ads) {
+          const forms = extractLeadForms(ad);
+          for (const f of forms) {
+            if (!f.id) continue;
+            if (!formMap.has(f.id)) formMap.set(f.id, { name: f.name ?? null, ads: [] });
+            formMap.get(f.id)!.ads.push({
+              id: ad.id,
+              name: ad.name ?? null,
+              adset_id: ad.adset_id ?? null,
+              adset_name: ad.adset?.name ?? null,
+              campaign_id: ad.campaign_id ?? null,
+              campaign_name: ad.campaign?.name ?? null,
+            });
+          }
         }
 
         for (const [formId, info] of formMap.entries()) {
