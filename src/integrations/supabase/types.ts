@@ -1035,10 +1035,16 @@ export type Database = {
           full_name: string | null
           ghl_check_status: string | null
           ghl_checked_at: string | null
+          ghl_contact_id: string | null
           id: string
+          last_sync_error: string | null
           lead_id: string
+          next_check_at: string | null
           phone: string | null
           raw: Json | null
+          recovered_at: string | null
+          sync_attempts: number
+          sync_status: string
           updated_at: string
           workspace_id: string
         }
@@ -1061,10 +1067,16 @@ export type Database = {
           full_name?: string | null
           ghl_check_status?: string | null
           ghl_checked_at?: string | null
+          ghl_contact_id?: string | null
           id?: string
+          last_sync_error?: string | null
           lead_id: string
+          next_check_at?: string | null
           phone?: string | null
           raw?: Json | null
+          recovered_at?: string | null
+          sync_attempts?: number
+          sync_status?: string
           updated_at?: string
           workspace_id: string
         }
@@ -1087,10 +1099,16 @@ export type Database = {
           full_name?: string | null
           ghl_check_status?: string | null
           ghl_checked_at?: string | null
+          ghl_contact_id?: string | null
           id?: string
+          last_sync_error?: string | null
           lead_id?: string
+          next_check_at?: string | null
           phone?: string | null
           raw?: Json | null
+          recovered_at?: string | null
+          sync_attempts?: number
+          sync_status?: string
           updated_at?: string
           workspace_id?: string
         }
