@@ -173,6 +173,23 @@ Deno.serve(async (req) => {
   return json({ ok: true, leadsSynced: totalLeads, errors });
 });
 
+function extractLeadForms(ad: any): { id: string; name: string | null }[] {
+  const forms = new Map<string, string | null>();
+  const add = (id: unknown, name: unknown = null) => {
+    if (typeof id === "string" && id) forms.set(id, typeof name === "string" ? name : null);
+  };
+
+  add(ad.leadgen_form?.id, ad.leadgen_form?.name);
+
+  const story = ad.creative?.object_story_spec ?? {};
+  const storyBlocks = [story.link_data, story.video_data, ...(story.template_data?.child_attachments ?? [])];
+  for (const block of storyBlocks) {
+    add(block?.call_to_action?.value?.lead_gen_form_id);
+  }
+
+  return Array.from(forms.entries()).map(([id, name]) => ({ id, name }));
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
