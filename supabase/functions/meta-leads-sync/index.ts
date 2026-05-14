@@ -53,6 +53,35 @@ Deno.serve(async (req) => {
         // back to all ads (cheap, the form list is what matters).
         const since = Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
 
+        const { data: leadAds } = await admin
+          .from("meta_ads")
+          .select("id,name,adset_id,adset_name,campaign_id,campaign_name")
+          .eq("ad_account_id", acc.id)
+          .gt("leads", 0)
+          .order("leads", { ascending: false })
+          .limit(200);
+
+        if (leadAds?.length) {
+          for (const ad of leadAds) {
+            const url =
+              `https://graph.facebook.com/v21.0/${ad.id}/leads` +
+              `?fields=id,created_time,field_data,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,form_id` +
+              `&filtering=[{"field":"time_created","operator":"GREATER_THAN","value":${since}}]` +
+              `&limit=200&access_token=${encodeURIComponent(conn.access_token)}`;
+            const leadsRes = await fetch(url);
+            const leadsJson = await leadsRes.json();
+            if (!leadsRes.ok) {
+              errors.push({ ad_id: ad.id, act_id: acc.act_id, error: leadsJson });
+              continue;
+            }
+
+            const rows = buildLeadRows(leadsJson.data ?? [], acc, ad, null);
+            const inserted = await upsertLeadRows(admin, rows, errors, { ad_id: ad.id });
+            totalLeads += inserted;
+          }
+          continue;
+        }
+
         const adFields = [
           "id",
           "name",
