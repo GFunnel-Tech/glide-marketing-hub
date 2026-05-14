@@ -161,6 +161,49 @@ Deno.serve(async (req) => {
   return json({ ok: true, leadsSynced: totalLeads, errors });
 });
 
+function buildLeadRows(leads: any[], acc: any, adRefOrResolver: any, formName: string | null, fallbackFormId?: string) {
+  return leads.map((l: any) => {
+    const fd = (l.field_data ?? []) as { name: string; values: string[] }[];
+    const find = (keys: string[]) => {
+      const item = fd.find((f) => keys.some((k) => f.name?.toLowerCase().includes(k)));
+      return item?.values?.[0] ?? null;
+    };
+    const adRef = typeof adRefOrResolver === "function" ? adRefOrResolver(l) : adRefOrResolver;
+    return {
+      workspace_id: acc.workspace_id,
+      ad_account_id: acc.id,
+      client_id: acc.client_id,
+      lead_id: l.id,
+      form_id: l.form_id ?? fallbackFormId ?? null,
+      form_name: formName,
+      campaign_id: l.campaign_id ?? adRef?.campaign_id ?? null,
+      campaign_name: l.campaign_name ?? adRef?.campaign_name ?? null,
+      adset_id: l.adset_id ?? adRef?.adset_id ?? null,
+      adset_name: l.adset_name ?? adRef?.adset_name ?? null,
+      ad_id: l.ad_id ?? adRef?.id ?? null,
+      ad_name: l.ad_name ?? adRef?.name ?? null,
+      created_time: l.created_time ?? null,
+      full_name: find(["full_name", "name"]),
+      email: find(["email"]),
+      phone: find(["phone"]),
+      field_data: fd,
+      raw: l,
+    };
+  });
+}
+
+async function upsertLeadRows(admin: any, rows: any[], errors: any[], context: Record<string, unknown>) {
+  if (!rows.length) return 0;
+  const { error } = await admin
+    .from("meta_leads")
+    .upsert(rows, { onConflict: "ad_account_id,lead_id" });
+  if (error) {
+    errors.push({ ...context, error: error.message });
+    return 0;
+  }
+  return rows.length;
+}
+
 function extractLeadForms(ad: any): { id: string; name: string | null }[] {
   const forms = new Map<string, string | null>();
   const add = (id: unknown, name: unknown = null) => {
