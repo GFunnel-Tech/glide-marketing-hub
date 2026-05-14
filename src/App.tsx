@@ -26,6 +26,7 @@ import Rebilling from "./pages/Rebilling";
 import DemoGfunnel from "./pages/DemoGfunnel";
 import BillingPage from "./pages/BillingPage";
 import AffiliatePage from "./pages/AffiliatePage";
+import ForecastPage from "./pages/ForecastPage";
 import NotFound from "./pages/NotFound";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
@@ -71,6 +72,7 @@ const App = () => (
                   <Route path="reports" element={<Reports />} />
                   <Route path="billing" element={<BillingPage />} />
                   <Route path="affiliate" element={<AffiliatePage />} />
+                  <Route path="forecast" element={<ForecastPage />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="rebilling" element={<Rebilling />} />

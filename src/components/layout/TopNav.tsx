@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useUnreadMessageCount } from "@/hooks/useMessages";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins
+  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp
 } from "lucide-react";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ const navItems = [
   { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
   { icon: CreditCard, label: "Billing", path: "/billing" },
   { icon: Coins, label: "Affiliate", path: "/affiliate" },
+  { icon: TrendingUp, label: "Forecast", path: "/forecast" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
