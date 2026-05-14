@@ -482,6 +482,81 @@ export type Database = {
         }
         Relationships: []
       }
+      google_leads: {
+        Row: {
+          ad_id: string | null
+          ad_name: string | null
+          adset_id: string | null
+          adset_name: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          client_id: number | null
+          created_at: string
+          created_time: string | null
+          email: string | null
+          external_lead_id: string | null
+          field_data: Json | null
+          form_id: string | null
+          form_name: string | null
+          full_name: string | null
+          id: string
+          note: string | null
+          phone: string | null
+          raw: Json | null
+          stage: Database["public"]["Enums"]["lead_stage"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: number | null
+          created_at?: string
+          created_time?: string | null
+          email?: string | null
+          external_lead_id?: string | null
+          field_data?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          note?: string | null
+          phone?: string | null
+          raw?: Json | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: number | null
+          created_at?: string
+          created_time?: string | null
+          email?: string | null
+          external_lead_id?: string | null
+          field_data?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          note?: string | null
+          phone?: string | null
+          raw?: Json | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       impersonation_log: {
         Row: {
           action: string
@@ -625,6 +700,156 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      linkedin_leads: {
+        Row: {
+          ad_id: string | null
+          ad_name: string | null
+          adset_id: string | null
+          adset_name: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          client_id: number | null
+          created_at: string
+          created_time: string | null
+          email: string | null
+          external_lead_id: string | null
+          field_data: Json | null
+          form_id: string | null
+          form_name: string | null
+          full_name: string | null
+          id: string
+          note: string | null
+          phone: string | null
+          raw: Json | null
+          stage: Database["public"]["Enums"]["lead_stage"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: number | null
+          created_at?: string
+          created_time?: string | null
+          email?: string | null
+          external_lead_id?: string | null
+          field_data?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          note?: string | null
+          phone?: string | null
+          raw?: Json | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: number | null
+          created_at?: string
+          created_time?: string | null
+          email?: string | null
+          external_lead_id?: string | null
+          field_data?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          note?: string | null
+          phone?: string | null
+          raw?: Json | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      manual_leads: {
+        Row: {
+          ad_id: string | null
+          ad_name: string | null
+          adset_id: string | null
+          adset_name: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          client_id: number | null
+          created_at: string
+          created_time: string | null
+          email: string | null
+          external_lead_id: string | null
+          field_data: Json | null
+          form_id: string | null
+          form_name: string | null
+          full_name: string | null
+          id: string
+          note: string | null
+          phone: string | null
+          raw: Json | null
+          stage: Database["public"]["Enums"]["lead_stage"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: number | null
+          created_at?: string
+          created_time?: string | null
+          email?: string | null
+          external_lead_id?: string | null
+          field_data?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          note?: string | null
+          phone?: string | null
+          raw?: Json | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: number | null
+          created_at?: string
+          created_time?: string | null
+          email?: string | null
+          external_lead_id?: string | null
+          field_data?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          note?: string | null
+          phone?: string | null
+          raw?: Json | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -1040,9 +1265,11 @@ export type Database = {
           last_sync_error: string | null
           lead_id: string
           next_check_at: string | null
+          note: string | null
           phone: string | null
           raw: Json | null
           recovered_at: string | null
+          stage: Database["public"]["Enums"]["lead_stage"]
           sync_attempts: number
           sync_status: string
           updated_at: string
@@ -1072,9 +1299,11 @@ export type Database = {
           last_sync_error?: string | null
           lead_id: string
           next_check_at?: string | null
+          note?: string | null
           phone?: string | null
           raw?: Json | null
           recovered_at?: string | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
           sync_attempts?: number
           sync_status?: string
           updated_at?: string
@@ -1104,9 +1333,11 @@ export type Database = {
           last_sync_error?: string | null
           lead_id?: string
           next_check_at?: string | null
+          note?: string | null
           phone?: string | null
           raw?: Json | null
           recovered_at?: string | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
           sync_attempts?: number
           sync_status?: string
           updated_at?: string
@@ -1598,6 +1829,81 @@ export type Database = {
         }
         Relationships: []
       }
+      tiktok_leads: {
+        Row: {
+          ad_id: string | null
+          ad_name: string | null
+          adset_id: string | null
+          adset_name: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          client_id: number | null
+          created_at: string
+          created_time: string | null
+          email: string | null
+          external_lead_id: string | null
+          field_data: Json | null
+          form_id: string | null
+          form_name: string | null
+          full_name: string | null
+          id: string
+          note: string | null
+          phone: string | null
+          raw: Json | null
+          stage: Database["public"]["Enums"]["lead_stage"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: number | null
+          created_at?: string
+          created_time?: string | null
+          email?: string | null
+          external_lead_id?: string | null
+          field_data?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          note?: string | null
+          phone?: string | null
+          raw?: Json | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: number | null
+          created_at?: string
+          created_time?: string | null
+          email?: string | null
+          external_lead_id?: string | null
+          field_data?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          note?: string | null
+          phone?: string | null
+          raw?: Json | null
+          stage?: Database["public"]["Enums"]["lead_stage"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1855,6 +2161,7 @@ export type Database = {
       bm_type: "Own BM" | "Agency BM"
       campaign_status: "active" | "paused"
       client_status: "GREEN" | "YELLOW" | "RED" | "BLOCKED"
+      lead_stage: "intake" | "in_progress" | "converted"
       rebill_assignment_level: "account" | "campaign" | "adset" | "ad"
       rebill_cadence: "monthly" | "weekly" | "custom"
       rebill_invoice_status: "draft" | "sent" | "paid" | "void"
@@ -1998,6 +2305,7 @@ export const Constants = {
       bm_type: ["Own BM", "Agency BM"],
       campaign_status: ["active", "paused"],
       client_status: ["GREEN", "YELLOW", "RED", "BLOCKED"],
+      lead_stage: ["intake", "in_progress", "converted"],
       rebill_assignment_level: ["account", "campaign", "adset", "ad"],
       rebill_cadence: ["monthly", "weekly", "custom"],
       rebill_invoice_status: ["draft", "sent", "paid", "void"],
