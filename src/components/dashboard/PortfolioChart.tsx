@@ -1,7 +1,22 @@
+import { useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { cplTrendData } from "@/data/mockData";
+import { useCampaigns } from "@/hooks/useDatabase";
 
 export function PortfolioChart() {
+  const { data: campaigns = [] } = useCampaigns();
+
+  const dc = useMemo(() => {
+    const flagged = campaigns.filter((c) => c.doubleCount);
+    if (flagged.length === 0) return null;
+    const reportedLeads = flagged.reduce((s, c) => s + (c.leads || 0), 0);
+    const trueLeads = flagged.reduce((s, c) => s + (c.trueLeads || 0), 0);
+    const spend = flagged.reduce((s, c) => s + (c.spend || 0), 0);
+    const reportedCpl = reportedLeads > 0 ? spend / reportedLeads : 0;
+    const trueCpl = trueLeads > 0 ? spend / trueLeads : 0;
+    return { count: flagged.length, reportedLeads, trueLeads, reportedCpl, trueCpl };
+  }, [campaigns]);
+
   return (
     <div className="rounded-lg border border-border bg-card p-5">
       <h3 className="text-sm font-semibold text-foreground mb-4">Portfolio CPL Trend (30 Days)</h3>
@@ -19,11 +34,19 @@ export function PortfolioChart() {
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-3 rounded-lg bg-destructive/10 border border-destructive/20 p-3">
-        <p className="text-xs text-destructive font-medium">
-          ⚠ Double-counting confirmed on 9 campaigns. Reported: 663 leads at $36.95 · True: 253 leads at $60.92. Fix: remove Lead pixel from post-form redirect pages.
-        </p>
-      </div>
+      {dc ? (
+        <div className="mt-3 rounded-lg bg-destructive/10 border border-destructive/20 p-3">
+          <p className="text-xs text-destructive font-medium">
+            ⚠ Double-counting confirmed on {dc.count} campaign{dc.count === 1 ? "" : "s"}. Reported: {dc.reportedLeads} leads at ${dc.reportedCpl.toFixed(2)} · True: {dc.trueLeads} leads at ${dc.trueCpl.toFixed(2)}. Fix: remove Lead pixel from post-form redirect pages.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-3 rounded-lg bg-success/10 border border-success/20 p-3">
+          <p className="text-xs text-success font-medium">
+            ✓ No double-counting detected across active campaigns.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
