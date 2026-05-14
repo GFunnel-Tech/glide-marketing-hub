@@ -19,19 +19,42 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 
-const navItems = [
+type NavChild = { icon: any; label: string; path: string; badge?: string };
+type NavGroup = { icon: any; label: string; children: NavChild[] };
+type NavSingle = { icon: any; label: string; path: string; badge?: string };
+type NavEntry = NavSingle | NavGroup;
+
+const isGroup = (e: NavEntry): e is NavGroup => "children" in e;
+
+const navItems: NavEntry[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Users, label: "Clients", path: "/clients" },
-  { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
-  { icon: Sparkles, label: "Creatives", path: "/creatives", badge: "NEW" },
-  { icon: Inbox, label: "Leads", path: "/leads" },
-  { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
-  { icon: FileBarChart, label: "Reports", path: "/reports" },
-  { icon: Receipt, label: "Rebilling", path: "/rebilling" },
-  { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
-  { icon: CreditCard, label: "Billing", path: "/billing" },
-  { icon: Coins, label: "Affiliate", path: "/affiliate" },
-  { icon: TrendingUp, label: "Forecast", path: "/forecast" },
+  {
+    icon: Users, label: "Clients", children: [
+      { icon: Users, label: "All Clients", path: "/clients" },
+      { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
+    ]
+  },
+  {
+    icon: Megaphone, label: "Marketing", children: [
+      { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
+      { icon: Sparkles, label: "Creatives", path: "/creatives", badge: "NEW" },
+      { icon: Inbox, label: "Leads", path: "/leads" },
+    ]
+  },
+  {
+    icon: CreditCard, label: "Finance", children: [
+      { icon: CreditCard, label: "Billing", path: "/billing" },
+      { icon: Receipt, label: "Rebilling", path: "/rebilling" },
+      { icon: Coins, label: "Affiliate", path: "/affiliate" },
+      { icon: TrendingUp, label: "Forecast", path: "/forecast" },
+    ]
+  },
+  {
+    icon: FileBarChart, label: "Insights", children: [
+      { icon: FileBarChart, label: "Reports", path: "/reports" },
+      { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
+    ]
+  },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
