@@ -3,8 +3,11 @@ import { useState } from "react";
 import { useUnreadMessageCount } from "@/hooks/useMessages";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp
+  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
@@ -16,19 +19,42 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 
-const navItems = [
+type NavChild = { icon: any; label: string; path: string; badge?: string };
+type NavGroup = { icon: any; label: string; children: NavChild[] };
+type NavSingle = { icon: any; label: string; path: string; badge?: string };
+type NavEntry = NavSingle | NavGroup;
+
+const isGroup = (e: NavEntry): e is NavGroup => "children" in e;
+
+const navItems: NavEntry[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Users, label: "Clients", path: "/clients" },
-  { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
-  { icon: Sparkles, label: "Creatives", path: "/creatives", badge: "NEW" },
-  { icon: Inbox, label: "Leads", path: "/leads" },
-  { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
-  { icon: FileBarChart, label: "Reports", path: "/reports" },
-  { icon: Receipt, label: "Rebilling", path: "/rebilling" },
-  { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
-  { icon: CreditCard, label: "Billing", path: "/billing" },
-  { icon: Coins, label: "Affiliate", path: "/affiliate" },
-  { icon: TrendingUp, label: "Forecast", path: "/forecast" },
+  {
+    icon: Users, label: "Clients", children: [
+      { icon: Users, label: "All Clients", path: "/clients" },
+      { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
+    ]
+  },
+  {
+    icon: Megaphone, label: "Marketing", children: [
+      { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
+      { icon: Sparkles, label: "Creatives", path: "/creatives", badge: "NEW" },
+      { icon: Inbox, label: "Leads", path: "/leads" },
+    ]
+  },
+  {
+    icon: CreditCard, label: "Finance", children: [
+      { icon: CreditCard, label: "Billing", path: "/billing" },
+      { icon: Receipt, label: "Rebilling", path: "/rebilling" },
+      { icon: Coins, label: "Affiliate", path: "/affiliate" },
+      { icon: TrendingUp, label: "Forecast", path: "/forecast" },
+    ]
+  },
+  {
+    icon: FileBarChart, label: "Insights", children: [
+      { icon: FileBarChart, label: "Reports", path: "/reports" },
+      { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
+    ]
+  },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
@@ -41,7 +67,7 @@ export function TopNav() {
   const { data: unreadMessages = 0 } = useUnreadMessageCount();
   const { data: isSuperAdmin } = useIsSuperAdmin();
   const [connecting, setConnecting] = useState(false);
-  const items = isSuperAdmin
+  const items: NavEntry[] = isSuperAdmin
     ? [...navItems, { icon: Shield, label: "Admin", path: "/admin" }]
     : navItems;
 
@@ -110,11 +136,61 @@ export function TopNav() {
 
       {/* Nav row */}
       <nav className="flex items-center gap-1 px-6 overflow-x-auto">
-        {items.map((item: any) => {
+        {items.map((item) => {
+          const Icon = item.icon;
+
+          if (isGroup(item)) {
+            const isActive = item.children.some(
+              (c) => location.pathname === c.path || (c.path !== "/" && location.pathname.startsWith(c.path))
+            );
+            return (
+              <DropdownMenu key={item.label}>
+                <DropdownMenuTrigger
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 whitespace-nowrap outline-none",
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span>{item.label}</span>
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[180px]">
+                  {item.children.map((child) => {
+                    const ChildIcon = child.icon;
+                    const childActive =
+                      location.pathname === child.path ||
+                      (child.path !== "/" && location.pathname.startsWith(child.path));
+                    return (
+                      <DropdownMenuItem key={child.path} asChild>
+                        <Link
+                          to={child.path}
+                          className={cn(
+                            "flex items-center gap-2 cursor-pointer",
+                            childActive && "text-primary font-medium"
+                          )}
+                        >
+                          <ChildIcon className="h-4 w-4 shrink-0" />
+                          <span className="flex-1">{child.label}</span>
+                          {child.badge && (
+                            <span className="text-[10px] bg-gradient-primary text-primary-foreground rounded px-1.5 py-0.5 font-medium leading-none">
+                              {child.badge}
+                            </span>
+                          )}
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          }
+
           const isActive =
             location.pathname === item.path ||
             (item.path !== "/" && location.pathname.startsWith(item.path));
-          const Icon = item.icon;
           return (
             <Link
               key={item.path}
