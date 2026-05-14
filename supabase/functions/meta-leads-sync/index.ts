@@ -14,9 +14,11 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let workspaceFilter: string | null = null;
+  let exhaustiveDiscovery = false;
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
+    exhaustiveDiscovery = body.exhaustiveDiscovery === true;
   }
 
   const admin = createClient(
@@ -81,6 +83,8 @@ Deno.serve(async (req) => {
           }
           continue;
         }
+
+        if (!exhaustiveDiscovery) continue;
 
         const adFields = [
           "id",
