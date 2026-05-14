@@ -24,10 +24,12 @@ Deno.serve(async (req) => {
     const { adAccountId, clientId } = await req.json();
     if (!adAccountId) return json({ error: "adAccountId required" }, 400);
 
-    // Use the user's RLS context — they must have write access.
+    // Map the account. When mapping to a client, auto-activate so it's
+    // eligible for lead sync. When unmapping (clientId null), deactivate.
+    const willMap = clientId !== null && clientId !== undefined;
     const { error } = await supabase
       .from("meta_ad_accounts")
-      .update({ client_id: clientId ?? null })
+      .update({ client_id: willMap ? clientId : null, is_active: willMap })
       .eq("id", adAccountId);
     if (error) return json({ error: error.message }, 403);
 
