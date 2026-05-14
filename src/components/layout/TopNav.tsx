@@ -67,7 +67,7 @@ export function TopNav() {
   const { data: unreadMessages = 0 } = useUnreadMessageCount();
   const { data: isSuperAdmin } = useIsSuperAdmin();
   const [connecting, setConnecting] = useState(false);
-  const items = isSuperAdmin
+  const items: NavEntry[] = isSuperAdmin
     ? [...navItems, { icon: Shield, label: "Admin", path: "/admin" }]
     : navItems;
 
