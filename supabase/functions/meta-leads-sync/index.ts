@@ -148,50 +148,9 @@ Deno.serve(async (req) => {
             errors.push({ form: formId, act_id: acc.act_id, error: leadsJson });
             continue;
           }
-          const leads = leadsJson.data ?? [];
-          if (!leads.length) continue;
-
           const adById = new Map(info.ads.map((a) => [a.id, a]));
-
-          const rows = leads.map((l: any) => {
-            const fd = (l.field_data ?? []) as { name: string; values: string[] }[];
-            const find = (keys: string[]) => {
-              const item = fd.find((f) =>
-                keys.some((k) => f.name?.toLowerCase().includes(k))
-              );
-              return item?.values?.[0] ?? null;
-            };
-            const adRef = l.ad_id ? adById.get(l.ad_id) : undefined;
-            return {
-              workspace_id: acc.workspace_id,
-              ad_account_id: acc.id,
-              client_id: acc.client_id,
-              lead_id: l.id,
-              form_id: l.form_id ?? formId,
-              form_name: info.name,
-              campaign_id: l.campaign_id ?? adRef?.campaign_id ?? null,
-              campaign_name: l.campaign_name ?? adRef?.campaign_name ?? null,
-              adset_id: l.adset_id ?? adRef?.adset_id ?? null,
-              adset_name: l.adset_name ?? adRef?.adset_name ?? null,
-              ad_id: l.ad_id ?? null,
-              ad_name: l.ad_name ?? adRef?.name ?? null,
-              created_time: l.created_time ?? null,
-              full_name: find(["full_name", "name"]),
-              email: find(["email"]),
-              phone: find(["phone"]),
-              field_data: fd,
-              raw: l,
-            };
-          });
-
-          const { error: upErr } = await admin
-            .from("meta_leads")
-            .upsert(rows, { onConflict: "ad_account_id,lead_id" });
-          if (upErr) {
-            errors.push({ form: formId, error: upErr.message });
-          } else {
-            totalLeads += rows.length;
-          }
+          const rows = buildLeadRows(leadsJson.data ?? [], acc, (lead: any) => lead.ad_id ? adById.get(lead.ad_id) : undefined, info.name, formId);
+          totalLeads += await upsertLeadRows(admin, rows, errors, { form: formId });
         }
       } catch (e) {
         errors.push({ act_id: acc.act_id, error: String(e) });
