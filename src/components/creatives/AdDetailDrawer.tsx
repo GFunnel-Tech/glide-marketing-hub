@@ -11,6 +11,7 @@ import {
 import { Image as ImageIcon, ExternalLink, Sparkles, AlertTriangle, Loader2, Calendar, Users, Target, MousePointerClick } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { AdActionsMenu } from "@/components/ads/AdActionsMenu";
 
 const STATUS: Record<AdClass, { label: string; cls: string; Icon: any }> = {
   best: { label: "Best", cls: "bg-success/15 text-success border-success/30", Icon: Sparkles },
@@ -99,7 +100,10 @@ export function AdDetailDrawer({
               <span className="text-[10px] text-muted-foreground uppercase">{ad.effective_status}</span>
             )}
           </div>
-          <SheetTitle className="text-left">{ad.title || ad.name || "Untitled ad"}</SheetTitle>
+          <div className="flex items-start justify-between gap-2">
+            <SheetTitle className="text-left flex-1">{ad.title || ad.name || "Untitled ad"}</SheetTitle>
+            <AdActionsMenu ad={ad} channel="meta" />
+          </div>
           {ad.campaign_name && (
             <SheetDescription className="text-left">
               Campaign · {ad.campaign_name}
