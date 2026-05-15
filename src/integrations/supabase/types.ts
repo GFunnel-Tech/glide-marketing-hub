@@ -125,6 +125,51 @@ export type Database = {
           },
         ]
       }
+      ad_action_log: {
+        Row: {
+          action: string
+          channel: string
+          client_id: number | null
+          created_at: string
+          error_message: string | null
+          id: string
+          meta: Json | null
+          performed_by: string | null
+          result_object_id: string | null
+          source_object_id: string | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          channel: string
+          client_id?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          meta?: Json | null
+          performed_by?: string | null
+          result_object_id?: string | null
+          source_object_id?: string | null
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          channel?: string
+          client_id?: number | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          meta?: Json | null
+          performed_by?: string | null
+          result_object_id?: string | null
+          source_object_id?: string | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           ad_sets: number
