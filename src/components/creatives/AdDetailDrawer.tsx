@@ -11,6 +11,7 @@ import {
 import { Image as ImageIcon, ExternalLink, Sparkles, AlertTriangle, Loader2, Calendar, Users, Target, MousePointerClick } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { AdActionsMenu } from "@/components/ads/AdActionsMenu";
 
 const STATUS: Record<AdClass, { label: string; cls: string; Icon: any }> = {
   best: { label: "Best", cls: "bg-success/15 text-success border-success/30", Icon: Sparkles },
