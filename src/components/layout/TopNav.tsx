@@ -32,7 +32,8 @@ const navItems: NavEntry[] = [
   {
     icon: Megaphone, label: "Marketing", children: [
       { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
-      { icon: Sparkles, label: "Creatives", path: "/creatives", badge: "NEW" },
+      { icon: Sparkles, label: "Creatives", path: "/creatives" },
+      { icon: Megaphone, label: "Ads", path: "/ads", badge: "NEW" },
       { icon: Inbox, label: "Leads", path: "/leads" },
     ]
   },
