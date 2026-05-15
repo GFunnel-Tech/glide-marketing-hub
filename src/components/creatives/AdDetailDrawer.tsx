@@ -99,7 +99,10 @@ export function AdDetailDrawer({
               <span className="text-[10px] text-muted-foreground uppercase">{ad.effective_status}</span>
             )}
           </div>
-          <SheetTitle className="text-left">{ad.title || ad.name || "Untitled ad"}</SheetTitle>
+          <div className="flex items-start justify-between gap-2">
+            <SheetTitle className="text-left flex-1">{ad.title || ad.name || "Untitled ad"}</SheetTitle>
+            <AdActionsMenu ad={ad} channel="meta" />
+          </div>
           {ad.campaign_name && (
             <SheetDescription className="text-left">
               Campaign · {ad.campaign_name}
