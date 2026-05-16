@@ -218,6 +218,7 @@ Deno.serve(async (req) => {
           name: `${state.campaignName || "Creative"} – ${Date.now()}`,
           object_story_spec: {
             page_id: pageId,
+            instagram_actor_id: state.igAccountId || undefined,
             link_data: {
               image_hash: imageHashes[0],
               link: `https://fb.me/${leadFormId}`,
@@ -243,7 +244,7 @@ Deno.serve(async (req) => {
         };
         creativeBody = {
           name: `${state.campaignName || "Creative"} – ${Date.now()}`,
-          object_story_spec: { page_id: pageId },
+          object_story_spec: { page_id: pageId, instagram_actor_id: state.igAccountId || undefined },
           asset_feed_spec,
         };
       }
