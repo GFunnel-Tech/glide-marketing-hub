@@ -418,6 +418,161 @@ export type Database = {
           },
         ]
       }
+      client_report_schedules: {
+        Row: {
+          active: boolean
+          cadence: string
+          client_id: number
+          commentary_override: string | null
+          created_at: string
+          created_by: string
+          day_of_month: number | null
+          day_of_week: number | null
+          id: string
+          last_run_at: string | null
+          next_run_at: string
+          recipients: Json
+          send_hour: number
+          template_id: string
+          timezone: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          active?: boolean
+          cadence?: string
+          client_id: number
+          commentary_override?: string | null
+          created_at?: string
+          created_by: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string
+          recipients?: Json
+          send_hour?: number
+          template_id: string
+          timezone?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          active?: boolean
+          cadence?: string
+          client_id?: number
+          commentary_override?: string | null
+          created_at?: string
+          created_by?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string
+          recipients?: Json
+          send_hour?: number
+          template_id?: string
+          timezone?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_report_schedules_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_reports: {
+        Row: {
+          client_id: number
+          commentary: string | null
+          created_at: string
+          email_message_ids: Json
+          error_message: string | null
+          generated_at: string | null
+          id: string
+          payload: Json
+          pdf_url: string | null
+          period_end: string
+          period_start: string
+          recipients: Json
+          schedule_id: string | null
+          sent_at: string | null
+          share_token: string
+          status: string
+          template_id: string | null
+          trigger_type: string
+          triggered_by: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          commentary?: string | null
+          created_at?: string
+          email_message_ids?: Json
+          error_message?: string | null
+          generated_at?: string | null
+          id?: string
+          payload?: Json
+          pdf_url?: string | null
+          period_end: string
+          period_start: string
+          recipients?: Json
+          schedule_id?: string | null
+          sent_at?: string | null
+          share_token?: string
+          status?: string
+          template_id?: string | null
+          trigger_type?: string
+          triggered_by?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          commentary?: string | null
+          created_at?: string
+          email_message_ids?: Json
+          error_message?: string | null
+          generated_at?: string | null
+          id?: string
+          payload?: Json
+          pdf_url?: string | null
+          period_end?: string
+          period_start?: string
+          recipients?: Json
+          schedule_id?: string | null
+          sent_at?: string | null
+          share_token?: string
+          status?: string
+          template_id?: string | null
+          trigger_type?: string
+          triggered_by?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_reports_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "client_report_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_reports_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_wallets: {
         Row: {
           auto_topup_enabled: boolean
@@ -1893,6 +2048,48 @@ export type Database = {
           stripe_invoice_id?: string | null
           stripe_payment_intent_id?: string | null
           total_due?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      report_templates: {
+        Row: {
+          branding: Json
+          commentary_template: string | null
+          created_at: string
+          created_by: string
+          default_period: string
+          description: string | null
+          id: string
+          name: string
+          sections: Json
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          branding?: Json
+          commentary_template?: string | null
+          created_at?: string
+          created_by: string
+          default_period?: string
+          description?: string | null
+          id?: string
+          name: string
+          sections?: Json
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          branding?: Json
+          commentary_template?: string | null
+          created_at?: string
+          created_by?: string
+          default_period?: string
+          description?: string | null
+          id?: string
+          name?: string
+          sections?: Json
           updated_at?: string
           workspace_id?: string
         }
