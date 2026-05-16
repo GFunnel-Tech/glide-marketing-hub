@@ -11,9 +11,10 @@ import { GenerateMode } from "@/components/ads/builder/GenerateMode";
 import { TemplateMode } from "@/components/ads/builder/TemplateMode";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Edit3, Lightbulb, ChevronLeft, Flame, Plug } from "lucide-react";
+import { Edit3, Lightbulb, ChevronLeft, Flame, Plug, Rocket, AlertCircle } from "lucide-react";
 import { ConnectedAccountsModal } from "@/components/ads/builder/ConnectedAccountsModal";
-import { toast } from "sonner";
+import { PublishDialog } from "@/components/ads/builder/PublishDialog";
+import { validateForPublish } from "@/lib/adBuilderValidation";
 import type { BuilderMode, Objective, SpecialAdCategory } from "@/components/ads/builder/types";
 
 export default function AdCreator() {
