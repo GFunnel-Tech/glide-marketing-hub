@@ -61,8 +61,11 @@ export default function AdCreator() {
 
   const launch = async () => {
     if (!currentWorkspace) return;
-    if (!state.pageId) { toast.error("Select a Facebook Page in the Identity section"); return; }
-    if (!state.adAccountId) { toast.error("Select an Ad Account in the Identity section"); return; }
+    if (!state.pageId || !state.adAccountId) {
+      toast.error("Choose connected accounts first");
+      setAccountsOpen(true);
+      return;
+    }
     if (!state.media.length && !state.bankImages.length) { toast.error("Add at least one creative image"); return; }
     if (state.objective === "leads") {
       const lf = state.leadForm;
