@@ -45,9 +45,11 @@ export interface LeadFormQuestion {
 export interface LeadFormDraft {
   mode: "existing" | "new";
   existingFormId?: string;
+  existingFormName?: string;
   name?: string;
   intro?: string;
   privacyUrl?: string;
+  followUpUrl?: string;
   thankYou?: string;
   questions?: LeadFormQuestion[];
 }

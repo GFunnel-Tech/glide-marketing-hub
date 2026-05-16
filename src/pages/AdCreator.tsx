@@ -62,6 +62,12 @@ export default function AdCreator() {
     if (!state.pageId) { toast.error("Select a Facebook Page in the Identity section"); return; }
     if (!state.adAccountId) { toast.error("Select an Ad Account in the Identity section"); return; }
     if (!state.media.length && !state.bankImages.length) { toast.error("Add at least one creative image"); return; }
+    if (state.objective === "leads") {
+      const lf = state.leadForm;
+      if (lf.mode === "existing" && !lf.existingFormId) { toast.error("Pick an existing lead form or switch to Create new"); return; }
+      if (lf.mode === "new" && !lf.privacyUrl) { toast.error("Add a Privacy Policy URL to the lead form"); return; }
+      if (lf.mode === "new" && !(lf.questions ?? []).length) { toast.error("Add at least one lead form question"); return; }
+    }
     setLaunching(true);
     try {
       // Ensure draft saved

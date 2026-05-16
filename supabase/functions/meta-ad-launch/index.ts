@@ -46,6 +46,50 @@ async function metaPost(path: string, body: Record<string, any>, token: string) 
   return j;
 }
 
+async function metaGet(path: string, token: string, extra: Record<string, string> = {}) {
+  const params = new URLSearchParams({ access_token: token, ...extra });
+  const r = await fetch(`https://graph.facebook.com/${META_VER}/${path}?${params.toString()}`);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j?.error?.message || `Meta GET ${path} error`);
+  return j;
+}
+
+async function getPageAccessToken(pageId: string, userToken: string): Promise<string> {
+  const j = await metaGet(`${pageId}`, userToken, { fields: "access_token" });
+  if (!j.access_token) throw new Error("Could not obtain Page access token. Reconnect Meta with pages_manage_ads + pages_show_list + leads_retrieval scopes.");
+  return j.access_token;
+}
+
+function mapLeadQuestion(q: { type: string; label: string; options?: string[] }) {
+  switch (q.type) {
+    case "FULL_NAME": return { type: "FULL_NAME" };
+    case "EMAIL": return { type: "EMAIL" };
+    case "PHONE": return { type: "PHONE" };
+    case "MULTIPLE_CHOICE":
+      return { type: "CUSTOM", key: q.label.toLowerCase().replace(/\s+/g, "_").slice(0, 60), label: q.label, options: (q.options ?? []).map((o) => ({ value: o, key: o.toLowerCase().replace(/\s+/g, "_").slice(0, 60) })) };
+    default:
+      return { type: "CUSTOM", key: q.label.toLowerCase().replace(/\s+/g, "_").slice(0, 60) || "custom", label: q.label, input_type: "SHORT_ANSWER" };
+  }
+}
+
+async function createLeadGenForm(pageId: string, pageToken: string, lf: any): Promise<string> {
+  if (!lf?.privacyUrl) throw new Error("Privacy Policy URL is required for Lead form ads.");
+  const questions = (lf.questions ?? []).map(mapLeadQuestion);
+  if (questions.length === 0) throw new Error("Add at least one lead form question.");
+  const body: Record<string, any> = {
+    name: lf.name || "Lead Form",
+    follow_up_action_url: lf.followUpUrl || lf.privacyUrl,
+    privacy_policy: { url: lf.privacyUrl, link_text: "Privacy Policy" },
+    questions,
+    locale: "en_US",
+    context_card: lf.intro ? { title: lf.name || "Learn more", content: [lf.intro], style: "PARAGRAPH_STYLE", button_text: "Continue" } : undefined,
+    thank_you_page: { title: "Thanks!", body: lf.thankYou || "We'll be in touch shortly.", button_type: "VIEW_WEBSITE", website_url: lf.privacyUrl, button_text: "View website" },
+  };
+  const r = await metaPost(`${pageId}/leadgen_forms`, body, pageToken);
+  if (!r.id) throw new Error("Lead form creation returned no id");
+  return r.id as string;
+}
+
 async function uploadImageFromUrl(actId: string, imageUrl: string, token: string): Promise<string> {
   // Meta /adimages accepts a `url` parameter to fetch the image server-side.
   const r = await metaPost(`${actId}/adimages`, { url: imageUrl }, token);
@@ -157,22 +201,52 @@ Deno.serve(async (req) => {
       const allTexts = [...(state.primaryTexts ?? []).filter(Boolean), ...(state.bankCopy ?? [])];
       const allHeadlines = (state.headlines ?? []).filter(Boolean);
 
-      // Asset feed spec for dynamic creative
-      const asset_feed_spec: any = {
-        images: imageHashes.map((h) => ({ hash: h })),
-        bodies: allTexts.length ? allTexts.map((t: string) => ({ text: t })) : [{ text: "Learn more about our offer." }],
-        titles: allHeadlines.length ? allHeadlines.map((t: string) => ({ text: t })) : undefined,
-        descriptions: state.description ? [{ text: state.description }] : undefined,
-        link_urls: [{ website_url: linkUrl + utm, display_url: state.displayLink || undefined }],
-        call_to_action_types: [state.cta || "LEARN_MORE"],
-        ad_formats: ["SINGLE_IMAGE"],
-      };
+      // For Leads objective: create (or reuse) a leadgen form and build a link_data creative
+      // attached to that form. asset_feed_spec doesn't support lead_gen_form_id reliably.
+      let creativeBody: any;
+      let leadFormId: string | null = null;
 
-      const creativeBody: any = {
-        name: `${state.campaignName || "Creative"} – ${Date.now()}`,
-        object_story_spec: { page_id: pageId },
-        asset_feed_spec,
-      };
+      if (state.objective === "leads") {
+        const pageToken = await getPageAccessToken(pageId, token);
+        if (state.leadForm?.mode === "existing" && state.leadForm?.existingFormId) {
+          leadFormId = state.leadForm.existingFormId;
+        } else {
+          leadFormId = await createLeadGenForm(pageId, pageToken, state.leadForm);
+        }
+
+        creativeBody = {
+          name: `${state.campaignName || "Creative"} – ${Date.now()}`,
+          object_story_spec: {
+            page_id: pageId,
+            link_data: {
+              image_hash: imageHashes[0],
+              link: `https://fb.me/${leadFormId}`,
+              message: allTexts[0] || "Learn more about our offer.",
+              name: allHeadlines[0] || undefined,
+              description: state.description || undefined,
+              call_to_action: {
+                type: state.cta || "SIGN_UP",
+                value: { lead_gen_form_id: leadFormId },
+              },
+            },
+          },
+        };
+      } else {
+        const asset_feed_spec: any = {
+          images: imageHashes.map((h) => ({ hash: h })),
+          bodies: allTexts.length ? allTexts.map((t: string) => ({ text: t })) : [{ text: "Learn more about our offer." }],
+          titles: allHeadlines.length ? allHeadlines.map((t: string) => ({ text: t })) : undefined,
+          descriptions: state.description ? [{ text: state.description }] : undefined,
+          link_urls: [{ website_url: linkUrl + utm, display_url: state.displayLink || undefined }],
+          call_to_action_types: [state.cta || "LEARN_MORE"],
+          ad_formats: ["SINGLE_IMAGE"],
+        };
+        creativeBody = {
+          name: `${state.campaignName || "Creative"} – ${Date.now()}`,
+          object_story_spec: { page_id: pageId },
+          asset_feed_spec,
+        };
+      }
       const creative = await metaPost(`${actId}/adcreatives`, creativeBody, token);
 
       // 4. Ad
@@ -195,10 +269,10 @@ Deno.serve(async (req) => {
 
       await admin.from("ad_action_log").update({
         status: "success", result_object_id: ad.id,
-        meta: { campaign_id: campaign.id, adset_id: adset.id, creative_id: creative.id, ad_id: ad.id },
+        meta: { campaign_id: campaign.id, adset_id: adset.id, creative_id: creative.id, ad_id: ad.id, lead_form_id: leadFormId },
       }).eq("id", log.data!.id);
 
-      return json({ ok: true, campaignId: campaign.id, adsetId: adset.id, adId: ad.id });
+      return json({ ok: true, campaignId: campaign.id, adsetId: adset.id, adId: ad.id, leadFormId });
     } catch (e: any) {
       if (draftId) await admin.from("ad_drafts").update({ status: "failed", launch_error: e.message }).eq("id", draftId);
       await admin.from("ad_action_log").update({ status: "failed", error_message: e.message }).eq("id", log.data!.id);
