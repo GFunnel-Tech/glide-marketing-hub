@@ -107,11 +107,14 @@ export interface AdBuilderState {
   campaignName: string;
   utmParameters: string;
 
-  // Identity (Page + Ad Account)
+  // Identity (Page + Instagram + Ad Account)
   pageId: string | null;
   pageName: string | null;
   pageAvatar: string | null;
+  igAccountId: string | null;
+  igUsername: string | null;
   adAccountId: string | null;
+  adAccountName: string | null;
 }
 
 export const DEFAULT_UTM =
@@ -164,6 +167,9 @@ export function makeInitialState(
     pageId: null,
     pageName: null,
     pageAvatar: null,
+    igAccountId: null,
+    igUsername: null,
     adAccountId: null,
+    adAccountName: null,
   };
 }
