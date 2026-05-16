@@ -114,7 +114,23 @@ export default function AdCreator() {
               <ModeBtn label="Generate" icon={<Lightbulb className="h-3.5 w-3.5" />} active={mode === "generate"} onClick={() => setMode("generate")} />
               <ModeBtn label="Template" icon={<Lightbulb className="h-3.5 w-3.5" />} active={mode === "template"} onClick={() => setMode("template")} />
               <ModeBtn label="Manual" icon={<Edit3 className="h-3.5 w-3.5" />} active={mode === "manual"} onClick={() => setMode("manual")} />
-              <div className="ml-auto inline-flex items-center gap-1.5 bg-white/15 rounded-md px-2.5 py-1 text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setAccountsOpen(true)}
+                className="ml-auto inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+                title="Connected accounts"
+              >
+                <Plug className="h-3.5 w-3.5" />
+                {state.pageName ? (
+                  <>
+                    <span className="max-w-[120px] truncate">{state.pageName}</span>
+                    {state.igUsername && <span className="opacity-80">/ @{state.igUsername}</span>}
+                  </>
+                ) : (
+                  "Connect accounts"
+                )}
+              </button>
+              <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-md px-2.5 py-1 text-xs font-medium">
                 <Flame className="h-3.5 w-3.5" /> {state.objective.charAt(0).toUpperCase() + state.objective.slice(1)}
                 {state.specialAdCategory && <span className="ml-1 bg-white/20 rounded px-1.5 py-0.5 text-[10px] capitalize">Special: {state.specialAdCategory}</span>}
               </div>
@@ -152,6 +168,8 @@ export default function AdCreator() {
           {draftId && <div className="text-[10px] text-muted-foreground text-center mt-1">{dirty ? "Saving…" : "Draft autosaved"}</div>}
         </div>
       </div>
+
+      <ConnectedAccountsModal open={accountsOpen} onOpenChange={setAccountsOpen} />
     </div>
   );
 }
