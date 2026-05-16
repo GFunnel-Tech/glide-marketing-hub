@@ -269,10 +269,10 @@ Deno.serve(async (req) => {
 
       await admin.from("ad_action_log").update({
         status: "success", result_object_id: ad.id,
-        meta: { campaign_id: campaign.id, adset_id: adset.id, creative_id: creative.id, ad_id: ad.id },
+        meta: { campaign_id: campaign.id, adset_id: adset.id, creative_id: creative.id, ad_id: ad.id, lead_form_id: leadFormId },
       }).eq("id", log.data!.id);
 
-      return json({ ok: true, campaignId: campaign.id, adsetId: adset.id, adId: ad.id });
+      return json({ ok: true, campaignId: campaign.id, adsetId: adset.id, adId: ad.id, leadFormId });
     } catch (e: any) {
       if (draftId) await admin.from("ad_drafts").update({ status: "failed", launch_error: e.message }).eq("id", draftId);
       await admin.from("ad_action_log").update({ status: "failed", error_message: e.message }).eq("id", log.data!.id);
