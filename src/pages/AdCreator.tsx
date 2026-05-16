@@ -1,19 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAdDraftStore } from "@/stores/adDraftStore";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useSaveAdDraft } from "@/hooks/useAdDrafts";
-import { useSaveAdTemplate } from "@/hooks/useAdTemplates";
-import { supabase } from "@/integrations/supabase/client";
 import { PreviewPane } from "@/components/ads/builder/preview/PreviewPane";
 import { ManualMode } from "@/components/ads/builder/ManualMode";
 import { GenerateMode } from "@/components/ads/builder/GenerateMode";
 import { TemplateMode } from "@/components/ads/builder/TemplateMode";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Edit3, Lightbulb, ChevronLeft, Flame, Plug } from "lucide-react";
+import { Edit3, Lightbulb, ChevronLeft, Flame, Plug, Rocket, AlertCircle } from "lucide-react";
 import { ConnectedAccountsModal } from "@/components/ads/builder/ConnectedAccountsModal";
-import { toast } from "sonner";
+import { PublishDialog } from "@/components/ads/builder/PublishDialog";
+import { validateForPublish } from "@/lib/adBuilderValidation";
 import type { BuilderMode, Objective, SpecialAdCategory } from "@/components/ads/builder/types";
 
 export default function AdCreator() {
@@ -28,11 +27,10 @@ export default function AdCreator() {
   const markClean = useAdDraftStore((s) => s.markClean);
 
   const [mode, setMode] = useState<BuilderMode>("manual");
-  const [launching, setLaunching] = useState(false);
   const [accountsOpen, setAccountsOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
 
   const saveDraft = useSaveAdDraft();
-  const saveTemplate = useSaveAdTemplate();
 
   // Initialize from URL params on first mount if needed
   useEffect(() => {
@@ -59,43 +57,9 @@ export default function AdCreator() {
     return () => clearTimeout(t);
   }, [dirty, state, draftId, currentWorkspace]);
 
-  const launch = async () => {
-    if (!currentWorkspace) return;
-    if (!state.pageId || !state.adAccountId) {
-      toast.error("Choose connected accounts first");
-      setAccountsOpen(true);
-      return;
-    }
-    if (!state.media.length && !state.bankImages.length) { toast.error("Add at least one creative image"); return; }
-    if (state.objective === "leads") {
-      const lf = state.leadForm;
-      if (lf.mode === "existing" && !lf.existingFormId) { toast.error("Pick an existing lead form or switch to Create new"); return; }
-      if (lf.mode === "new" && !lf.privacyUrl) { toast.error("Add a Privacy Policy URL to the lead form"); return; }
-      if (lf.mode === "new" && !(lf.questions ?? []).length) { toast.error("Add at least one lead form question"); return; }
-    }
-    setLaunching(true);
-    try {
-      // Ensure draft saved
-      let id = draftId;
-      if (!id || dirty) {
-        const res = await saveDraft.mutateAsync({ id, state });
-        id = res.id; setDraftId(id); markClean();
-      }
-      // Save as template if requested
-      if (state.saveAsTemplate) {
-        await saveTemplate.mutateAsync({ name: state.campaignName || `Template ${new Date().toLocaleDateString()}`, state });
-      }
-      const { data, error } = await supabase.functions.invoke("meta-ad-launch", {
-        body: { workspaceId: currentWorkspace.id, draftId: id, state },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast.success("Campaign launched (PAUSED). Review and activate in Meta Ads Manager.");
-      navigate("/ads");
-    } catch (e: any) {
-      toast.error(e.message || "Launch failed");
-    } finally { setLaunching(false); }
-  };
+  const issueCount = useMemo(() => validateForPublish(state).filter((i) => i.severity === "error").length, [state]);
+
+  const openPublish = () => setPublishOpen(true);
 
   const headerColor = mode === "generate" ? "from-violet-500 to-fuchsia-500"
     : mode === "template" ? "from-blue-500 to-indigo-500"
@@ -155,21 +119,36 @@ export default function AdCreator() {
         </div>
       </div>
 
-      {/* Sticky launch bar */}
+      {/* Sticky publish bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-3 z-40">
-        <div className="max-w-2xl mx-auto lg:mx-0 lg:ml-6">
+        <div className="max-w-2xl mx-auto lg:mx-0 lg:ml-6 space-y-1">
           <Button
-            onClick={launch}
-            disabled={launching}
+            onClick={openPublish}
             className="w-full h-12 bg-gradient-to-r from-primary via-primary to-violet-600 text-white text-sm font-semibold"
           >
-            {launching ? "Launching…" : "💡 Launch Campaign"}
+            <Rocket className="h-4 w-4 mr-2" />
+            Publish Campaign
+            {issueCount > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                <AlertCircle className="h-3 w-3" /> {issueCount}
+              </span>
+            )}
           </Button>
-          {draftId && <div className="text-[10px] text-muted-foreground text-center mt-1">{dirty ? "Saving…" : "Draft autosaved"}</div>}
+          <div className="text-[10px] text-muted-foreground text-center">
+            {issueCount > 0
+              ? `${issueCount} issue${issueCount === 1 ? "" : "s"} to fix · `
+              : "Ready to publish · "}
+            {draftId ? (dirty ? "Saving…" : "Draft autosaved") : "New draft"}
+          </div>
         </div>
       </div>
 
       <ConnectedAccountsModal open={accountsOpen} onOpenChange={setAccountsOpen} />
+      <PublishDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        onMissingIdentity={() => { setPublishOpen(false); setAccountsOpen(true); }}
+      />
     </div>
   );
 }
