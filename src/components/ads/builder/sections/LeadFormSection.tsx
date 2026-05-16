@@ -3,7 +3,8 @@ import { useAdDraftStore } from "@/stores/adDraftStore";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Section } from "../shared/Section";
-import { FileText, Plus, X, Loader2 } from "lucide-react";
+import { FileText, Plus, X, Loader2, GripVertical, ArrowUp, ArrowDown } from "lucide-react";
+import type { LeadFormQuestion } from "../types";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -77,21 +78,90 @@ export function LeadFormSection() {
           <div>
             <label className="text-xs font-medium text-foreground mb-1.5 block">Questions</label>
             <div className="space-y-2">
-              {(lf.questions ?? []).map((q, i) => (
-                <div key={q.id} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
-                  <span className="text-[10px] font-semibold uppercase text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{q.type}</span>
-                  <Input
-                    value={q.label}
-                    onChange={(e) => {
-                      const next = [...(lf.questions ?? [])]; next[i] = { ...q, label: e.target.value }; setLf({ ...lf, questions: next });
-                    }}
-                    className="h-7 text-sm border-0 bg-transparent focus-visible:ring-0 px-0"
-                  />
-                  <button onClick={() => setLf({ ...lf, questions: (lf.questions ?? []).filter((qq) => qq.id !== q.id) })}>
-                    <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                  </button>
-                </div>
-              ))}
+              {(lf.questions ?? []).map((q, i) => {
+                const list = lf.questions ?? [];
+                const updateQ = (patch: Partial<LeadFormQuestion>) => {
+                  const next = [...list];
+                  next[i] = { ...q, ...patch } as LeadFormQuestion;
+                  setLf({ ...lf, questions: next });
+                };
+                const move = (dir: -1 | 1) => {
+                  const j = i + dir;
+                  if (j < 0 || j >= list.length) return;
+                  const next = [...list];
+                  [next[i], next[j]] = [next[j], next[i]];
+                  setLf({ ...lf, questions: next });
+                };
+                const remove = () => setLf({ ...lf, questions: list.filter((qq) => qq.id !== q.id) });
+                const isMC = q.type === "MULTIPLE_CHOICE";
+                return (
+                  <div key={q.id} className="rounded-lg border border-border p-2 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <Select value={q.type} onValueChange={(v) => updateQ({ type: v as LeadFormQuestion["type"], options: v === "MULTIPLE_CHOICE" ? (q.options ?? ["Option 1"]) : undefined })}>
+                        <SelectTrigger className="h-7 text-xs w-[140px] shrink-0"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FULL_NAME">Full name</SelectItem>
+                          <SelectItem value="EMAIL">Email</SelectItem>
+                          <SelectItem value="PHONE">Phone</SelectItem>
+                          <SelectItem value="CUSTOM">Short answer</SelectItem>
+                          <SelectItem value="MULTIPLE_CHOICE">Multiple choice</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        value={q.label}
+                        onChange={(e) => updateQ({ label: e.target.value })}
+                        placeholder="Question text"
+                        className="h-7 text-sm flex-1"
+                      />
+                      <button type="button" onClick={() => move(-1)} disabled={i === 0} className="disabled:opacity-30">
+                        <ArrowUp className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                      </button>
+                      <button type="button" onClick={() => move(1)} disabled={i === list.length - 1} className="disabled:opacity-30">
+                        <ArrowDown className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                      </button>
+                      <button type="button" onClick={remove}>
+                        <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                      </button>
+                    </div>
+                    {isMC && (
+                      <div className="pl-6 space-y-1.5">
+                        {(q.options ?? []).map((opt, oi) => (
+                          <div key={oi} className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground w-4">{oi + 1}.</span>
+                            <Input
+                              value={opt}
+                              onChange={(e) => {
+                                const opts = [...(q.options ?? [])];
+                                opts[oi] = e.target.value;
+                                updateQ({ options: opts });
+                              }}
+                              placeholder={`Option ${oi + 1}`}
+                              className="h-7 text-xs flex-1"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => updateQ({ options: (q.options ?? []).filter((_, k) => k !== oi) })}
+                              disabled={(q.options ?? []).length <= 1}
+                              className="disabled:opacity-30"
+                            >
+                              <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                            </button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[11px] px-2"
+                          onClick={() => updateQ({ options: [...(q.options ?? []), `Option ${(q.options?.length ?? 0) + 1}`] })}
+                        >
+                          <Plus className="h-3 w-3 mr-1" /> Add option
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <Button variant="ghost" size="sm" className="mt-2 text-xs" onClick={() => setLf({ ...lf, questions: [...(lf.questions ?? []), { id: crypto.randomUUID(), type: "CUSTOM", label: "New question" }] })}>
               <Plus className="h-3 w-3 mr-1" /> Add Question
