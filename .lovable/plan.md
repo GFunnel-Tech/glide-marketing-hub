@@ -1,166 +1,95 @@
-# Phase 2 — Meta Ad Creator (Plai-style)
 
-A new full-page ad creator modeled on the Plai screenshots: three modes (Generate / Template / Manual), live Facebook + Instagram preview, Special Ad Category support, and a Creative Bank for Dynamic Creative.
+# Scheduled Reports & Client Communications
 
-## Entry points
+A two-pillar system bolted onto the existing client/workspace model:
 
-- New button **"+ New Ad"** on `/ads` (currently disabled) → opens objective picker modal → routes to `/ads/new?objective=leads|website|awareness|messages`.
-- Same modal also reachable from a new **"Launch"** card grid on `/ads` (Meta tile = active, others = Coming soon — mirrors your Plai "Launch" screenshot).
+1. **Reports** — staff-configurable, schedulable performance digests that get emailed (HTML inline + PDF link), can be sent on-demand, opened as a live shareable link, and archived in the Client Portal.
+2. **Communications** — structured request workflows (content update, video brief, script approval, generic announcement) that fan out to email, in-app portal notifications, and internal staff tasks.
 
-## Objective picker modal (matches screenshot 1)
+Phased so you get something usable end of phase 1.
 
-- Header: "Create a Facebook campaign"
-- Top row: **Leads / Website / Awareness** primary tiles. **Messages** secondary tile underneath.
-- For Leads only: sub-tiles **Leads (Instant Form) / Phone Calls / Lead Message** (we ship Instant Form; others disabled w/ tooltip).
-- **Special Ad Categories** toggle + 3 cards: Housing / Financial Products / Employment (single-select when toggle on).
-- Country multi-select (defaults to United States).
-- "Create Campaign" → routes to builder with these params persisted in URL + Zustand draft store.
+## Phase 1 — Reports (the core deliverable)
 
-## Builder page `/ads/new`
+### Data model
+- `report_templates` — reusable report definitions per workspace (name, sections enabled: kpis / leads / creative / commentary, date_range_preset, branding overrides).
+- `client_report_schedules` — links a template to a client + cadence (daily/weekly/monthly + day/time + timezone), recipient list, active flag, next_run_at.
+- `client_reports` — generated report instances (client_id, template_id, period_start/end, payload JSONB snapshot, pdf_url, share_token, status: queued/generating/ready/sent/failed, email_message_id).
+- `report_recipients` — embedded as JSONB on schedule (email + name + role) — no separate table needed.
 
-Two-column layout:
+All workspace-scoped with the standard `is_workspace_member` / `can_write_workspace` RLS pattern. Public read on `client_reports` only via `share_token` (separate policy keyed on token presence) so the live link works without auth.
 
-### Left column — three tabs
+### Generation pipeline
+- Edge function `generate-client-report`: takes `{ scheduleId? , clientId, templateId, periodStart, periodEnd, triggeredBy }`, pulls KPIs from `campaigns` / `meta_insights_daily`, leads from `meta_leads`/`google_leads`/`linkedin_leads`/`manual_leads`, top ads from `meta_ads`, stitches the JSONB payload, renders PDF (puppeteer-less: use `npm:@react-pdf/renderer` in Deno), uploads to a new public `client-reports` storage bucket, writes `client_reports` row, returns share URL + payload.
+- Edge function `send-client-report`: takes a `client_reports.id`, renders the React Email template (inline KPI cards + commentary + "View full report" button → share link + PDF download link), calls `send-transactional-email` per recipient with one `idempotencyKey` per (report, recipient), marks the row `sent`.
+- Edge function `run-scheduled-reports`: pg_cron-driven dispatcher that finds `client_report_schedules` where `next_run_at <= now() AND active`, kicks off `generate-client-report` then `send-client-report`, advances `next_run_at` using the cadence.
+- pg_cron job runs every 5 min.
 
-**1. Generate (AI)**
-- Describe what you're advertising (textarea + "Improve" button → calls `lovable-ai` edge fn, gemini-2.5-flash).
-- Creative type tiles: AI Images / Product Shot / AI Avatar / Smart Creatives / Memes / Use My Own. Phase 2 ships **AI Images** + **Use My Own**; rest = "Coming soon".
-- "Generate" → calls `meta-ad-generate` edge fn → returns 3–5 image variants (Gemini 3 image preview) + copy variants (primary text, headlines, CTA suggestion).
+### UI
+- **Staff: `/reports` page** gets two tabs:
+  - *Templates* — list + create/edit modal (name, sections toggles, period preset, commentary text supporting `{{client_name}}`/`{{period}}` tokens).
+  - *Schedules* — per-client schedule list with Run-now, Pause, Edit recipients.
+- **Client profile** gets a "Reports" tab: schedule for this client, history of generated reports (status, sent date, link to view, resend button), and an "Add commentary" inline editor on draft reports before they auto-send.
+- **Public share page** `/r/:shareToken` — branded, no-auth, mirrors the email content with charts (Recharts). Locks down to read-only.
+- **Client Portal** gets a "Reports" card listing all `client_reports` for the linked client where status=sent. Opens the same share page inside the portal shell.
 
-**2. Template**
-- List of saved templates (new `ad_templates` table). Click → hydrates Manual form.
-- "Save as template" toggle in Manual mode.
+### Email
+- New React Email template `client-performance-report` in `_shared/transactional-email-templates/` with KPI tiles, top-ads strip, commentary block, and the share-link CTA. All dynamic data via props.
+- Requires Lovable Email infrastructure — I'll set that up first if it isn't already (this is the only "intermediary" step; I'll continue straight through).
 
-**3. Manual** — sections (collapsible, mirrors screenshots 2–5):
-- **Creative**: Dynamic Ad / Standard Ad / Carousel tabs. Media uploader (images + videos, up to 10 — Creative Bank). Primary Texts list (add up to 5). Headlines list. Description. CTA dropdown. Display link.
-- **Lead Form** (Leads objective only): Select existing lead form OR Create new (questions builder: name/email/phone + custom short-answer & multiple choice + intro/privacy/thank-you). OR Use template.
-- **Targeting**: "Edit Targeting" drawer. Locations (multi country/region/city). Age & Gender (disabled w/ explainer when Special Ad Category active — matches screenshot). Detailed interests autosuggest (Meta Targeting Search API). Placements: Advantage+ or Manual.
-- **Budget**: Daily / Lifetime. Amount input + currency. **Forecasted Results** card (Daily/Weekly/Monthly tabs, spend/clicks/reach ranges — uses Meta Reach Estimate API).
-- **Optional**:
-  - Optimize For Me toggle
-  - **Creative Bank** panel (add up to 50 extra images / videos / ad copy — AI rotates)
-  - Update Product Group toggle (stub, off by default)
-  - Save prompt / Save as template toggles
-  - Campaign Name input (auto-suggested)
-  - UTM parameters textarea (pre-filled with `utm_source=fb_ad&utm_medium={{adset.name}}&utm_campaign={{campaign.name}}&utm_content={{ad.name}}&campaign_id={{campaign.id}}`)
+## Phase 2 — Communications
 
-Sticky bottom CTA: **Launch Campaign** (gradient button).
+### Data model
+- `client_communications` — type (`content_update` | `video_request` | `script_approval` | `announcement`), client_id, created_by, subject, body (markdown), payload JSONB (type-specific: e.g. script text, video brief fields, due date, attachments URLs), status (`draft`/`sent`/`acknowledged`/`approved`/`changes_requested`/`completed`), channels[] (email/portal/internal_task), created_at, due_at.
+- `client_communication_recipients` — per-recipient delivery row (email or portal_user_id, channel, status: queued/delivered/opened/responded, email_message_id, responded_at, response_payload JSONB for approvals).
+- `client_communication_tasks` — internal task rows when "internal_task" channel selected (assignee_user_id, status, linked back to communication).
 
-### Right column — live preview
+### Workflow per type
+- **Content update**: composer with structured fields (what to change, why, deadline). Channel default: portal notification + internal task; email optional.
+- **Video request**: brief form (concept, length, target hook, due date, reference URLs). Channel: email to client + internal task for video team. Status tracks production.
+- **Script approval**: paste/upload script, set "needs approval by" recipients. Portal shows Approve / Request changes buttons; result writes to `response_payload` and bumps comm status. Email contains the script preview + approve link to the portal.
+- **Announcement**: free-form composer, multi-recipient, email + portal.
 
-- Top tabs: **Facebook | Instagram**
-- "Ad Set 1" pill + "+ Add More Ad Sets" (Phase 2 supports 1 ad set; the + button is stubbed).
-- "Ad combinations" pill (cycles through creative bank variants).
-- Renders a faithful FB/IG post mock: page avatar + name (from `meta_connections.page_name`), "Sponsored", media area (shows uploaded media or placeholder), primary text, headline + CTA card, like/comment/share row with mock counts.
-- Updates live as the user edits Manual form (Zustand store + selector subscriptions).
+### UI
+- **Staff: new `/communications` page** (also reachable from client profile as a "Comms" tab) with:
+  - List view filtered by client/type/status.
+  - "New communication" wizard: pick type → fill type-specific form → choose recipients → preview email → send.
+  - Detail view showing per-recipient delivery status + responses (approvals etc.).
+- **Client Portal**: new "Updates" section listing communications targeted at that client. Content-update items show a read receipt. Script-approval items show inline Approve / Request changes with a textarea. Video requests show status.
+- **Agency Dashboard**: internal tasks generated by communications surface in a "Comms tasks" widget; clicking opens the communication detail.
 
-## Data model (migration)
+### Email
+- One template per type (`content-update-notice`, `video-request-brief`, `script-approval-request`, `client-announcement`), each with a "Open in portal" CTA.
+- Approval/response actions happen in the portal (no email-link voting) so we don't need signed action tokens in phase 2 — keeps the surface small.
 
-```sql
--- Drafts (autosaved every 2s)
-create table ad_drafts (
-  id uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references workspaces(id) on delete cascade,
-  client_id integer references clients(id) on delete set null,
-  created_by uuid not null,
-  channel text not null default 'meta',  -- future-proof
-  objective text not null,               -- leads|website|awareness|messages
-  special_ad_category text,              -- null|housing|credit|employment
-  countries text[] not null default '{US}',
-  state jsonb not null default '{}',     -- full form snapshot
-  preview_summary jsonb,                 -- name, thumbnail_url for list views
-  status text not null default 'draft',  -- draft|launching|launched|failed
-  meta_campaign_id text,
-  meta_adset_id text,
-  meta_ad_id text,
-  launch_error text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
+## Technical details
 
--- Reusable templates
-create table ad_templates (
-  id uuid primary key default gen_random_uuid(),
-  workspace_id uuid not null references workspaces(id) on delete cascade,
-  client_id integer references clients(id) on delete set null,
-  created_by uuid not null,
-  channel text not null default 'meta',
-  objective text not null,
-  name text not null,
-  state jsonb not null default '{}',
-  thumbnail_url text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
+- **PDF rendering**: `@react-pdf/renderer` via `npm:` specifier in the Deno edge function. Same React component is reused for the email HTML (via `@react-email/components`) and the live share page (regular React in the SPA) — three renderers, one data payload.
+- **Cron**: single pg_cron job hitting `run-scheduled-reports` every 5 min via `net.http_post` (uses the schedule-jobs pattern — inserted via the insert tool with the project URL + anon key, not a migration).
+- **Storage**: new public bucket `client-reports` for PDFs; share tokens are random 32-char strings, not enumerable.
+- **Realtime**: enable Realtime on `client_reports` and `client_communications` so the staff list and client portal update without refresh, matching the existing pattern.
+- **Adapters**: extend `useDatabase.ts` adapters for the new snake_case → camelCase mappings.
+- **Permissions**:
+  - Staff (`owner`/`admin`/`member`) can CRUD templates, schedules, communications for clients in their workspace.
+  - Client portal users see only `client_reports` and `client_communications` for their linked client(s), via existing portal-user → client mapping.
+  - Share-link page bypasses auth using `share_token` match only.
+- **Security**: all type-specific JSONB validated server-side in the edge functions with Zod before insert/send. No raw HTML in commentary — markdown → sanitized HTML via `marked` + DOMPurify equivalent (sanitize-html in the edge function, React-safe rendering on the client).
 
--- Storage bucket for uploaded creative assets
-insert into storage.buckets (id, name, public) values ('ad-creatives', 'ad-creatives', true);
-```
+## Out of scope (call out so we don't scope-creep)
 
-RLS: workspace-scoped read/write via `is_workspace_member` / `can_write_workspace`. Storage policy: authenticated upload to `{workspace_id}/...`, public read.
+- SMS/WhatsApp delivery
+- Marketing-style bulk sends (blocked by policy anyway)
+- Granular per-section permissions on reports (everyone in a workspace sees all templates)
+- A/B testing communications
+- Calendar invites for video shoot dates
 
-## New edge functions
+## Suggested build order
 
-1. **`meta-ad-generate`** — Lovable AI (gemini-2.5-flash for copy, gemini-3-flash-image-preview for images). Returns `{ images: string[], primaryTexts: string[], headlines: string[], description, cta }`.
-2. **`meta-targeting-search`** — proxies `GET /search?type=adinterest` for autosuggest.
-3. **`meta-reach-estimate`** — proxies `GET /{ad_account}/reachestimate` for Forecasted Results.
-4. **`meta-lead-forms-list`** — lists existing instant forms for selected page.
-5. **`meta-lead-form-create`** — creates a new instant form via `/{page_id}/leadgen_forms`.
-6. **`meta-ad-launch`** — orchestrates: create Campaign (with `special_ad_categories` if set) → AdSet (with targeting, budget, placements, optimization_goal per objective) → Creative (with image_hash / video_id / asset_feed_spec for Creative Bank) → Ad. Uploads media to `/{ad_account}/adimages` first. Writes results back to `ad_drafts` + `ad_action_log`.
+1. Lovable Email infra + transactional scaffolding (if not yet set up).
+2. Reports DB + storage bucket + RLS.
+3. `generate-client-report` + `send-client-report` + email template + share page.
+4. Staff Templates/Schedules UI + Client profile Reports tab + Client portal Reports card.
+5. pg_cron dispatcher.
+6. Communications DB + RLS + realtime.
+7. Communications composer + per-type forms + portal Updates section + internal task widget + 4 email templates.
 
-All use existing `meta_connections` token + `ads_management` scope.
-
-## Frontend file map
-
-```
-src/pages/Ads.tsx                          (add Launch grid + New Ad button)
-src/pages/AdCreator.tsx                    (new — builder page route /ads/new)
-src/components/ads/builder/
-  ObjectivePickerModal.tsx
-  BuilderLayout.tsx                        (2-col + sticky launch bar)
-  ModeTabs.tsx                             (Generate/Template/Manual)
-  GenerateMode.tsx
-  TemplateMode.tsx
-  ManualMode.tsx
-  sections/CreativeSection.tsx             (Dynamic/Standard/Carousel)
-  sections/LeadFormSection.tsx
-  sections/TargetingSection.tsx
-  sections/TargetingDrawer.tsx
-  sections/BudgetSection.tsx
-  sections/ForecastCard.tsx
-  sections/OptionalSection.tsx
-  sections/CreativeBankPanel.tsx
-  preview/PreviewPane.tsx
-  preview/FacebookPostPreview.tsx
-  preview/InstagramPostPreview.tsx
-  shared/MediaUploader.tsx
-  shared/InterestAutocomplete.tsx
-  shared/CountryPicker.tsx
-src/stores/adDraftStore.ts                 (Zustand: state + autosave)
-src/hooks/useAdDrafts.ts
-src/hooks/useAdTemplates.ts
-src/lib/adChannels/meta.ts                 (add launch/generate methods)
-```
-
-## Out of scope (Phase 3+)
-
-- Multiple ad sets per campaign
-- Carousel media editor (tab will render "Coming soon")
-- Google / TikTok / LinkedIn implementations (tiles disabled)
-- AI Avatar / Memes / Smart Creatives generators
-- A/B test scheduling, dayparting
-- Custom audiences / lookalikes (interest targeting only at launch)
-- Pixel/conversion event picker for Website objective (defaults to LINK_CLICKS)
-
-## Build order
-
-1. Migration (`ad_drafts`, `ad_templates`, `ad-creatives` bucket + RLS)
-2. Edge functions (generate, targeting-search, reach-estimate, lead-forms-list, lead-form-create, ad-launch)
-3. Zustand draft store + hooks
-4. Objective picker modal + route wiring on `/ads`
-5. Builder layout + Manual mode sections + live preview
-6. Generate mode (AI)
-7. Template mode + save flow
-8. Launch flow + post-launch toast + redirect to `/ads`
-
-I'll start with the migration.
+Want me to proceed with this plan, or trim/reorder anything (e.g. ship reports first as v1 and tackle comms in a follow-up)?
