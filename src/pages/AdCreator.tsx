@@ -120,21 +120,36 @@ export default function AdCreator() {
         </div>
       </div>
 
-      {/* Sticky launch bar */}
+      {/* Sticky publish bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-3 z-40">
-        <div className="max-w-2xl mx-auto lg:mx-0 lg:ml-6">
+        <div className="max-w-2xl mx-auto lg:mx-0 lg:ml-6 space-y-1">
           <Button
-            onClick={launch}
-            disabled={launching}
+            onClick={openPublish}
             className="w-full h-12 bg-gradient-to-r from-primary via-primary to-violet-600 text-white text-sm font-semibold"
           >
-            {launching ? "Launching…" : "💡 Launch Campaign"}
+            <Rocket className="h-4 w-4 mr-2" />
+            Publish Campaign
+            {issueCount > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                <AlertCircle className="h-3 w-3" /> {issueCount}
+              </span>
+            )}
           </Button>
-          {draftId && <div className="text-[10px] text-muted-foreground text-center mt-1">{dirty ? "Saving…" : "Draft autosaved"}</div>}
+          <div className="text-[10px] text-muted-foreground text-center">
+            {issueCount > 0
+              ? `${issueCount} issue${issueCount === 1 ? "" : "s"} to fix · `
+              : "Ready to publish · "}
+            {draftId ? (dirty ? "Saving…" : "Draft autosaved") : "New draft"}
+          </div>
         </div>
       </div>
 
       <ConnectedAccountsModal open={accountsOpen} onOpenChange={setAccountsOpen} />
+      <PublishDialog
+        open={publishOpen}
+        onOpenChange={setPublishOpen}
+        onMissingIdentity={() => { setPublishOpen(false); setAccountsOpen(true); }}
+      />
     </div>
   );
 }
