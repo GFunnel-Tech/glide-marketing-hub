@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
         objective,
         status: "PAUSED",
         special_ad_categories: specialCategories,
-      }, token);
+      }, token, "Creating campaign");
 
       // 2. Ad Set
       const targeting: any = {
@@ -270,7 +270,7 @@ Deno.serve(async (req) => {
       else adsetBody.lifetime_budget = Math.round(state.budgetAmount * 100);
 
       if (state.objective === "leads") adsetBody.destination_type = "ON_AD";
-      const adset = await metaPost(`${actId}/adsets`, adsetBody, token);
+      const adset = await metaPost(`${actId}/adsets`, adsetBody, token, "Creating ad set");
 
       // 3. Upload images & build creative
       const allImages = [...(state.media ?? []), ...(state.bankImages ?? [])].filter((m: any) => m.type === "image");
@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
           console.error("image upload failed", e);
         }
       }
-      if (imageHashes.length === 0) throw new Error("No images uploaded successfully. Add at least one image creative.");
+      if (imageHashes.length === 0) throw new Error("Uploading creative image: None of your images could be uploaded to Meta. Try a different image (JPG/PNG, under 30MB, at least 600px wide).");
 
       const linkUrl = state.websiteUrl || `https://facebook.com/${pageId}`;
       const utm = state.utmParameters ? `?${state.utmParameters}` : "";
@@ -337,7 +337,7 @@ Deno.serve(async (req) => {
           asset_feed_spec,
         };
       }
-      const creative = await metaPost(`${actId}/adcreatives`, creativeBody, token);
+      const creative = await metaPost(`${actId}/adcreatives`, creativeBody, token, "Creating ad creative");
 
       // 4. Ad
       const ad = await metaPost(`${actId}/ads`, {
@@ -345,7 +345,7 @@ Deno.serve(async (req) => {
         adset_id: adset.id,
         creative: { creative_id: creative.id },
         status: "PAUSED",
-      }, token);
+      }, token, "Creating ad");
 
       // Update draft
       if (draftId) {
