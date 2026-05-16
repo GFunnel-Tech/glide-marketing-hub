@@ -201,22 +201,52 @@ Deno.serve(async (req) => {
       const allTexts = [...(state.primaryTexts ?? []).filter(Boolean), ...(state.bankCopy ?? [])];
       const allHeadlines = (state.headlines ?? []).filter(Boolean);
 
-      // Asset feed spec for dynamic creative
-      const asset_feed_spec: any = {
-        images: imageHashes.map((h) => ({ hash: h })),
-        bodies: allTexts.length ? allTexts.map((t: string) => ({ text: t })) : [{ text: "Learn more about our offer." }],
-        titles: allHeadlines.length ? allHeadlines.map((t: string) => ({ text: t })) : undefined,
-        descriptions: state.description ? [{ text: state.description }] : undefined,
-        link_urls: [{ website_url: linkUrl + utm, display_url: state.displayLink || undefined }],
-        call_to_action_types: [state.cta || "LEARN_MORE"],
-        ad_formats: ["SINGLE_IMAGE"],
-      };
+      // For Leads objective: create (or reuse) a leadgen form and build a link_data creative
+      // attached to that form. asset_feed_spec doesn't support lead_gen_form_id reliably.
+      let creativeBody: any;
+      let leadFormId: string | null = null;
 
-      const creativeBody: any = {
-        name: `${state.campaignName || "Creative"} – ${Date.now()}`,
-        object_story_spec: { page_id: pageId },
-        asset_feed_spec,
-      };
+      if (state.objective === "leads") {
+        const pageToken = await getPageAccessToken(pageId, token);
+        if (state.leadForm?.mode === "existing" && state.leadForm?.existingFormId) {
+          leadFormId = state.leadForm.existingFormId;
+        } else {
+          leadFormId = await createLeadGenForm(pageId, pageToken, state.leadForm);
+        }
+
+        creativeBody = {
+          name: `${state.campaignName || "Creative"} – ${Date.now()}`,
+          object_story_spec: {
+            page_id: pageId,
+            link_data: {
+              image_hash: imageHashes[0],
+              link: `https://fb.me/${leadFormId}`,
+              message: allTexts[0] || "Learn more about our offer.",
+              name: allHeadlines[0] || undefined,
+              description: state.description || undefined,
+              call_to_action: {
+                type: state.cta || "SIGN_UP",
+                value: { lead_gen_form_id: leadFormId },
+              },
+            },
+          },
+        };
+      } else {
+        const asset_feed_spec: any = {
+          images: imageHashes.map((h) => ({ hash: h })),
+          bodies: allTexts.length ? allTexts.map((t: string) => ({ text: t })) : [{ text: "Learn more about our offer." }],
+          titles: allHeadlines.length ? allHeadlines.map((t: string) => ({ text: t })) : undefined,
+          descriptions: state.description ? [{ text: state.description }] : undefined,
+          link_urls: [{ website_url: linkUrl + utm, display_url: state.displayLink || undefined }],
+          call_to_action_types: [state.cta || "LEARN_MORE"],
+          ad_formats: ["SINGLE_IMAGE"],
+        };
+        creativeBody = {
+          name: `${state.campaignName || "Creative"} – ${Date.now()}`,
+          object_story_spec: { page_id: pageId },
+          asset_feed_spec,
+        };
+      }
       const creative = await metaPost(`${actId}/adcreatives`, creativeBody, token);
 
       // 4. Ad
