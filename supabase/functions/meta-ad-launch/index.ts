@@ -145,8 +145,8 @@ async function metaGet(path: string, token: string, extra: Record<string, string
 }
 
 async function getPageAccessToken(pageId: string, userToken: string): Promise<string> {
-  const j = await metaGet(`${pageId}`, userToken, { fields: "access_token" });
-  if (!j.access_token) throw new Error("Could not obtain Page access token. Reconnect Meta with pages_manage_ads + pages_show_list + leads_retrieval scopes.");
+  const j = await metaGet(`${pageId}`, userToken, { fields: "access_token" }, "Fetching Page access token");
+  if (!j.access_token) throw new Error("Fetching Page access token: We couldn't get permission for your Facebook Page. Reconnect Meta with pages_manage_ads, pages_show_list, and leads_retrieval scopes.");
   return j.access_token;
 }
 
@@ -163,9 +163,9 @@ function mapLeadQuestion(q: { type: string; label: string; options?: string[] })
 }
 
 async function createLeadGenForm(pageId: string, pageToken: string, lf: any): Promise<string> {
-  if (!lf?.privacyUrl) throw new Error("Privacy Policy URL is required for Lead form ads.");
+  if (!lf?.privacyUrl) throw new Error("Creating lead form: A Privacy Policy URL is required. Add one in the Lead Form section.");
   const questions = (lf.questions ?? []).map(mapLeadQuestion);
-  if (questions.length === 0) throw new Error("Add at least one lead form question.");
+  if (questions.length === 0) throw new Error("Creating lead form: Add at least one question before launching.");
   const body: Record<string, any> = {
     name: lf.name || "Lead Form",
     follow_up_action_url: lf.followUpUrl || lf.privacyUrl,
@@ -175,17 +175,16 @@ async function createLeadGenForm(pageId: string, pageToken: string, lf: any): Pr
     context_card: lf.intro ? { title: lf.name || "Learn more", content: [lf.intro], style: "PARAGRAPH_STYLE", button_text: "Continue" } : undefined,
     thank_you_page: { title: "Thanks!", body: lf.thankYou || "We'll be in touch shortly.", button_type: "VIEW_WEBSITE", website_url: lf.privacyUrl, button_text: "View website" },
   };
-  const r = await metaPost(`${pageId}/leadgen_forms`, body, pageToken);
-  if (!r.id) throw new Error("Lead form creation returned no id");
+  const r = await metaPost(`${pageId}/leadgen_forms`, body, pageToken, "Creating lead form");
+  if (!r.id) throw new Error("Creating lead form: Meta accepted the request but returned no form ID. Try again.");
   return r.id as string;
 }
 
 async function uploadImageFromUrl(actId: string, imageUrl: string, token: string): Promise<string> {
-  // Meta /adimages accepts a `url` parameter to fetch the image server-side.
-  const r = await metaPost(`${actId}/adimages`, { url: imageUrl }, token);
+  const r = await metaPost(`${actId}/adimages`, { url: imageUrl }, token, "Uploading creative image");
   const images = r.images || {};
   const first: any = Object.values(images)[0];
-  if (!first?.hash) throw new Error("Image upload returned no hash");
+  if (!first?.hash) throw new Error("Uploading creative image: Meta accepted the image but didn't return a reference. Try a different image.");
   return first.hash;
 }
 
