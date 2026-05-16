@@ -1,80 +1,53 @@
-import { useEffect } from "react";
+import { useState } from "react";
 import { useAdDraftStore } from "@/stores/adDraftStore";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Section } from "../shared/Section";
-import { User } from "lucide-react";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
+import { User, Facebook, Instagram, Wallet, Settings2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ConnectedAccountsModal } from "../ConnectedAccountsModal";
 
 export function IdentitySection() {
-  const { currentWorkspace } = useWorkspace();
   const state = useAdDraftStore((s) => s.state);
-  const patchMany = useAdDraftStore((s) => s.patchMany);
+  const [open, setOpen] = useState(false);
 
-  const { data } = useQuery({
-    queryKey: ["meta_identities", currentWorkspace?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("meta-list-identities", {
-        body: { workspaceId: currentWorkspace!.id },
-      });
-      if (error) throw error;
-      return data as { pages: { id: string; name: string; avatar?: string }[]; adAccounts: { act_id: string; account_name: string; currency: string }[] };
-    },
-    enabled: !!currentWorkspace?.id,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Auto-select first page & ad account once loaded
-  useEffect(() => {
-    if (!data) return;
-    const patch: any = {};
-    if (!state.pageId && data.pages?.[0]) {
-      patch.pageId = data.pages[0].id;
-      patch.pageName = data.pages[0].name;
-      patch.pageAvatar = data.pages[0].avatar ?? null;
-    }
-    if (!state.adAccountId && data.adAccounts?.[0]) {
-      patch.adAccountId = data.adAccounts[0].act_id;
-      if (data.adAccounts[0].currency) patch.currency = data.adAccounts[0].currency;
-    }
-    if (Object.keys(patch).length) patchMany(patch);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  const connected = state.pageId && state.adAccountId;
 
   return (
     <Section title="Identity" icon={<User className="h-4 w-4 text-primary" />}>
-      <div>
-        <label className="text-xs font-medium text-foreground">Facebook Page</label>
-        <Select
-          value={state.pageId ?? ""}
-          onValueChange={(v) => {
-            const p = data?.pages.find((pg) => pg.id === v);
-            patchMany({ pageId: v, pageName: p?.name ?? null, pageAvatar: p?.avatar ?? null });
-          }}
-        >
-          <SelectTrigger className="h-9 mt-1.5"><SelectValue placeholder="Select a Page" /></SelectTrigger>
-          <SelectContent>
-            {(data?.pages ?? []).map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <label className="text-xs font-medium text-foreground">Ad Account</label>
-        <Select
-          value={state.adAccountId ?? ""}
-          onValueChange={(v) => {
-            const a = data?.adAccounts.find((acc) => acc.act_id === v);
-            patchMany({ adAccountId: v, currency: a?.currency ?? "USD" });
-          }}
-        >
-          <SelectTrigger className="h-9 mt-1.5"><SelectValue placeholder="Select Ad Account" /></SelectTrigger>
-          <SelectContent>
-            {(data?.adAccounts ?? []).map((a) => <SelectItem key={a.act_id} value={a.act_id}>{a.account_name || a.act_id}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
+      {connected ? (
+        <div className="rounded-lg border border-border bg-card/40 p-3 space-y-2">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-full bg-muted overflow-hidden flex items-center justify-center shrink-0">
+              {state.pageAvatar ? <img src={state.pageAvatar} alt="" className="h-full w-full object-cover" /> : <Facebook className="h-4 w-4 text-muted-foreground" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium truncate">{state.pageName}</div>
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                {state.igUsername ? (
+                  <span className="inline-flex items-center gap-1"><Instagram className="h-3 w-3" /> @{state.igUsername}</span>
+                ) : (
+                  <span>Facebook only</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <Wallet className="h-3.5 w-3.5 text-emerald-500" />
+            <span className="truncate">{state.adAccountName || state.adAccountId}</span>
+            <span className="text-muted-foreground">• {state.currency}</span>
+          </div>
+          <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => setOpen(true)}>
+            <Settings2 className="h-3 w-3 mr-1.5" /> Change connected accounts
+          </Button>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-border p-4 text-center">
+          <p className="text-xs text-muted-foreground mb-2">Connect a Facebook Page, Instagram account, and Ad Account to publish.</p>
+          <Button size="sm" onClick={() => setOpen(true)} className="h-8 text-xs">
+            <Settings2 className="h-3 w-3 mr-1.5" /> Choose connected accounts
+          </Button>
+        </div>
+      )}
+      <ConnectedAccountsModal open={open} onOpenChange={setOpen} />
     </Section>
   );
 }
