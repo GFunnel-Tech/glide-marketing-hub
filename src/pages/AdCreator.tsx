@@ -11,7 +11,8 @@ import { GenerateMode } from "@/components/ads/builder/GenerateMode";
 import { TemplateMode } from "@/components/ads/builder/TemplateMode";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Edit3, Lightbulb, ChevronLeft, Flame } from "lucide-react";
+import { Edit3, Lightbulb, ChevronLeft, Flame, Plug } from "lucide-react";
+import { ConnectedAccountsModal } from "@/components/ads/builder/ConnectedAccountsModal";
 import { toast } from "sonner";
 import type { BuilderMode, Objective, SpecialAdCategory } from "@/components/ads/builder/types";
 
@@ -28,6 +29,7 @@ export default function AdCreator() {
 
   const [mode, setMode] = useState<BuilderMode>("manual");
   const [launching, setLaunching] = useState(false);
+  const [accountsOpen, setAccountsOpen] = useState(false);
 
   const saveDraft = useSaveAdDraft();
   const saveTemplate = useSaveAdTemplate();
