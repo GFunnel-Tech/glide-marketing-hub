@@ -46,6 +46,50 @@ async function metaPost(path: string, body: Record<string, any>, token: string) 
   return j;
 }
 
+async function metaGet(path: string, token: string, extra: Record<string, string> = {}) {
+  const params = new URLSearchParams({ access_token: token, ...extra });
+  const r = await fetch(`https://graph.facebook.com/${META_VER}/${path}?${params.toString()}`);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j?.error?.message || `Meta GET ${path} error`);
+  return j;
+}
+
+async function getPageAccessToken(pageId: string, userToken: string): Promise<string> {
+  const j = await metaGet(`${pageId}`, userToken, { fields: "access_token" });
+  if (!j.access_token) throw new Error("Could not obtain Page access token. Reconnect Meta with pages_manage_ads + pages_show_list + leads_retrieval scopes.");
+  return j.access_token;
+}
+
+function mapLeadQuestion(q: { type: string; label: string; options?: string[] }) {
+  switch (q.type) {
+    case "FULL_NAME": return { type: "FULL_NAME" };
+    case "EMAIL": return { type: "EMAIL" };
+    case "PHONE": return { type: "PHONE" };
+    case "MULTIPLE_CHOICE":
+      return { type: "CUSTOM", key: q.label.toLowerCase().replace(/\s+/g, "_").slice(0, 60), label: q.label, options: (q.options ?? []).map((o) => ({ value: o, key: o.toLowerCase().replace(/\s+/g, "_").slice(0, 60) })) };
+    default:
+      return { type: "CUSTOM", key: q.label.toLowerCase().replace(/\s+/g, "_").slice(0, 60) || "custom", label: q.label, input_type: "SHORT_ANSWER" };
+  }
+}
+
+async function createLeadGenForm(pageId: string, pageToken: string, lf: any): Promise<string> {
+  if (!lf?.privacyUrl) throw new Error("Privacy Policy URL is required for Lead form ads.");
+  const questions = (lf.questions ?? []).map(mapLeadQuestion);
+  if (questions.length === 0) throw new Error("Add at least one lead form question.");
+  const body: Record<string, any> = {
+    name: lf.name || "Lead Form",
+    follow_up_action_url: lf.followUpUrl || lf.privacyUrl,
+    privacy_policy: { url: lf.privacyUrl, link_text: "Privacy Policy" },
+    questions,
+    locale: "en_US",
+    context_card: lf.intro ? { title: lf.name || "Learn more", content: [lf.intro], style: "PARAGRAPH_STYLE", button_text: "Continue" } : undefined,
+    thank_you_page: { title: "Thanks!", body: lf.thankYou || "We'll be in touch shortly.", button_type: "VIEW_WEBSITE", website_url: lf.privacyUrl, button_text: "View website" },
+  };
+  const r = await metaPost(`${pageId}/leadgen_forms`, body, pageToken);
+  if (!r.id) throw new Error("Lead form creation returned no id");
+  return r.id as string;
+}
+
 async function uploadImageFromUrl(actId: string, imageUrl: string, token: string): Promise<string> {
   // Meta /adimages accepts a `url` parameter to fetch the image server-side.
   const r = await metaPost(`${actId}/adimages`, { url: imageUrl }, token);
