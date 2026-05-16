@@ -30,33 +30,123 @@ function specialCategoryMap(cat: string | null): string[] {
   return [];
 }
 
-async function metaPost(path: string, body: Record<string, any>, token: string) {
+// ---- Error humanization + retry ----------------------------------------
+
+interface MetaErrorShape {
+  message?: string;
+  code?: number;
+  error_subcode?: number;
+  error_user_title?: string;
+  error_user_msg?: string;
+  type?: string;
+  fbtrace_id?: string;
+}
+
+// Transient Meta error codes that are safe to retry.
+// 1/2 = unknown/service, 4/17/32/613 = rate limits, 341 = app-level throttle,
+// 368 = temporarily blocked, -1 = unknown.
+const RETRYABLE_CODES = new Set([-1, 1, 2, 4, 17, 32, 341, 368, 613]);
+
+function isRetryable(status: number, err?: MetaErrorShape) {
+  if (status === 429 || status >= 500) return true;
+  if (err?.code != null && RETRYABLE_CODES.has(err.code)) return true;
+  return false;
+}
+
+function humanizeMetaError(step: string, err: MetaErrorShape | undefined, status: number): string {
+  const userMsg = err?.error_user_msg?.trim();
+  const baseMsg = err?.message?.trim();
+  const code = err?.code;
+  const sub = err?.error_subcode;
+
+  // Specific, well-known cases first
+  if (code === 190 || sub === 463 || sub === 460 || sub === 467) {
+    return `${step}: Your Meta connection has expired. Please reconnect your Facebook account in Connected Accounts and try again.`;
+  }
+  if (code === 200 || code === 10 || code === 3 || code === 294) {
+    return `${step}: Missing Meta permissions. Reconnect with ads_management, pages_manage_ads, pages_show_list, and leads_retrieval scopes.`;
+  }
+  if (code === 100 && /image|hash/i.test(baseMsg ?? "")) {
+    return `${step}: One of your creative images couldn't be processed. Try a different image (JPG/PNG, under 30MB, at least 600px wide).`;
+  }
+  if (code === 100 && /privacy/i.test(baseMsg ?? "")) {
+    return `${step}: Meta rejected the Privacy Policy URL. Make sure it's a public HTTPS link that loads without redirects.`;
+  }
+  if (code === 100 && /lead_gen_form|leadgen/i.test(baseMsg ?? "")) {
+    return `${step}: The lead form was rejected. Check the form name (max 60 chars), questions, and thank-you message for restricted content.`;
+  }
+  if (code === 1885007 || /special ad category/i.test(baseMsg ?? "")) {
+    return `${step}: Your targeting isn't allowed for this Special Ad Category. Remove detailed interests and narrow age/gender targeting.`;
+  }
+  if (code === 4 || code === 17 || code === 32 || code === 613) {
+    return `${step}: Meta is rate-limiting your account right now. We retried a few times — please wait a minute and try again.`;
+  }
+  if (status === 0) {
+    return `${step}: Couldn't reach Meta. Check your internet connection and try again.`;
+  }
+
+  const friendly = userMsg || baseMsg || `Meta returned an unexpected error (HTTP ${status}).`;
+  return `${step}: ${friendly}`;
+}
+
+async function metaFetch(
+  step: string,
+  url: string,
+  init: RequestInit,
+  { retries = 3, baseDelayMs = 800 }: { retries?: number; baseDelayMs?: number } = {},
+): Promise<any> {
+  let lastErr: { status: number; err?: MetaErrorShape } = { status: 0 };
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const r = await fetch(url, init);
+      let j: any = null;
+      try { j = await r.json(); } catch { /* non-json */ }
+      if (r.ok) return j ?? {};
+      const err: MetaErrorShape | undefined = j?.error;
+      lastErr = { status: r.status, err };
+      console.warn(`[meta] ${step} failed (attempt ${attempt + 1}/${retries + 1}) status=${r.status} code=${err?.code} sub=${err?.error_subcode} msg=${err?.message}`);
+      if (attempt < retries && isRetryable(r.status, err)) {
+        const delay = baseDelayMs * Math.pow(2, attempt) + Math.floor(Math.random() * 250);
+        await new Promise((res) => setTimeout(res, delay));
+        continue;
+      }
+      throw new Error(humanizeMetaError(step, err, r.status));
+    } catch (e: any) {
+      // Network / fetch-level error
+      if (e?.message && e.message.startsWith(step + ":")) throw e; // already humanized
+      console.warn(`[meta] ${step} network error (attempt ${attempt + 1}/${retries + 1})`, e?.message ?? e);
+      if (attempt < retries) {
+        const delay = baseDelayMs * Math.pow(2, attempt) + Math.floor(Math.random() * 250);
+        await new Promise((res) => setTimeout(res, delay));
+        continue;
+      }
+      throw new Error(humanizeMetaError(step, lastErr.err, lastErr.status));
+    }
+  }
+  throw new Error(humanizeMetaError(step, lastErr.err, lastErr.status));
+}
+
+async function metaPost(path: string, body: Record<string, any>, token: string, step = `POST ${path}`) {
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(body)) {
     params.set(k, typeof v === "object" ? JSON.stringify(v) : String(v));
   }
   params.set("access_token", token);
-  const r = await fetch(`https://graph.facebook.com/${META_VER}/${path}`, {
+  return metaFetch(step, `https://graph.facebook.com/${META_VER}/${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
   });
-  const j = await r.json();
-  if (!r.ok) throw new Error(j?.error?.message || `Meta ${path} error`);
-  return j;
 }
 
-async function metaGet(path: string, token: string, extra: Record<string, string> = {}) {
+async function metaGet(path: string, token: string, extra: Record<string, string> = {}, step = `GET ${path}`) {
   const params = new URLSearchParams({ access_token: token, ...extra });
-  const r = await fetch(`https://graph.facebook.com/${META_VER}/${path}?${params.toString()}`);
-  const j = await r.json();
-  if (!r.ok) throw new Error(j?.error?.message || `Meta GET ${path} error`);
-  return j;
+  return metaFetch(step, `https://graph.facebook.com/${META_VER}/${path}?${params.toString()}`, { method: "GET" });
 }
 
 async function getPageAccessToken(pageId: string, userToken: string): Promise<string> {
-  const j = await metaGet(`${pageId}`, userToken, { fields: "access_token" });
-  if (!j.access_token) throw new Error("Could not obtain Page access token. Reconnect Meta with pages_manage_ads + pages_show_list + leads_retrieval scopes.");
+  const j = await metaGet(`${pageId}`, userToken, { fields: "access_token" }, "Fetching Page access token");
+  if (!j.access_token) throw new Error("Fetching Page access token: We couldn't get permission for your Facebook Page. Reconnect Meta with pages_manage_ads, pages_show_list, and leads_retrieval scopes.");
   return j.access_token;
 }
 
@@ -73,9 +163,9 @@ function mapLeadQuestion(q: { type: string; label: string; options?: string[] })
 }
 
 async function createLeadGenForm(pageId: string, pageToken: string, lf: any): Promise<string> {
-  if (!lf?.privacyUrl) throw new Error("Privacy Policy URL is required for Lead form ads.");
+  if (!lf?.privacyUrl) throw new Error("Creating lead form: A Privacy Policy URL is required. Add one in the Lead Form section.");
   const questions = (lf.questions ?? []).map(mapLeadQuestion);
-  if (questions.length === 0) throw new Error("Add at least one lead form question.");
+  if (questions.length === 0) throw new Error("Creating lead form: Add at least one question before launching.");
   const body: Record<string, any> = {
     name: lf.name || "Lead Form",
     follow_up_action_url: lf.followUpUrl || lf.privacyUrl,
@@ -85,17 +175,16 @@ async function createLeadGenForm(pageId: string, pageToken: string, lf: any): Pr
     context_card: lf.intro ? { title: lf.name || "Learn more", content: [lf.intro], style: "PARAGRAPH_STYLE", button_text: "Continue" } : undefined,
     thank_you_page: { title: "Thanks!", body: lf.thankYou || "We'll be in touch shortly.", button_type: "VIEW_WEBSITE", website_url: lf.privacyUrl, button_text: "View website" },
   };
-  const r = await metaPost(`${pageId}/leadgen_forms`, body, pageToken);
-  if (!r.id) throw new Error("Lead form creation returned no id");
+  const r = await metaPost(`${pageId}/leadgen_forms`, body, pageToken, "Creating lead form");
+  if (!r.id) throw new Error("Creating lead form: Meta accepted the request but returned no form ID. Try again.");
   return r.id as string;
 }
 
 async function uploadImageFromUrl(actId: string, imageUrl: string, token: string): Promise<string> {
-  // Meta /adimages accepts a `url` parameter to fetch the image server-side.
-  const r = await metaPost(`${actId}/adimages`, { url: imageUrl }, token);
+  const r = await metaPost(`${actId}/adimages`, { url: imageUrl }, token, "Uploading creative image");
   const images = r.images || {};
   const first: any = Object.values(images)[0];
-  if (!first?.hash) throw new Error("Image upload returned no hash");
+  if (!first?.hash) throw new Error("Uploading creative image: Meta accepted the image but didn't return a reference. Try a different image.");
   return first.hash;
 }
 
@@ -148,7 +237,7 @@ Deno.serve(async (req) => {
         objective,
         status: "PAUSED",
         special_ad_categories: specialCategories,
-      }, token);
+      }, token, "Creating campaign");
 
       // 2. Ad Set
       const targeting: any = {
@@ -181,7 +270,7 @@ Deno.serve(async (req) => {
       else adsetBody.lifetime_budget = Math.round(state.budgetAmount * 100);
 
       if (state.objective === "leads") adsetBody.destination_type = "ON_AD";
-      const adset = await metaPost(`${actId}/adsets`, adsetBody, token);
+      const adset = await metaPost(`${actId}/adsets`, adsetBody, token, "Creating ad set");
 
       // 3. Upload images & build creative
       const allImages = [...(state.media ?? []), ...(state.bankImages ?? [])].filter((m: any) => m.type === "image");
@@ -194,7 +283,7 @@ Deno.serve(async (req) => {
           console.error("image upload failed", e);
         }
       }
-      if (imageHashes.length === 0) throw new Error("No images uploaded successfully. Add at least one image creative.");
+      if (imageHashes.length === 0) throw new Error("Uploading creative image: None of your images could be uploaded to Meta. Try a different image (JPG/PNG, under 30MB, at least 600px wide).");
 
       const linkUrl = state.websiteUrl || `https://facebook.com/${pageId}`;
       const utm = state.utmParameters ? `?${state.utmParameters}` : "";
@@ -248,7 +337,7 @@ Deno.serve(async (req) => {
           asset_feed_spec,
         };
       }
-      const creative = await metaPost(`${actId}/adcreatives`, creativeBody, token);
+      const creative = await metaPost(`${actId}/adcreatives`, creativeBody, token, "Creating ad creative");
 
       // 4. Ad
       const ad = await metaPost(`${actId}/ads`, {
@@ -256,7 +345,7 @@ Deno.serve(async (req) => {
         adset_id: adset.id,
         creative: { creative_id: creative.id },
         status: "PAUSED",
-      }, token);
+      }, token, "Creating ad");
 
       // Update draft
       if (draftId) {
