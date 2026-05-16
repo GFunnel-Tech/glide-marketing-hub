@@ -10,10 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search } from "lucide-react";
 import { CHANNEL_LABELS, type AdChannel } from "@/lib/adChannels";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ObjectivePickerModal } from "@/components/ads/builder/ObjectivePickerModal";
 
 export default function Ads() {
   const [channel, setChannel] = useState<AdChannel>("meta");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const { hasConnection, isLoading: connLoading } = useHasActiveMetaConnection();
 
   return (
@@ -23,16 +24,10 @@ export default function Ads() {
           <h1 className="text-2xl font-semibold text-foreground">Ads</h1>
           <p className="text-sm text-muted-foreground">Manage live ads across channels — duplicate winners, scale budgets, edit copy.</p>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>
-              <Button disabled className="opacity-60 cursor-not-allowed">
-                <Plus className="h-4 w-4 mr-1.5" /> New ad
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>Full ad builder coming in Phase 2</TooltipContent>
-        </Tooltip>
+        <Button onClick={() => setPickerOpen(true)} disabled={!hasConnection}>
+          <Plus className="h-4 w-4 mr-1.5" /> New ad
+        </Button>
+        <ObjectivePickerModal open={pickerOpen} onOpenChange={setPickerOpen} />
       </div>
 
       <Tabs value={channel} onValueChange={(v) => setChannel(v as AdChannel)}>
