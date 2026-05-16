@@ -170,6 +170,138 @@ export type Database = {
         }
         Relationships: []
       }
+      ad_drafts: {
+        Row: {
+          channel: string
+          client_id: number | null
+          countries: string[]
+          created_at: string
+          created_by: string
+          id: string
+          launch_error: string | null
+          meta_ad_id: string | null
+          meta_adset_id: string | null
+          meta_campaign_id: string | null
+          objective: string
+          preview_summary: Json | null
+          special_ad_category: string | null
+          state: Json
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          channel?: string
+          client_id?: number | null
+          countries?: string[]
+          created_at?: string
+          created_by: string
+          id?: string
+          launch_error?: string | null
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          objective: string
+          preview_summary?: Json | null
+          special_ad_category?: string | null
+          state?: Json
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          channel?: string
+          client_id?: number | null
+          countries?: string[]
+          created_at?: string
+          created_by?: string
+          id?: string
+          launch_error?: string | null
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          objective?: string
+          preview_summary?: Json | null
+          special_ad_category?: string | null
+          state?: Json
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_drafts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_drafts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_templates: {
+        Row: {
+          channel: string
+          client_id: number | null
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          objective: string
+          state: Json
+          thumbnail_url: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          channel?: string
+          client_id?: number | null
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          objective: string
+          state?: Json
+          thumbnail_url?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          channel?: string
+          client_id?: number | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          objective?: string
+          state?: Json
+          thumbnail_url?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           ad_sets: number
