@@ -15,6 +15,7 @@ import ClientProfile from "./pages/ClientProfile";
 import Campaigns from "./pages/Campaigns";
 import Creatives from "./pages/Creatives";
 import Ads from "./pages/Ads";
+import AdCreator from "./pages/AdCreator";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Leads from "./pages/Leads";
@@ -70,6 +71,7 @@ const App = () => (
                   <Route path="campaigns" element={<Campaigns />} />
                   <Route path="creatives" element={<Creatives />} />
                   <Route path="ads" element={<Ads />} />
+                  <Route path="ads/new" element={<AdCreator />} />
                   <Route path="leads" element={<Leads />} />
                   <Route path="reports" element={<Reports />} />
                   <Route path="billing" element={<BillingPage />} />
