@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAdDraftStore } from "@/stores/adDraftStore";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useSaveAdDraft } from "@/hooks/useAdDrafts";
-import { supabase } from "@/integrations/supabase/client";
 import { PreviewPane } from "@/components/ads/builder/preview/PreviewPane";
 import { ManualMode } from "@/components/ads/builder/ManualMode";
 import { GenerateMode } from "@/components/ads/builder/GenerateMode";
