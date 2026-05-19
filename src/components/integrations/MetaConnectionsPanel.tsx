@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info, RotateCw, AlertTriangle, KeyRound, X, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info, RotateCw, AlertTriangle, KeyRound, X, CheckCircle2, XCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
