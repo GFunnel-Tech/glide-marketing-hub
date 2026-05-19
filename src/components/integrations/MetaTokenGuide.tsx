@@ -182,6 +182,9 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
 
       {open && (
         <div className="border-t border-border p-3 space-y-3">
+          {/* Multi-BM scenario callout */}
+          <MultiBmCallout />
+
           {/* Prerequisites checklist */}
           <PrereqChecklist tab={tab} />
 
