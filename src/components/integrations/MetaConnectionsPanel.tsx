@@ -1001,7 +1001,7 @@ export function MetaConnectionsPanel() {
             const warnings = !inlineError && !isEmpty ? getTokenWarnings(manualToken) : [];
             const busy = connecting || verifying;
             return (
-              <div className="mt-3 space-y-3 rounded-md border border-border bg-muted/30 p-3">
+              <div ref={manualSectionRef} className="mt-3 space-y-3 rounded-md border border-border bg-muted/30 p-3 scroll-mt-4">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                     <KeyRound className="h-3.5 w-3.5 text-primary" />
