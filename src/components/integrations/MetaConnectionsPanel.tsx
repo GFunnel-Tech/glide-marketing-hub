@@ -1250,6 +1250,8 @@ export function MetaConnectionsPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MetaTroubleshootWizard open={showWizard} onOpenChange={setShowWizard} />
     </div>
   );
 }
