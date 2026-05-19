@@ -16,7 +16,7 @@ type Client = {
   clickup_list_id: string | null;
 };
 type GhlLoc = { id: string; location_id: string; name: string | null; business_name: string | null };
-type MetaAcc = { id: string; act_id: string; account_name: string | null; client_id: number | null };
+type MetaAcc = { id: string; act_id: string; account_name: string | null; client_id: number | null; business_name: string | null };
 
 function norm(s: string) {
   return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
