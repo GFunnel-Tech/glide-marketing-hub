@@ -643,6 +643,10 @@ export function MetaConnectionsPanel() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setShowWizard(true)} title="Step-by-step troubleshooter">
+              <LifeBuoy className="h-3 w-3" />
+              <span className="ml-1">Troubleshoot</span>
+            </Button>
             <Button size="sm" variant="outline" onClick={handleSync} disabled={syncing || !connections.length}>
               {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               <span className="ml-1">Sync now</span>
