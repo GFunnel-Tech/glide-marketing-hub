@@ -287,34 +287,154 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
   );
 }
 
-const TROUBLESHOOTING: { issue: string; fix: React.ReactNode }[] = [
+type TroubleshootBranch = { when: React.ReactNode; then: React.ReactNode };
+type TroubleshootEntry = {
+  issue: string;
+  fix?: React.ReactNode;
+  branches?: TroubleshootBranch[];
+};
+
+const TROUBLESHOOTING: TroubleshootEntry[] = [
+  {
+    issue: "“Generate New Token” is greyed out / disabled",
+    branches: [
+      {
+        when: <>The <span className="font-medium text-foreground">app dropdown is empty</span> or Meta Hub isn't listed</>,
+        then: (
+          <>
+            The Meta Hub app isn't connected to your Business Manager yet. Open{" "}
+            <a className="text-primary hover:underline" href="https://business.facebook.com/settings/apps" target="_blank" rel="noreferrer">Business Settings → Apps</a>{" "}
+            → <span className="font-medium text-foreground">Add → Connect an app ID</span> and paste{" "}
+            <span className="font-mono">{APP_ID}</span>. Reload the System Users page after.
+          </>
+        ),
+      },
+      {
+        when: <>The app is listed but the <span className="font-medium text-foreground">button stays disabled</span></>,
+        then: (
+          <>
+            The System User doesn't have the app assigned. Click the user →{" "}
+            <span className="font-medium text-foreground">Add Assets → Apps</span>, pick{" "}
+            <span className="font-medium text-foreground">Meta Hub</span>, and enable both{" "}
+            <span className="font-medium text-foreground">Develop app</span> and{" "}
+            <span className="font-medium text-foreground">Manage app</span>.
+          </>
+        ),
+      },
+      {
+        when: <>You see <span className="font-medium text-foreground">“You need to finish setting up your business”</span></>,
+        then: (
+          <>
+            Meta requires business verification before issuing long-lived tokens. Open{" "}
+            <a className="text-primary hover:underline" href="https://business.facebook.com/settings/security" target="_blank" rel="noreferrer">Security Center</a>{" "}
+            and complete the pending tasks (verify email, accept terms, confirm 2FA), then retry.
+          </>
+        ),
+      },
+      {
+        when: <>Your role on the System User is <span className="font-medium text-foreground">Employee</span></>,
+        then: (
+          <>
+            Only an <span className="font-medium text-foreground">Admin</span> System User can mint tokens with{" "}
+            <span className="font-mono">ads_management</span> / <span className="font-mono">business_management</span>.
+            Edit the user and switch role to Admin, or create a new Admin System User.
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    issue: "Verify fails with “missing required permissions”",
+    branches: [
+      {
+        when: <>It complains about <span className="font-mono">ads_read</span> or <span className="font-mono">read_insights</span></>,
+        then: (
+          <>
+            Re-generate the token and tick <span className="font-medium text-foreground">every</span> scope shown above
+            before clicking <span className="font-medium text-foreground">Generate</span>. Meta silently drops scopes
+            you didn't pre-approve on the app.
+          </>
+        ),
+      },
+      {
+        when: <>It complains about <span className="font-mono">ads_management</span> or <span className="font-mono">business_management</span></>,
+        then: (
+          <>
+            These are advanced-access scopes. Open{" "}
+            <a className="text-primary hover:underline" href={`https://developers.facebook.com/apps/${APP_ID}/app-review/permissions/`} target="_blank" rel="noreferrer">App Review → Permissions</a>{" "}
+            and confirm both are listed under <span className="font-medium text-foreground">Advanced Access</span>.
+            If not, switch the app to <span className="font-medium text-foreground">Live</span> mode, or use a System User
+            from the same Business that owns the app — internal users get advanced access automatically.
+          </>
+        ),
+      },
+      {
+        when: <>It complains about <span className="font-mono">leads_retrieval</span></>,
+        then: (
+          <>
+            Optional scope for Lead Ads. Either tick it when generating the token (Page admin role required), or
+            ignore the warning — sync will still work without lead pulls.
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    issue: "Connected, but “No ad accounts found”",
+    branches: [
+      {
+        when: <>You used a <span className="font-medium text-foreground">System User token</span></>,
+        then: (
+          <>
+            The System User isn't assigned to any ad accounts. Open{" "}
+            <a className="text-primary hover:underline" href="https://business.facebook.com/settings/system-users" target="_blank" rel="noreferrer">System Users</a>{" "}
+            → click the user → <span className="font-medium text-foreground">Add Assets → Ad Accounts</span>, tick every
+            account you want to sync, and enable <span className="font-medium text-foreground">Manage campaigns</span> +{" "}
+            <span className="font-medium text-foreground">View performance</span>. Then click{" "}
+            <span className="font-medium text-foreground">Refresh</span> on the connection — no need to regenerate the token.
+          </>
+        ),
+      },
+      {
+        when: <>You used a <span className="font-medium text-foreground">User token</span></>,
+        then: (
+          <>
+            Your Facebook user must be added to each ad account in{" "}
+            <a className="text-primary hover:underline" href="https://business.facebook.com/settings/ad-accounts" target="_blank" rel="noreferrer">Business Settings → Ad Accounts</a>{" "}
+            with at least <span className="font-medium text-foreground">Advertiser</span> access. If you're an agency,
+            the client must share the ad account with your Business via{" "}
+            <span className="font-medium text-foreground">Partners → Assign assets</span>.
+          </>
+        ),
+      },
+      {
+        when: <>Ad accounts are <span className="font-medium text-foreground">disabled or unsettled</span></>,
+        then: (
+          <>
+            Meta hides ad accounts with billing issues from the API. Open{" "}
+            <a className="text-primary hover:underline" href="https://adsmanager.facebook.com/" target="_blank" rel="noreferrer">Ads Manager</a>,
+            fix any "Account disabled" or "Payment required" banners, then click{" "}
+            <span className="font-medium text-foreground">Refresh</span> here.
+          </>
+        ),
+      },
+      {
+        when: <>The ad account lives in a <span className="font-medium text-foreground">different Business Manager</span></>,
+        then: (
+          <>
+            A System User can only see assets owned by its own Business. Either move/share the ad account into the
+            same Business, or generate the token from the Business that owns the account.
+          </>
+        ),
+      },
+    ],
+  },
   {
     issue: "“Invalid OAuth access token” or token rejected immediately",
     fix: (
       <>
         You probably copied a masked preview (with •••) or extra whitespace. Re-open Business Settings,
         click <span className="font-medium text-foreground">Show</span> on the token, and copy the full string.
-      </>
-    ),
-  },
-  {
-    issue: "Verify says “missing required permissions: ads_read”",
-    fix: (
-      <>
-        The token was generated without the right scopes. Re-generate it and tick{" "}
-        <span className="font-mono">ads_read</span> + <span className="font-mono">read_insights</span> at minimum.
-      </>
-    ),
-  },
-  {
-    issue: "Connected, but 0 ad accounts discovered",
-    fix: (
-      <>
-        The System User isn't assigned to any ad accounts. Open{" "}
-        <a className="text-primary hover:underline" href="https://business.facebook.com/settings/system-users" target="_blank" rel="noreferrer">
-          System Users
-        </a>{" "}
-        → click the user → <span className="font-medium text-foreground">Add Assets → Ad Accounts</span> and tick the accounts you want to sync.
       </>
     ),
   },
@@ -366,6 +486,7 @@ const TROUBLESHOOTING: { issue: string; fix: React.ReactNode }[] = [
 
 function Troubleshooting() {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState<number | null>(null);
   return (
     <div className="rounded border border-border bg-muted/20">
       <button
@@ -378,13 +499,48 @@ function Troubleshooting() {
         <span className="ml-auto text-[10px] text-muted-foreground">{TROUBLESHOOTING.length} fixes</span>
       </button>
       {open && (
-        <ul className="border-t border-border p-2.5 space-y-2.5">
-          {TROUBLESHOOTING.map((t, i) => (
-            <li key={i} className="text-[11px] leading-relaxed">
-              <p className="font-medium text-foreground">{t.issue}</p>
-              <p className="text-muted-foreground mt-0.5">{t.fix}</p>
-            </li>
-          ))}
+        <ul className="border-t border-border p-2 space-y-1">
+          {TROUBLESHOOTING.map((t, i) => {
+            const isOpen = expanded === i;
+            const hasBranches = !!t.branches?.length;
+            return (
+              <li key={i} className="text-[11px] leading-relaxed rounded border border-border/60 bg-background/40">
+                <button
+                  onClick={() => setExpanded(isOpen ? null : i)}
+                  className="w-full flex items-start gap-1.5 px-2 py-1.5 text-left hover:bg-muted/30 transition-colors rounded"
+                >
+                  {isOpen ? <ChevronDown className="h-3 w-3 mt-0.5 shrink-0" /> : <ChevronRight className="h-3 w-3 mt-0.5 shrink-0" />}
+                  <span className="font-medium text-foreground flex-1">{t.issue}</span>
+                  {hasBranches && (
+                    <span className="text-[10px] text-muted-foreground shrink-0">
+                      {t.branches!.length} branches
+                    </span>
+                  )}
+                </button>
+                {isOpen && (
+                  <div className="px-2.5 pb-2 pt-0.5">
+                    {t.fix && <p className="text-muted-foreground">{t.fix}</p>}
+                    {hasBranches && (
+                      <ul className="space-y-2 mt-1 border-l border-border/60 pl-2.5">
+                        {t.branches!.map((b, bi) => (
+                          <li key={bi}>
+                            <p className="text-foreground">
+                              <span className="text-[10px] uppercase tracking-wide text-warning font-semibold mr-1">If</span>
+                              {b.when}
+                            </p>
+                            <p className="text-muted-foreground mt-0.5">
+                              <span className="text-[10px] uppercase tracking-wide text-success font-semibold mr-1">Fix</span>
+                              {b.then}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
