@@ -182,6 +182,9 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
 
       {open && (
         <div className="border-t border-border p-3 space-y-3">
+          {/* Prerequisites checklist */}
+          <PrereqChecklist tab={tab} />
+
           {/* Tabs */}
           <div className="flex gap-1 rounded bg-muted/40 p-0.5">
             <TabBtn active={tab === "system"} onClick={() => setTab("system")}>
@@ -218,6 +221,21 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
               </li>
             ))}
           </ol>
+
+          {/* Where to paste callout */}
+          <div className="rounded-md border border-primary/40 bg-primary/5 p-2.5 flex items-start gap-2">
+            <ArrowDown className="h-4 w-4 text-primary shrink-0 mt-0.5 animate-bounce" />
+            <div className="text-xs leading-relaxed">
+              <p className="font-semibold text-foreground">Where to paste the token</p>
+              <p className="text-muted-foreground">
+                Scroll down to the <span className="font-medium text-foreground">Manual access token</span> field
+                directly below this guide. Paste your token there, click{" "}
+                <span className="font-medium text-foreground">Verify</span> to confirm permissions, then click{" "}
+                <span className="font-medium text-foreground">Connect</span> to save it to this workspace.
+              </p>
+            </div>
+          </div>
+
 
           {/* App ID + scopes */}
           <div className="rounded border border-border bg-muted/30 p-2.5 space-y-2">
