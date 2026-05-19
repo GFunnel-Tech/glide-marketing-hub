@@ -694,3 +694,63 @@ function PrereqChecklist({ tab }: { tab: "system" | "user" }) {
     </div>
   );
 }
+
+function MultiBmCallout() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-md border border-primary/30 bg-primary/5 p-2.5">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 text-xs font-semibold text-foreground"
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        <Building2 className="h-3.5 w-3.5 text-primary" />
+        <span>Managing multiple Business Managers or many ad accounts?</span>
+        <span className="ml-auto text-[10px] text-primary">Read this first</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2 text-xs text-muted-foreground leading-relaxed pl-5">
+          <p className="text-foreground font-medium">Good news — one connection can cover them all.</p>
+          <p>
+            Meta Hub stores ad accounts independently of the BM they live in, so a single System User token can
+            import every ad account that user has access to (across any number of BMs). The platform groups them
+            by Business Manager automatically once connected.
+          </p>
+          <div>
+            <p className="text-foreground font-medium mb-1">Recommended setup</p>
+            <ol className="list-decimal pl-4 space-y-0.5">
+              <li>
+                Pick <span className="text-foreground">one "owning" BM</span> where the System User lives (your agency BM
+                is usually best).
+              </li>
+              <li>
+                For each <span className="text-foreground">other BM</span>, the BM admin shares the ad account into the
+                owning BM via <span className="text-foreground">Business Settings → Ad Accounts → Assign Partner</span>{" "}
+                (or accepts a request from the owning BM).
+              </li>
+              <li>
+                In the owning BM, open the System User → <span className="text-foreground">Add Assets → Ad Accounts</span>{" "}
+                → tick every account (including the newly shared ones) → enable{" "}
+                <span className="text-foreground">Manage campaigns</span>.
+              </li>
+              <li>
+                Generate the token once. Paste it below. All ad accounts across every BM appear in the panel.
+              </li>
+            </ol>
+          </div>
+          <div>
+            <p className="text-foreground font-medium mb-1">Alternative: one connection per BM</p>
+            <p>
+              If BMs can't share assets with each other (separate legal entities, conflicting partner rules), create
+              a separate System User token in each BM and add multiple Meta connections here. Each connection is
+              scoped to its own BM and won't affect the others.
+            </p>
+          </div>
+          <p className="text-[11px] italic">
+            Either way works — Meta Hub handles unlimited connections and unlimited ad accounts per workspace.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
