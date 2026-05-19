@@ -1012,7 +1012,7 @@ export function MetaConnectionsPanel() {
                   </p>
                 </div>
 
-                <MetaTokenGuide />
+                <MetaTokenGuide defaultOpen={autoOpenGuide} />
 
                 <div className="flex gap-2">
                   <Input
