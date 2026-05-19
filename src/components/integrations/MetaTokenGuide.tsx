@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronRight, ExternalLink, Copy, Check, BookOpen, LifeBuoy } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Copy, Check, BookOpen, LifeBuoy, ClipboardList, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
