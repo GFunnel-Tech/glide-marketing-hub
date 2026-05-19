@@ -25,6 +25,12 @@ const integrations = [
 export default function Settings() {
   const { data: teamMembers = [] } = useTeamMembers();
   const [copied, setCopied] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const validTabs = ["agency", "integrations", "team", "kpis", "notifications"] as const;
+  const initialTab = (validTabs as readonly string[]).includes(tabParam ?? "")
+    ? (tabParam as typeof validTabs[number])
+    : "agency";
 
   const copyUrl = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -37,7 +43,15 @@ export default function Settings() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
 
-      <Tabs defaultValue="agency" className="space-y-4">
+      <Tabs
+        value={initialTab}
+        onValueChange={(v) => {
+          const next = new URLSearchParams(searchParams);
+          next.set("tab", v);
+          setSearchParams(next, { replace: true });
+        }}
+        className="space-y-4"
+      >
         <TabsList>
           <TabsTrigger value="agency">Agency</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
