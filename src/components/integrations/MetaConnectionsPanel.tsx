@@ -27,6 +27,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { MetaTokenGuide } from "./MetaTokenGuide";
+import { MetaTroubleshootWizard } from "./MetaTroubleshootWizard";
+import { LifeBuoy } from "lucide-react";
 
 // Meta user/system-user access tokens are opaque strings.
 // They are typically 100–500 chars of URL-safe base64-ish characters.
