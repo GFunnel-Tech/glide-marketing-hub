@@ -223,6 +223,7 @@ export function MetaConnectionsPanel() {
   const [syncing, setSyncing] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [autoOpenGuide, setAutoOpenGuide] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const manualSectionRef = useRef<HTMLDivElement | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [manualToken, setManualToken] = useState("");
