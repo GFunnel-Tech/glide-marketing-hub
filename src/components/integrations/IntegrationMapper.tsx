@@ -236,48 +236,12 @@ export function IntegrationMapper() {
         </div>
       )}
 
-      {tab === "meta" && (
-        <div className="space-y-2">
-          <div className="text-xs text-muted-foreground">
-            {metaAccs.length} ad accounts · {metaAccs.filter(a => a.client_id).length} linked
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="text-muted-foreground border-b border-border">
-                <tr><th className="text-left py-2 px-2">Meta Ad Account</th><th className="text-left py-2 px-2">Client</th><th className="py-2 px-2"></th></tr>
-              </thead>
-              <tbody>
-                {metaAccs.map((acc) => (
-                  <tr key={acc.id} className="border-b border-border/50">
-                    <td className="py-2 px-2">
-                      <div className="font-medium text-foreground">{acc.account_name || acc.act_id}</div>
-                      <div className="text-muted-foreground font-mono">{acc.act_id}</div>
-                    </td>
-                    <td className="py-2 px-2">
-                      <Select
-                        value={acc.client_id?.toString() ?? ""}
-                        onValueChange={(v) => linkMeta(acc.id, v ? parseInt(v) : null)}
-                      >
-                        <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Pick client…" /></SelectTrigger>
-                        <SelectContent>
-                          {clients.map((c) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="py-2 px-2 text-right">
-                      {acc.client_id && (
-                        <Button size="sm" variant="ghost" onClick={() => linkMeta(acc.id, null)}>
-                          <Unlink className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {tab === "meta" && (() => {
+        const bmOptions = Array.from(
+          new Set(metaAccs.map(a => a.business_name || "No Business Manager"))
+        ).sort();
+        return <MetaMapTab metaAccs={metaAccs} clients={clients} bmOptions={bmOptions} linkMeta={linkMeta} />;
+      })()}
 
       {tab === "clickup" && (
         <div className="space-y-2">
