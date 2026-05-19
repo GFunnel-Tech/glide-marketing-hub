@@ -421,3 +421,117 @@ function CopyRow({ label, value, copied, onCopy }: { label: string; value: strin
     </div>
   );
 }
+
+type ChecklistItem = { id: string; label: string; hint?: string };
+
+const SYSTEM_PREREQS: ChecklistItem[] = [
+  { id: "bm", label: "I own (or am Admin of) a Meta Business Manager", hint: "Required to create System Users and assign assets." },
+  { id: "app", label: "I've added the Meta Hub app to my Business Manager", hint: "Business Settings → Accounts → Apps → Connect an app ID." },
+  { id: "su", label: "I've created a System User with Admin role", hint: "Business Settings → Users → System Users → Add." },
+  { id: "app-assigned", label: "I've assigned the Meta Hub app to that System User", hint: "System User → Add Assets → Apps → enable Develop & Manage." },
+  { id: "ads", label: "I've assigned all ad accounts to that System User", hint: "Same screen → Add Assets → Ad Accounts → Manage campaigns + View performance." },
+  { id: "scopes", label: "When generating, I'll tick ads_read + read_insights (+ leads_retrieval for lead sync)", hint: "Scopes are listed below for one-click copy." },
+];
+
+const USER_PREREQS: ChecklistItem[] = [
+  { id: "fb", label: "I'm signed in with the Facebook account that has access to the ad accounts" },
+  { id: "explorer", label: "I can open Graph API Explorer and select the Meta Hub app from the top-right dropdown" },
+  { id: "scopes", label: "I'll request ads_read + read_insights (+ leads_retrieval) before generating" },
+  { id: "extend", label: "I'll extend the short-lived token to 60 days via the Access Token Debugger" },
+  { id: "note", label: "I understand User tokens expire — I'll switch to a System User token for production" },
+];
+
+function PrereqChecklist({ tab }: { tab: "system" | "user" }) {
+  const items = tab === "system" ? SYSTEM_PREREQS : USER_PREREQS;
+  const storageKey = `metahub:meta-token-guide:checklist:${tab}`;
+  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(window.localStorage.getItem(storageKey) || "{}"); } catch { return {}; }
+  });
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    try { window.localStorage.setItem(storageKey, JSON.stringify(checked)); } catch { /* ignore */ }
+  }, [storageKey, checked]);
+
+  // Reload state when tab changes
+  useEffect(() => {
+    try { setChecked(JSON.parse(window.localStorage.getItem(storageKey) || "{}")); } catch { setChecked({}); }
+  }, [storageKey]);
+
+  const done = items.filter(i => checked[i.id]).length;
+  const allDone = done === items.length;
+
+  return (
+    <div className={cn(
+      "rounded-md border p-2.5 transition-colors",
+      allDone ? "border-success/40 bg-success/5" : "border-primary/30 bg-primary/5",
+    )}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 text-xs font-semibold text-foreground"
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        <ClipboardList className={cn("h-3.5 w-3.5", allDone ? "text-success" : "text-primary")} />
+        <span>Before you start — prerequisites</span>
+        <span className={cn(
+          "ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded",
+          allDone ? "bg-success/20 text-success" : "bg-primary/15 text-primary",
+        )}>
+          {done}/{items.length} {allDone ? "ready" : "done"}
+        </span>
+      </button>
+      {open && (
+        <ul className="mt-2 space-y-1.5">
+          {items.map(item => {
+            const isChecked = !!checked[item.id];
+            return (
+              <li key={item.id}>
+                <label className="flex items-start gap-2 cursor-pointer group">
+                  <span
+                    className={cn(
+                      "mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors",
+                      isChecked
+                        ? "bg-success border-success text-background"
+                        : "border-border bg-background group-hover:border-primary",
+                    )}
+                    aria-hidden
+                  >
+                    {isChecked && <Check className="h-3 w-3" strokeWidth={3} />}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={e => setChecked(prev => ({ ...prev, [item.id]: e.target.checked }))}
+                    className="sr-only"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      "text-xs leading-snug",
+                      isChecked ? "text-muted-foreground line-through" : "text-foreground",
+                    )}>
+                      {item.label}
+                    </p>
+                    {item.hint && !isChecked && (
+                      <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">{item.hint}</p>
+                    )}
+                  </div>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {!allDone && open && (
+        <p className="mt-2 text-[10px] text-muted-foreground italic">
+          Tick each item once it's done. We'll save your progress on this device.
+        </p>
+      )}
+      {allDone && (
+        <p className="mt-2 text-[11px] text-success font-medium flex items-center gap-1">
+          <Check className="h-3 w-3" /> You're ready — follow the steps below to generate and paste the token.
+        </p>
+      )}
+    </div>
+  );
+}
