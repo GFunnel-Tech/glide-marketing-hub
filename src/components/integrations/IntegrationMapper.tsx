@@ -16,7 +16,7 @@ type Client = {
   clickup_list_id: string | null;
 };
 type GhlLoc = { id: string; location_id: string; name: string | null; business_name: string | null };
-type MetaAcc = { id: string; act_id: string; account_name: string | null; client_id: number | null };
+type MetaAcc = { id: string; act_id: string; account_name: string | null; client_id: number | null; business_name: string | null };
 
 function norm(s: string) {
   return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -61,7 +61,7 @@ export function IntegrationMapper() {
         .select("id,location_id,name,business_name")
         .eq("workspace_id", wsId).order("name"),
       (supabase as any).from("meta_ad_accounts")
-        .select("id,act_id,account_name,client_id")
+        .select("id,act_id,account_name,client_id,business_name")
         .eq("workspace_id", wsId).order("account_name"),
     ]);
     setClients(c.data || []);
@@ -236,48 +236,12 @@ export function IntegrationMapper() {
         </div>
       )}
 
-      {tab === "meta" && (
-        <div className="space-y-2">
-          <div className="text-xs text-muted-foreground">
-            {metaAccs.length} ad accounts · {metaAccs.filter(a => a.client_id).length} linked
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="text-muted-foreground border-b border-border">
-                <tr><th className="text-left py-2 px-2">Meta Ad Account</th><th className="text-left py-2 px-2">Client</th><th className="py-2 px-2"></th></tr>
-              </thead>
-              <tbody>
-                {metaAccs.map((acc) => (
-                  <tr key={acc.id} className="border-b border-border/50">
-                    <td className="py-2 px-2">
-                      <div className="font-medium text-foreground">{acc.account_name || acc.act_id}</div>
-                      <div className="text-muted-foreground font-mono">{acc.act_id}</div>
-                    </td>
-                    <td className="py-2 px-2">
-                      <Select
-                        value={acc.client_id?.toString() ?? ""}
-                        onValueChange={(v) => linkMeta(acc.id, v ? parseInt(v) : null)}
-                      >
-                        <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Pick client…" /></SelectTrigger>
-                        <SelectContent>
-                          {clients.map((c) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="py-2 px-2 text-right">
-                      {acc.client_id && (
-                        <Button size="sm" variant="ghost" onClick={() => linkMeta(acc.id, null)}>
-                          <Unlink className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {tab === "meta" && (() => {
+        const bmOptions = Array.from(
+          new Set(metaAccs.map(a => a.business_name || "No Business Manager"))
+        ).sort();
+        return <MetaMapTab metaAccs={metaAccs} clients={clients} bmOptions={bmOptions} linkMeta={linkMeta} />;
+      })()}
 
       {tab === "clickup" && (
         <div className="space-y-2">
@@ -314,5 +278,98 @@ function ClickupRow({ client, onSave }: { client: Client; onSave: (id: number, v
         </div>
       </td>
     </tr>
+  );
+}
+
+function MetaMapTab({
+  metaAccs,
+  clients,
+  bmOptions,
+  linkMeta,
+}: {
+  metaAccs: MetaAcc[];
+  clients: Client[];
+  bmOptions: string[];
+  linkMeta: (id: string, clientId: number | null) => void;
+}) {
+  const [bmFilter, setBmFilter] = useState<string>("__all__");
+  const [search, setSearch] = useState("");
+  const filtered = metaAccs.filter(a => {
+    const bm = a.business_name || "No Business Manager";
+    if (bmFilter !== "__all__" && bm !== bmFilter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (a.account_name || "").toLowerCase().includes(q) ||
+      bm.toLowerCase().includes(q) ||
+      a.act_id.toLowerCase().includes(q)
+    );
+  });
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="text-xs text-muted-foreground flex-1 min-w-[200px]">
+          {filtered.length} of {metaAccs.length} ad accounts · {metaAccs.filter(a => a.client_id).length} linked
+          {" · "}{bmOptions.length} BM{bmOptions.length === 1 ? "" : "s"}
+        </div>
+        <Select value={bmFilter} onValueChange={setBmFilter}>
+          <SelectTrigger className="h-8 w-56 text-xs"><SelectValue placeholder="All Business Managers" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All Business Managers</SelectItem>
+            {bmOptions.map(bm => <SelectItem key={bm} value={bm}>{bm}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search…"
+          className="h-8 w-48 text-xs"
+        />
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="text-muted-foreground border-b border-border">
+            <tr>
+              <th className="text-left py-2 px-2">Meta Ad Account</th>
+              <th className="text-left py-2 px-2">Business Manager</th>
+              <th className="text-left py-2 px-2">Client</th>
+              <th className="py-2 px-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((acc) => (
+              <tr key={acc.id} className="border-b border-border/50">
+                <td className="py-2 px-2">
+                  <div className="font-medium text-foreground">{acc.account_name || acc.act_id}</div>
+                  <div className="text-muted-foreground font-mono">{acc.act_id}</div>
+                </td>
+                <td className="py-2 px-2 text-muted-foreground">{acc.business_name || "—"}</td>
+                <td className="py-2 px-2">
+                  <Select
+                    value={acc.client_id?.toString() ?? ""}
+                    onValueChange={(v) => linkMeta(acc.id, v ? parseInt(v) : null)}
+                  >
+                    <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Pick client…" /></SelectTrigger>
+                    <SelectContent>
+                      {clients.map((c) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="py-2 px-2 text-right">
+                  {acc.client_id && (
+                    <Button size="sm" variant="ghost" onClick={() => linkMeta(acc.id, null)}>
+                      <Unlink className="h-3 w-3" />
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={4} className="py-6 text-center text-muted-foreground">No ad accounts match.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

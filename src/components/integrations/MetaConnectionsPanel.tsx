@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info, RotateCw, AlertTriangle, KeyRound, X, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, Link2, Facebook, Info, RotateCw, AlertTriangle, KeyRound, X, CheckCircle2, XCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -1158,79 +1158,15 @@ export function MetaConnectionsPanel() {
         </div>
       </div>
 
-      {accounts.length > 0 && (() => {
-        const unmappedCount = accounts.filter(a => !a.client_id).length;
-        return (
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
-          <div className="px-5 py-3 border-b border-border">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Link2 className="h-4 w-4" /> Ad Accounts ({accounts.length})
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Map each ad account to a client. Multiple ad accounts can roll up to one client.</p>
-          </div>
-          {unmappedCount > 0 && (
-            <div className="px-5 py-2.5 bg-warning/10 border-b border-warning/30 flex items-start gap-2 text-xs">
-              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-              <div>
-                <span className="font-medium text-foreground">{unmappedCount} ad account{unmappedCount === 1 ? "" : "s"} unmapped.</span>
-                <span className="text-muted-foreground"> Insights are syncing, but will not appear on client dashboards until each account is linked to a client (or used to create one).</span>
-              </div>
-            </div>
-          )}
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-accent/50">
-                {["Account", "Business", "Currency", "Client", "Last Sync"].map(h => (
-                  <th key={h} className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {accounts.map(a => (
-                <tr key={a.id} className="border-b border-border last:border-0 hover:bg-accent/20">
-                  <td className="px-4 py-2">
-                    <div className="font-medium text-foreground">{a.account_name || a.act_id}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{a.act_id}</div>
-                  </td>
-                  <td className="px-4 py-2 text-muted-foreground text-xs">{a.business_name || "—"}</td>
-                  <td className="px-4 py-2 text-muted-foreground text-xs">{a.currency || "—"}</td>
-                  <td className="px-4 py-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <select
-                        value={a.client_id ?? ""}
-                        onChange={e => handleMap(a.id, e.target.value ? Number(e.target.value) : null)}
-                        className="rounded border border-border bg-background px-2 py-1 text-xs"
-                      >
-                        <option value="">— Unmapped —</option>
-                        {clients.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                      {!a.client_id && (
-                        <button
-                          onClick={() => openCreateClientDialog(a)}
-                          disabled={creatingClientFor === a.id}
-                          className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-60"
-                          title="Create a new client from this ad account and link it"
-                        >
-                          {creatingClientFor === a.id
-                            ? <Loader2 className="h-3 w-3 animate-spin" />
-                            : <Plus className="h-3 w-3" />}
-                          New client
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-2 text-xs text-muted-foreground">
-                    {a.last_synced_at ? new Date(a.last_synced_at).toLocaleString() : "Never"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        );
-      })()}
+      {accounts.length > 0 && (
+        <AdAccountsByBm
+          accounts={accounts}
+          clients={clients}
+          onMap={handleMap}
+          onCreateClient={openCreateClientDialog}
+          creatingClientFor={creatingClientFor}
+        />
+      )}
 
       <Dialog open={!!createDialogAccount} onOpenChange={(open) => !open && setCreateDialogAccount(null)}>
         <DialogContent className="sm:max-w-md">
@@ -1307,6 +1243,150 @@ export function MetaConnectionsPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function AdAccountsByBm({
+  accounts,
+  clients,
+  onMap,
+  onCreateClient,
+  creatingClientFor,
+}: {
+  accounts: MetaAdAccount[];
+  clients: { id: number; name: string }[];
+  onMap: (id: string, clientId: number | null) => void;
+  onCreateClient: (a: MetaAdAccount) => void;
+  creatingClientFor: string | null;
+}) {
+  const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const filtered = accounts.filter(a => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (a.account_name || "").toLowerCase().includes(q) ||
+      (a.business_name || "").toLowerCase().includes(q) ||
+      a.act_id.toLowerCase().includes(q)
+    );
+  });
+
+  const groups = new Map<string, { name: string; key: string; rows: MetaAdAccount[] }>();
+  for (const a of filtered) {
+    const key = a.business_name || "__no_bm__";
+    const name = a.business_name || "No Business Manager";
+    if (!groups.has(key)) groups.set(key, { key, name, rows: [] });
+    groups.get(key)!.rows.push(a);
+  }
+  const groupList = Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name));
+  const unmappedCount = accounts.filter(a => !a.client_id).length;
+
+  return (
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="px-5 py-3 border-b border-border flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Link2 className="h-4 w-4" /> Ad Accounts ({accounts.length})
+            <span className="text-xs font-normal text-muted-foreground">· {groupList.length} Business Manager{groupList.length === 1 ? "" : "s"}</span>
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Grouped by Business Manager. Map each ad account to a client.</p>
+        </div>
+        <Input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search BM, account, or act_id…"
+          className="h-8 text-xs w-64"
+        />
+      </div>
+      {unmappedCount > 0 && (
+        <div className="px-5 py-2.5 bg-warning/10 border-b border-warning/30 flex items-start gap-2 text-xs">
+          <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+          <div>
+            <span className="font-medium text-foreground">{unmappedCount} ad account{unmappedCount === 1 ? "" : "s"} unmapped.</span>
+            <span className="text-muted-foreground"> Insights are syncing, but will not appear on client dashboards until each account is linked.</span>
+          </div>
+        </div>
+      )}
+      {groupList.length === 0 ? (
+        <p className="px-5 py-6 text-xs text-muted-foreground text-center">No ad accounts match "{search}".</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {groupList.map(g => {
+            const isCollapsed = !!collapsed[g.key];
+            const groupUnmapped = g.rows.filter(a => !a.client_id).length;
+            return (
+              <div key={g.key}>
+                <button
+                  onClick={() => setCollapsed(c => ({ ...c, [g.key]: !isCollapsed }))}
+                  className="w-full flex items-center gap-2 px-5 py-2 bg-accent/40 hover:bg-accent/60 transition-colors text-left"
+                >
+                  {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  <Facebook className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-semibold text-foreground truncate">{g.name}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {g.rows.length} account{g.rows.length === 1 ? "" : "s"}
+                    {groupUnmapped > 0 && <> · <span className="text-warning">{groupUnmapped} unmapped</span></>}
+                  </span>
+                </button>
+                {!isCollapsed && (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/60 bg-background/40">
+                        {["Account", "Currency", "Client", "Last Sync"].map(h => (
+                          <th key={h} className="px-4 py-1.5 text-left text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {g.rows.map(a => (
+                        <tr key={a.id} className="border-b border-border/40 last:border-0 hover:bg-accent/20">
+                          <td className="px-4 py-2">
+                            <div className="font-medium text-foreground text-xs">{a.account_name || a.act_id}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{a.act_id}</div>
+                          </td>
+                          <td className="px-4 py-2 text-muted-foreground text-xs">{a.currency || "—"}</td>
+                          <td className="px-4 py-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <select
+                                value={a.client_id ?? ""}
+                                onChange={e => onMap(a.id, e.target.value ? Number(e.target.value) : null)}
+                                className="rounded border border-border bg-background px-2 py-1 text-xs"
+                              >
+                                <option value="">— Unmapped —</option>
+                                {clients.map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                              {!a.client_id && (
+                                <button
+                                  onClick={() => onCreateClient(a)}
+                                  disabled={creatingClientFor === a.id}
+                                  className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-60"
+                                  title="Create a new client from this ad account and link it"
+                                >
+                                  {creatingClientFor === a.id
+                                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                                    : <Plus className="h-3 w-3" />}
+                                  New client
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-[11px] text-muted-foreground">
+                            {a.last_synced_at ? new Date(a.last_synced_at).toLocaleString() : "Never"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
