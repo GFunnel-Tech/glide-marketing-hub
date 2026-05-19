@@ -61,7 +61,7 @@ export function IntegrationMapper() {
         .select("id,location_id,name,business_name")
         .eq("workspace_id", wsId).order("name"),
       (supabase as any).from("meta_ad_accounts")
-        .select("id,act_id,account_name,client_id")
+        .select("id,act_id,account_name,client_id,business_name")
         .eq("workspace_id", wsId).order("account_name"),
     ]);
     setClients(c.data || []);
