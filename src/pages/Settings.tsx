@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTeamMembers } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
 import { Copy, ExternalLink, Check, Loader2, UserPlus, Bell, Zap } from "lucide-react";
