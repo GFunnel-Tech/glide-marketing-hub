@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useClients } from "@/hooks/useDatabase";
@@ -219,6 +220,9 @@ export function MetaConnectionsPanel() {
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const [autoOpenGuide, setAutoOpenGuide] = useState(false);
+  const manualSectionRef = useRef<HTMLDivElement | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [manualToken, setManualToken] = useState("");
   const [reconnectingId, setReconnectingId] = useState<string | null>(null);
   const [manualReconnectId, setManualReconnectId] = useState<string | null>(null);
@@ -231,6 +235,23 @@ export function MetaConnectionsPanel() {
     | { ok: false; error: string }
     | null
   >(null);
+
+  // Deep-link: ?manual=1 opens the manual flow with the guide expanded and scrolls to it.
+  useEffect(() => {
+    if (searchParams.get("manual") === "1") {
+      setShowManual(true);
+      setAutoOpenGuide(true);
+      // Clear the param so it doesn't re-trigger
+      const next = new URLSearchParams(searchParams);
+      next.delete("manual");
+      setSearchParams(next, { replace: true });
+      // Scroll after the panel expands
+      setTimeout(() => {
+        manualSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleVerifyToken = async () => {
     const validated = validateMetaToken(manualToken);
@@ -980,7 +1001,7 @@ export function MetaConnectionsPanel() {
             const warnings = !inlineError && !isEmpty ? getTokenWarnings(manualToken) : [];
             const busy = connecting || verifying;
             return (
-              <div className="mt-3 space-y-3 rounded-md border border-border bg-muted/30 p-3">
+              <div ref={manualSectionRef} className="mt-3 space-y-3 rounded-md border border-border bg-muted/30 p-3 scroll-mt-4">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                     <KeyRound className="h-3.5 w-3.5 text-primary" />
@@ -991,7 +1012,7 @@ export function MetaConnectionsPanel() {
                   </p>
                 </div>
 
-                <MetaTokenGuide />
+                <MetaTokenGuide defaultOpen={autoOpenGuide} />
 
                 <div className="flex gap-2">
                   <Input

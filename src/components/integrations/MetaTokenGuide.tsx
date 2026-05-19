@@ -48,6 +48,18 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
       link: { href: "https://business.facebook.com/settings", label: "business.facebook.com/settings" },
     },
     {
+      title: "Add the Meta Hub app to your Business Manager",
+      body: (
+        <>
+          Go to <span className="font-medium text-foreground">Accounts → Apps</span> →{" "}
+          <span className="font-medium text-foreground">Add → Connect an app ID</span> and paste the
+          Meta Hub <span className="font-mono">App ID</span> shown below. Skip this if it's already listed.
+          Without this step, the app won't appear in the token generator dropdown.
+        </>
+      ),
+      link: { href: "https://business.facebook.com/settings/apps", label: "Open Business Settings → Apps" },
+    },
+    {
       title: "Create or select a System User",
       body: (
         <>
@@ -56,16 +68,31 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
           and set role to <span className="font-medium text-foreground">Admin</span>.
         </>
       ),
+      link: { href: "https://business.facebook.com/settings/system-users", label: "Open System Users" },
     },
     {
-      title: "Assign ad accounts to the system user",
+      title: "Assign the Meta Hub app to the System User",
       body: (
         <>
           Click the system user → <span className="font-medium text-foreground">Add Assets</span> →{" "}
+          <span className="font-medium text-foreground">Apps</span>. Select{" "}
+          <span className="font-medium text-foreground">Meta Hub</span> and enable{" "}
+          <span className="font-medium text-foreground">Develop app</span> and{" "}
+          <span className="font-medium text-foreground">Manage app</span>. If you skip this, Meta will
+          reject the token with "Application does not have permission".
+        </>
+      ),
+    },
+    {
+      title: "Assign ad accounts to the System User",
+      body: (
+        <>
+          Same system user → <span className="font-medium text-foreground">Add Assets</span> →{" "}
           <span className="font-medium text-foreground">Ad Accounts</span>. Select every ad account
           you want Meta Hub to read, then enable{" "}
           <span className="font-medium text-foreground">Manage campaigns</span> &{" "}
-          <span className="font-medium text-foreground">View performance</span>.
+          <span className="font-medium text-foreground">View performance</span>. Without this, the
+          token connects but discovers <span className="text-foreground font-medium">0 ad accounts</span>.
         </>
       ),
     },
@@ -74,8 +101,9 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
       body: (
         <>
           On the system user page, click <span className="font-medium text-foreground">Generate New Token</span>.
-          Pick the app below, set <span className="font-medium text-foreground">Token expiration: Never</span>,
-          and check the scopes listed below.
+          Pick <span className="font-medium text-foreground">Meta Hub</span> from the app dropdown, set{" "}
+          <span className="font-medium text-foreground">Token expiration: Never</span>, and check every
+          scope listed below.
         </>
       ),
     },

@@ -45,7 +45,7 @@ export function ConnectMetaPrompt() {
             Connect with Meta
           </Button>
           <Link
-            to="/settings"
+            to="/settings?tab=integrations&manual=1"
             className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1"
           >
             Or use a manual access token <ArrowRight className="h-3 w-3" />
