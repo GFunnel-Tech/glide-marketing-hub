@@ -27,6 +27,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { MetaTokenGuide } from "./MetaTokenGuide";
+import { MetaTroubleshootWizard } from "./MetaTroubleshootWizard";
+import { LifeBuoy } from "lucide-react";
 
 // Meta user/system-user access tokens are opaque strings.
 // They are typically 100–500 chars of URL-safe base64-ish characters.
@@ -221,6 +223,7 @@ export function MetaConnectionsPanel() {
   const [syncing, setSyncing] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [autoOpenGuide, setAutoOpenGuide] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const manualSectionRef = useRef<HTMLDivElement | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [manualToken, setManualToken] = useState("");
@@ -640,6 +643,10 @@ export function MetaConnectionsPanel() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setShowWizard(true)} title="Step-by-step troubleshooter">
+              <LifeBuoy className="h-3 w-3" />
+              <span className="ml-1">Troubleshoot</span>
+            </Button>
             <Button size="sm" variant="outline" onClick={handleSync} disabled={syncing || !connections.length}>
               {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               <span className="ml-1">Sync now</span>
@@ -1243,6 +1250,8 @@ export function MetaConnectionsPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MetaTroubleshootWizard open={showWizard} onOpenChange={setShowWizard} />
     </div>
   );
 }
