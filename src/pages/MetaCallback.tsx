@@ -62,9 +62,22 @@ export default function MetaCallback() {
     supabase.functions
       .invoke("meta-oauth-callback", { body: { code, state } })
       .then(({ data, error }) => {
-        if (error || data?.error) {
+        if (error) {
           setPhase("error");
-          setErrorMsg(error?.message || data?.error || "Connection failed");
+          setErrorMsg(error.message || "Connection failed");
+          return;
+        }
+        if (data?.error === "permissions_declined") {
+          setPhase("error");
+          setErrorMsg(
+            data.message ||
+              "You didn't grant the permissions needed to read ad accounts. Click 'Edit access' on Facebook's consent screen and make sure ads_read, ads_management, and business_management stay checked.",
+          );
+          return;
+        }
+        if (data?.error) {
+          setPhase("error");
+          setErrorMsg(data.message || data.error || "Connection failed");
           return;
         }
         const r = data as CallbackResult;
