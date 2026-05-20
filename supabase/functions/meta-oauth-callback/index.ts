@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
       await admin
         .from("meta_connections")
         .update({
-          status: "needs_permissions",
+          status: "error",
           last_error: permissionErrorMessage,
           updated_at: new Date().toISOString(),
         })
