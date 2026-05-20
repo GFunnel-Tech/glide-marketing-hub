@@ -222,7 +222,7 @@ export default function MetaCallback() {
 
       <div className="flex gap-2 justify-center pt-2">
         <Button size="sm" onClick={() => window.close()}>Done</Button>
-        <Button size="sm" variant="outline" onClick={() => { window.location.href = "/settings/integrations"; }}>
+        <Button size="sm" variant="outline" onClick={() => { window.location.href = "/settings?tab=integrations"; }}>
           Manage connection
         </Button>
       </div>
