@@ -5,6 +5,8 @@ import { ArrowLeft, ArrowRight, ExternalLink, LifeBuoy, CheckCircle2, AlertTrian
 import { cn } from "@/lib/utils";
 
 const APP_ID = "122550261945762";
+const META_DEVELOPER_APPS_URL = "https://developers.facebook.com/apps/";
+const TESTER_ACCEPT_URL = "https://www.facebook.com/settings/?tab=applications";
 
 type Option = { id: string; label: string; hint?: string; next?: string; fix?: Fix };
 type Node = { id: string; question: string; subtitle?: string; options: Option[] };
@@ -41,12 +43,14 @@ const FIXES: Record<string, Fix> = {
     ],
   },
   oauthFeatureUnavailable: {
-    title: "'Feature unavailable' from Meta",
+    title: "Meta app tester access is missing",
     tone: "bad",
-    summary: "Your Facebook user isn't added as a developer/tester on the Meta Hub app, or the app is in Development mode.",
+    summary: "If the Meta app is still in Development mode, Facebook only grants ads permissions to app Admins, Developers, or Testers. Facebook often does not show a bell notification for tester invites.",
     steps: [
-      { text: "Open App Roles and add the user as Developer or Tester.", href: `https://developers.facebook.com/apps/${APP_ID}/roles/roles/` },
-      { text: "Or switch to the Manual access token flow below — System User tokens bypass this entirely." },
+      { text: "App admin: open Meta for Developers → My Apps → Meta Hub → App roles → Roles, then add this Facebook user as Developer or Tester.", href: META_DEVELOPER_APPS_URL },
+      { text: "User: if no notification appears, open Facebook Settings → Apps and Websites, then scroll to Requests and accept the Meta Hub invite.", href: TESTER_ACCEPT_URL },
+      { text: "After accepting, click Connect with Meta again and keep every ads permission enabled on the consent screen." },
+      { text: "Or switch to the Manual access token flow — System User tokens bypass tester invitations entirely." },
     ],
   },
   oauthScopeDenied: {
@@ -208,6 +212,7 @@ const NODES: Record<string, Node> = {
       { id: "popup", label: "Popup never opens or closes immediately", next: "oauth_popup" },
       { id: "login", label: "Stuck on Facebook login / loops back", fix: FIXES.oauthLoginLoop },
       { id: "feature", label: "Meta shows 'Feature unavailable'", fix: FIXES.oauthFeatureUnavailable },
+      { id: "no-invite", label: "No tester notification / invite link doesn't work", fix: FIXES.oauthFeatureUnavailable },
       { id: "consent", label: "I clicked Cancel or skipped permissions", fix: FIXES.oauthScopeDenied },
     ],
   },
