@@ -70,6 +70,8 @@ Deno.serve(async (req) => {
     url.searchParams.set("scope", META_SCOPES);
     url.searchParams.set("state", state);
     url.searchParams.set("response_type", "code");
+    url.searchParams.set("auth_type", "rerequest");
+    url.searchParams.set("return_scopes", "true");
 
     return new Response(JSON.stringify({ url: url.toString() }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

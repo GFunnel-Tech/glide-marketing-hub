@@ -66,6 +66,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    const requiredAdsScopes = ["ads_read", "ads_management", "business_management"];
+    const permissionErrorMessage =
+      "Meta only granted public_profile. Ads permissions were not granted to this Facebook user. If the Meta app is in Development mode, add this user as an app Tester/Developer and have them accept the invite in Facebook Settings → Apps and Websites → Requests, then reconnect.";
 
     // verify membership
     const { data: memberCheck } = await admin
@@ -137,15 +140,21 @@ Deno.serve(async (req) => {
     // Detect missing ads permissions BEFORE trying to discover accounts —
     // without these scopes, /me/adaccounts returns empty and the user gets a
     // confusing "0 accounts" screen instead of a clear permissions error.
-    const requiredAdsScopes = ["ads_read", "ads_management", "business_management"];
     const missingAdsScopes = requiredAdsScopes.filter((s) => !grantedScopes.includes(s));
     if (missingAdsScopes.length === requiredAdsScopes.length) {
+      await admin
+        .from("meta_connections")
+        .update({
+          status: "error",
+          last_error: permissionErrorMessage,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", conn.id);
       // User declined ALL ads-related scopes on the Facebook consent screen.
       return json({
         ok: false,
         error: "permissions_declined",
-        message:
-          "You didn't grant the permissions needed to read ad accounts. On the Facebook consent screen, make sure every permission stays checked (especially ads_read, ads_management, and business_management), then try connecting again.",
+        message: permissionErrorMessage,
         connectionId: conn.id,
         metaUserName: me.name ?? null,
         grantedScopes,

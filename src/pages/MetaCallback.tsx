@@ -71,7 +71,7 @@ export default function MetaCallback() {
           setPhase("error");
           setErrorMsg(
             data.message ||
-              "You didn't grant the permissions needed to read ad accounts. Click 'Edit access' on Facebook's consent screen and make sure ads_read, ads_management, and business_management stay checked.",
+              "Meta only granted public_profile. If the app is in Development mode, the Facebook user must be added as a Meta app Tester or Developer, accept the invite in Facebook Settings → Apps and Websites → Requests, then reconnect.",
           );
           return;
         }
