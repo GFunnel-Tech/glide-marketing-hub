@@ -134,11 +134,43 @@ Deno.serve(async (req) => {
     }
     if (connErr || !conn) return json({ error: "store connection failed", details: connErr }, 500);
 
+    // Detect missing ads permissions BEFORE trying to discover accounts —
+    // without these scopes, /me/adaccounts returns empty and the user gets a
+    // confusing "0 accounts" screen instead of a clear permissions error.
+    const requiredAdsScopes = ["ads_read", "ads_management", "business_management"];
+    const missingAdsScopes = requiredAdsScopes.filter((s) => !grantedScopes.includes(s));
+    if (missingAdsScopes.length === requiredAdsScopes.length) {
+      // User declined ALL ads-related scopes on the Facebook consent screen.
+      return json({
+        ok: false,
+        error: "permissions_declined",
+        message:
+          "You didn't grant the permissions needed to read ad accounts. On the Facebook consent screen, make sure every permission stays checked (especially ads_read, ads_management, and business_management), then try connecting again.",
+        connectionId: conn.id,
+        metaUserName: me.name ?? null,
+        grantedScopes,
+        declinedScopes,
+        missingScopes: missingAdsScopes,
+      }, 200);
+    }
+
     // Discover ad accounts (insert as inactive — selection step decides what's active)
     const accountsRes = await fetch(
       `https://graph.facebook.com/v21.0/me/adaccounts?fields=account_id,name,currency,timezone_name,account_status,business{id,name}&limit=200&access_token=${encodeURIComponent(accessToken)}`,
     );
     const accounts = await accountsRes.json();
+    if (!accountsRes.ok) {
+      return json({
+        ok: false,
+        error: "adaccounts_fetch_failed",
+        message: accounts?.error?.message || "Failed to fetch ad accounts from Meta.",
+        connectionId: conn.id,
+        metaUserName: me.name ?? null,
+        grantedScopes,
+        declinedScopes,
+        details: accounts,
+      }, 200);
+    }
     const discovered = (accounts.data ?? []).map((a: any) => ({
       workspace_id: parsed.w,
       connection_id: conn.id,
