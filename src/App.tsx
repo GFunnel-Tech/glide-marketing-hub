@@ -30,6 +30,18 @@ import BillingPage from "./pages/BillingPage";
 import AffiliatePage from "./pages/AffiliatePage";
 import ForecastPage from "./pages/ForecastPage";
 import NotFound from "./pages/NotFound";
+import PortalLayout from "./pages/portal/PortalLayout";
+import PortalAuth from "./pages/portal/PortalAuth";
+import { PortalRoute } from "./pages/portal/PortalRoute";
+import PortalDashboard from "./pages/portal/PortalDashboard";
+import PortalPerformance from "./pages/portal/PortalPerformance";
+import PortalLeads from "./pages/portal/PortalLeads";
+import PortalApprovals from "./pages/portal/PortalApprovals";
+import PortalCreative from "./pages/portal/PortalCreative";
+import PortalDocuments from "./pages/portal/PortalDocuments";
+import PortalBilling from "./pages/portal/PortalBilling";
+import PortalSupport from "./pages/portal/PortalSupport";
+import PortalSettings from "./pages/portal/PortalSettings";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
 import { useConversationsRealtime } from "@/hooks/useMessages";
@@ -57,6 +69,28 @@ const App = () => (
                 <Route path="/auth/meta/callback" element={<MetaCallback />} />
                 <Route path="/client-portal/:id" element={<ClientPortal />} />
                 <Route path="/demo/gfunnel" element={<DemoGfunnel />} />
+
+                {/* EMM Client Portal */}
+                <Route path="/portal/login" element={<PortalAuth />} />
+                <Route
+                  path="/portal"
+                  element={
+                    <PortalRoute>
+                      <PortalLayout />
+                    </PortalRoute>
+                  }
+                >
+                  <Route index element={<PortalDashboard />} />
+                  <Route path="performance" element={<PortalPerformance />} />
+                  <Route path="leads" element={<PortalLeads />} />
+                  <Route path="approvals" element={<PortalApprovals />} />
+                  <Route path="creative" element={<PortalCreative />} />
+                  <Route path="documents" element={<PortalDocuments />} />
+                  <Route path="billing" element={<PortalBilling />} />
+                  <Route path="support" element={<PortalSupport />} />
+                  <Route path="settings" element={<PortalSettings />} />
+                </Route>
+
                 <Route
                   path="/"
                   element={
