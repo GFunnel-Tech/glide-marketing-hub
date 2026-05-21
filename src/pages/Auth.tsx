@@ -143,7 +143,12 @@ export default function Auth() {
             </button>
           </p>
         </Card>
+
+        <div className="mt-6">
+          <MetaScopesStaticBanner />
+        </div>
       </div>
+
     </div>
   );
 }
