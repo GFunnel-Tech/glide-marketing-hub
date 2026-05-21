@@ -694,10 +694,41 @@ export function MetaConnectionsPanel() {
               <LifeBuoy className="h-3 w-3" />
               <span className="ml-1">Troubleshoot</span>
             </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowWizard(true)} title="Step-by-step troubleshooter">
+              <LifeBuoy className="h-3 w-3" />
+              <span className="ml-1">Troubleshoot</span>
+            </Button>
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleResetFailedAndReconnect}
+                    disabled={resettingFailed || connecting || workspaceLoading || !currentWorkspace}
+                    className="border-warning/40 text-warning hover:bg-warning/10"
+                  >
+                    {resettingFailed ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                    <span className="ml-1">
+                      Reset {failedConnections.length > 0 ? `(${failedConnections.length})` : ""} & reconnect
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p className="font-semibold mb-1">One-click cleanup</p>
+                  <ul className="text-xs space-y-0.5 list-disc pl-4">
+                    <li>Deletes every Meta connection not in <span className="font-mono">active</span> status</li>
+                    <li>Opens a fresh Facebook consent screen (forces re-login)</li>
+                    <li>Lets you re-tick every scope from scratch</li>
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button size="sm" variant="outline" onClick={handleSync} disabled={syncing || !connections.length}>
               {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               <span className="ml-1">Sync now</span>
             </Button>
+
             <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
