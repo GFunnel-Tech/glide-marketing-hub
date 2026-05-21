@@ -42,6 +42,8 @@ import PortalDocuments from "./pages/portal/PortalDocuments";
 import PortalBilling from "./pages/portal/PortalBilling";
 import PortalSupport from "./pages/portal/PortalSupport";
 import PortalSettings from "./pages/portal/PortalSettings";
+import PortalAcceptInvite from "./pages/portal/PortalAcceptInvite";
+import PortalOnboarding from "./pages/portal/PortalOnboarding";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
 import { useConversationsRealtime } from "@/hooks/useMessages";
