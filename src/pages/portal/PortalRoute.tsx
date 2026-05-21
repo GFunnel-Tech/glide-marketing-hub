@@ -2,12 +2,14 @@ import { Navigate, useLocation } from "react-router-dom";
 import { ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePortalClient, useActiveOnboarding } from "@/hooks/usePortalClients";
+import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Card } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 
 export function PortalRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const { mappings, activeMapping, activeClientId, isLoading, hasAnyMapping } = usePortalClient();
+  const { data: isSuperAdmin } = useIsSuperAdmin();
   const { data: onboarding, isLoading: onbLoading } = useActiveOnboarding(activeClientId);
   const location = useLocation();
 
