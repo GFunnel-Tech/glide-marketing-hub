@@ -319,14 +319,20 @@ function MetaMapTab({
   clients,
   bmOptions,
   linkMeta,
+  onCreateClient,
+  onCreateAllUnmapped,
 }: {
   metaAccs: MetaAcc[];
   clients: Client[];
   bmOptions: string[];
   linkMeta: (id: string, clientId: number | null) => void;
+  onCreateClient: (acc: MetaAcc) => Promise<void>;
+  onCreateAllUnmapped: () => Promise<void>;
 }) {
   const [bmFilter, setBmFilter] = useState<string>("__all__");
   const [search, setSearch] = useState("");
+  const [creatingId, setCreatingId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const filtered = metaAccs.filter(a => {
     const bm = a.business_name || "No Business Manager";
     if (bmFilter !== "__all__" && bm !== bmFilter) return false;
@@ -338,11 +344,12 @@ function MetaMapTab({
       a.act_id.toLowerCase().includes(q)
     );
   });
+  const unmappedCount = metaAccs.filter(a => !a.client_id).length;
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
         <div className="text-xs text-muted-foreground flex-1 min-w-[200px]">
-          {filtered.length} of {metaAccs.length} ad accounts · {metaAccs.filter(a => a.client_id).length} linked
+          {filtered.length} of {metaAccs.length} ad accounts · {metaAccs.filter(a => a.client_id).length} linked · {unmappedCount} unmapped
           {" · "}{bmOptions.length} BM{bmOptions.length === 1 ? "" : "s"}
         </div>
         <Select value={bmFilter} onValueChange={setBmFilter}>
@@ -358,6 +365,16 @@ function MetaMapTab({
           placeholder="Search…"
           className="h-8 w-48 text-xs"
         />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={bulkBusy || unmappedCount === 0}
+          onClick={async () => { setBulkBusy(true); try { await onCreateAllUnmapped(); } finally { setBulkBusy(false); } }}
+          className="h-8 text-xs"
+        >
+          {bulkBusy ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+          Create clients for all unmapped ({unmappedCount})
+        </Button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
@@ -378,15 +395,33 @@ function MetaMapTab({
                 </td>
                 <td className="py-2 px-2 text-muted-foreground">{acc.business_name || "—"}</td>
                 <td className="py-2 px-2">
-                  <Select
-                    value={acc.client_id?.toString() ?? ""}
-                    onValueChange={(v) => linkMeta(acc.id, v ? parseInt(v) : null)}
-                  >
-                    <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Pick client…" /></SelectTrigger>
-                    <SelectContent>
-                      {clients.map((c) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Select
+                      value={acc.client_id?.toString() ?? ""}
+                      onValueChange={(v) => linkMeta(acc.id, v ? parseInt(v) : null)}
+                    >
+                      <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Pick client…" /></SelectTrigger>
+                      <SelectContent>
+                        {clients.length === 0 && (
+                          <div className="px-2 py-1.5 text-xs text-muted-foreground">No clients yet</div>
+                        )}
+                        {clients.map((c) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    {!acc.client_id && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={creatingId === acc.id}
+                        onClick={async () => { setCreatingId(acc.id); try { await onCreateClient(acc); } finally { setCreatingId(null); } }}
+                        className="h-8 text-xs"
+                        title="Create a new client from this ad account and link it"
+                      >
+                        {creatingId === acc.id ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+                        New client
+                      </Button>
+                    )}
+                  </div>
                 </td>
                 <td className="py-2 px-2 text-right">
                   {acc.client_id && (
@@ -405,4 +440,5 @@ function MetaMapTab({
       </div>
     </div>
   );
+
 }
