@@ -11,6 +11,9 @@ import { Plus, Search } from "lucide-react";
 import { CHANNEL_LABELS, type AdChannel } from "@/lib/adChannels";
 import { cn } from "@/lib/utils";
 import { ObjectivePickerModal } from "@/components/ads/builder/ObjectivePickerModal";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
+
+
 
 export default function Ads() {
   const [channel, setChannel] = useState<AdChannel>("meta");
@@ -24,11 +27,15 @@ export default function Ads() {
           <h1 className="text-2xl font-semibold text-foreground">Ads</h1>
           <p className="text-sm text-muted-foreground">Manage live ads across channels — duplicate winners, scale budgets, edit copy.</p>
         </div>
-        <Button onClick={() => setPickerOpen(true)} disabled={!hasConnection}>
-          <Plus className="h-4 w-4 mr-1.5" /> New ad
-        </Button>
+        <div className="flex items-center gap-2">
+          <DateRangePicker />
+          <Button onClick={() => setPickerOpen(true)} disabled={!hasConnection}>
+            <Plus className="h-4 w-4 mr-1.5" /> New ad
+          </Button>
+        </div>
         <ObjectivePickerModal open={pickerOpen} onOpenChange={setPickerOpen} />
       </div>
+
 
       <Tabs value={channel} onValueChange={(v) => setChannel(v as AdChannel)}>
         <TabsList>
