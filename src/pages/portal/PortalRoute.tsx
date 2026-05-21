@@ -57,6 +57,7 @@ export function PortalRoute({ children }: { children: ReactNode }) {
 
   // Active mapping but onboarding not complete → redirect to onboarding (except when already there)
   if (
+    !isSuperAdmin &&
     activeMapping?.status === "active" &&
     !onbLoading &&
     (!onboarding || !onboarding.completed_at) &&
