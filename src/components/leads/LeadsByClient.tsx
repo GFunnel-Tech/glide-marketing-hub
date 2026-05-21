@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, ChevronRight, Inbox, Mail, Phone, RefreshCw, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Inbox, Mail, Phone, RefreshCw, Loader2, Sparkles } from "lucide-react";
 import { useMetaLeads, type MetaLead } from "@/hooks/useMetaLeads";
 import { useClients } from "@/hooks/useDatabase";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLeadScoreIndex, useComputeLeadScores, type LeadGrade } from "@/hooks/useLeadScores";
+import { LeadGradeBadge } from "./LeadGradeBadge";
 
 interface Props {
   /** When set, only this client's group is shown and is auto-expanded. */
