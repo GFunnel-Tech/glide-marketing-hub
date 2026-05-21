@@ -573,6 +573,48 @@ export type Database = {
           },
         ]
       }
+      client_status_phases: {
+        Row: {
+          auto_managed: boolean
+          color: string
+          created_at: string
+          enabled: boolean
+          id: string
+          label: string
+          sort_order: number
+          status_key: string
+          updated_at: string
+          webhook_url: string | null
+          workspace_id: string
+        }
+        Insert: {
+          auto_managed?: boolean
+          color?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label: string
+          sort_order?: number
+          status_key: string
+          updated_at?: string
+          webhook_url?: string | null
+          workspace_id: string
+        }
+        Update: {
+          auto_managed?: boolean
+          color?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string
+          sort_order?: number
+          status_key?: string
+          updated_at?: string
+          webhook_url?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       client_wallets: {
         Row: {
           auto_topup_enabled: boolean
@@ -637,6 +679,7 @@ export type Database = {
           ghl_location_id: string | null
           id: number
           last_audit: string | null
+          launched_at: string | null
           leads: number
           name: string
           plai_connected: boolean
@@ -663,6 +706,7 @@ export type Database = {
           ghl_location_id?: string | null
           id?: number
           last_audit?: string | null
+          launched_at?: string | null
           leads?: number
           name: string
           plai_connected?: boolean
@@ -689,6 +733,7 @@ export type Database = {
           ghl_location_id?: string | null
           id?: number
           last_audit?: string | null
+          launched_at?: string | null
           leads?: number
           name?: string
           plai_connected?: boolean
@@ -2553,6 +2598,10 @@ export type Database = {
         Returns: number
       }
       resolve_client_kpi_config: { Args: { _client_id: number }; Returns: Json }
+      seed_default_status_phases: {
+        Args: { _workspace_id: string }
+        Returns: undefined
+      }
       workspace_role_of: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: Database["public"]["Enums"]["workspace_role"]
@@ -2570,6 +2619,11 @@ export type Database = {
         | "NEW"
         | "LAUNCHING"
         | "RELAUNCH"
+        | "PENDING_APPROVAL"
+        | "SETUP_COMPLETE"
+        | "LEARNING"
+        | "PENDING_CANCELLATION"
+        | "CANCELLED"
       lead_stage: "intake" | "in_progress" | "converted"
       rebill_assignment_level: "account" | "campaign" | "adset" | "ad"
       rebill_cadence: "monthly" | "weekly" | "custom"
@@ -2721,6 +2775,11 @@ export const Constants = {
         "NEW",
         "LAUNCHING",
         "RELAUNCH",
+        "PENDING_APPROVAL",
+        "SETUP_COMPLETE",
+        "LEARNING",
+        "PENDING_CANCELLATION",
+        "CANCELLED",
       ],
       lead_stage: ["intake", "in_progress", "converted"],
       rebill_assignment_level: ["account", "campaign", "adset", "ad"],
