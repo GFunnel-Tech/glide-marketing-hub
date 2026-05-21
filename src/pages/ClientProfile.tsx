@@ -5,6 +5,8 @@ import { cplTrendData, pipelineData, auditResults } from "@/data/mockData";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, ExternalLink, RefreshCw, Pencil, AlertTriangle, CheckCircle, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
+
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -105,7 +107,8 @@ export default function ClientProfile() {
           </div>
           <p className="text-xs text-muted-foreground mt-1">${client.spend.toLocaleString()} spend · Last synced just now</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <DateRangePicker />
           <button className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent transition-colors"><Pencil className="h-3.5 w-3.5 inline mr-1" />Edit</button>
           <button onClick={() => handleAction("Audit", () => api.runAudit(String(client.id)))} className="rounded-lg bg-purple px-3 py-2 text-sm text-purple-foreground hover:bg-purple/90 transition-colors">
             {loading === "Audit" ? <Loader2 className="h-4 w-4 animate-spin inline mr-1" /> : null}Run Audit
@@ -113,6 +116,7 @@ export default function ClientProfile() {
           <button onClick={() => handleAction("Sync", () => api.syncMetaAds(String(client.id)))} className="rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90 transition-colors">
             <RefreshCw className="h-3.5 w-3.5 inline mr-1" />Sync Now
           </button>
+
         </div>
       </div>
 

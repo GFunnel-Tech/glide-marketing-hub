@@ -6,6 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, CheckCircle2, Calendar, Bot, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
+
+
 
 function KpiCard({ label, value, delta, sublabel }: { label: string; value: string; delta?: number; sublabel?: string }) {
   return (
@@ -65,12 +68,16 @@ export default function PortalDashboard() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-semibold">
-          {client ? `Welcome back, ${client.name.split(" ")[0]}` : "Welcome"}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">Here's what's happening with your account today.</p>
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold">
+            {client ? `Welcome back, ${client.name.split(" ")[0]}` : "Welcome"}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Here's what's happening with your account today.</p>
+        </div>
+        <DateRangePicker />
       </div>
+
 
       <StatusBanner status={client?.status} />
 

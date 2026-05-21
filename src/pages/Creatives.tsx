@@ -11,6 +11,8 @@ import { ClassificationSettings } from "@/components/creatives/ClassificationSet
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sparkles, AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
+
 
 type StatusFilter = "all" | "best" | "worst" | "learning";
 
@@ -51,12 +53,16 @@ export default function Creatives() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Creatives</h1>
-        <p className="text-sm text-muted-foreground">
-          See which ads, headlines, copy, and audiences are winning — broken down so you can replicate them.
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Creatives</h1>
+          <p className="text-sm text-muted-foreground">
+            See which ads, headlines, copy, and audiences are winning — broken down so you can replicate them.
+          </p>
+        </div>
+        <DateRangePicker />
       </div>
+
 
       <div className="flex flex-wrap items-center gap-3">
         <select
