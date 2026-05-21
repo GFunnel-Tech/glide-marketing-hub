@@ -26,6 +26,9 @@ export function PortalRoute({ children }: { children: ReactNode }) {
   }
 
   if (!hasAnyMapping) {
+    if (isSuperAdmin) {
+      return <>{children}</>;
+    }
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background p-6 text-center">
         <h1 className="text-xl font-semibold text-foreground">No portal access yet</h1>
