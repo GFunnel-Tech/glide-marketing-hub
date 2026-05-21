@@ -70,8 +70,17 @@ const App = () => (
                 <Route path="/client-portal/:id" element={<ClientPortal />} />
                 <Route path="/demo/gfunnel" element={<DemoGfunnel />} />
 
-                {/* EMM Client Portal */}
+                {/* Client Portal */}
                 <Route path="/portal/login" element={<PortalAuth />} />
+                <Route path="/portal/accept" element={<PortalAcceptInvite />} />
+                <Route
+                  path="/portal/onboarding"
+                  element={
+                    <PortalRoute>
+                      <PortalOnboarding />
+                    </PortalRoute>
+                  }
+                />
                 <Route
                   path="/portal"
                   element={
