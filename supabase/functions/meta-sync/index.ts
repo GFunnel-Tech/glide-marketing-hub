@@ -15,9 +15,11 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let workspaceFilter: string | null = null;
+  let includeDetails = false;
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
+    includeDetails = body.includeDetails === true;
   }
 
   const admin = createClient(
@@ -66,8 +68,7 @@ Deno.serve(async (req) => {
         ].join(",");
         const url = `https://graph.facebook.com/v21.0/${acc.act_id}/insights?fields=${fields}&time_increment=1&date_preset=last_30d&level=account&limit=500&access_token=${encodeURIComponent(conn.access_token)}`;
 
-        const res = await fetch(url);
-        const json_ = await res.json();
+        const { res, json: json_ } = await fetchJsonWithTimeout(url);
         if (!res.ok) throw new Error(JSON.stringify(json_));
 
         const rows = (json_.data ?? []).map((d: any) => {
@@ -104,12 +105,16 @@ Deno.serve(async (req) => {
         }
 
         // ---- Granular daily insights (campaign + adset + ad) ----
-        const granularRows = await syncGranularInsights(admin, acc, conn.access_token);
+        // The bulk workspace sync must finish quickly so account analytics
+        // populate reliably. Detailed creative/ad scans are intentionally opt-in.
+        const granularRows = includeDetails ? await syncGranularInsights(admin, acc, conn.access_token) : 0;
 
         // ---- Ad-level creatives + 30d performance (for the Creatives page) ----
         let adRows = 0;
-        try { adRows = await syncAds(admin, acc, conn.access_token); }
-        catch (e) { errors.push({ account: acc.act_id, scope: "ads", error: String(e) }); }
+        if (includeDetails) {
+          try { adRows = await syncAds(admin, acc, conn.access_token); }
+          catch (e) { errors.push({ account: acc.act_id, scope: "ads", error: String(e) }); }
+        }
 
         await admin.from("meta_ad_accounts")
           .update({ last_synced_at: new Date().toISOString() })
@@ -283,6 +288,18 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+async function fetchJsonWithTimeout(url: string, timeoutMs = 15_000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    const json = await res.json();
+    return { res, json };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function syncGranularInsights(admin: any, acc: any, accessToken: string): Promise<number> {
