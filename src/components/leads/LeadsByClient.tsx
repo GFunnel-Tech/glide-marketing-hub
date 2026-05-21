@@ -93,21 +93,45 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
   return (
     <div className="rounded-lg border border-border bg-card">
       {!hideHeader && (
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border">
           <div>
             <h3 className="text-sm font-semibold text-foreground">Leads from Meta</h3>
             <p className="text-xs text-muted-foreground">
               {leads.length} lead{leads.length === 1 ? "" : "s"} · grouped by client · newest first
             </p>
           </div>
-          <button
-            onClick={syncNow}
-            disabled={syncing}
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
-          >
-            {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            Sync leads
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-md border border-border p-0.5">
+              {(["ALL","A","B","C","D"] as const).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGradeFilter(g)}
+                  className={cn(
+                    "px-2 py-1 text-[10px] font-semibold rounded-sm transition-colors",
+                    gradeFilter === g ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={scoreNow}
+              disabled={scoreMutation.isPending}
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
+            >
+              {scoreMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              Score leads
+            </button>
+            <button
+              onClick={syncNow}
+              disabled={syncing}
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
+            >
+              {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              Sync leads
+            </button>
+          </div>
         </div>
       )}
 
