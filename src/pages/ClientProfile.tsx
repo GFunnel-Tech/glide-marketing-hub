@@ -352,8 +352,14 @@ export default function ClientProfile() {
               <p className="text-xs text-muted-foreground italic">No activity logged yet</p>
             )}
           </div>
-        </div>
       </div>
+
+      <ClientInvitesPanel
+        clientId={client.id}
+        workspaceId={(client as any).workspace_id ?? null}
+        clientName={client.name}
+      />
+
 
       <AlertDialog open={showPause} onOpenChange={setShowPause}>
         <AlertDialogContent>
