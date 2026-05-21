@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
-import { Lock } from "lucide-react";
+import { Lock, Sparkles, Rocket, RefreshCw } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-type Status = "GREEN" | "YELLOW" | "RED" | "BLOCKED";
+export type Status = "GREEN" | "YELLOW" | "RED" | "BLOCKED" | "NEW" | "LAUNCHING" | "RELAUNCH";
 
 const statusConfig: Record<Status, { label: string; className: string; tooltip: string }> = {
   GREEN: {
@@ -25,10 +25,31 @@ const statusConfig: Record<Status, { label: string; className: string; tooltip: 
     className: "bg-muted text-muted-foreground border-border",
     tooltip: "Account blocked — cannot run campaigns",
   },
+  NEW: {
+    label: "NEW",
+    className: "bg-primary/15 text-primary border-primary/30",
+    tooltip: "Newly added — not yet launched",
+  },
+  LAUNCHING: {
+    label: "LAUNCHING",
+    className: "bg-purple/15 text-purple border-purple/30",
+    tooltip: "Launching — first campaign being set up",
+  },
+  RELAUNCH: {
+    label: "RELAUNCH",
+    className: "bg-accent text-accent-foreground border-border",
+    tooltip: "Relaunching — campaign is being restarted",
+  },
 };
 
 export function StatusBadge({ status }: { status: Status }) {
-  const config = statusConfig[status];
+  const config = statusConfig[status] ?? statusConfig.GREEN;
+  const Icon =
+    status === "BLOCKED" ? Lock
+    : status === "NEW" ? Sparkles
+    : status === "LAUNCHING" ? Rocket
+    : status === "RELAUNCH" ? RefreshCw
+    : null;
   return (
     <Tooltip>
       <TooltipTrigger>
@@ -38,7 +59,7 @@ export function StatusBadge({ status }: { status: Status }) {
             config.className
           )}
         >
-          {status === "BLOCKED" && <Lock className="h-3 w-3" />}
+          {Icon && <Icon className="h-3 w-3" />}
           {config.label}
         </span>
       </TooltipTrigger>
@@ -46,3 +67,4 @@ export function StatusBadge({ status }: { status: Status }) {
     </Tooltip>
   );
 }
+
