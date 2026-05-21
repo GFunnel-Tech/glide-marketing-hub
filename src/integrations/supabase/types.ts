@@ -1722,6 +1722,75 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_oauth_events: {
+        Row: {
+          connection_id: string | null
+          correlation_id: string
+          created_at: string
+          declined_scopes: string[] | null
+          details: Json | null
+          error_code: string | null
+          error_message: string | null
+          granted_scopes: string[] | null
+          http_status: number | null
+          id: string
+          meta_user_name: string | null
+          outcome: string
+          step: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          connection_id?: string | null
+          correlation_id: string
+          created_at?: string
+          declined_scopes?: string[] | null
+          details?: Json | null
+          error_code?: string | null
+          error_message?: string | null
+          granted_scopes?: string[] | null
+          http_status?: number | null
+          id?: string
+          meta_user_name?: string | null
+          outcome: string
+          step: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          connection_id?: string | null
+          correlation_id?: string
+          created_at?: string
+          declined_scopes?: string[] | null
+          details?: Json | null
+          error_code?: string | null
+          error_message?: string | null
+          granted_scopes?: string[] | null
+          http_status?: number | null
+          id?: string
+          meta_user_name?: string | null
+          outcome?: string
+          step?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_oauth_events_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "meta_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_oauth_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_sync_log: {
         Row: {
           ad_account_id: string | null
