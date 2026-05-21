@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, ChevronRight, Inbox, Mail, Phone, RefreshCw, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Inbox, Mail, Phone, RefreshCw, Loader2, Sparkles } from "lucide-react";
 import { useMetaLeads, type MetaLead } from "@/hooks/useMetaLeads";
 import { useClients } from "@/hooks/useDatabase";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLeadScoreIndex, useComputeLeadScores, type LeadGrade } from "@/hooks/useLeadScores";
+import { LeadGradeBadge } from "./LeadGradeBadge";
 
 interface Props {
   /** When set, only this client's group is shown and is auto-expanded. */
@@ -28,10 +30,14 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
   const qc = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [gradeFilter, setGradeFilter] = useState<LeadGrade | "ALL">("ALL");
+  const { index: scoreIndex } = useLeadScoreIndex(clientId);
+  const scoreMutation = useComputeLeadScores();
 
   const grouped = useMemo(() => {
+    const source = gradeFilter === "ALL" ? leads : leads.filter((l) => scoreIndex.get(`meta:${l.lead_id}`)?.grade === gradeFilter);
     const map = new Map<string, { clientId: number | null; clientName: string; leads: MetaLead[] }>();
-    for (const l of leads) {
+    for (const l of source) {
       const key = String(l.client_id ?? "unmapped");
       const c = clients.find((x) => x.id === l.client_id);
       if (!map.has(key)) {
@@ -44,7 +50,7 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
       map.get(key)!.leads.push(l);
     }
     return Array.from(map.values()).sort((a, b) => b.leads.length - a.leads.length);
-  }, [leads, clients]);
+  }, [leads, clients, gradeFilter, scoreIndex]);
 
   const toggle = (k: string) =>
     setExpanded((e) => ({ ...e, [k]: !(k in e ? e[k] : !!clientId) }));
@@ -59,6 +65,10 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
       if (error) throw error;
       toast.success(`Synced ${data?.leadsSynced ?? 0} leads`);
       qc.invalidateQueries({ queryKey: ["meta_leads"] });
+      // Auto-score newly synced leads
+      scoreMutation.mutate(undefined, {
+        onSuccess: (r) => r.scored && toast.success(`Scored ${r.scored} leads`),
+      });
     } catch (e: any) {
       toast.error(e.message || "Sync failed");
     } finally {
@@ -66,26 +76,62 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
     }
   };
 
+  const scoreNow = () => {
+    scoreMutation.mutate(undefined, {
+      onSuccess: (r) => toast.success(`Scored ${r.scored} of ${r.attempted} leads`),
+      onError: (e: any) => toast.error(e.message || "Scoring failed"),
+    });
+  };
+
+  const filteredLeads = useMemo(() => {
+    if (gradeFilter === "ALL") return leads;
+    return leads.filter((l) => scoreIndex.get(`meta:${l.lead_id}`)?.grade === gradeFilter);
+  }, [leads, gradeFilter, scoreIndex]);
+
   const limit = compact ? 5 : 50;
 
   return (
     <div className="rounded-lg border border-border bg-card">
       {!hideHeader && (
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border">
           <div>
             <h3 className="text-sm font-semibold text-foreground">Leads from Meta</h3>
             <p className="text-xs text-muted-foreground">
               {leads.length} lead{leads.length === 1 ? "" : "s"} · grouped by client · newest first
             </p>
           </div>
-          <button
-            onClick={syncNow}
-            disabled={syncing}
-            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
-          >
-            {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            Sync leads
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-md border border-border p-0.5">
+              {(["ALL","A","B","C","D"] as const).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGradeFilter(g)}
+                  className={cn(
+                    "px-2 py-1 text-[10px] font-semibold rounded-sm transition-colors",
+                    gradeFilter === g ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={scoreNow}
+              disabled={scoreMutation.isPending}
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
+            >
+              {scoreMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              Score leads
+            </button>
+            <button
+              onClick={syncNow}
+              disabled={syncing}
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
+            >
+              {syncing ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              Sync leads
+            </button>
+          </div>
         </div>
       )}
 
@@ -139,6 +185,7 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
                         <thead className="bg-muted/40 text-xs text-muted-foreground">
                           <tr>
                             <th className="text-left font-medium px-3 py-2">Date</th>
+                            <th className="text-left font-medium px-3 py-2">Quality</th>
                             <th className="text-left font-medium px-3 py-2">Name</th>
                             <th className="text-left font-medium px-3 py-2">Contact</th>
                             <th className="text-left font-medium px-3 py-2">Form</th>
@@ -146,21 +193,25 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
                           </tr>
                         </thead>
                         <tbody>
-                          {visible.map((l) => (
-                            <tr key={l.id} className="border-t border-border hover:bg-accent/30">
-                              <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDate(l.created_time)}</td>
-                              <td className="px-3 py-2 font-medium text-foreground">{l.full_name || "—"}</td>
-                              <td className="px-3 py-2 text-muted-foreground">
-                                <div className="flex flex-col gap-0.5">
-                                  {l.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{l.email}</span>}
-                                  {l.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{l.phone}</span>}
-                                  {!l.email && !l.phone && "—"}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2 text-muted-foreground">{l.form_name || "—"}</td>
-                              {!compact && <td className="px-3 py-2 text-muted-foreground">{l.campaign_name || "—"}</td>}
-                            </tr>
-                          ))}
+                          {visible.map((l) => {
+                            const s = scoreIndex.get(`meta:${l.lead_id}`);
+                            return (
+                              <tr key={l.id} className="border-t border-border hover:bg-accent/30">
+                                <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDate(l.created_time)}</td>
+                                <td className="px-3 py-2"><LeadGradeBadge grade={s?.grade} score={s?.score} showScore /></td>
+                                <td className="px-3 py-2 font-medium text-foreground">{l.full_name || "—"}</td>
+                                <td className="px-3 py-2 text-muted-foreground">
+                                  <div className="flex flex-col gap-0.5">
+                                    {l.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{l.email}</span>}
+                                    {l.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{l.phone}</span>}
+                                    {!l.email && !l.phone && "—"}
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 text-muted-foreground">{l.form_name || "—"}</td>
+                                {!compact && <td className="px-3 py-2 text-muted-foreground">{l.campaign_name || "—"}</td>}
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                       {g.leads.length > limit && (
