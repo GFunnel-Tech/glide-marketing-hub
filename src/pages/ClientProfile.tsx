@@ -352,7 +352,9 @@ export default function ClientProfile() {
               <p className="text-xs text-muted-foreground italic">No activity logged yet</p>
             )}
           </div>
+        </div>
       </div>
+
 
       <ClientInvitesPanel
         clientId={client.id}
