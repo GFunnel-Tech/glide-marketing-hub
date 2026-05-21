@@ -83,6 +83,20 @@ Deno.serve(async (req) => {
       finished_at: new Date().toISOString(),
     });
 
+    if (toActivate.length) {
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const syncPromise = fetch(`${supabaseUrl}/functions/v1/meta-sync`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ workspaceId: conn.workspace_id }),
+      }).catch((error) => console.error("Failed to start Meta sync", error));
+      (globalThis as any).EdgeRuntime?.waitUntil?.(syncPromise);
+    }
+
     return json({
       ok: true,
       activated: toActivate.length,
