@@ -582,7 +582,7 @@ export function MetaConnectionsPanel() {
   const [newClientName, setNewClientName] = useState("");
   const [newClientBrand, setNewClientBrand] = useState("");
   const [newClientStatus, setNewClientStatus] = useState<"GREEN" | "YELLOW" | "RED">("GREEN");
-  const [newClientBmType, setNewClientBmType] = useState<"Agency BM" | "Client BM">("Agency BM");
+  const [newClientBmType, setNewClientBmType] = useState<"Agency BM" | "Own BM">("Agency BM");
 
   const openCreateClientDialog = (a: MetaAdAccount) => {
     const suggested = a.business_name || a.account_name || a.act_id;
