@@ -1,95 +1,74 @@
+# GoHighLevel Sync — Implementation Plan
 
-# Scheduled Reports & Client Communications
+Build agency-level OAuth + webhooks + scheduled reconciliation so every sub-account's contacts, pipeline stages, and appointments flow into Lovable, and lead status changes push back to GHL.
 
-A two-pillar system bolted onto the existing client/workspace model:
+## Prerequisites you'll do once in GHL Marketplace
 
-1. **Reports** — staff-configurable, schedulable performance digests that get emailed (HTML inline + PDF link), can be sent on-demand, opened as a live shareable link, and archived in the Client Portal.
-2. **Communications** — structured request workflows (content update, video brief, script approval, generic announcement) that fan out to email, in-app portal notifications, and internal staff tasks.
+1. Create an **Agency-level Marketplace App** (Settings → Marketplace → My Apps).
+2. Scopes to enable: `contacts.readonly`, `contacts.write`, `opportunities.readonly`, `opportunities.write`, `calendars/events.readonly`, `locations.readonly`, `users.readonly`, `oauth.readonly`, `oauth.write`.
+3. Redirect URI: `https://kkuvdoejqruszisyojap.supabase.co/functions/v1/ghl-oauth-callback`
+4. Webhook URL (for events): `https://kkuvdoejqruszisyojap.supabase.co/functions/v1/ghl-webhook`
+5. Give me the **Client ID** and **Client Secret** — I'll store them as secrets.
 
-Phased so you get something usable end of phase 1.
+## Database changes (one migration)
 
-## Phase 1 — Reports (the core deliverable)
+- **`ghl_installs`** — one row per installed location: `location_id`, `company_id`, `client_id` (FK), `workspace_id`, `access_token`, `refresh_token`, `token_expires_at`, `scopes[]`, `status`, `installed_by`, timestamps.
+- **`ghl_opportunities`** — `id` (GHL id), `location_id`, `client_id`, `contact_id`, `pipeline_id`, `pipeline_name`, `stage_id`, `stage_name`, `status`, `monetary_value`, `assigned_to`, `created_at`, `updated_at`, `raw`.
+- **`ghl_appointments`** — `id` (GHL id), `location_id`, `client_id`, `contact_id`, `calendar_id`, `title`, `start_time`, `end_time`, `status` (booked/showed/no-show/cancelled), `assigned_to`, `raw`.
+- **`ghl_sync_state`** — per `location_id`: `last_contacts_sync_at`, `last_opps_sync_at`, `last_appts_sync_at`, `last_error`, `last_run_at`.
+- **`ghl_webhook_events`** — raw inbound webhook log (`id`, `type`, `location_id`, `payload`, `processed_at`, `error`).
+- Add `ghl_contact_id` column to `leads` and `meta_leads` to dedupe.
+- RLS: workspace members read/write their own; portal users read their client's data only.
 
-### Data model
-- `report_templates` — reusable report definitions per workspace (name, sections enabled: kpis / leads / creative / commentary, date_range_preset, branding overrides).
-- `client_report_schedules` — links a template to a client + cadence (daily/weekly/monthly + day/time + timezone), recipient list, active flag, next_run_at.
-- `client_reports` — generated report instances (client_id, template_id, period_start/end, payload JSONB snapshot, pdf_url, share_token, status: queued/generating/ready/sent/failed, email_message_id).
-- `report_recipients` — embedded as JSONB on schedule (email + name + role) — no separate table needed.
+## Edge functions
 
-All workspace-scoped with the standard `is_workspace_member` / `can_write_workspace` RLS pattern. Public read on `client_reports` only via `share_token` (separate policy keyed on token presence) so the live link works without auth.
+| Function | Purpose |
+|---|---|
+| `ghl-oauth-start` | Builds GHL authorize URL (agency-level), stores CSRF state, returns redirect URL. Triggered from "Connect GoHighLevel" button on Client Profile or Settings. |
+| `ghl-oauth-callback` | Exchanges code → tokens, fetches installed locations, upserts one `ghl_installs` row per location, auto-maps to clients by `ghl_location_id` when set. |
+| `ghl-webhook` | Public endpoint. Verifies signature, logs to `ghl_webhook_events`, dispatches by type: ContactCreate/Update → upsert lead; OpportunityCreate/StatusUpdate → upsert opportunity + update lead stage; AppointmentCreate/Update → upsert appointment. |
+| `ghl-sync` | Scheduled reconciliation. For each install: pull contacts/opps/appointments updated since `last_*_sync_at`, refresh token if needed, update `ghl_sync_state`. |
+| `ghl-push-lead-update` | Called from app when a user changes lead stage/notes. Maps internal stage → GHL pipeline stage and PATCHes the opportunity. |
+| `ghl-token-refresh` | Helper invoked by other functions when token within 5 min of expiry. |
 
-### Generation pipeline
-- Edge function `generate-client-report`: takes `{ scheduleId? , clientId, templateId, periodStart, periodEnd, triggeredBy }`, pulls KPIs from `campaigns` / `meta_insights_daily`, leads from `meta_leads`/`google_leads`/`linkedin_leads`/`manual_leads`, top ads from `meta_ads`, stitches the JSONB payload, renders PDF (puppeteer-less: use `npm:@react-pdf/renderer` in Deno), uploads to a new public `client-reports` storage bucket, writes `client_reports` row, returns share URL + payload.
-- Edge function `send-client-report`: takes a `client_reports.id`, renders the React Email template (inline KPI cards + commentary + "View full report" button → share link + PDF download link), calls `send-transactional-email` per recipient with one `idempotencyKey` per (report, recipient), marks the row `sent`.
-- Edge function `run-scheduled-reports`: pg_cron-driven dispatcher that finds `client_report_schedules` where `next_run_at <= now() AND active`, kicks off `generate-client-report` then `send-client-report`, advances `next_run_at` using the cadence.
-- pg_cron job runs every 5 min.
+All functions: CORS headers, Zod input validation, structured logging with correlation IDs, `verify_jwt = false` only on `ghl-webhook` and `ghl-oauth-callback`.
 
-### UI
-- **Staff: `/reports` page** gets two tabs:
-  - *Templates* — list + create/edit modal (name, sections toggles, period preset, commentary text supporting `{{client_name}}`/`{{period}}` tokens).
-  - *Schedules* — per-client schedule list with Run-now, Pause, Edit recipients.
-- **Client profile** gets a "Reports" tab: schedule for this client, history of generated reports (status, sent date, link to view, resend button), and an "Add commentary" inline editor on draft reports before they auto-send.
-- **Public share page** `/r/:shareToken` — branded, no-auth, mirrors the email content with charts (Recharts). Locks down to read-only.
-- **Client Portal** gets a "Reports" card listing all `client_reports` for the linked client where status=sent. Opens the same share page inside the portal shell.
+## Scheduling
 
-### Email
-- New React Email template `client-performance-report` in `_shared/transactional-email-templates/` with KPI tiles, top-ads strip, commentary block, and the share-link CTA. All dynamic data via props.
-- Requires Lovable Email infrastructure — I'll set that up first if it isn't already (this is the only "intermediary" step; I'll continue straight through).
+`pg_cron` + `pg_net` job: invoke `ghl-sync` every 15 minutes. Inserted via the insert tool (not migration) since it contains the project ref.
 
-## Phase 2 — Communications
+## UI changes
 
-### Data model
-- `client_communications` — type (`content_update` | `video_request` | `script_approval` | `announcement`), client_id, created_by, subject, body (markdown), payload JSONB (type-specific: e.g. script text, video brief fields, due date, attachments URLs), status (`draft`/`sent`/`acknowledged`/`approved`/`changes_requested`/`completed`), channels[] (email/portal/internal_task), created_at, due_at.
-- `client_communication_recipients` — per-recipient delivery row (email or portal_user_id, channel, status: queued/delivered/opened/responded, email_message_id, responded_at, response_payload JSONB for approvals).
-- `client_communication_tasks` — internal task rows when "internal_task" channel selected (assignee_user_id, status, linked back to communication).
+- **Client Profile** → new `GhlConnectionPanel`:
+  - If no install for client's `ghl_location_id`: "Connect GoHighLevel" → opens OAuth in new tab.
+  - If installed: green status, last sync timestamp, "Sync now" button, "Disconnect".
+  - Recent webhook events table (last 10).
+- **Leads page** → new column "GHL stage" + filter by pipeline.
+- **Lead detail drawer** → "Bookings" section listing `ghl_appointments` for that contact.
+- **Settings → Integrations** → agency-wide install management (list of all installed locations, map unmapped ones to clients).
+- **Portal dashboard** → "Bookings (MTD)" KPI wired to `ghl_appointments`.
 
-### Workflow per type
-- **Content update**: composer with structured fields (what to change, why, deadline). Channel default: portal notification + internal task; email optional.
-- **Video request**: brief form (concept, length, target hook, due date, reference URLs). Channel: email to client + internal task for video team. Status tracks production.
-- **Script approval**: paste/upload script, set "needs approval by" recipients. Portal shows Approve / Request changes buttons; result writes to `response_payload` and bumps comm status. Email contains the script preview + approve link to the portal.
-- **Announcement**: free-form composer, multi-recipient, email + portal.
+## Two-way push
 
-### UI
-- **Staff: new `/communications` page** (also reachable from client profile as a "Comms" tab) with:
-  - List view filtered by client/type/status.
-  - "New communication" wizard: pick type → fill type-specific form → choose recipients → preview email → send.
-  - Detail view showing per-recipient delivery status + responses (approvals etc.).
-- **Client Portal**: new "Updates" section listing communications targeted at that client. Content-update items show a read receipt. Script-approval items show inline Approve / Request changes with a textarea. Video requests show status.
-- **Agency Dashboard**: internal tasks generated by communications surface in a "Comms tasks" widget; clicking opens the communication detail.
+When a user updates lead `stage` in Leads page or drawer:
+1. Frontend calls `ghl-push-lead-update` with `lead_id` + new stage.
+2. Function looks up the linked `ghl_contact_id` and active opportunity, maps to a configured GHL pipeline/stage, PATCHes via GHL API.
+3. Logs to `activity_log` with success/failure.
 
-### Email
-- One template per type (`content-update-notice`, `video-request-brief`, `script-approval-request`, `client-announcement`), each with a "Open in portal" CTA.
-- Approval/response actions happen in the portal (no email-link voting) so we don't need signed action tokens in phase 2 — keeps the surface small.
+A small mapping table (`ghl_stage_map`) lets each client configure: internal stage → GHL pipeline_id + stage_id.
 
-## Technical details
+## Open question I need from you
 
-- **PDF rendering**: `@react-pdf/renderer` via `npm:` specifier in the Deno edge function. Same React component is reused for the email HTML (via `@react-email/components`) and the live share page (regular React in the SPA) — three renderers, one data payload.
-- **Cron**: single pg_cron job hitting `run-scheduled-reports` every 5 min via `net.http_post` (uses the schedule-jobs pattern — inserted via the insert tool with the project URL + anon key, not a migration).
-- **Storage**: new public bucket `client-reports` for PDFs; share tokens are random 32-char strings, not enumerable.
-- **Realtime**: enable Realtime on `client_reports` and `client_communications` so the staff list and client portal update without refresh, matching the existing pattern.
-- **Adapters**: extend `useDatabase.ts` adapters for the new snake_case → camelCase mappings.
-- **Permissions**:
-  - Staff (`owner`/`admin`/`member`) can CRUD templates, schedules, communications for clients in their workspace.
-  - Client portal users see only `client_reports` and `client_communications` for their linked client(s), via existing portal-user → client mapping.
-  - Share-link page bypasses auth using `share_token` match only.
-- **Security**: all type-specific JSONB validated server-side in the edge functions with Zod before insert/send. No raw HTML in commentary — markdown → sanitized HTML via `marked` + DOMPurify equivalent (sanitize-html in the edge function, React-safe rendering on the client).
+What you call "leads" in Lovable can map to either GHL **Contacts** or **Opportunities**. Best practice:
+- Inbound = create/update Contact + Opportunity in default pipeline.
+- Stage changes here = move the Opportunity, not the Contact.
 
-## Out of scope (call out so we don't scope-creep)
+I'll default to that unless you say otherwise.
 
-- SMS/WhatsApp delivery
-- Marketing-style bulk sends (blocked by policy anyway)
-- Granular per-section permissions on reports (everyone in a workspace sees all templates)
-- A/B testing communications
-- Calendar invites for video shoot dates
+## After you approve
 
-## Suggested build order
-
-1. Lovable Email infra + transactional scaffolding (if not yet set up).
-2. Reports DB + storage bucket + RLS.
-3. `generate-client-report` + `send-client-report` + email template + share page.
-4. Staff Templates/Schedules UI + Client profile Reports tab + Client portal Reports card.
-5. pg_cron dispatcher.
-6. Communications DB + RLS + realtime.
-7. Communications composer + per-type forms + portal Updates section + internal task widget + 4 email templates.
-
-Want me to proceed with this plan, or trim/reorder anything (e.g. ship reports first as v1 and tackle comms in a follow-up)?
+1. I'll ask you to add `GHL_CLIENT_ID` and `GHL_CLIENT_SECRET` as secrets.
+2. Run the migration.
+3. Ship all 6 edge functions + cron.
+4. Ship the UI.
+5. We test by installing into one sub-account and watching webhooks land.

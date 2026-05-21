@@ -868,6 +868,117 @@ export type Database = {
         }
         Relationships: []
       }
+      ghl_appointments: {
+        Row: {
+          assigned_to: string | null
+          calendar_id: string | null
+          client_id: number | null
+          contact_id: string | null
+          created_at: string | null
+          end_time: string | null
+          id: string
+          location_id: string
+          raw: Json | null
+          start_time: string | null
+          status: string | null
+          synced_at: string
+          title: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          calendar_id?: string | null
+          client_id?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          end_time?: string | null
+          id: string
+          location_id: string
+          raw?: Json | null
+          start_time?: string | null
+          status?: string | null
+          synced_at?: string
+          title?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          calendar_id?: string | null
+          client_id?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          end_time?: string | null
+          id?: string
+          location_id?: string
+          raw?: Json | null
+          start_time?: string | null
+          status?: string | null
+          synced_at?: string
+          title?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      ghl_installs: {
+        Row: {
+          access_token: string
+          client_id: number | null
+          company_id: string | null
+          created_at: string
+          id: string
+          installed_by: string | null
+          last_error: string | null
+          location_id: string
+          location_name: string | null
+          refresh_token: string
+          scopes: string[]
+          status: string
+          token_expires_at: string
+          updated_at: string
+          user_type: string | null
+          workspace_id: string
+        }
+        Insert: {
+          access_token: string
+          client_id?: number | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          installed_by?: string | null
+          last_error?: string | null
+          location_id: string
+          location_name?: string | null
+          refresh_token: string
+          scopes?: string[]
+          status?: string
+          token_expires_at: string
+          updated_at?: string
+          user_type?: string | null
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string
+          client_id?: number | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          installed_by?: string | null
+          last_error?: string | null
+          location_id?: string
+          location_name?: string | null
+          refresh_token?: string
+          scopes?: string[]
+          status?: string
+          token_expires_at?: string
+          updated_at?: string
+          user_type?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       ghl_locations: {
         Row: {
           address: string | null
@@ -907,6 +1018,210 @@ export type Database = {
           timezone?: string | null
           updated_at?: string
           workspace_id?: string
+        }
+        Relationships: []
+      }
+      ghl_oauth_states: {
+        Row: {
+          client_id: number | null
+          created_at: string
+          expires_at: string
+          redirect_to: string | null
+          state: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          created_at?: string
+          expires_at?: string
+          redirect_to?: string | null
+          state: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          created_at?: string
+          expires_at?: string
+          redirect_to?: string | null
+          state?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      ghl_opportunities: {
+        Row: {
+          assigned_to: string | null
+          client_id: number | null
+          contact_id: string | null
+          created_at: string | null
+          id: string
+          location_id: string
+          monetary_value: number | null
+          name: string | null
+          pipeline_id: string | null
+          pipeline_name: string | null
+          raw: Json | null
+          source: string | null
+          stage_id: string | null
+          stage_name: string | null
+          status: string | null
+          synced_at: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          id: string
+          location_id: string
+          monetary_value?: number | null
+          name?: string | null
+          pipeline_id?: string | null
+          pipeline_name?: string | null
+          raw?: Json | null
+          source?: string | null
+          stage_id?: string | null
+          stage_name?: string | null
+          status?: string | null
+          synced_at?: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: number | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          location_id?: string
+          monetary_value?: number | null
+          name?: string | null
+          pipeline_id?: string | null
+          pipeline_name?: string | null
+          raw?: Json | null
+          source?: string | null
+          stage_id?: string | null
+          stage_name?: string | null
+          status?: string | null
+          synced_at?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      ghl_stage_map: {
+        Row: {
+          client_id: number
+          created_at: string
+          id: string
+          internal_stage: string
+          pipeline_id: string
+          pipeline_name: string | null
+          stage_id: string
+          stage_name: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          id?: string
+          internal_stage: string
+          pipeline_id: string
+          pipeline_name?: string | null
+          stage_id: string
+          stage_name?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          id?: string
+          internal_stage?: string
+          pipeline_id?: string
+          pipeline_name?: string | null
+          stage_id?: string
+          stage_name?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      ghl_sync_state: {
+        Row: {
+          client_id: number | null
+          last_appts_sync_at: string | null
+          last_contacts_sync_at: string | null
+          last_error: string | null
+          last_opps_sync_at: string | null
+          last_run_at: string | null
+          location_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          last_appts_sync_at?: string | null
+          last_contacts_sync_at?: string | null
+          last_error?: string | null
+          last_opps_sync_at?: string | null
+          last_run_at?: string | null
+          location_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          last_appts_sync_at?: string | null
+          last_contacts_sync_at?: string | null
+          last_error?: string | null
+          last_opps_sync_at?: string | null
+          last_run_at?: string | null
+          location_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      ghl_webhook_events: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          error: string | null
+          event_type: string | null
+          id: string
+          location_id: string | null
+          payload: Json | null
+          processed_at: string | null
+          signature_valid: boolean | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          error?: string | null
+          event_type?: string | null
+          id?: string
+          location_id?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          signature_valid?: boolean | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          error?: string | null
+          event_type?: string | null
+          id?: string
+          location_id?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          signature_valid?: boolean | null
         }
         Relationships: []
       }
@@ -1083,6 +1398,7 @@ export type Database = {
           client_id: number
           created_at: string
           date: string
+          ghl_contact_id: string | null
           id: string
           name: string
           phone: string | null
@@ -1094,6 +1410,7 @@ export type Database = {
           client_id: number
           created_at?: string
           date: string
+          ghl_contact_id?: string | null
           id?: string
           name: string
           phone?: string | null
@@ -1105,6 +1422,7 @@ export type Database = {
           client_id?: number
           created_at?: string
           date?: string
+          ghl_contact_id?: string | null
           id?: string
           name?: string
           phone?: string | null
