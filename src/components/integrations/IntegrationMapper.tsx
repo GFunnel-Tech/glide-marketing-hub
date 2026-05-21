@@ -114,6 +114,39 @@ export function IntegrationMapper() {
     if (error) toast.error(error.message); else { toast.success(clientId ? "Linked" : "Unlinked"); load(); }
   };
 
+  const createClientFromMeta = async (acc: MetaAcc): Promise<number | null> => {
+    if (!wsId) return null;
+    const name = (acc.account_name || acc.act_id || "New Client").trim();
+    const { data, error } = await (supabase as any).from("clients")
+      .insert({ workspace_id: wsId, name, brand: acc.business_name || name })
+      .select("id").single();
+    if (error) { toast.error(error.message); return null; }
+    const newId = data.id as number;
+    const { error: linkErr } = await (supabase as any).from("meta_ad_accounts")
+      .update({ client_id: newId }).eq("id", acc.id);
+    if (linkErr) { toast.error(linkErr.message); return null; }
+    return newId;
+  };
+
+  const handleCreateClient = async (acc: MetaAcc) => {
+    const id = await createClientFromMeta(acc);
+    if (id) { toast.success(`Client created from ${acc.account_name || acc.act_id}`); load(); }
+  };
+
+  const createClientsForAllUnmapped = async () => {
+    const unmapped = metaAccs.filter(a => !a.client_id);
+    if (!unmapped.length) { toast.info("No unmapped ad accounts"); return; }
+    if (!confirm(`Create ${unmapped.length} new client${unmapped.length === 1 ? "" : "s"} from unmapped ad accounts?`)) return;
+    let created = 0;
+    for (const acc of unmapped) {
+      const id = await createClientFromMeta(acc);
+      if (id) created++;
+    }
+    toast.success(`Created ${created} client${created === 1 ? "" : "s"}`);
+    load();
+  };
+
+
   const updateClickup = async (clientId: number, listId: string) => {
     const { error } = await (supabase as any).from("clients")
       .update({ clickup_list_id: listId || null }).eq("id", clientId);
