@@ -11,6 +11,7 @@ import { MetaConnectionsPanel } from "@/components/integrations/MetaConnectionsP
 import { KpiThresholdsPanel } from "@/components/settings/KpiThresholdsPanel";
 import { GhlClickupPanel } from "@/components/integrations/GhlClickupPanel";
 import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
+import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -27,7 +28,7 @@ export default function Settings() {
   const [copied, setCopied] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const validTabs = ["agency", "integrations", "team", "kpis", "notifications"] as const;
+  const validTabs = ["agency", "integrations", "team", "kpis", "statuses", "notifications"] as const;
   const initialTab = (validTabs as readonly string[]).includes(tabParam ?? "")
     ? (tabParam as typeof validTabs[number])
     : "agency";
@@ -57,8 +58,13 @@ export default function Settings() {
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
           <TabsTrigger value="kpis">KPI Thresholds</TabsTrigger>
+          <TabsTrigger value="statuses">Statuses &amp; Webhooks</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="statuses">
+          <StatusPhasesPanel />
+        </TabsContent>
 
         <TabsContent value="kpis">
           <div className="rounded-lg border border-border bg-card p-6">
