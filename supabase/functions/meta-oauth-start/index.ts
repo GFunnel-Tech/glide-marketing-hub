@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const workspaceId: string | undefined = body.workspaceId;
     const reconnectId: string | undefined = body.reconnectId;
+    const forceConsent: boolean = body.forceConsent === true;
     if (!workspaceId) {
       return new Response(JSON.stringify({ error: "workspaceId required" }), {
         status: 400,
