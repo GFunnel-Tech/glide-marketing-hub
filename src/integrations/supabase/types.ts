@@ -2562,7 +2562,14 @@ export type Database = {
       app_role: "admin" | "user" | "super_admin"
       bm_type: "Own BM" | "Agency BM"
       campaign_status: "active" | "paused"
-      client_status: "GREEN" | "YELLOW" | "RED" | "BLOCKED"
+      client_status:
+        | "GREEN"
+        | "YELLOW"
+        | "RED"
+        | "BLOCKED"
+        | "NEW"
+        | "LAUNCHING"
+        | "RELAUNCH"
       lead_stage: "intake" | "in_progress" | "converted"
       rebill_assignment_level: "account" | "campaign" | "adset" | "ad"
       rebill_cadence: "monthly" | "weekly" | "custom"
@@ -2706,7 +2713,15 @@ export const Constants = {
       app_role: ["admin", "user", "super_admin"],
       bm_type: ["Own BM", "Agency BM"],
       campaign_status: ["active", "paused"],
-      client_status: ["GREEN", "YELLOW", "RED", "BLOCKED"],
+      client_status: [
+        "GREEN",
+        "YELLOW",
+        "RED",
+        "BLOCKED",
+        "NEW",
+        "LAUNCHING",
+        "RELAUNCH",
+      ],
       lead_stage: ["intake", "in_progress", "converted"],
       rebill_assignment_level: ["account", "campaign", "adset", "ad"],
       rebill_cadence: ["monthly", "weekly", "custom"],

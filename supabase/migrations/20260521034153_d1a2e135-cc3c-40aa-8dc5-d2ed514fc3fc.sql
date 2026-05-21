@@ -1,0 +1,3 @@
+ALTER TYPE public.client_status ADD VALUE IF NOT EXISTS 'NEW';
+ALTER TYPE public.client_status ADD VALUE IF NOT EXISTS 'LAUNCHING';
+ALTER TYPE public.client_status ADD VALUE IF NOT EXISTS 'RELAUNCH';
