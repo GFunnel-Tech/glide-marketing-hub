@@ -13,20 +13,74 @@ const REDIRECT_URI = "https://metahub.gfunnel.com/auth/meta/callback";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Correlation ID — returned to the client AND written into meta_oauth_events
+  // so the user can match a UI error to a backend log line.
+  const correlationId = crypto.randomUUID();
+  const log = (...args: unknown[]) => console.log(`[meta-oauth-callback ${correlationId}]`, ...args);
+
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  const recordEvent = async (params: {
+    workspaceId: string | null;
+    userId?: string | null;
+    connectionId?: string | null;
+    step: string;
+    outcome: "success" | "error" | "warning";
+    errorCode?: string;
+    errorMessage?: string;
+    metaUserName?: string | null;
+    grantedScopes?: string[];
+    declinedScopes?: string[];
+    httpStatus?: number;
+    details?: unknown;
+  }) => {
+    if (!params.workspaceId) return; // can't satisfy RLS-protected workspace_id constraint
+    try {
+      await admin.from("meta_oauth_events").insert({
+        workspace_id: params.workspaceId,
+        connection_id: params.connectionId ?? null,
+        user_id: params.userId ?? null,
+        correlation_id: correlationId,
+        step: params.step,
+        outcome: params.outcome,
+        error_code: params.errorCode ?? null,
+        error_message: params.errorMessage ?? null,
+        meta_user_name: params.metaUserName ?? null,
+        granted_scopes: params.grantedScopes ?? [],
+        declined_scopes: params.declinedScopes ?? [],
+        http_status: params.httpStatus ?? null,
+        details: params.details ?? {},
+      });
+    } catch (e) {
+      log("failed to record event", e);
+    }
+  };
+
   try {
     const { code, state } = await req.json();
     if (!code || !state) {
-      return json({ error: "code and state required" }, 400);
+      return json({ error: "code and state required", correlationId }, 400);
     }
 
     let parsed: { u: string; w: string; n: string; t: number; r?: string | null };
     try {
       parsed = JSON.parse(atob(state));
     } catch {
-      return json({ error: "invalid state" }, 400);
+      return json({ error: "invalid state", correlationId }, 400);
     }
     if (Date.now() - parsed.t > 10 * 60 * 1000) {
-      return json({ error: "state expired" }, 400);
+      await recordEvent({
+        workspaceId: parsed.w,
+        userId: parsed.u,
+        step: "state_validation",
+        outcome: "error",
+        errorCode: "state_expired",
+        errorMessage: "OAuth state token expired (>10 min). User likely left the popup open too long.",
+      });
+      return json({ error: "state expired", correlationId }, 400);
     }
 
     const appId = Deno.env.get("META_APP_ID")!;
@@ -41,7 +95,18 @@ Deno.serve(async (req) => {
     const tokRes = await fetch(tokenUrl.toString());
     const tok = await tokRes.json();
     if (!tokRes.ok || !tok.access_token) {
-      return json({ error: "token exchange failed", details: tok }, 400);
+      log("token exchange failed", tokRes.status, tok);
+      await recordEvent({
+        workspaceId: parsed.w,
+        userId: parsed.u,
+        step: "token_exchange",
+        outcome: "error",
+        errorCode: tok?.error?.code ? String(tok.error.code) : "token_exchange_failed",
+        errorMessage: tok?.error?.message || "Meta refused to exchange the auth code for a token.",
+        httpStatus: tokRes.status,
+        details: tok,
+      });
+      return json({ error: "token exchange failed", details: tok, correlationId }, 400);
     }
 
     // 2) Long-lived token (~60 days)
@@ -62,10 +127,6 @@ Deno.serve(async (req) => {
     );
     const me = await meRes.json();
 
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
     const requiredAdsScopes = ["ads_read", "ads_management", "business_management"];
     const permissionErrorMessage =
       "Meta only granted public_profile. Ads permissions were not granted to this Facebook user. If the Meta app is in Development mode, add this user as an app Tester/Developer and have them accept the invite in Facebook Settings → Apps and Websites → Requests, then reconnect.";
@@ -77,7 +138,18 @@ Deno.serve(async (req) => {
       .eq("workspace_id", parsed.w)
       .eq("user_id", parsed.u)
       .maybeSingle();
-    if (!memberCheck) return json({ error: "not a workspace member" }, 403);
+    if (!memberCheck) {
+      await recordEvent({
+        workspaceId: parsed.w,
+        userId: parsed.u,
+        step: "membership_check",
+        outcome: "error",
+        errorCode: "not_a_member",
+        errorMessage: "User is not a member of this workspace.",
+        httpStatus: 403,
+      });
+      return json({ error: "not a workspace member", correlationId }, 403);
+    }
 
     // granted permissions
     let grantedScopes: string[] = [];
@@ -135,7 +207,21 @@ Deno.serve(async (req) => {
       conn = ins.data;
       connErr = ins.error;
     }
-    if (connErr || !conn) return json({ error: "store connection failed", details: connErr }, 500);
+    if (connErr || !conn) {
+      await recordEvent({
+        workspaceId: parsed.w,
+        userId: parsed.u,
+        step: "store_connection",
+        outcome: "error",
+        errorCode: "store_failed",
+        errorMessage: connErr?.message || "Database refused to persist the Meta connection.",
+        grantedScopes,
+        declinedScopes,
+        metaUserName: me.name ?? null,
+        details: connErr,
+      });
+      return json({ error: "store connection failed", details: connErr, correlationId }, 500);
+    }
 
     // Detect missing ads permissions BEFORE trying to discover accounts —
     // without these scopes, /me/adaccounts returns empty and the user gets a
@@ -150,6 +236,19 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         })
         .eq("id", conn.id);
+      await recordEvent({
+        workspaceId: parsed.w,
+        userId: parsed.u,
+        connectionId: conn.id,
+        step: "permissions_check",
+        outcome: "error",
+        errorCode: "permissions_declined",
+        errorMessage: permissionErrorMessage,
+        metaUserName: me.name ?? null,
+        grantedScopes,
+        declinedScopes,
+        details: { missingScopes: missingAdsScopes },
+      });
       // User declined ALL ads-related scopes on the Facebook consent screen.
       return json({
         ok: false,
@@ -160,6 +259,7 @@ Deno.serve(async (req) => {
         grantedScopes,
         declinedScopes,
         missingScopes: missingAdsScopes,
+        correlationId,
       }, 200);
     }
 
@@ -169,6 +269,20 @@ Deno.serve(async (req) => {
     );
     const accounts = await accountsRes.json();
     if (!accountsRes.ok) {
+      await recordEvent({
+        workspaceId: parsed.w,
+        userId: parsed.u,
+        connectionId: conn.id,
+        step: "discover_adaccounts",
+        outcome: "error",
+        errorCode: accounts?.error?.code ? String(accounts.error.code) : "adaccounts_fetch_failed",
+        errorMessage: accounts?.error?.message || "Failed to fetch ad accounts from Meta.",
+        metaUserName: me.name ?? null,
+        grantedScopes,
+        declinedScopes,
+        httpStatus: accountsRes.status,
+        details: accounts,
+      });
       return json({
         ok: false,
         error: "adaccounts_fetch_failed",
@@ -178,6 +292,7 @@ Deno.serve(async (req) => {
         grantedScopes,
         declinedScopes,
         details: accounts,
+        correlationId,
       }, 200);
     }
     const discovered = (accounts.data ?? []).map((a: any) => ({
@@ -223,6 +338,21 @@ Deno.serve(async (req) => {
       .eq("connection_id", conn.id)
       .order("account_name", { ascending: true });
 
+    await recordEvent({
+      workspaceId: parsed.w,
+      userId: parsed.u,
+      connectionId: conn.id,
+      step: "complete",
+      outcome: declinedScopes.length > 0 ? "warning" : "success",
+      errorMessage: declinedScopes.length > 0
+        ? `Connected, but the user declined: ${declinedScopes.join(", ")}.`
+        : undefined,
+      metaUserName: me.name ?? null,
+      grantedScopes,
+      declinedScopes,
+      details: { accountsDiscovered: discovered.length, isReconnect: !!parsed.r },
+    });
+
     return json({
       ok: true,
       connectionId: conn.id,
@@ -234,15 +364,17 @@ Deno.serve(async (req) => {
       declinedScopes,
       tokenExpiresAt: expiresAt,
       isReconnect: !!parsed.r,
+      correlationId,
     });
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    log("uncaught", e);
+    return json({ error: String(e), correlationId }, 500);
+  }
+
+  function json(body: Record<string, unknown>, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
