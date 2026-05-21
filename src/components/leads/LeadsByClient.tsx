@@ -185,6 +185,7 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
                         <thead className="bg-muted/40 text-xs text-muted-foreground">
                           <tr>
                             <th className="text-left font-medium px-3 py-2">Date</th>
+                            <th className="text-left font-medium px-3 py-2">Quality</th>
                             <th className="text-left font-medium px-3 py-2">Name</th>
                             <th className="text-left font-medium px-3 py-2">Contact</th>
                             <th className="text-left font-medium px-3 py-2">Form</th>
@@ -192,21 +193,25 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
                           </tr>
                         </thead>
                         <tbody>
-                          {visible.map((l) => (
-                            <tr key={l.id} className="border-t border-border hover:bg-accent/30">
-                              <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDate(l.created_time)}</td>
-                              <td className="px-3 py-2 font-medium text-foreground">{l.full_name || "—"}</td>
-                              <td className="px-3 py-2 text-muted-foreground">
-                                <div className="flex flex-col gap-0.5">
-                                  {l.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{l.email}</span>}
-                                  {l.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{l.phone}</span>}
-                                  {!l.email && !l.phone && "—"}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2 text-muted-foreground">{l.form_name || "—"}</td>
-                              {!compact && <td className="px-3 py-2 text-muted-foreground">{l.campaign_name || "—"}</td>}
-                            </tr>
-                          ))}
+                          {visible.map((l) => {
+                            const s = scoreIndex.get(`meta:${l.lead_id}`);
+                            return (
+                              <tr key={l.id} className="border-t border-border hover:bg-accent/30">
+                                <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{fmtDate(l.created_time)}</td>
+                                <td className="px-3 py-2"><LeadGradeBadge grade={s?.grade} score={s?.score} showScore /></td>
+                                <td className="px-3 py-2 font-medium text-foreground">{l.full_name || "—"}</td>
+                                <td className="px-3 py-2 text-muted-foreground">
+                                  <div className="flex flex-col gap-0.5">
+                                    {l.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{l.email}</span>}
+                                    {l.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{l.phone}</span>}
+                                    {!l.email && !l.phone && "—"}
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 text-muted-foreground">{l.form_name || "—"}</td>
+                                {!compact && <td className="px-3 py-2 text-muted-foreground">{l.campaign_name || "—"}</td>}
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                       {g.leads.length > limit && (
