@@ -29,6 +29,7 @@ import { z } from "zod";
 import { MetaTokenGuide } from "./MetaTokenGuide";
 import { MetaTroubleshootWizard } from "./MetaTroubleshootWizard";
 import { MetaScopesLiveBanner } from "./MetaScopesBanner";
+import { MetaAppRolePanel } from "./MetaAppRolePanel";
 import { LifeBuoy } from "lucide-react";
 
 // Meta user/system-user access tokens are opaque strings.
@@ -634,7 +635,9 @@ export function MetaConnectionsPanel() {
 
   return (
     <div className="space-y-6">
+      <MetaAppRolePanel />
       <div className="rounded-lg border border-border bg-card p-5">
+
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
