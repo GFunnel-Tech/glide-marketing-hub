@@ -30,6 +30,9 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
   const qc = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [gradeFilter, setGradeFilter] = useState<LeadGrade | "ALL">("ALL");
+  const { index: scoreIndex } = useLeadScoreIndex(clientId);
+  const scoreMutation = useComputeLeadScores();
 
   const grouped = useMemo(() => {
     const map = new Map<string, { clientId: number | null; clientName: string; leads: MetaLead[] }>();
