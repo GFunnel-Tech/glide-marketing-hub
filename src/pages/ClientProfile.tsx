@@ -9,6 +9,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { LeadsByClient } from "@/components/leads/LeadsByClient";
+import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
