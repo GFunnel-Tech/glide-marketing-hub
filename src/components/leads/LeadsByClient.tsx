@@ -64,12 +64,28 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
       if (error) throw error;
       toast.success(`Synced ${data?.leadsSynced ?? 0} leads`);
       qc.invalidateQueries({ queryKey: ["meta_leads"] });
+      // Auto-score newly synced leads
+      scoreMutation.mutate(undefined, {
+        onSuccess: (r) => r.scored && toast.success(`Scored ${r.scored} leads`),
+      });
     } catch (e: any) {
       toast.error(e.message || "Sync failed");
     } finally {
       setSyncing(false);
     }
   };
+
+  const scoreNow = () => {
+    scoreMutation.mutate(undefined, {
+      onSuccess: (r) => toast.success(`Scored ${r.scored} of ${r.attempted} leads`),
+      onError: (e: any) => toast.error(e.message || "Scoring failed"),
+    });
+  };
+
+  const filteredLeads = useMemo(() => {
+    if (gradeFilter === "ALL") return leads;
+    return leads.filter((l) => scoreIndex.get(`meta:${l.lead_id}`)?.grade === gradeFilter);
+  }, [leads, gradeFilter, scoreIndex]);
 
   const limit = compact ? 5 : 50;
 
