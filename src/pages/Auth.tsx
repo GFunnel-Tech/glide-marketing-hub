@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { MetaScopesStaticBanner } from "@/components/integrations/MetaScopesBanner";
+
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -144,9 +144,6 @@ export default function Auth() {
           </p>
         </Card>
 
-        <div className="mt-6">
-          <MetaScopesStaticBanner />
-        </div>
       </div>
 
     </div>
