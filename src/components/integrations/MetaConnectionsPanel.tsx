@@ -29,6 +29,7 @@ import { z } from "zod";
 import { MetaTokenGuide } from "./MetaTokenGuide";
 import { MetaTroubleshootWizard } from "./MetaTroubleshootWizard";
 import { MetaScopesLiveBanner } from "./MetaScopesBanner";
+import { MetaAppRolePanel } from "./MetaAppRolePanel";
 import { LifeBuoy } from "lucide-react";
 
 // Meta user/system-user access tokens are opaque strings.
