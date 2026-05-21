@@ -71,8 +71,15 @@ Deno.serve(async (req) => {
     url.searchParams.set("scope", META_SCOPES);
     url.searchParams.set("state", state);
     url.searchParams.set("response_type", "code");
-    url.searchParams.set("auth_type", "rerequest");
+    // `reauthenticate` forces Meta to show login + the full consent screen again,
+    // even if the user previously granted the same scopes.
+    url.searchParams.set("auth_type", forceConsent ? "reauthenticate" : "rerequest");
     url.searchParams.set("return_scopes", "true");
+    if (forceConsent) {
+      // Defeat any cached consent — Meta honours this on the dialog endpoint.
+      url.searchParams.set("display", "popup");
+      url.searchParams.set("prompt", "consent");
+    }
 
     return new Response(JSON.stringify({ url: url.toString() }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
