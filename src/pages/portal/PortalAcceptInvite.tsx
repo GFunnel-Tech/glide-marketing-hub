@@ -92,14 +92,14 @@ export default function PortalAcceptInvite() {
     );
   }
 
-  if (!lookup.valid) {
+  if (lookup.valid === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-4">
         <Card className="w-full max-w-md p-8 text-center">
           <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-3" />
           <h1 className="text-xl font-semibold mb-2">Invite invalid</h1>
           <p className="text-sm text-muted-foreground mb-4">
-            This invite is <strong>{lookup.reason}</strong>. Please contact your account manager for a fresh invite link.
+            This invite is <strong>{(lookup as { reason: string }).reason}</strong>. Please contact your account manager for a fresh invite link.
           </p>
           <Button variant="outline" onClick={() => navigate("/portal/login")}>Go to sign in</Button>
         </Card>
