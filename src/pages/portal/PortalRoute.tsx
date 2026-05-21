@@ -41,7 +41,7 @@ export function PortalRoute({ children }: { children: ReactNode }) {
 
   // All mappings pending approval → show waiting screen
   const anyActive = mappings.some((m) => m.status === "active");
-  if (!anyActive) {
+  if (!anyActive && !isSuperAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] p-4">
         <Card className="w-full max-w-md p-8 text-center">
