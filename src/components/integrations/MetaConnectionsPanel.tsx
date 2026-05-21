@@ -187,6 +187,7 @@ interface MetaConnection {
   token_expires_at: string | null;
   created_at: string;
   last_error: string | null;
+  scopes: string[] | null;
 }
 
 interface SyncLogEntry {
