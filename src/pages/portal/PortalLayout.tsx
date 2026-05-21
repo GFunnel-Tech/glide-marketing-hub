@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalClient } from "@/hooks/usePortalClient";
 import { Badge } from "@/components/ui/badge";
+import { PortalClientSwitcher } from "@/components/portal/PortalClientSwitcher";
 
 // EMM brand palette as CSS-var overrides scoped to this subtree.
 const emmTheme: CSSProperties = {
