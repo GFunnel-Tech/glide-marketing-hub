@@ -42,6 +42,8 @@ import PortalDocuments from "./pages/portal/PortalDocuments";
 import PortalBilling from "./pages/portal/PortalBilling";
 import PortalSupport from "./pages/portal/PortalSupport";
 import PortalSettings from "./pages/portal/PortalSettings";
+import PortalAcceptInvite from "./pages/portal/PortalAcceptInvite";
+import PortalOnboarding from "./pages/portal/PortalOnboarding";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
 import { useConversationsRealtime } from "@/hooks/useMessages";
@@ -70,8 +72,17 @@ const App = () => (
                 <Route path="/client-portal/:id" element={<ClientPortal />} />
                 <Route path="/demo/gfunnel" element={<DemoGfunnel />} />
 
-                {/* EMM Client Portal */}
+                {/* Client Portal */}
                 <Route path="/portal/login" element={<PortalAuth />} />
+                <Route path="/portal/accept" element={<PortalAcceptInvite />} />
+                <Route
+                  path="/portal/onboarding"
+                  element={
+                    <PortalRoute>
+                      <PortalOnboarding />
+                    </PortalRoute>
+                  }
+                />
                 <Route
                   path="/portal"
                   element={

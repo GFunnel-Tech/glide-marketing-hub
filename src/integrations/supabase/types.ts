@@ -380,6 +380,57 @@ export type Database = {
           },
         ]
       }
+      client_invites: {
+        Row: {
+          client_id: number
+          code: string
+          created_at: string
+          created_by: string
+          email: string | null
+          expires_at: string
+          id: string
+          max_uses: number
+          note: string | null
+          status: string
+          token: string
+          updated_at: string
+          used_count: number
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          code: string
+          created_at?: string
+          created_by: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          max_uses?: number
+          note?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+          used_count?: number
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          code?: string
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          max_uses?: number
+          note?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+          used_count?: number
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       client_kpi_overrides: {
         Row: {
           client_id: number
@@ -1981,27 +2032,105 @@ export type Database = {
           },
         ]
       }
+      portal_onboarding: {
+        Row: {
+          billing_done: boolean
+          brand_done: boolean
+          brand_logo_url: string | null
+          brand_notes: string | null
+          brand_primary_color: string | null
+          business_name: string | null
+          client_id: number
+          completed_at: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          meta_done: boolean
+          profile_done: boolean
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          billing_done?: boolean
+          brand_done?: boolean
+          brand_logo_url?: string | null
+          brand_notes?: string | null
+          brand_primary_color?: string | null
+          business_name?: string | null
+          client_id: number
+          completed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          meta_done?: boolean
+          profile_done?: boolean
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          billing_done?: boolean
+          brand_done?: boolean
+          brand_logo_url?: string | null
+          brand_notes?: string | null
+          brand_primary_color?: string | null
+          business_name?: string | null
+          client_id?: number
+          completed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          meta_done?: boolean
+          profile_done?: boolean
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       portal_users: {
         Row: {
+          accepted_at: string | null
+          approved_at: string | null
+          approved_by: string | null
           client_id: number
           created_at: string
           id: string
+          invite_id: string | null
+          status: string
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
+          accepted_at?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           client_id: number
           created_at?: string
           id?: string
+          invite_id?: string | null
+          status?: string
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
+          accepted_at?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           client_id?: number
           created_at?: string
           id?: string
+          invite_id?: string | null
+          status?: string
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -2658,6 +2787,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      lookup_client_invite: { Args: { _code_or_token: string }; Returns: Json }
       notif_pref_enabled: {
         Args: { _event_type: string; _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -2666,6 +2796,7 @@ export type Database = {
         Args: { _workspace_id: string }
         Returns: number
       }
+      redeem_client_invite: { Args: { _code_or_token: string }; Returns: Json }
       resolve_client_kpi_config: { Args: { _client_id: number }; Returns: Json }
       seed_default_status_phases: {
         Args: { _workspace_id: string }

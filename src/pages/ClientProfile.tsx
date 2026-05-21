@@ -9,6 +9,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { LeadsByClient } from "@/components/leads/LeadsByClient";
+import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -353,6 +354,14 @@ export default function ClientProfile() {
           </div>
         </div>
       </div>
+
+
+      <ClientInvitesPanel
+        clientId={client.id}
+        workspaceId={(client as any).workspace_id ?? null}
+        clientName={client.name}
+      />
+
 
       <AlertDialog open={showPause} onOpenChange={setShowPause}>
         <AlertDialogContent>

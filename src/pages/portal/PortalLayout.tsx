@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalClient } from "@/hooks/usePortalClient";
 import { Badge } from "@/components/ui/badge";
+import { PortalClientSwitcher } from "@/components/portal/PortalClientSwitcher";
 
 // EMM brand palette as CSS-var overrides scoped to this subtree.
 const emmTheme: CSSProperties = {
@@ -81,14 +82,15 @@ export default function PortalLayout() {
               <p className="text-[11px] text-white/60">Expert Mortgage Marketing</p>
             </div>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 space-y-2">
+            <PortalClientSwitcher />
             <p className="text-sm font-medium truncate">
               {isLoading ? "Loading…" : client?.name ?? "Your account"}
             </p>
             {client && (
               <span className={cn(
-                "mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                statusStyles[client.status],
+                "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                statusStyles[client.status as keyof typeof statusStyles] ?? statusStyles.BLOCKED,
               )}>
                 {client.status}
               </span>
