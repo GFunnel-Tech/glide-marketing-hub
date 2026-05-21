@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { MetaTokenGuide } from "./MetaTokenGuide";
 import { MetaTroubleshootWizard } from "./MetaTroubleshootWizard";
+import { MetaScopesLiveBanner } from "./MetaScopesBanner";
 import { LifeBuoy } from "lucide-react";
 
 // Meta user/system-user access tokens are opaque strings.
@@ -187,6 +188,7 @@ interface MetaConnection {
   token_expires_at: string | null;
   created_at: string;
   last_error: string | null;
+  scopes: string[] | null;
 }
 
 interface SyncLogEntry {
@@ -696,8 +698,15 @@ export function MetaConnectionsPanel() {
           </div>
         )}
 
+        {connections.length > 0 && (
+          <div className="mb-4">
+            <MetaScopesLiveBanner connections={connections} />
+          </div>
+        )}
+
         {connections.length === 0 && !loading && (
           <div className="rounded-lg border border-dashed border-border p-8 text-center space-y-4">
+
             <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
               <Facebook className="h-6 w-6 text-primary" />
             </div>
