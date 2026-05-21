@@ -679,6 +679,7 @@ export function MetaConnectionsPanel() {
   return (
     <div className="space-y-6">
       <MetaAppRolePanel />
+      <MetaOAuthDiagnosticsPanel />
       <div className="rounded-lg border border-border bg-card p-5">
 
         <div className="flex items-start justify-between mb-4">
