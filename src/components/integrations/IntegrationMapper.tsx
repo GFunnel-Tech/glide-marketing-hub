@@ -273,7 +273,7 @@ export function IntegrationMapper() {
         const bmOptions = Array.from(
           new Set(metaAccs.map(a => a.business_name || "No Business Manager"))
         ).sort();
-        return <MetaMapTab metaAccs={metaAccs} clients={clients} bmOptions={bmOptions} linkMeta={linkMeta} />;
+        return <MetaMapTab metaAccs={metaAccs} clients={clients} bmOptions={bmOptions} linkMeta={linkMeta} onCreateClient={handleCreateClient} onCreateAllUnmapped={createClientsForAllUnmapped} />;
       })()}
 
       {tab === "clickup" && (
