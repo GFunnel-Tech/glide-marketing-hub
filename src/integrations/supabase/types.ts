@@ -1393,6 +1393,211 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_score_calibrations: {
+        Row: {
+          created_at: string
+          evidence: Json
+          id: string
+          proposed_thresholds: Json
+          proposed_weights: Json
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rule_set_id: string
+          status: Database["public"]["Enums"]["calibration_status"]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          evidence?: Json
+          id?: string
+          proposed_thresholds: Json
+          proposed_weights: Json
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule_set_id: string
+          status?: Database["public"]["Enums"]["calibration_status"]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          evidence?: Json
+          id?: string
+          proposed_thresholds?: Json
+          proposed_weights?: Json
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule_set_id?: string
+          status?: Database["public"]["Enums"]["calibration_status"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_score_calibrations_rule_set_id_fkey"
+            columns: ["rule_set_id"]
+            isOneToOne: false
+            referencedRelation: "lead_score_rule_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_score_events: {
+        Row: {
+          client_id: number | null
+          created_at: string
+          id: string
+          lead_id: string
+          lead_source: Database["public"]["Enums"]["lead_source_type"]
+          occurred_at: string
+          signal_type: string
+          value: Json
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          created_at?: string
+          id?: string
+          lead_id: string
+          lead_source: Database["public"]["Enums"]["lead_source_type"]
+          occurred_at?: string
+          signal_type: string
+          value?: Json
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          created_at?: string
+          id?: string
+          lead_id?: string
+          lead_source?: Database["public"]["Enums"]["lead_source_type"]
+          occurred_at?: string
+          signal_type?: string
+          value?: Json
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      lead_score_rule_sets: {
+        Row: {
+          auto_tune_enabled: boolean
+          created_at: string
+          created_by: string | null
+          grade_thresholds: Json
+          id: string
+          is_active: boolean
+          last_tuned_at: string | null
+          name: string
+          qualifying_rules: Json
+          scope: Database["public"]["Enums"]["lead_score_scope"]
+          scope_id: string | null
+          source_modifiers: Json
+          updated_at: string
+          version: number
+          weights: Json
+          workspace_id: string
+        }
+        Insert: {
+          auto_tune_enabled?: boolean
+          created_at?: string
+          created_by?: string | null
+          grade_thresholds?: Json
+          id?: string
+          is_active?: boolean
+          last_tuned_at?: string | null
+          name?: string
+          qualifying_rules?: Json
+          scope?: Database["public"]["Enums"]["lead_score_scope"]
+          scope_id?: string | null
+          source_modifiers?: Json
+          updated_at?: string
+          version?: number
+          weights?: Json
+          workspace_id: string
+        }
+        Update: {
+          auto_tune_enabled?: boolean
+          created_at?: string
+          created_by?: string | null
+          grade_thresholds?: Json
+          id?: string
+          is_active?: boolean
+          last_tuned_at?: string | null
+          name?: string
+          qualifying_rules?: Json
+          scope?: Database["public"]["Enums"]["lead_score_scope"]
+          scope_id?: string | null
+          source_modifiers?: Json
+          updated_at?: string
+          version?: number
+          weights?: Json
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      lead_scores: {
+        Row: {
+          breakdown: Json
+          campaign_id: string | null
+          client_id: number | null
+          computed_at: string
+          created_at: string
+          grade: Database["public"]["Enums"]["lead_score_grade"]
+          id: string
+          lead_id: string
+          lead_source: Database["public"]["Enums"]["lead_source_type"]
+          outcome: Database["public"]["Enums"]["lead_outcome"]
+          rule_set_id: string | null
+          rule_set_version: number | null
+          score: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          breakdown?: Json
+          campaign_id?: string | null
+          client_id?: number | null
+          computed_at?: string
+          created_at?: string
+          grade?: Database["public"]["Enums"]["lead_score_grade"]
+          id?: string
+          lead_id: string
+          lead_source: Database["public"]["Enums"]["lead_source_type"]
+          outcome?: Database["public"]["Enums"]["lead_outcome"]
+          rule_set_id?: string | null
+          rule_set_version?: number | null
+          score?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          breakdown?: Json
+          campaign_id?: string | null
+          client_id?: number | null
+          computed_at?: string
+          created_at?: string
+          grade?: Database["public"]["Enums"]["lead_score_grade"]
+          id?: string
+          lead_id?: string
+          lead_source?: Database["public"]["Enums"]["lead_source_type"]
+          outcome?: Database["public"]["Enums"]["lead_outcome"]
+          rule_set_id?: string | null
+          rule_set_version?: number | null
+          score?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_scores_rule_set_id_fkey"
+            columns: ["rule_set_id"]
+            isOneToOne: false
+            referencedRelation: "lead_score_rule_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           client_id: number
@@ -3116,6 +3321,37 @@ export type Database = {
       }
       redeem_client_invite: { Args: { _code_or_token: string }; Returns: Json }
       resolve_client_kpi_config: { Args: { _client_id: number }; Returns: Json }
+      resolve_lead_score_rule_set: {
+        Args: {
+          _campaign_id: string
+          _client_id: number
+          _workspace_id: string
+        }
+        Returns: {
+          auto_tune_enabled: boolean
+          created_at: string
+          created_by: string | null
+          grade_thresholds: Json
+          id: string
+          is_active: boolean
+          last_tuned_at: string | null
+          name: string
+          qualifying_rules: Json
+          scope: Database["public"]["Enums"]["lead_score_scope"]
+          scope_id: string | null
+          source_modifiers: Json
+          updated_at: string
+          version: number
+          weights: Json
+          workspace_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lead_score_rule_sets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       seed_default_status_phases: {
         Args: { _workspace_id: string }
         Returns: undefined
@@ -3128,6 +3364,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user" | "super_admin"
       bm_type: "Own BM" | "Agency BM"
+      calibration_status: "pending" | "approved" | "rejected" | "superseded"
       campaign_status: "active" | "paused"
       client_status:
         | "GREEN"
@@ -3142,6 +3379,10 @@ export type Database = {
         | "LEARNING"
         | "PENDING_CANCELLATION"
         | "CANCELLED"
+      lead_outcome: "unknown" | "closed_won" | "closed_lost" | "disqualified"
+      lead_score_grade: "A" | "B" | "C" | "D"
+      lead_score_scope: "workspace" | "client" | "campaign"
+      lead_source_type: "meta" | "google" | "linkedin" | "manual" | "ghl"
       lead_stage: "intake" | "in_progress" | "converted"
       rebill_assignment_level: "account" | "campaign" | "adset" | "ad"
       rebill_cadence: "monthly" | "weekly" | "custom"
@@ -3284,6 +3525,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user", "super_admin"],
       bm_type: ["Own BM", "Agency BM"],
+      calibration_status: ["pending", "approved", "rejected", "superseded"],
       campaign_status: ["active", "paused"],
       client_status: [
         "GREEN",
@@ -3299,6 +3541,10 @@ export const Constants = {
         "PENDING_CANCELLATION",
         "CANCELLED",
       ],
+      lead_outcome: ["unknown", "closed_won", "closed_lost", "disqualified"],
+      lead_score_grade: ["A", "B", "C", "D"],
+      lead_score_scope: ["workspace", "client", "campaign"],
+      lead_source_type: ["meta", "google", "linkedin", "manual", "ghl"],
       lead_stage: ["intake", "in_progress", "converted"],
       rebill_assignment_level: ["account", "campaign", "adset", "ad"],
       rebill_cadence: ["monthly", "weekly", "custom"],
