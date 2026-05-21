@@ -2,12 +2,14 @@ import { Navigate, useLocation } from "react-router-dom";
 import { ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePortalClient, useActiveOnboarding } from "@/hooks/usePortalClients";
+import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Card } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 
 export function PortalRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const { mappings, activeMapping, activeClientId, isLoading, hasAnyMapping } = usePortalClient();
+  const { data: isSuperAdmin } = useIsSuperAdmin();
   const { data: onboarding, isLoading: onbLoading } = useActiveOnboarding(activeClientId);
   const location = useLocation();
 
@@ -24,6 +26,9 @@ export function PortalRoute({ children }: { children: ReactNode }) {
   }
 
   if (!hasAnyMapping) {
+    if (isSuperAdmin) {
+      return <>{children}</>;
+    }
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-background p-6 text-center">
         <h1 className="text-xl font-semibold text-foreground">No portal access yet</h1>
@@ -36,7 +41,7 @@ export function PortalRoute({ children }: { children: ReactNode }) {
 
   // All mappings pending approval → show waiting screen
   const anyActive = mappings.some((m) => m.status === "active");
-  if (!anyActive) {
+  if (!anyActive && !isSuperAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] p-4">
         <Card className="w-full max-w-md p-8 text-center">
@@ -52,6 +57,7 @@ export function PortalRoute({ children }: { children: ReactNode }) {
 
   // Active mapping but onboarding not complete → redirect to onboarding (except when already there)
   if (
+    !isSuperAdmin &&
     activeMapping?.status === "active" &&
     !onbLoading &&
     (!onboarding || !onboarding.completed_at) &&
