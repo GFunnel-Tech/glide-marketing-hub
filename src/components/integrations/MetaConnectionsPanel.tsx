@@ -1226,7 +1226,7 @@ export function MetaConnectionsPanel() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Agency BM">Agency BM</SelectItem>
-                    <SelectItem value="Client BM">Client BM</SelectItem>
+                    <SelectItem value="Own BM">Own BM</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
