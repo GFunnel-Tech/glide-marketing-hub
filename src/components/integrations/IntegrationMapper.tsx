@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Link2, Unlink, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, RefreshCw, Link2, Unlink, CheckCircle2, AlertCircle, Plus, Wand2 } from "lucide-react";
 
 type Client = {
   id: number;
