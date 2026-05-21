@@ -312,19 +312,60 @@ export function MetaConnectionsPanel() {
 
   useEffect(() => { refresh(); }, [currentWorkspace?.id]);
 
-  const startOAuthForWorkspace = async (workspaceId: string) => {
+  const startOAuthForWorkspace = async (workspaceId: string, forceConsent = false) => {
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke("meta-oauth-start", {
-        body: { workspaceId },
+        body: { workspaceId, forceConsent },
       });
       if (error) throw error;
       window.open(data.url, "_blank", "width=600,height=700");
-      toast.info("Complete sign-in in the popup, then refresh this page.");
+      toast.info(
+        forceConsent
+          ? "Fresh consent screen opened — re-approve every scope, then refresh this page."
+          : "Complete sign-in in the popup, then refresh this page.",
+      );
     } catch (e: any) {
       toast.error(e.message || "Failed to start OAuth");
     } finally {
       setConnecting(false);
+    }
+  };
+
+  const [resettingFailed, setResettingFailed] = useState(false);
+  const failedConnections = connections.filter(c => c.status !== "active");
+
+  const handleResetFailedAndReconnect = async () => {
+    if (!currentWorkspace) {
+      toast.error("Workspace not loaded");
+      return;
+    }
+    if (!failedConnections.length) {
+      // Nothing to clean — just force a fresh consent.
+      await startOAuthForWorkspace(currentWorkspace.id, true);
+      return;
+    }
+    const ok = window.confirm(
+      `Delete ${failedConnections.length} failed Meta connection${failedConnections.length === 1 ? "" : "s"} and open a fresh consent screen?`,
+    );
+    if (!ok) return;
+
+    setResettingFailed(true);
+    try {
+      const ids = failedConnections.map(c => c.id);
+      const { error } = await (supabase as any)
+        .from("meta_connections")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+      toast.success(`Removed ${ids.length} failed connection${ids.length === 1 ? "" : "s"}.`);
+      // Refresh local state immediately so the banner clears.
+      setConnections(prev => prev.filter(c => !ids.includes(c.id)));
+      await startOAuthForWorkspace(currentWorkspace.id, true);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to reset connections");
+    } finally {
+      setResettingFailed(false);
     }
   };
 
@@ -342,6 +383,7 @@ export function MetaConnectionsPanel() {
     }
     await startOAuthForWorkspace(currentWorkspace.id);
   };
+
 
   const handleRetryWorkspaceAndConnect = async () => {
     setRetryingWorkspace(true);
