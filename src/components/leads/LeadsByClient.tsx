@@ -35,8 +35,9 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
   const scoreMutation = useComputeLeadScores();
 
   const grouped = useMemo(() => {
+    const source = gradeFilter === "ALL" ? leads : leads.filter((l) => scoreIndex.get(`meta:${l.lead_id}`)?.grade === gradeFilter);
     const map = new Map<string, { clientId: number | null; clientName: string; leads: MetaLead[] }>();
-    for (const l of leads) {
+    for (const l of source) {
       const key = String(l.client_id ?? "unmapped");
       const c = clients.find((x) => x.id === l.client_id);
       if (!map.has(key)) {
@@ -49,7 +50,7 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
       map.get(key)!.leads.push(l);
     }
     return Array.from(map.values()).sort((a, b) => b.leads.length - a.leads.length);
-  }, [leads, clients]);
+  }, [leads, clients, gradeFilter, scoreIndex]);
 
   const toggle = (k: string) =>
     setExpanded((e) => ({ ...e, [k]: !(k in e ? e[k] : !!clientId) }));
