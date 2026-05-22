@@ -402,6 +402,17 @@ async function syncGranularInsights(admin: any, acc: any, accessToken: string): 
 
 // Pull every ad in the account with its creative + targeting + last-30d
 // performance, and upsert into meta_ads for the Creatives page.
+function storyPageId(storyId: string | null | undefined): string | null {
+  if (!storyId || typeof storyId !== "string") return null;
+  return storyId.includes("_") ? storyId.split("_")[0] : null;
+}
+
+function firstAssetUrl(images: any): string | null {
+  if (!Array.isArray(images)) return null;
+  const img = images.find((i: any) => i?.url || i?.permalink_url || i?.thumbnail_url) ?? null;
+  return img?.url ?? img?.permalink_url ?? img?.thumbnail_url ?? null;
+}
+
 async function syncAds(admin: any, acc: any, accessToken: string): Promise<number> {
   const adFields = [
     "id","name","status","effective_status","created_time",
