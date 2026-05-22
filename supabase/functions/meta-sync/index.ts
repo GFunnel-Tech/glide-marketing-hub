@@ -16,12 +16,14 @@ Deno.serve(async (req) => {
 
   let workspaceFilter: string | null = null;
   let includeDetails = false;
+  let adsOnly = false;
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
     // Support both the current flag and the older/manual "syncAds" flag used
     // by quick backfills so creative images are actually refreshed.
-    includeDetails = body.includeDetails === true || body.syncAds === true;
+    adsOnly = body.adsOnly === true || (body.syncAds === true && body.includeDetails !== true);
+    includeDetails = body.includeDetails === true || body.syncAds === true || adsOnly;
   }
 
   const admin = createClient(
@@ -64,6 +66,22 @@ Deno.serve(async (req) => {
       }).select().single();
 
       try {
+        if (adsOnly) {
+          const adRows = await syncAds(admin, acc, conn.access_token);
+          await admin.from("meta_ad_accounts")
+            .update({ last_synced_at: new Date().toISOString() })
+            .eq("id", acc.id);
+
+          await admin.from("meta_sync_log").update({
+            status: "success",
+            rows_synced: adRows,
+            finished_at: new Date().toISOString(),
+          }).eq("id", log.data!.id);
+
+          totalRows += adRows;
+          continue;
+        }
+
         const fields = [
           "spend","impressions","clicks","ctr","cpm","frequency","reach",
           "actions","cost_per_action_type",
