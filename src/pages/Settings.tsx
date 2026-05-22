@@ -59,6 +59,7 @@ export default function Settings() {
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
           <TabsTrigger value="kpis">KPI Thresholds</TabsTrigger>
+          <TabsTrigger value="custom_kpis">Custom KPIs</TabsTrigger>
           <TabsTrigger value="statuses">Statuses &amp; Webhooks</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
@@ -70,6 +71,12 @@ export default function Settings() {
         <TabsContent value="kpis">
           <div className="rounded-lg border border-border bg-card p-6">
             <KpiThresholdsPanel />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="custom_kpis">
+          <div className="rounded-lg border border-border bg-card p-6">
+            <CustomKpisPanel />
           </div>
         </TabsContent>
 
