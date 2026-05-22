@@ -114,6 +114,10 @@ export function ClientTable() {
           <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary tabular-nums">
             {filtered.length}
           </span>
+          <span className="text-xs text-muted-foreground">
+            · {rangeLabel}
+            {rangeLoading && " · updating…"}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           {filters.map((f) => (
