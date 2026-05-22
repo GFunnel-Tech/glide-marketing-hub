@@ -1,5 +1,7 @@
-import { CheckCircle2, XCircle, AlertTriangle, ShieldCheck, Facebook } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, ShieldCheck, Facebook, RefreshCw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 export const REQUIRED_META_SCOPES = [
   "ads_read",
@@ -49,8 +51,27 @@ export function MetaScopesStaticBanner() {
 }
 
 /** Live banner — shows current connections, their status, and granted scopes. */
-export function MetaScopesLiveBanner({ connections }: { connections: ConnectionLike[] }) {
+export function MetaScopesLiveBanner({
+  connections,
+  onReconnect,
+}: {
+  connections: ConnectionLike[];
+  /** Called when user clicks Reconnect on a connection with missing scopes. Receives connectionId and the list of missing scopes. */
+  onReconnect?: (connectionId: string, missingScopes: string[]) => Promise<void> | void;
+}) {
+  const [reconnectingId, setReconnectingId] = useState<string | null>(null);
+
   if (!connections.length) return null;
+
+  const handleReconnect = async (id: string, missing: string[]) => {
+    if (!onReconnect) return;
+    setReconnectingId(id);
+    try {
+      await onReconnect(id, missing);
+    } finally {
+      setReconnectingId(null);
+    }
+  };
 
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
@@ -63,6 +84,7 @@ export function MetaScopesLiveBanner({ connections }: { connections: ConnectionL
           const granted = c.scopes ?? [];
           const missing = REQUIRED_META_SCOPES.filter(s => !granted.includes(s));
           const isActive = c.status === "active";
+          const isReconnecting = reconnectingId === c.id;
           return (
             <div key={c.id} className="rounded-md border border-border bg-background p-3 space-y-2">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -102,8 +124,8 @@ export function MetaScopesLiveBanner({ connections }: { connections: ConnectionL
               )}
 
               {missing.length > 0 && (
-                <div>
-                  <p className="text-[11px] text-warning flex items-center gap-1 mb-1">
+                <div className="space-y-2">
+                  <p className="text-[11px] text-warning flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" /> Missing required scopes
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -113,6 +135,22 @@ export function MetaScopesLiveBanner({ connections }: { connections: ConnectionL
                       </Badge>
                     ))}
                   </div>
+                  {onReconnect && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-warning/40 text-warning hover:bg-warning/10"
+                      disabled={isReconnecting}
+                      onClick={() => handleReconnect(c.id, missing)}
+                    >
+                      {isReconnecting ? (
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                      )}
+                      Reconnect to grant {missing.length} missing scope{missing.length === 1 ? "" : "s"}
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
