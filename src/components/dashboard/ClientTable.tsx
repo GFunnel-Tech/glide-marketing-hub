@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { useClients } from "@/hooks/useDatabase";
+import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
+import { useDateRange } from "@/hooks/useDateRange";
 import { StatusBadge } from "./StatusBadge";
 import { ClientDrawer } from "./ClientDrawer";
 import { cn } from "@/lib/utils";
