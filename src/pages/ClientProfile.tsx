@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { LeadsByClient } from "@/components/leads/LeadsByClient";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
+import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -359,6 +360,11 @@ export default function ClientProfile() {
         </div>
       </div>
 
+
+      <ClientGuaranteesPanel
+        clientId={client.id}
+        client={{ leads: client.leads, spend: client.spend }}
+      />
 
       <ClientInvitesPanel
         clientId={client.id}
