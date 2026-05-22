@@ -1,5 +1,5 @@
 import { MetaAd, AdClass } from "@/hooks/useMetaAds";
-import { Image as ImageIcon, ExternalLink, Sparkles, AlertTriangle, Loader2 } from "lucide-react";
+import { Image as ImageIcon, Sparkles, AlertTriangle, Loader2, Play, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS: Record<AdClass, { label: string; cls: string; Icon: any }> = {
@@ -8,6 +8,25 @@ const STATUS: Record<AdClass, { label: string; cls: string; Icon: any }> = {
   learning: { label: "Learning", cls: "bg-warning/15 text-warning border-warning/30", Icon: Loader2 },
   unclassified: { label: "—", cls: "bg-muted text-muted-foreground", Icon: ImageIcon },
 };
+
+// Friendly labels for Meta call-to-action types (e.g. LEARN_MORE → "Learn More")
+function ctaLabel(cta: string | null): string {
+  if (!cta) return "Learn More";
+  return cta
+    .toLowerCase()
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function hostnameOf(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toUpperCase();
+  } catch {
+    return null;
+  }
+}
 
 export function CreativeCard({
   ad,
@@ -22,12 +41,60 @@ export function CreativeCard({
 }) {
   const s = STATUS[klass];
   const Icon = s.Icon;
+  const pageName = ad.page_name ?? clientName ?? "Sponsored";
+  const initials = pageName.slice(0, 2).toUpperCase();
+  const isVideo = ad.media_type === "video" || !!ad.video_id;
+  const hostname = hostnameOf(ad.link_url);
+  const cpl = ad.cpl > 0 ? `$${ad.cpl.toFixed(2)}` : "—";
+
   return (
     <div
       onClick={onClick}
-      className="rounded-lg border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-md transition-all flex flex-col cursor-pointer text-left"
+      className="rounded-lg border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-lg transition-all flex flex-col cursor-pointer text-left"
     >
-      <div className="relative aspect-video bg-muted/40 flex items-center justify-center overflow-hidden">
+      {/* FB-style header */}
+      <div className="flex items-start gap-2 p-3 pb-2">
+        {ad.page_avatar_url ? (
+          <img
+            src={ad.page_avatar_url}
+            alt={pageName}
+            className="h-10 w-10 rounded-full object-cover flex-shrink-0"
+            loading="lazy"
+          />
+        ) : (
+          <div className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold flex-shrink-0">
+            {initials}
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-semibold text-foreground truncate">{pageName}</p>
+          </div>
+          <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+            Sponsored · <Globe className="h-3 w-3" />
+          </p>
+        </div>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+            s.cls,
+          )}
+        >
+          <Icon className={cn("h-3 w-3", klass === "learning" && "animate-spin")} />
+          {s.label}
+        </span>
+        <MoreHorizontal className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      </div>
+
+      {/* Primary copy */}
+      {ad.body && (
+        <p className="px-3 pb-2 text-[13px] text-foreground/90 line-clamp-3 whitespace-pre-line">
+          {ad.body}
+        </p>
+      )}
+
+      {/* Media */}
+      <div className="relative aspect-square bg-muted/40 flex items-center justify-center overflow-hidden">
         {(ad.image_url || ad.thumbnail_url) ? (
           <img
             src={ad.image_url ?? ad.thumbnail_url ?? ""}
@@ -43,43 +110,59 @@ export function CreativeCard({
             }}
           />
         ) : (
-          <ImageIcon className="h-8 w-8 text-muted-foreground" />
+          <ImageIcon className="h-10 w-10 text-muted-foreground" />
         )}
-        <span className={cn("absolute top-2 left-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold", s.cls)}>
-          <Icon className={cn("h-3 w-3", klass === "learning" && "animate-spin")} />
-          {s.label}
-        </span>
+        {isVideo && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="h-14 w-14 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-lg">
+              <Play className="h-7 w-7 text-foreground fill-foreground ml-0.5" />
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="p-3 flex-1 flex flex-col gap-1.5">
-        {clientName && <span className="text-[10px] font-medium text-primary uppercase tracking-wider">{clientName}</span>}
-        <p className="text-sm font-semibold text-foreground line-clamp-1">{ad.title || ad.name || "Untitled ad"}</p>
-        {ad.body && <p className="text-xs text-muted-foreground line-clamp-2">{ad.body}</p>}
-        {ad.adset_name && (
-          <p className="text-[11px] text-muted-foreground">
-            <span className="text-muted-foreground/70">Audience · </span>
-            <span className="text-foreground/80">{ad.adset_name}</span>
+      {/* CTA bar (Meta-style) */}
+      <div className="flex items-center gap-3 px-3 py-2 bg-muted/40 border-y border-border">
+        <div className="flex-1 min-w-0">
+          {hostname && (
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">
+              {hostname}
+            </p>
+          )}
+          <p className="text-sm font-semibold text-foreground line-clamp-1">
+            {ad.title || ad.name || "Untitled ad"}
           </p>
-        )}
-
-        <div className="grid grid-cols-4 gap-1 mt-2 pt-2 border-t border-border text-[11px]">
-          <Stat label="Spend" value={`$${Math.round(ad.spend).toLocaleString()}`} />
-          <Stat label="Leads" value={ad.leads.toString()} />
-          <Stat label="CPL" value={ad.cpl > 0 ? `$${ad.cpl.toFixed(2)}` : "—"} />
-          <Stat label="CTR" value={`${(ad.ctr).toFixed(2)}%`} />
         </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (ad.link_url) window.open(ad.link_url, "_blank", "noopener,noreferrer");
+          }}
+          className="flex-shrink-0 rounded-md bg-secondary hover:bg-secondary/80 text-secondary-foreground text-xs font-semibold px-3 py-1.5 transition-colors"
+        >
+          {ctaLabel(ad.call_to_action_type)}
+        </button>
       </div>
 
-      {ad.link_url && (
-        <a
-          href={ad.link_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center justify-center gap-1 text-[11px] text-muted-foreground hover:text-primary border-t border-border py-1.5"
-        >
-          View landing page <ExternalLink className="h-3 w-3" />
-        </a>
+      {/* Reactions row (visual only) */}
+      <div className="flex items-center justify-between px-3 py-1.5 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1"><ThumbsUp className="h-3 w-3" /> Like</span>
+        <span className="inline-flex items-center gap-1"><MessageCircle className="h-3 w-3" /> Comment</span>
+        <span className="inline-flex items-center gap-1"><Share2 className="h-3 w-3" /> Share</span>
+      </div>
+
+      {/* Performance footer */}
+      <div className="grid grid-cols-4 gap-1 px-3 py-2 border-t border-border text-[11px] bg-card">
+        <Stat label="Spend" value={`$${Math.round(ad.spend).toLocaleString()}`} />
+        <Stat label="Leads" value={ad.leads.toString()} />
+        <Stat label="CPL" value={cpl} />
+        <Stat label="CTR" value={`${ad.ctr.toFixed(2)}%`} />
+      </div>
+      {clientName && (
+        <div className="px-3 pb-2 -mt-1">
+          <span className="text-[10px] font-medium text-primary uppercase tracking-wider">{clientName}</span>
+        </div>
       )}
     </div>
   );
