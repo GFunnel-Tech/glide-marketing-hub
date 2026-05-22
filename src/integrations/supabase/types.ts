@@ -302,6 +302,57 @@ export type Database = {
           },
         ]
       }
+      ai_pending_actions: {
+        Row: {
+          action_type: string
+          approved_at: string | null
+          approved_by: string | null
+          client_id: number | null
+          created_at: string
+          error_message: string | null
+          executed_at: string | null
+          id: string
+          payload: Json
+          proposed_by: string
+          reasoning: string | null
+          result: Json | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          action_type: string
+          approved_at?: string | null
+          approved_by?: string | null
+          client_id?: number | null
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          payload: Json
+          proposed_by: string
+          reasoning?: string | null
+          result?: Json | null
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          action_type?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          client_id?: number | null
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          payload?: Json
+          proposed_by?: string
+          reasoning?: string | null
+          result?: Json | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           ad_sets: number
@@ -776,6 +827,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          autonomous_optimization: boolean
           bm_account_name: string | null
           bm_id: string | null
           bm_type: Database["public"]["Enums"]["bm_type"]
@@ -803,6 +855,7 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          autonomous_optimization?: boolean
           bm_account_name?: string | null
           bm_id?: string | null
           bm_type?: Database["public"]["Enums"]["bm_type"]
@@ -830,6 +883,7 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          autonomous_optimization?: boolean
           bm_account_name?: string | null
           bm_id?: string | null
           bm_type?: Database["public"]["Enums"]["bm_type"]
