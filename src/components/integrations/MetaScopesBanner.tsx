@@ -1,5 +1,7 @@
-import { CheckCircle2, XCircle, AlertTriangle, ShieldCheck, Facebook } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, ShieldCheck, Facebook, RefreshCw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 export const REQUIRED_META_SCOPES = [
   "ads_read",
