@@ -153,8 +153,14 @@ async function rollupClients(admin: any, workspaceFilter: string | null) {
   const { data: links } = await q;
   const clientIds = Array.from(new Set((links ?? []).map((l: any) => l.client_id)));
 
+  // 30-day window — same boundary for spend, reported leads AND lead dedup
+  // so the resulting CPLs reconcile.
+  const sinceMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const sinceDate = new Date(sinceMs).toISOString().slice(0, 10);
+  const sinceIso = new Date(sinceMs).toISOString();
+
   for (const cid of clientIds) {
-    // get all ad accounts linked to this client
+    // All ad accounts linked to this client
     const { data: accs } = await admin
       .from("meta_ad_accounts")
       .select("id")
@@ -162,31 +168,68 @@ async function rollupClients(admin: any, workspaceFilter: string | null) {
     const ids = (accs ?? []).map((a: any) => a.id);
     if (!ids.length) continue;
 
-    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    // ---- 1) Spend + Meta-reported leads from daily insights ----
     const { data: rows } = await admin
       .from("meta_insights_daily")
-      .select("spend,leads,cpm,frequency,impressions")
+      .select("spend,leads,cpm,frequency,impressions,clicks")
       .in("ad_account_id", ids)
-      .gte("date", since);
+      .gte("date", sinceDate);
 
     const sum = (rows ?? []).reduce((acc: any, r: any) => ({
       spend: acc.spend + Number(r.spend ?? 0),
       leads: acc.leads + Number(r.leads ?? 0),
-      cpmW: acc.cpmW + Number(r.cpm ?? 0) * Number(r.impressions ?? 0),
+      clicks: acc.clicks + Number(r.clicks ?? 0),
       impressions: acc.impressions + Number(r.impressions ?? 0),
+      cpmW: acc.cpmW + Number(r.cpm ?? 0) * Number(r.impressions ?? 0),
       freqW: acc.freqW + Number(r.frequency ?? 0) * Number(r.impressions ?? 0),
-    }), { spend: 0, leads: 0, cpmW: 0, impressions: 0, freqW: 0 });
+    }), { spend: 0, leads: 0, clicks: 0, impressions: 0, cpmW: 0, freqW: 0 });
 
-    const cpl = sum.leads > 0 ? sum.spend / sum.leads : 0;
+    const reportedLeads = sum.leads;
+    const cpl = reportedLeads > 0 ? sum.spend / reportedLeads : 0;
     const cpm = sum.impressions > 0 ? sum.cpmW / sum.impressions : 0;
     const frequency = sum.impressions > 0 ? sum.freqW / sum.impressions : 0;
 
+    // ---- 2) Form CVR = leads / link_clicks (Meta convention) ----
+    const formCvr = sum.clicks > 0 ? (reportedLeads / sum.clicks) * 100 : 0;
+
+    // ---- 3) True (deduplicated) leads from meta_leads ----
+    // Dedup key: lowercased email OR digits-only phone OR lead_id fallback.
+    const { data: leadRows } = await admin
+      .from("meta_leads")
+      .select("lead_id,email,phone")
+      .eq("client_id", cid)
+      .gte("created_time", sinceIso)
+      .limit(50000);
+
+    const seen = new Set<string>();
+    for (const l of leadRows ?? []) {
+      const email = (l.email ?? "").trim().toLowerCase();
+      const phone = (l.phone ?? "").replace(/\D+/g, "");
+      const key = email || phone || `lid:${l.lead_id}`;
+      if (key) seen.add(key);
+    }
+    const trueLeadsCount = seen.size;
+    // Only trust dedup when we actually have lead-level data; otherwise
+    // fall back to the Meta-reported number rather than silently writing 0.
+    const haveLeadDetails = (leadRows ?? []).length > 0;
+    const trueLeads = haveLeadDetails ? trueLeadsCount : reportedLeads;
+    const trueCpl = trueLeads > 0 ? sum.spend / trueLeads : 0;
+    // Flag double-count when Meta reports >15% more leads than we can dedupe
+    const doubleCount = haveLeadDetails && reportedLeads > 0
+      && reportedLeads > trueLeads * 1.15;
+
     await admin.from("clients").update({
       spend: sum.spend,
-      leads: sum.leads,
+      leads: reportedLeads,
+      reported_leads: reportedLeads,
+      true_leads: trueLeads,
       cpl,
+      true_cpl: trueCpl,
       cpm,
       frequency,
+      form_cvr: formCvr,
+      double_count: doubleCount,
+      last_audit: new Date().toISOString().slice(0, 10),
     }).eq("id", cid);
   }
 }
