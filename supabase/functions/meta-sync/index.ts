@@ -404,13 +404,15 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
   const adFields = [
     "id","name","status","effective_status","created_time",
     "campaign_id","campaign{name}","adset_id","adset{name,targeting}",
-    "creative{id,thumbnail_url,image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id}",
+    // Field expansion modifiers ensure Graph returns a 600px thumbnail
+    // instead of the default ~64px (which renders blurry when scaled up).
+    "creative{id,thumbnail_url.width(600).height(600),image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id}",
   ].join(",");
 
   const ads: any[] = [];
-  // Request a larger thumbnail (default is ~64px which looks blurry).
   let next: string | null =
     `https://graph.facebook.com/v21.0/${acc.act_id}/ads?fields=${adFields}&thumbnail_width=600&thumbnail_height=600&limit=200&access_token=${encodeURIComponent(accessToken)}`;
+
   // safety cap: 5 pages = 1000 ads per account
   let page = 0;
   while (next && page < 5) {
@@ -437,8 +439,50 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     insNext = j.paging?.next ?? null;
     ip++;
   }
+  // For ads missing image_url (video / page-post creatives), batch-fetch the
+  // post's full_picture so we render a high-res image instead of the tiny
+  // thumbnail_url. Graph allows up to 50 sub-requests per batch.
+  const postIds = Array.from(new Set(
+    ads
+      .map((a) => a.creative?.effective_object_story_id)
+      .filter((id: any) => typeof id === "string" && id.length > 0)
+      .filter((id: string) => {
+        const ad = ads.find((x) => x.creative?.effective_object_story_id === id);
+        return ad && !ad.creative?.image_url;
+      })
+  )) as string[];
+  const fullPicMap = new Map<string, string>();
+  for (let i = 0; i < postIds.length; i += 50) {
+    const batch = postIds.slice(i, i + 50).map((id) => ({
+      method: "GET",
+      relative_url: `${id}?fields=full_picture`,
+    }));
+    try {
+      const r = await fetch("https://graph.facebook.com/v21.0/", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          access_token: accessToken,
+          batch: JSON.stringify(batch),
+          include_headers: "false",
+        }),
+      });
+      const j = await r.json();
+      if (Array.isArray(j)) {
+        j.forEach((res: any, idx: number) => {
+          if (res?.code === 200 && res.body) {
+            try {
+              const body = JSON.parse(res.body);
+              if (body.full_picture) fullPicMap.set(postIds[i + idx], body.full_picture);
+            } catch { /* ignore */ }
+          }
+        });
+      }
+    } catch { /* non-fatal */ }
+  }
 
   const now = Date.now();
+
   const rows = ads.map((a: any) => {
     const ins = insMap.get(a.id) ?? {};
     const leads = extractLeads(ins.actions);
@@ -476,7 +520,7 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
       creative_id: cre.id ?? null,
       creative_hash: creativeHash,
       thumbnail_url: cre.thumbnail_url ?? null,
-      image_url: cre.image_url ?? null,
+      image_url: cre.image_url ?? fullPicMap.get(cre.effective_object_story_id) ?? null,
       video_id: cre.video_id ?? null,
       title,
       body,
