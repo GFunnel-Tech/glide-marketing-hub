@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaConnectionsPanel } from "@/components/integrations/MetaConnectionsPanel";
 import { KpiThresholdsPanel } from "@/components/settings/KpiThresholdsPanel";
+import { CustomKpisPanel } from "@/components/kpi/CustomKpisPanel";
 import { GhlClickupPanel } from "@/components/integrations/GhlClickupPanel";
 import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
 import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
