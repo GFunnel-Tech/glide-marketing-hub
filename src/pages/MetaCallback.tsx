@@ -265,7 +265,7 @@ function SelectionView({
         <p className="text-sm text-muted-foreground">
           {result.isReconnect
             ? "Re-confirm which accounts should keep syncing. Your current selection is pre-checked."
-            : `We discovered ${total} ad account${total === 1 ? "" : "s"}. Pick which ones to sync — only selected accounts will pull insights and leads.`}
+            : `We discovered ${total} ad account${total === 1 ? "" : "s"}. Tick only the ones you actually want Lovable to pull insights and leads from — nothing is selected by default.`}
         </p>
       </div>
 
