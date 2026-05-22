@@ -16,10 +16,14 @@ Deno.serve(async (req) => {
 
   let workspaceFilter: string | null = null;
   let includeDetails = false;
+  let adsOnly = false;
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
-    includeDetails = body.includeDetails === true;
+    // Support both the current flag and the older/manual "syncAds" flag used
+    // by quick backfills so creative images are actually refreshed.
+    adsOnly = body.adsOnly === true || (body.syncAds === true && body.includeDetails !== true);
+    includeDetails = body.includeDetails === true || body.syncAds === true || adsOnly;
   }
 
   const admin = createClient(
@@ -62,6 +66,22 @@ Deno.serve(async (req) => {
       }).select().single();
 
       try {
+        if (adsOnly) {
+          const adRows = await syncAds(admin, acc, conn.access_token);
+          await admin.from("meta_ad_accounts")
+            .update({ last_synced_at: new Date().toISOString() })
+            .eq("id", acc.id);
+
+          await admin.from("meta_sync_log").update({
+            status: "success",
+            rows_synced: adRows,
+            finished_at: new Date().toISOString(),
+          }).eq("id", log.data!.id);
+
+          totalRows += adRows;
+          continue;
+        }
+
         const fields = [
           "spend","impressions","clicks","ctr","cpm","frequency","reach",
           "actions","cost_per_action_type",
@@ -357,8 +377,8 @@ async function syncGranularInsights(admin: any, acc: any, accessToken: string): 
     let next: string | null = url;
     const rows: any[] = [];
     while (next) {
-      const res = await fetch(next);
-      const j = await res.json();
+      const res: Response = await fetch(next);
+      const j: any = await res.json();
       if (!res.ok) break;
       for (const d of j.data ?? []) {
         const leads = extractLeads(d.actions);
@@ -400,13 +420,24 @@ async function syncGranularInsights(admin: any, acc: any, accessToken: string): 
 
 // Pull every ad in the account with its creative + targeting + last-30d
 // performance, and upsert into meta_ads for the Creatives page.
+function storyPageId(storyId: string | null | undefined): string | null {
+  if (!storyId || typeof storyId !== "string") return null;
+  return storyId.includes("_") ? storyId.split("_")[0] : null;
+}
+
+function firstAssetUrl(images: any): string | null {
+  if (!Array.isArray(images)) return null;
+  const img = images.find((i: any) => i?.url || i?.permalink_url || i?.thumbnail_url) ?? null;
+  return img?.url ?? img?.permalink_url ?? img?.thumbnail_url ?? null;
+}
+
 async function syncAds(admin: any, acc: any, accessToken: string): Promise<number> {
   const adFields = [
     "id","name","status","effective_status","created_time",
     "campaign_id","campaign{name}","adset_id","adset{name,targeting}",
     // Field expansion modifiers ensure Graph returns a 600px thumbnail
     // instead of the default ~64px (which renders blurry when scaled up).
-    "creative{id,thumbnail_url.width(600).height(600),image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id}",
+    "creative{id,thumbnail_url.width(600).height(600),image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id,asset_feed_spec}",
   ].join(",");
 
   const ads: any[] = [];
@@ -416,14 +447,53 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
   // safety cap: 5 pages = 1000 ads per account
   let page = 0;
   while (next && page < 5) {
-    const r = await fetch(next);
-    const j = await r.json();
+    const r: Response = await fetch(next);
+    const j: any = await r.json();
     if (!r.ok) throw new Error("ads list: " + JSON.stringify(j));
     for (const a of j.data ?? []) ads.push(a);
     next = j.paging?.next ?? null;
     page++;
   }
   if (!ads.length) return 0;
+
+  // Some /ads field expansions ignore the requested thumbnail size and return
+  // the tiny 64px URL. Refetch creatives directly by ID to get larger images.
+  const creativeIds = Array.from(new Set(
+    ads.map((a) => a.creative?.id).filter((id: any) => typeof id === "string" && id.length > 0)
+  )) as string[];
+  const creativeMap = new Map<string, any>();
+  for (let i = 0; i < creativeIds.length; i += 50) {
+    const batch = creativeIds.slice(i, i + 50).map((id) => ({
+      method: "GET",
+      relative_url: `${id}?fields=id,thumbnail_url,image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id,asset_feed_spec&thumbnail_width=600&thumbnail_height=600`,
+    }));
+    try {
+      const r: Response = await fetch("https://graph.facebook.com/v21.0/", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          access_token: accessToken,
+          batch: JSON.stringify(batch),
+          include_headers: "false",
+        }),
+      });
+      const j: any = await r.json();
+      if (Array.isArray(j)) {
+        j.forEach((res: any, idx: number) => {
+          if (res?.code === 200 && res.body) {
+            try {
+              const body = JSON.parse(res.body);
+              creativeMap.set(creativeIds[i + idx], body);
+            } catch { /* ignore */ }
+          }
+        });
+      }
+    } catch { /* non-fatal */ }
+  }
+  for (const ad of ads) {
+    const fresh = ad.creative?.id ? creativeMap.get(ad.creative.id) : null;
+    if (fresh) ad.creative = { ...ad.creative, ...fresh };
+  }
 
   // Pull last-30d insights at ad level in one call
   const insFields = "ad_id,spend,impressions,clicks,ctr,actions";
@@ -432,8 +502,8 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     `https://graph.facebook.com/v21.0/${acc.act_id}/insights?fields=${insFields}&level=ad&date_preset=last_30d&limit=500&access_token=${encodeURIComponent(accessToken)}`;
   let ip = 0;
   while (insNext && ip < 10) {
-    const r = await fetch(insNext);
-    const j = await r.json();
+    const r: Response = await fetch(insNext);
+    const j: any = await r.json();
     if (!r.ok) break;
     for (const row of j.data ?? []) insMap.set(row.ad_id, row);
     insNext = j.paging?.next ?? null;
@@ -485,7 +555,7 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
   // so the Creatives grid can render a real Meta-style post header.
   const pageIds = Array.from(new Set(
     ads
-      .map((a) => a.creative?.object_story_spec?.page_id)
+      .map((a) => a.creative?.object_story_spec?.page_id ?? storyPageId(a.creative?.effective_object_story_id))
       .filter((id: any) => typeof id === "string" && id.length > 0)
   )) as string[];
   const pageMap = new Map<string, { name: string | null; avatar: string | null }>();
@@ -532,6 +602,9 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     const cre = a.creative ?? {};
     const story = cre.object_story_spec ?? {};
     const linkData = story.link_data ?? story.video_data ?? {};
+    const assetFeed = cre.asset_feed_spec ?? {};
+    const assetImageUrl = firstAssetUrl(assetFeed.images);
+    const assetVideo = Array.isArray(assetFeed.videos) ? assetFeed.videos[0] : null;
 
     // body/title may live either directly on creative or inside object_story_spec
     const body = cre.body ?? linkData.message ?? linkData.description ?? null;
@@ -542,8 +615,9 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     // creative_hash: image_hash if available, else video_id, else creative_id —
     // lets us group "same visual reused across ads".
     const creativeHash = cre.image_hash ?? cre.video_id ?? cre.id ?? null;
-    const pageInfo = story.page_id ? pageMap.get(story.page_id) : null;
-    const mediaType = cre.video_id ? "video" : (cre.image_url || cre.image_hash) ? "image" : null;
+    const pageId = story.page_id ?? storyPageId(cre.effective_object_story_id);
+    const pageInfo = pageId ? pageMap.get(pageId) : null;
+    const mediaType = (cre.video_id || assetVideo?.video_id) ? "video" : (cre.image_url || assetImageUrl || cre.image_hash) ? "image" : null;
 
     const createdAt = a.created_time ? new Date(a.created_time) : null;
     const daysActive = createdAt
@@ -564,8 +638,8 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
       creative_id: cre.id ?? null,
       creative_hash: creativeHash,
       thumbnail_url: cre.thumbnail_url ?? null,
-      image_url: cre.image_url ?? fullPicMap.get(cre.effective_object_story_id) ?? null,
-      video_id: cre.video_id ?? null,
+      image_url: cre.image_url ?? assetImageUrl ?? linkData.picture ?? fullPicMap.get(cre.effective_object_story_id) ?? null,
+      video_id: cre.video_id ?? assetVideo?.video_id ?? null,
       page_name: pageInfo?.name ?? null,
       page_avatar_url: pageInfo?.avatar ?? null,
       media_type: mediaType,
