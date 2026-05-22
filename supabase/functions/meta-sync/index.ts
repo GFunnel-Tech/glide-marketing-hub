@@ -19,7 +19,9 @@ Deno.serve(async (req) => {
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
-    includeDetails = body.includeDetails === true;
+    // Support both the current flag and the older/manual "syncAds" flag used
+    // by quick backfills so creative images are actually refreshed.
+    includeDetails = body.includeDetails === true || body.syncAds === true;
   }
 
   const admin = createClient(
