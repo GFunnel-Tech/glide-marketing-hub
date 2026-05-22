@@ -1,9 +1,11 @@
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClients } from "@/hooks/useDatabase";
+import { KpiLabel } from "@/components/kpi/KpiLabel";
 
 interface KPITileProps {
   label: string;
+  kpiKey?: string;
   value: string;
   delta?: number;
   highlight?: boolean;
