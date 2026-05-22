@@ -408,7 +408,7 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     "campaign_id","campaign{name}","adset_id","adset{name,targeting}",
     // Field expansion modifiers ensure Graph returns a 600px thumbnail
     // instead of the default ~64px (which renders blurry when scaled up).
-    "creative{id,thumbnail_url.width(600).height(600),image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id}",
+    "creative{id,thumbnail_url.width(600).height(600),image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id,asset_feed_spec}",
   ].join(",");
 
   const ads: any[] = [];
@@ -487,7 +487,7 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
   // so the Creatives grid can render a real Meta-style post header.
   const pageIds = Array.from(new Set(
     ads
-      .map((a) => a.creative?.object_story_spec?.page_id)
+      .map((a) => a.creative?.object_story_spec?.page_id ?? storyPageId(a.creative?.effective_object_story_id))
       .filter((id: any) => typeof id === "string" && id.length > 0)
   )) as string[];
   const pageMap = new Map<string, { name: string | null; avatar: string | null }>();
@@ -534,6 +534,9 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     const cre = a.creative ?? {};
     const story = cre.object_story_spec ?? {};
     const linkData = story.link_data ?? story.video_data ?? {};
+    const assetFeed = cre.asset_feed_spec ?? {};
+    const assetImageUrl = firstAssetUrl(assetFeed.images);
+    const assetVideo = Array.isArray(assetFeed.videos) ? assetFeed.videos[0] : null;
 
     // body/title may live either directly on creative or inside object_story_spec
     const body = cre.body ?? linkData.message ?? linkData.description ?? null;
@@ -544,8 +547,9 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     // creative_hash: image_hash if available, else video_id, else creative_id —
     // lets us group "same visual reused across ads".
     const creativeHash = cre.image_hash ?? cre.video_id ?? cre.id ?? null;
-    const pageInfo = story.page_id ? pageMap.get(story.page_id) : null;
-    const mediaType = cre.video_id ? "video" : (cre.image_url || cre.image_hash) ? "image" : null;
+    const pageId = story.page_id ?? storyPageId(cre.effective_object_story_id);
+    const pageInfo = pageId ? pageMap.get(pageId) : null;
+    const mediaType = (cre.video_id || assetVideo?.video_id) ? "video" : (cre.image_url || assetImageUrl || cre.image_hash) ? "image" : null;
 
     const createdAt = a.created_time ? new Date(a.created_time) : null;
     const daysActive = createdAt
@@ -566,8 +570,8 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
       creative_id: cre.id ?? null,
       creative_hash: creativeHash,
       thumbnail_url: cre.thumbnail_url ?? null,
-      image_url: cre.image_url ?? fullPicMap.get(cre.effective_object_story_id) ?? null,
-      video_id: cre.video_id ?? null,
+      image_url: cre.image_url ?? assetImageUrl ?? linkData.picture ?? fullPicMap.get(cre.effective_object_story_id) ?? null,
+      video_id: cre.video_id ?? assetVideo?.video_id ?? null,
       page_name: pageInfo?.name ?? null,
       page_avatar_url: pageInfo?.avatar ?? null,
       media_type: mediaType,
