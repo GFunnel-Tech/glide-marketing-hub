@@ -82,11 +82,13 @@ export default function MetaCallback() {
         }
         const r = data as CallbackResult;
         setResult(r);
-        // Default selection: existing actives on reconnect, otherwise all.
+        // Default selection:
+        //  - reconnect → preserve the user's existing active accounts
+        //  - first connect → NONE pre-selected, forcing an explicit choice.
+        //    (Pre-checking everything caused users to accidentally sync every
+        //    ad account on their Meta profile by just clicking "Sync".)
         const initial = new Set<string>(
-          r.isReconnect
-            ? r.accounts.filter(a => a.is_active).map(a => a.act_id)
-            : r.accounts.map(a => a.act_id),
+          r.isReconnect ? r.accounts.filter(a => a.is_active).map(a => a.act_id) : [],
         );
         setSelected(initial);
         setPhase("select");
