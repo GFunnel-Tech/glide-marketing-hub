@@ -14,11 +14,15 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let workspaceFilter: string | null = null;
-  let exhaustiveDiscovery = false;
+  // Default to exhaustive discovery so accounts without pre-synced meta_ads
+  // (e.g. brand-new mappings) still pull their Lead Gen forms.
+  let exhaustiveDiscovery = true;
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
-    exhaustiveDiscovery = body.exhaustiveDiscovery === true;
+    if (typeof body.exhaustiveDiscovery === "boolean") {
+      exhaustiveDiscovery = body.exhaustiveDiscovery;
+    }
   }
 
   const admin = createClient(
