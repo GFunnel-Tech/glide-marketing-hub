@@ -542,6 +542,8 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     // creative_hash: image_hash if available, else video_id, else creative_id —
     // lets us group "same visual reused across ads".
     const creativeHash = cre.image_hash ?? cre.video_id ?? cre.id ?? null;
+    const pageInfo = story.page_id ? pageMap.get(story.page_id) : null;
+    const mediaType = cre.video_id ? "video" : (cre.image_url || cre.image_hash) ? "image" : null;
 
     const createdAt = a.created_time ? new Date(a.created_time) : null;
     const daysActive = createdAt
