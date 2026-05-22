@@ -481,7 +481,49 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     } catch { /* non-fatal */ }
   }
 
+  // Fetch Facebook Page name + avatar for every unique page referenced by an ad
+  // so the Creatives grid can render a real Meta-style post header.
+  const pageIds = Array.from(new Set(
+    ads
+      .map((a) => a.creative?.object_story_spec?.page_id)
+      .filter((id: any) => typeof id === "string" && id.length > 0)
+  )) as string[];
+  const pageMap = new Map<string, { name: string | null; avatar: string | null }>();
+  for (let i = 0; i < pageIds.length; i += 50) {
+    const batch = pageIds.slice(i, i + 50).map((id) => ({
+      method: "GET",
+      relative_url: `${id}?fields=name,picture.width(120).height(120)`,
+    }));
+    try {
+      const r = await fetch("https://graph.facebook.com/v21.0/", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          access_token: accessToken,
+          batch: JSON.stringify(batch),
+          include_headers: "false",
+        }),
+      });
+      const j = await r.json();
+      if (Array.isArray(j)) {
+        j.forEach((res: any, idx: number) => {
+          if (res?.code === 200 && res.body) {
+            try {
+              const body = JSON.parse(res.body);
+              pageMap.set(pageIds[i + idx], {
+                name: body.name ?? null,
+                avatar: body.picture?.data?.url ?? null,
+              });
+            } catch { /* ignore */ }
+          }
+        });
+      }
+    } catch { /* non-fatal */ }
+  }
+
   const now = Date.now();
+
+
 
   const rows = ads.map((a: any) => {
     const ins = insMap.get(a.id) ?? {};
@@ -500,6 +542,8 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     // creative_hash: image_hash if available, else video_id, else creative_id —
     // lets us group "same visual reused across ads".
     const creativeHash = cre.image_hash ?? cre.video_id ?? cre.id ?? null;
+    const pageInfo = story.page_id ? pageMap.get(story.page_id) : null;
+    const mediaType = cre.video_id ? "video" : (cre.image_url || cre.image_hash) ? "image" : null;
 
     const createdAt = a.created_time ? new Date(a.created_time) : null;
     const daysActive = createdAt
@@ -522,6 +566,9 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
       thumbnail_url: cre.thumbnail_url ?? null,
       image_url: cre.image_url ?? fullPicMap.get(cre.effective_object_story_id) ?? null,
       video_id: cre.video_id ?? null,
+      page_name: pageInfo?.name ?? null,
+      page_avatar_url: pageInfo?.avatar ?? null,
+      media_type: mediaType,
       title,
       body,
       call_to_action_type: cta,

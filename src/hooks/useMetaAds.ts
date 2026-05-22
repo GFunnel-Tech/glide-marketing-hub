@@ -18,6 +18,9 @@ export interface MetaAd {
   thumbnail_url: string | null;
   image_url: string | null;
   video_id: string | null;
+  page_name: string | null;
+  page_avatar_url: string | null;
+  media_type: string | null;
   title: string | null;
   body: string | null;
   call_to_action_type: string | null;
