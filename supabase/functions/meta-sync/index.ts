@@ -439,8 +439,50 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     insNext = j.paging?.next ?? null;
     ip++;
   }
+  // For ads missing image_url (video / page-post creatives), batch-fetch the
+  // post's full_picture so we render a high-res image instead of the tiny
+  // thumbnail_url. Graph allows up to 50 sub-requests per batch.
+  const postIds = Array.from(new Set(
+    ads
+      .map((a) => a.creative?.effective_object_story_id)
+      .filter((id: any) => typeof id === "string" && id.length > 0)
+      .filter((id: string) => {
+        const ad = ads.find((x) => x.creative?.effective_object_story_id === id);
+        return ad && !ad.creative?.image_url;
+      })
+  )) as string[];
+  const fullPicMap = new Map<string, string>();
+  for (let i = 0; i < postIds.length; i += 50) {
+    const batch = postIds.slice(i, i + 50).map((id) => ({
+      method: "GET",
+      relative_url: `${id}?fields=full_picture`,
+    }));
+    try {
+      const r = await fetch("https://graph.facebook.com/v21.0/", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          access_token: accessToken,
+          batch: JSON.stringify(batch),
+          include_headers: "false",
+        }),
+      });
+      const j = await r.json();
+      if (Array.isArray(j)) {
+        j.forEach((res: any, idx: number) => {
+          if (res?.code === 200 && res.body) {
+            try {
+              const body = JSON.parse(res.body);
+              if (body.full_picture) fullPicMap.set(postIds[i + idx], body.full_picture);
+            } catch { /* ignore */ }
+          }
+        });
+      }
+    } catch { /* non-fatal */ }
+  }
 
   const now = Date.now();
+
   const rows = ads.map((a: any) => {
     const ins = insMap.get(a.id) ?? {};
     const leads = extractLeads(ins.actions);
