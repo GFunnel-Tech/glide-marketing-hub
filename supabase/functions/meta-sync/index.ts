@@ -520,7 +520,7 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
       creative_id: cre.id ?? null,
       creative_hash: creativeHash,
       thumbnail_url: cre.thumbnail_url ?? null,
-      image_url: cre.image_url ?? null,
+      image_url: cre.image_url ?? fullPicMap.get(cre.effective_object_story_id) ?? null,
       video_id: cre.video_id ?? null,
       title,
       body,
