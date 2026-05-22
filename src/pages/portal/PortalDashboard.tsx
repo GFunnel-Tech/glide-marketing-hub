@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, CheckCircle2, Calendar, Bot, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 
 
 
@@ -123,6 +124,14 @@ export default function PortalDashboard() {
           <p className="text-sm text-muted-foreground">You're all caught up. We'll notify you when something needs your review.</p>
         </Card>
       </div>
+
+      {clientId && (
+        <ClientGuaranteesPanel
+          clientId={clientId}
+          client={{ leads: client?.leads, spend: client?.spend }}
+          readOnly
+        />
+      )}
     </div>
   );
 }

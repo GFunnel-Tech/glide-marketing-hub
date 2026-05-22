@@ -380,6 +380,66 @@ export type Database = {
           },
         ]
       }
+      client_guarantees: {
+        Row: {
+          client_id: number
+          created_at: string
+          created_by: string
+          criteria: Json
+          deadline: string
+          description: string | null
+          id: string
+          last_evaluated_at: string | null
+          last_status_change_at: string | null
+          name: string
+          start_date: string
+          status: string
+          template_id: string | null
+          terms: string | null
+          updated_at: string
+          visible_to_client: boolean
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          created_by: string
+          criteria?: Json
+          deadline: string
+          description?: string | null
+          id?: string
+          last_evaluated_at?: string | null
+          last_status_change_at?: string | null
+          name: string
+          start_date?: string
+          status?: string
+          template_id?: string | null
+          terms?: string | null
+          updated_at?: string
+          visible_to_client?: boolean
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          created_by?: string
+          criteria?: Json
+          deadline?: string
+          description?: string | null
+          id?: string
+          last_evaluated_at?: string | null
+          last_status_change_at?: string | null
+          name?: string
+          start_date?: string
+          status?: string
+          template_id?: string | null
+          terms?: string | null
+          updated_at?: string
+          visible_to_client?: boolean
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       client_invites: {
         Row: {
           client_id: number
@@ -1452,6 +1512,84 @@ export type Database = {
           phone?: string | null
           raw?: Json | null
           stage?: Database["public"]["Enums"]["lead_stage"]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      guarantee_evaluations: {
+        Row: {
+          client_id: number
+          created_at: string
+          criteria_results: Json
+          evaluated_at: string
+          guarantee_id: string
+          id: string
+          overall_progress: number
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          criteria_results?: Json
+          evaluated_at?: string
+          guarantee_id: string
+          id?: string
+          overall_progress?: number
+          status: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          criteria_results?: Json
+          evaluated_at?: string
+          guarantee_id?: string
+          id?: string
+          overall_progress?: number
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      guarantee_templates: {
+        Row: {
+          created_at: string
+          created_by: string
+          criteria: Json
+          description: string | null
+          duration_days: number
+          enabled: boolean
+          id: string
+          name: string
+          terms: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          criteria?: Json
+          description?: string | null
+          duration_days?: number
+          enabled?: boolean
+          id?: string
+          name: string
+          terms?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          criteria?: Json
+          description?: string | null
+          duration_days?: number
+          enabled?: boolean
+          id?: string
+          name?: string
+          terms?: string | null
           updated_at?: string
           workspace_id?: string
         }

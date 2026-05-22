@@ -7,6 +7,7 @@ export type NotificationEventType =
   | "lead_received"
   | "new_message"
   | "custom_kpi_alert"
+  | "guarantee_status_changed"
   | "info";
 
 export interface NotificationEventDef {
@@ -30,6 +31,11 @@ export const NOTIFICATION_EVENTS: NotificationEventDef[] = [
     key: "custom_kpi_alert",
     label: "Custom KPI alert",
     description: "A custom KPI breaches a threshold or shifts beyond your trend rule.",
+  },
+  {
+    key: "guarantee_status_changed",
+    label: "Guarantee status changed",
+    description: "A client guarantee moves between On Track, At Risk, Met, or Failed.",
   },
   {
     key: "info",
