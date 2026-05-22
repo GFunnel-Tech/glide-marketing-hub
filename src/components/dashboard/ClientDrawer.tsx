@@ -91,7 +91,7 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                     ...(client.doubleCount ? [["True CPL", `$${client.trueCpl}`, "< $30"]] : []),
                     ["CPM", `$${client.cpm}`, "< $120"],
                     ["Leads (MTD)", client.leads, "50+"],
-                    ["Form CVR", `${client.formCvr}%`, "> 15%"],
+                    ["Form CVR", `${client.formCvr.toFixed(2)}%`, "> 15%"],
                     ["Frequency", client.frequency, "< 3.0"],
                   ].map(([m, v, b]) => (
                     <tr key={String(m)} className="border-b border-border">

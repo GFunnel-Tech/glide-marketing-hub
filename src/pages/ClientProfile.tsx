@@ -58,7 +58,7 @@ export default function ClientProfile() {
     { label: "CPM", value: `$${client.cpm.toFixed(2)}`, benchmark: "< $120", status: client.cpm < 120 ? "Good" : "Watch" },
     { label: "Leads MTD", value: String(client.leads), benchmark: "50+", status: client.leads >= 50 ? "Good" : client.leads >= 20 ? "Watch" : "Fix" },
     { label: "Spend", value: `$${client.spend.toLocaleString()}`, benchmark: "—", status: "Good" },
-    { label: "Form CVR", value: `${client.formCvr}%`, benchmark: "> 15%", status: client.formCvr > 15 ? "Good" : client.formCvr >= 10 ? "Watch" : "Fix" },
+    { label: "Form CVR", value: `${client.formCvr.toFixed(2)}%`, benchmark: "> 15%", status: client.formCvr > 15 ? "Good" : client.formCvr >= 10 ? "Watch" : "Fix" },
     { label: "Frequency", value: String(client.frequency), benchmark: "< 3.0", status: client.frequency < 3 ? "Good" : client.frequency <= 4 ? "Watch" : "Fix" },
     { label: "Double Count", value: client.doubleCount ? "Yes" : "No", benchmark: "No", status: client.doubleCount ? "Fix" : "Good" },
   ] as { label: string; value: string; benchmark: string; status: "Good" | "Watch" | "Fix" }[];
