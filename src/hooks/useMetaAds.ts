@@ -16,6 +16,7 @@ export interface MetaAd {
   creative_id: string | null;
   creative_hash: string | null;
   thumbnail_url: string | null;
+  image_url: string | null;
   video_id: string | null;
   title: string | null;
   body: string | null;
