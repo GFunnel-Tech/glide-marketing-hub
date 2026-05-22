@@ -456,6 +456,45 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
   }
   if (!ads.length) return 0;
 
+  // Some /ads field expansions ignore the requested thumbnail size and return
+  // the tiny 64px URL. Refetch creatives directly by ID to get larger images.
+  const creativeIds = Array.from(new Set(
+    ads.map((a) => a.creative?.id).filter((id: any) => typeof id === "string" && id.length > 0)
+  )) as string[];
+  const creativeMap = new Map<string, any>();
+  for (let i = 0; i < creativeIds.length; i += 50) {
+    const batch = creativeIds.slice(i, i + 50).map((id) => ({
+      method: "GET",
+      relative_url: `${id}?fields=id,thumbnail_url.width(600).height(600),image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id,asset_feed_spec`,
+    }));
+    try {
+      const r: Response = await fetch("https://graph.facebook.com/v21.0/", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          access_token: accessToken,
+          batch: JSON.stringify(batch),
+          include_headers: "false",
+        }),
+      });
+      const j: any = await r.json();
+      if (Array.isArray(j)) {
+        j.forEach((res: any, idx: number) => {
+          if (res?.code === 200 && res.body) {
+            try {
+              const body = JSON.parse(res.body);
+              creativeMap.set(creativeIds[i + idx], body);
+            } catch { /* ignore */ }
+          }
+        });
+      }
+    } catch { /* non-fatal */ }
+  }
+  for (const ad of ads) {
+    const fresh = ad.creative?.id ? creativeMap.get(ad.creative.id) : null;
+    if (fresh) ad.creative = { ...ad.creative, ...fresh };
+  }
+
   // Pull last-30d insights at ad level in one call
   const insFields = "ad_id,spend,impressions,clicks,ctr,actions";
   const insMap = new Map<string, any>();
