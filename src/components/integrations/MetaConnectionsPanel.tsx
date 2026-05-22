@@ -778,7 +778,25 @@ export function MetaConnectionsPanel() {
 
         {connections.length > 0 && (
           <div className="mb-4">
-            <MetaScopesLiveBanner connections={connections} />
+            <MetaScopesLiveBanner
+              connections={connections}
+              onReconnect={async (connectionId) => {
+                try {
+                  const { data, error } = await supabase.functions.invoke("meta-oauth-start", {
+                    body: {
+                      workspaceId: currentWorkspace!.id,
+                      reconnectId: connectionId,
+                      forceConsent: false,
+                    },
+                  });
+                  if (error) throw error;
+                  window.open(data.url, "_blank", "width=600,height=700");
+                  toast.info("Approve the missing scopes in the popup, then refresh this page.");
+                } catch (e: any) {
+                  toast.error(e.message || "Failed to start reconnect");
+                }
+              }}
+            />
           </div>
         )}
 
