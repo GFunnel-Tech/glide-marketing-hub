@@ -359,8 +359,8 @@ async function syncGranularInsights(admin: any, acc: any, accessToken: string): 
     let next: string | null = url;
     const rows: any[] = [];
     while (next) {
-      const res = await fetch(next);
-      const j = await res.json();
+      const res: Response = await fetch(next);
+      const j: any = await res.json();
       if (!res.ok) break;
       for (const d of j.data ?? []) {
         const leads = extractLeads(d.actions);
@@ -429,8 +429,8 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
   // safety cap: 5 pages = 1000 ads per account
   let page = 0;
   while (next && page < 5) {
-    const r = await fetch(next);
-    const j = await r.json();
+    const r: Response = await fetch(next);
+    const j: any = await r.json();
     if (!r.ok) throw new Error("ads list: " + JSON.stringify(j));
     for (const a of j.data ?? []) ads.push(a);
     next = j.paging?.next ?? null;
@@ -445,8 +445,8 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     `https://graph.facebook.com/v21.0/${acc.act_id}/insights?fields=${insFields}&level=ad&date_preset=last_30d&limit=500&access_token=${encodeURIComponent(accessToken)}`;
   let ip = 0;
   while (insNext && ip < 10) {
-    const r = await fetch(insNext);
-    const j = await r.json();
+    const r: Response = await fetch(insNext);
+    const j: any = await r.json();
     if (!r.ok) break;
     for (const row of j.data ?? []) insMap.set(row.ad_id, row);
     insNext = j.paging?.next ?? null;
