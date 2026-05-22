@@ -314,9 +314,11 @@ function SelectionView({
 
       <div className="flex gap-2 justify-end pt-2">
         <Button variant="outline" size="sm" onClick={() => window.close()} disabled={submitting}>Cancel</Button>
-        <Button size="sm" onClick={onConfirm} disabled={submitting}>
+        <Button size="sm" onClick={onConfirm} disabled={submitting || selectedCount === 0}>
           {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {selectedCount === 0 ? "Skip & finish" : `Sync ${selectedCount} account${selectedCount === 1 ? "" : "s"}`}
+          {selectedCount === 0
+            ? "Select at least one account"
+            : `Sync ${selectedCount} account${selectedCount === 1 ? "" : "s"}`}
         </Button>
       </div>
     </Shell>
