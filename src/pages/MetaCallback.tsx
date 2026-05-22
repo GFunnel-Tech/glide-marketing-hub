@@ -82,11 +82,13 @@ export default function MetaCallback() {
         }
         const r = data as CallbackResult;
         setResult(r);
-        // Default selection: existing actives on reconnect, otherwise all.
+        // Default selection:
+        //  - reconnect → preserve the user's existing active accounts
+        //  - first connect → NONE pre-selected, forcing an explicit choice.
+        //    (Pre-checking everything caused users to accidentally sync every
+        //    ad account on their Meta profile by just clicking "Sync".)
         const initial = new Set<string>(
-          r.isReconnect
-            ? r.accounts.filter(a => a.is_active).map(a => a.act_id)
-            : r.accounts.map(a => a.act_id),
+          r.isReconnect ? r.accounts.filter(a => a.is_active).map(a => a.act_id) : [],
         );
         setSelected(initial);
         setPhase("select");
@@ -263,7 +265,7 @@ function SelectionView({
         <p className="text-sm text-muted-foreground">
           {result.isReconnect
             ? "Re-confirm which accounts should keep syncing. Your current selection is pre-checked."
-            : `We discovered ${total} ad account${total === 1 ? "" : "s"}. Pick which ones to sync — only selected accounts will pull insights and leads.`}
+            : `We discovered ${total} ad account${total === 1 ? "" : "s"}. Tick only the ones you actually want Lovable to pull insights and leads from — nothing is selected by default.`}
         </p>
       </div>
 
@@ -312,9 +314,11 @@ function SelectionView({
 
       <div className="flex gap-2 justify-end pt-2">
         <Button variant="outline" size="sm" onClick={() => window.close()} disabled={submitting}>Cancel</Button>
-        <Button size="sm" onClick={onConfirm} disabled={submitting}>
+        <Button size="sm" onClick={onConfirm} disabled={submitting || selectedCount === 0}>
           {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {selectedCount === 0 ? "Skip & finish" : `Sync ${selectedCount} account${selectedCount === 1 ? "" : "s"}`}
+          {selectedCount === 0
+            ? "Select at least one account"
+            : `Sync ${selectedCount} account${selectedCount === 1 ? "" : "s"}`}
         </Button>
       </div>
     </Shell>
