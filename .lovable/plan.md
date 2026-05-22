@@ -1,112 +1,107 @@
-# Lead Quality Scoring System
+## Custom KPIs + Custom Notifications
 
-An automated, configurable scoring engine that grades every lead 0–100, surfaces an A/B/C/D badge, rolls up to client KPIs, drives notifications and status changes, can trigger automations, and auto-tunes its own weights from closed-deal outcomes.
+Lets users define their own metrics (e.g. "Lead-to-Appointment %", "Profit per Lead") with a visual formula builder, set thresholds + trend rules, and get notifications when those rules trigger.
 
-## 1. Data model (new tables)
+### 1. Data model (new tables)
 
-**`lead_score_rule_sets`** — a versioned bundle of weights & thresholds.
-- `scope` (`workspace` | `client` | `campaign`), `scope_id`, `version`, `is_active`
-- `weights` jsonb: `{ completeness, validity, crm_progression, engagement, qualifying_answers, source }`
-- `qualifying_rules` jsonb: array of `{ field, op, value, points }`
-- `source_modifiers` jsonb: `{ ad_id|adset_id|form_id : delta }`
-- `grade_thresholds` jsonb: `{ A: 85, B: 70, C: 50 }` (anything below C = D)
-- `auto_tune_enabled` bool, `last_tuned_at`
+- **`custom_kpis`** — formula definitions
+  - `workspace_id`, `client_id` (nullable → workspace default when null)
+  - `name`, `description`, `unit` (`currency` | `percent` | `number` | `ratio`)
+  - `format` (decimals, prefix/suffix)
+  - `direction` (`lower_better` | `higher_better` | `range`)
+  - `formula` (jsonb AST from the visual builder, see below)
+  - `enabled`, `sort_order`, `created_by`
 
-Resolution order (per lead): campaign > client > workspace, picking the highest-specificity active rule set.
+- **`custom_kpi_alerts`** — alert rules tied to a KPI
+  - `custom_kpi_id`, `workspace_id`, `client_id` (nullable)
+  - `trigger_type`: `threshold` | `trend`
+  - `threshold` jsonb: `{ op: 'gt'|'lt'|'between', value, value2? }`
+  - `trend` jsonb: `{ window_days, compare_to: 'prev_period'|'prev_week', change_pct, direction: 'up'|'down'|'either' }`
+  - `severity` (`info`|`warning`|`critical`), `cooldown_minutes`
+  - `notify_channels` jsonb: `{ in_app: true, email: [] }`
+  - `enabled`, `last_fired_at`
 
-**`lead_scores`** — one row per lead, recomputed on signal change.
-- `lead_id`, `client_id`, `workspace_id`, `campaign_id`
-- `score` numeric(5,2), `grade` text, `rule_set_id`, `rule_set_version`
-- `breakdown` jsonb (per-signal points + weight contribution — for the lead drawer)
-- `computed_at`, `outcome` (`unknown` | `closed_won` | `closed_lost` | `disqualified`) — set when GHL stage hits a terminal value
+- **`custom_kpi_evaluations`** — history of computed values
+  - `custom_kpi_id`, `client_id`, `period_start`, `period_end`, `value`, `inputs` jsonb, `created_at`
+  - lets the trend evaluator compare current vs prior, and powers a sparkline in the UI
 
-**`lead_score_events`** — append-only signal log used by both the scorer and the tuner.
-- `lead_id`, `signal_type` (`form_submit`, `email_valid`, `phone_valid`, `duplicate`, `stage_change`, `reply_received`, `call_answered`, `time_to_response`, `qualifying_answer_matched`), `value` jsonb, `occurred_at`
+All three: workspace-scoped RLS (`is_workspace_member` read, `can_write_workspace` write, owner/admin delete) plus portal-user read on the per-client view.
 
-**`lead_score_calibrations`** — proposed weight changes from auto-tuner, awaiting approval.
-- `rule_set_id`, `proposed_weights`, `proposed_thresholds`, `evidence` jsonb (sample sizes, correlations), `status` (`pending` | `approved` | `rejected`), `created_at`
+### 2. Formula AST (visual builder output)
 
-All tables: workspace-scoped RLS using existing `is_workspace_member` / `can_write_workspace` / `is_portal_user_for_client` helpers.
+JSON structure the builder produces and the server evaluates:
 
-## 2. Scoring engine
+```text
+{ "op": "div",
+  "a": { "metric": "meta.spend" },
+  "b": { "op": "add",
+         "a": { "metric": "ghl.appointments" },
+         "b": { "constant": 1 } } }
+```
 
-Edge function `lead-score-compute`:
-- Input: `lead_id` (or batch).
-- Pulls signal events + GHL stage from `ghl_opportunities` / `ghl_appointments`, form payload from `meta_leads`/`google_leads`/`linkedin_leads`.
-- Resolves the rule set (campaign → client → workspace fallback).
-- Computes weighted sub-scores (0–1) → sum × 100 → grade.
-- Writes `lead_scores`; emits `lead.score.updated` for downstream.
+Allowed nodes: `metric`, `constant`, and ops `add`, `sub`, `mul`, `div`, `min`, `max`, `pct` (a÷b×100), `safe_div` (0 if denominator 0).
 
-Triggers that call it:
-- DB trigger on insert into `meta_leads` / `google_leads` / `linkedin_leads` / `leads` → enqueue.
-- DB trigger on `ghl_opportunities` stage change → enqueue.
-- New `ghl_appointments` rows → enqueue.
-- Cron edge function `lead-score-recompute-stale` (every 15 min) for engagement-window updates.
+Available metric tokens (all of "Everything available"):
+- `meta.spend`, `meta.impressions`, `meta.clicks`, `meta.leads`, `meta.ctr`, `meta.cpm`, `meta.frequency`, `meta.cpl`
+- `ghl.opportunities`, `ghl.appointments`, `ghl.pipeline_value`, `ghl.opps_won`
+- `leads.true`, `leads.reported`, `leads.double_count` (0/1)
+- `override.<key>` for any value in `client_kpi_overrides`
 
-Scheduling uses Supabase `pg_cron` + `pg_net` to invoke the edge function.
+Evaluator is a pure TS function: walks the AST, looks up metrics from a pre-fetched per-client snapshot, returns `{ value, inputs }` so the UI can show "shown because spend=$1,240 / leads=12".
 
-## 3. Auto-tuner
+### 3. Visual builder UI
 
-Edge function `lead-score-autotune` (weekly cron):
-- For each rule set with `auto_tune_enabled = true` and ≥30 leads with known outcomes:
-  - Computes point-biserial correlation between each signal contribution and `outcome = closed_won`.
-  - Suggests new weights (normalized so they sum to 1) and grade thresholds (precision/recall sweep).
-  - Writes a row to `lead_score_calibrations` (status `pending`).
-- A bell in the UI prompts the workspace owner to review & approve.
-- On approval: bumps rule set version, recomputes all affected lead scores.
+`src/components/kpi/FormulaBuilder.tsx` — token-based row editor:
 
-## 4. UI
+```text
+[ metric ▾ ]  [ ÷ ▾ ]  [ ( ]  [ metric ▾ ]  [ + ▾ ]  [ 1 ]  [ ) ]
+```
 
-**Settings → Lead Scoring** (workspace level)
-- List rule sets (Workspace / Client / Campaign tabs).
-- Editor: weight sliders, qualifying-rule builder, source modifier table, grade thresholds, auto-tune toggle.
-- "Preview on recent 50 leads" — shows score distribution before saving.
-- Calibration inbox: pending proposals with diff vs current, approve / reject.
+- Click a token to swap it; `+` button appends; group/ungroup with parentheses chip.
+- Live preview pane shows: formula in plain English, sample value computed against the currently selected client's latest snapshot, and validation errors (divide-by-zero risk, unknown token).
+- No raw text input — purely click-to-build.
 
-**Leads view**
-- Score column with grade pill (A green / B blue / C amber / D red).
-- Filter by grade, sort by score.
-- Quality distribution sparkline per client.
+### 4. Management UI
 
-**Lead drawer**
-- Score breakdown: each signal, raw value, points, weighted contribution.
-- "Why this score" plain-language summary.
+New route **`/settings/custom-kpis`** with tabs:
 
-**Client dashboard**
-- New KPI tile: avg lead quality (last 30 days) + delta.
-- Quality factors into client RED/YELLOW/GREEN via `compute_client_status` (add `lead_quality` KPI key resolved from `lead_scores` avg).
+- **KPIs** — list with name, scope (workspace/client), formula chip, latest value, sparkline, enabled toggle, edit/delete.
+- **Alerts** — list grouped by KPI, severity badge, trigger summary ("CPL > $50" or "Form CVR ↓ 20% vs last 7d"), last fired, enabled toggle.
+- **Drawer** for create/edit: name, scope picker (workspace default or specific client), unit/format, direction, FormulaBuilder, then alerts section with threshold + trend sub-forms.
 
-## 5. Notifications & automations
+Per-client overrides live on the existing **Client Profile** page under a new "Custom KPIs" tab, listing inherited workspace KPIs with an "Override for this client" action that clones the formula or thresholds.
 
-New notification types (using existing `notifications` + `notification_preferences` pattern):
-- `lead_quality_drop` — client avg drops below threshold.
-- `score_calibration_ready` — auto-tuner has suggestions.
+### 5. Display surfaces
 
-Automation hooks (new `lead_score_automations` table — fire when grade meets condition):
-- Pause ad set in Meta (uses existing `meta-ad-status` function).
-- Create ClickUp task (existing pattern).
-- Trigger form-swap workflow `05-form-swap`.
+- **Agency Dashboard** — new "Custom KPIs" strip above the client table, showing workspace-default KPIs aggregated across visible clients.
+- **Client Profile / Client Portal** — custom KPIs render in the KPI grid alongside core metrics, respecting client overrides.
+- All values come from the evaluator + `custom_kpi_evaluations` snapshot so numbers match what alerts fire on.
 
-## 6. Rollout phases
+### 6. Evaluation + alerting
 
-Build in this order so the user gets value early:
+- **Edge function `custom-kpi-evaluate`** — for one workspace (or all clients), loads the metric snapshot from `meta_insights_daily`, `ghl_*`, `meta_leads`, `clients`, evaluates each enabled KPI per client, inserts into `custom_kpi_evaluations`.
+- **Edge function `custom-kpi-alert-check`** — runs after evaluation:
+  - Threshold: compare latest value vs rule.
+  - Trend: compare latest window aggregate vs prior window using `custom_kpi_evaluations`.
+  - On fire: insert into `notifications` (existing table, `type='custom_kpi_alert'`), respect `cooldown_minutes`, send email via existing transactional path if requested.
+- **pg_cron** schedules `custom-kpi-evaluate` every 15 min (same cadence already used for Meta sync).
 
-1. **Schema + scoring engine + Leads view badges** — the core. Manual rule editing only.
-2. **Client KPI rollup + notifications**.
-3. **Per-client and per-campaign rule sets + rule editor UI**.
-4. **Automations hooks**.
-5. **Auto-tuner + calibration inbox**.
+### 7. Notifications wiring
 
-## Technical notes
+- Reuse existing `notifications` table + bell UI — new `type='custom_kpi_alert'` with deep-link to the KPI drawer.
+- New row in `notification_preferences` event: `custom_kpi_alert`, so users can mute per-workspace.
+- Severity styles the bell badge color.
 
-- All score computation in edge functions, never client-side.
-- `breakdown` jsonb keeps the math transparent and auditable.
-- Rule sets are versioned so historical scores remain explainable.
-- Cron jobs registered via `supabase--insert` (not migration) since they contain project-specific URLs.
-- TanStack Query keys: `["lead_scores", workspaceId, clientId]`, invalidated by Realtime channel on `lead_scores`.
+### Technical notes
 
-## Out of scope (for now)
+- AST evaluator: pure-TS module shared by frontend (preview) and edge function (canonical). Lives at `supabase/functions/_shared/kpiFormula.ts` plus a thin re-export at `src/lib/kpiFormula.ts` (frontend copy, kept in sync — small, ~150 lines).
+- Server-side validation rejects unknown metric tokens, deeply nested ASTs (>16 levels), and division by literal 0.
+- All UI in `src/components/kpi/` and `src/pages/settings/CustomKpis.tsx`; types in `src/hooks/useCustomKpis.ts`.
+- Permission: only `owner`/`admin` can create/edit/delete KPIs and alerts; members can view.
+- Backfill: on first deploy, no rows; users add KPIs from scratch. Existing CPL/CPM/Frequency stay where they are — custom KPIs are additive.
 
-- ML model beyond linear weight tuning (can add gradient boosting later if needed).
-- Cross-workspace benchmarking.
-- Lead enrichment via 3rd-party data providers.
+### Out of scope (can add later)
+
+- Plain-text formula editor (we chose visual).
+- Cross-client aggregations inside one KPI (e.g. average across clients).
+- Slack/SMS notification channels (in-app + email only for v1).

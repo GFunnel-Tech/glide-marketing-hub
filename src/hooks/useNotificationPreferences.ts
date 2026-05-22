@@ -6,6 +6,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 export type NotificationEventType =
   | "lead_received"
   | "new_message"
+  | "custom_kpi_alert"
   | "info";
 
 export interface NotificationEventDef {
@@ -24,6 +25,11 @@ export const NOTIFICATION_EVENTS: NotificationEventDef[] = [
     key: "new_message",
     label: "New direct message",
     description: "A teammate sends you a message in a conversation.",
+  },
+  {
+    key: "custom_kpi_alert",
+    label: "Custom KPI alert",
+    description: "A custom KPI breaches a threshold or shifts beyond your trend rule.",
   },
   {
     key: "info",

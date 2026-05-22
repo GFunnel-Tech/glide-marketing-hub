@@ -868,6 +868,163 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_kpi_alerts: {
+        Row: {
+          client_id: number | null
+          cooldown_minutes: number
+          created_at: string
+          created_by: string
+          custom_kpi_id: string
+          enabled: boolean
+          id: string
+          last_fired_at: string | null
+          notify_channels: Json
+          severity: string
+          threshold: Json | null
+          trend: Json | null
+          trigger_type: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          cooldown_minutes?: number
+          created_at?: string
+          created_by: string
+          custom_kpi_id: string
+          enabled?: boolean
+          id?: string
+          last_fired_at?: string | null
+          notify_channels?: Json
+          severity?: string
+          threshold?: Json | null
+          trend?: Json | null
+          trigger_type: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          cooldown_minutes?: number
+          created_at?: string
+          created_by?: string
+          custom_kpi_id?: string
+          enabled?: boolean
+          id?: string
+          last_fired_at?: string | null
+          notify_channels?: Json
+          severity?: string
+          threshold?: Json | null
+          trend?: Json | null
+          trigger_type?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_kpi_alerts_custom_kpi_id_fkey"
+            columns: ["custom_kpi_id"]
+            isOneToOne: false
+            referencedRelation: "custom_kpis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_kpi_evaluations: {
+        Row: {
+          client_id: number | null
+          created_at: string
+          custom_kpi_id: string
+          id: string
+          inputs: Json
+          period_end: string
+          period_start: string
+          value: number | null
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          created_at?: string
+          custom_kpi_id: string
+          id?: string
+          inputs?: Json
+          period_end: string
+          period_start: string
+          value?: number | null
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          created_at?: string
+          custom_kpi_id?: string
+          id?: string
+          inputs?: Json
+          period_end?: string
+          period_start?: string
+          value?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_kpi_evaluations_custom_kpi_id_fkey"
+            columns: ["custom_kpi_id"]
+            isOneToOne: false
+            referencedRelation: "custom_kpis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_kpis: {
+        Row: {
+          client_id: number | null
+          created_at: string
+          created_by: string
+          description: string | null
+          direction: string
+          enabled: boolean
+          format: Json
+          formula: Json
+          id: string
+          name: string
+          sort_order: number
+          unit: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          direction?: string
+          enabled?: boolean
+          format?: Json
+          formula: Json
+          id?: string
+          name: string
+          sort_order?: number
+          unit?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          direction?: string
+          enabled?: boolean
+          format?: Json
+          formula?: Json
+          id?: string
+          name?: string
+          sort_order?: number
+          unit?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       ghl_appointments: {
         Row: {
           assigned_to: string | null
