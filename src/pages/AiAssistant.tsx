@@ -164,7 +164,7 @@ export default function AiAssistant() {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div><span className="text-muted-foreground">CPL</span><p className="font-semibold">${detectedClient.cpl.toFixed(2)}</p></div>
               <div><span className="text-muted-foreground">Leads</span><p className="font-semibold">{detectedClient.leads}</p></div>
-              <div><span className="text-muted-foreground">Form CVR</span><p className="font-semibold">{detectedClient.formCvr}%</p></div>
+              <div><span className="text-muted-foreground">Form CVR</span><p className="font-semibold">{detectedClient.formCvr.toFixed(2)}%</p></div>
               <div><span className="text-muted-foreground">Double Count</span><p className="font-semibold">{detectedClient.doubleCount ? "Yes ⚠" : "No"}</p></div>
               <div className="col-span-2"><span className="text-muted-foreground">Last Audit</span><p className="font-semibold">{detectedClient.lastAudit}</p></div>
             </div>

@@ -202,8 +202,8 @@ export function ClientTable() {
                   <td className={cn("px-3 py-3 font-semibold tabular-nums", getCPLColor(c.cpm > 120 ? 61 : c.cpm > 80 ? 31 : 0))}>${c.cpm.toFixed(2)}</td>
                   <td className="px-3 py-3 tabular-nums text-foreground">{c.leads}</td>
                   <td className="px-3 py-3 tabular-nums text-foreground">${c.spend.toLocaleString()}</td>
-                  <td className={cn("px-3 py-3 font-semibold tabular-nums", getCVRColor(c.formCvr))}>{c.formCvr}%</td>
-                  <td className={cn("px-3 py-3 tabular-nums", getFreqColor(c.frequency))}>{c.frequency}</td>
+                  <td className={cn("px-3 py-3 font-semibold tabular-nums", getCVRColor(c.formCvr))}>{c.formCvr.toFixed(2)}%</td>
+                  <td className={cn("px-3 py-3 tabular-nums", getFreqColor(c.frequency))}>{Number(c.frequency).toFixed(2)}</td>
                   <td className="px-3 py-3">
                     <Tooltip>
                       <TooltipTrigger>

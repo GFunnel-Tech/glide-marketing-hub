@@ -46,7 +46,7 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
             <div className="flex flex-wrap gap-1.5 mt-2 text-xs text-muted-foreground">
               <span className="bg-accent rounded px-1.5 py-0.5">${client.cpl} CPL</span>
               <span className="bg-accent rounded px-1.5 py-0.5">{client.leads} leads</span>
-              <span className="bg-accent rounded px-1.5 py-0.5">{client.formCvr}% CVR</span>
+              <span className="bg-accent rounded px-1.5 py-0.5">{client.formCvr.toFixed(2)}% CVR</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">Last audited: {client.lastAudit}</p>
           </div>
@@ -91,7 +91,7 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                     ...(client.doubleCount ? [["True CPL", `$${client.trueCpl}`, "< $30"]] : []),
                     ["CPM", `$${client.cpm}`, "< $120"],
                     ["Leads (MTD)", client.leads, "50+"],
-                    ["Form CVR", `${client.formCvr}%`, "> 15%"],
+                    ["Form CVR", `${client.formCvr.toFixed(2)}%`, "> 15%"],
                     ["Frequency", client.frequency, "< 3.0"],
                   ].map(([m, v, b]) => (
                     <tr key={String(m)} className="border-b border-border">
