@@ -29,7 +29,7 @@ export default function Settings() {
   const [copied, setCopied] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const validTabs = ["agency", "integrations", "team", "kpis", "statuses", "notifications"] as const;
+  const validTabs = ["agency", "integrations", "team", "kpis", "custom_kpis", "statuses", "notifications"] as const;
   const initialTab = (validTabs as readonly string[]).includes(tabParam ?? "")
     ? (tabParam as typeof validTabs[number])
     : "agency";
