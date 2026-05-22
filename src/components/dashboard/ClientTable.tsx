@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { useClients } from "@/hooks/useDatabase";
+import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
+import { useDateRange } from "@/hooks/useDateRange";
 import { StatusBadge } from "./StatusBadge";
 import { ClientDrawer } from "./ClientDrawer";
 import { cn } from "@/lib/utils";
@@ -33,12 +35,51 @@ function getFreqColor(f: number) {
 }
 
 export function ClientTable() {
-  const { data: clients = [], isLoading } = useClients();
+  const { data: baseClients = [], isLoading } = useClients();
+  const { data: rangeMetrics = {}, isFetching: rangeLoading } = useClientsRangeMetrics();
+  const { label: rangeLabel } = useDateRange();
   const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("status");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  // Merge per-range aggregates over the snapshot-style clients row.
+  const clients = useMemo(() => {
+    return baseClients.map((c) => {
+      const m = rangeMetrics[c.id];
+      if (!m) {
+        // No data in selected window → zero out KPIs so the table doesn't
+        // misleadingly show the meta-sync 30d snapshot when user picked "Today".
+        return {
+          ...c,
+          cpl: 0,
+          cpm: 0,
+          leads: 0,
+          spend: 0,
+          formCvr: 0,
+          frequency: 0,
+          doubleCount: false,
+          trueCpl: 0,
+          reportedLeads: 0,
+          trueLeads: 0,
+        };
+      }
+      return {
+        ...c,
+        cpl: m.cpl,
+        cpm: m.cpm,
+        leads: m.reportedLeads,
+        spend: m.spend,
+        formCvr: m.formCvr,
+        frequency: m.frequency,
+        doubleCount: m.doubleCount,
+        trueCpl: m.trueCpl,
+        reportedLeads: m.reportedLeads,
+        trueLeads: m.trueLeads,
+      };
+    });
+  }, [baseClients, rangeMetrics]);
 
   const filtered = useMemo(() => {
     let list = clients;
@@ -72,6 +113,10 @@ export function ClientTable() {
           <h2 className="text-lg font-semibold text-foreground">All Clients</h2>
           <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary tabular-nums">
             {filtered.length}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            · {rangeLabel}
+            {rangeLoading && " · updating…"}
           </span>
         </div>
         <div className="flex items-center gap-2">
