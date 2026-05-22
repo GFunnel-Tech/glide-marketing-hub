@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, CheckCircle2, Calendar, Bot, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 
 
 
