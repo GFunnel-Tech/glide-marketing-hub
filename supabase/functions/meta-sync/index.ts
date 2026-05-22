@@ -465,7 +465,7 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
   for (let i = 0; i < creativeIds.length; i += 50) {
     const batch = creativeIds.slice(i, i + 50).map((id) => ({
       method: "GET",
-      relative_url: `${id}?fields=id,thumbnail_url.width(600).height(600),image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id,asset_feed_spec`,
+      relative_url: `${id}?fields=id,thumbnail_url,image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id,asset_feed_spec&thumbnail_width=600&thumbnail_height=600`,
     }));
     try {
       const r: Response = await fetch("https://graph.facebook.com/v21.0/", {
