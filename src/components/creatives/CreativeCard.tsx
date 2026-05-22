@@ -28,9 +28,20 @@ export function CreativeCard({
       className="rounded-lg border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-md transition-all flex flex-col cursor-pointer text-left"
     >
       <div className="relative aspect-video bg-muted/40 flex items-center justify-center overflow-hidden">
-        {ad.thumbnail_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={ad.thumbnail_url} alt={ad.title ?? ad.name ?? "Ad"} className="w-full h-full object-cover" />
+        {(ad.image_url || ad.thumbnail_url) ? (
+          <img
+            src={ad.image_url ?? ad.thumbnail_url ?? ""}
+            alt={ad.title ?? ad.name ?? "Ad"}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (ad.thumbnail_url && img.src !== ad.thumbnail_url) {
+                img.src = ad.thumbnail_url;
+              }
+            }}
+          />
         ) : (
           <ImageIcon className="h-8 w-8 text-muted-foreground" />
         )}

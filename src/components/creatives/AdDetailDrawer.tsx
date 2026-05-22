@@ -115,8 +115,20 @@ export function AdDetailDrawer({
           {/* Creative */}
           <div className="rounded-lg border border-border overflow-hidden bg-muted/40">
             <div className="aspect-video flex items-center justify-center">
-              {ad.thumbnail_url ? (
-                <img src={ad.thumbnail_url} alt={ad.title ?? "Ad"} className="w-full h-full object-cover" />
+              {(ad.image_url || ad.thumbnail_url) ? (
+                <img
+                  src={ad.image_url ?? ad.thumbnail_url ?? ""}
+                  alt={ad.title ?? "Ad"}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (ad.thumbnail_url && img.src !== ad.thumbnail_url) {
+                      img.src = ad.thumbnail_url;
+                    }
+                  }}
+                />
               ) : (
                 <ImageIcon className="h-10 w-10 text-muted-foreground" />
               )}

@@ -404,12 +404,13 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
   const adFields = [
     "id","name","status","effective_status","created_time",
     "campaign_id","campaign{name}","adset_id","adset{name,targeting}",
-    "creative{id,thumbnail_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id}",
+    "creative{id,thumbnail_url,image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id}",
   ].join(",");
 
   const ads: any[] = [];
+  // Request a larger thumbnail (default is ~64px which looks blurry).
   let next: string | null =
-    `https://graph.facebook.com/v21.0/${acc.act_id}/ads?fields=${adFields}&limit=200&access_token=${encodeURIComponent(accessToken)}`;
+    `https://graph.facebook.com/v21.0/${acc.act_id}/ads?fields=${adFields}&thumbnail_width=600&thumbnail_height=600&limit=200&access_token=${encodeURIComponent(accessToken)}`;
   // safety cap: 5 pages = 1000 ads per account
   let page = 0;
   while (next && page < 5) {
@@ -475,6 +476,7 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
       creative_id: cre.id ?? null,
       creative_hash: creativeHash,
       thumbnail_url: cre.thumbnail_url ?? null,
+      image_url: cre.image_url ?? null,
       video_id: cre.video_id ?? null,
       title,
       body,

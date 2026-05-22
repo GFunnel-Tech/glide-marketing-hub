@@ -1930,6 +1930,7 @@ export type Database = {
           effective_status: string | null
           first_seen_at: string | null
           id: string
+          image_url: string | null
           impressions: number
           leads: number
           link_url: string | null
@@ -1961,6 +1962,7 @@ export type Database = {
           effective_status?: string | null
           first_seen_at?: string | null
           id: string
+          image_url?: string | null
           impressions?: number
           leads?: number
           link_url?: string | null
@@ -1992,6 +1994,7 @@ export type Database = {
           effective_status?: string | null
           first_seen_at?: string | null
           id?: string
+          image_url?: string | null
           impressions?: number
           leads?: number
           link_url?: string | null
