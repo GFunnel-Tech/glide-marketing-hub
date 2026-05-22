@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ArrowUpDown, Building2, User, MoreHorizontal, Search, AlertTriangle, CheckCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
+import { KpiLabel } from "@/components/kpi/KpiLabel";
 import type { Client } from "@/data/mockData";
 
 type StatusFilter = "ALL" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
