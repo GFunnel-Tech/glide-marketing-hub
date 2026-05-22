@@ -2229,7 +2229,10 @@ export type Database = {
           impressions: number
           leads: number
           link_url: string | null
+          media_type: string | null
           name: string | null
+          page_avatar_url: string | null
+          page_name: string | null
           spend: number
           targeting_summary: Json | null
           thumbnail_url: string | null
@@ -2261,7 +2264,10 @@ export type Database = {
           impressions?: number
           leads?: number
           link_url?: string | null
+          media_type?: string | null
           name?: string | null
+          page_avatar_url?: string | null
+          page_name?: string | null
           spend?: number
           targeting_summary?: Json | null
           thumbnail_url?: string | null
@@ -2293,7 +2299,10 @@ export type Database = {
           impressions?: number
           leads?: number
           link_url?: string | null
+          media_type?: string | null
           name?: string | null
+          page_avatar_url?: string | null
+          page_name?: string | null
           spend?: number
           targeting_summary?: Json | null
           thumbnail_url?: string | null
