@@ -13,6 +13,7 @@ import ReactMarkdown from "react-markdown";
 import { OptimizationRulesPanel } from "@/components/ai/OptimizationRulesPanel";
 import { OptimizationSchedulePanel } from "@/components/ai/OptimizationSchedulePanel";
 import { NotificationSettingsPanel } from "@/components/ai/NotificationSettingsPanel";
+import { AiAuditLogPanel } from "@/components/ai/AiAuditLogPanel";
 
 interface Message {
   id: string;
@@ -379,6 +380,10 @@ export default function AiAssistant() {
         )}
 
         {workspaceId && <NotificationSettingsPanel workspaceId={workspaceId} />}
+
+        {workspaceId && (
+          <AiAuditLogPanel workspaceId={workspaceId} clientId={selectedClient?.id} />
+        )}
 
         <div className="rounded-lg border border-border bg-card p-5">
           <div className="flex items-center justify-between mb-3">

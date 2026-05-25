@@ -302,6 +302,68 @@ export type Database = {
           },
         ]
       }
+      ai_action_audit_log: {
+        Row: {
+          action_id: string
+          action_type: string
+          actor_id: string | null
+          actor_kind: string
+          client_id: number | null
+          error_message: string | null
+          event: string
+          id: string
+          new_status: string | null
+          occurred_at: string
+          payload: Json | null
+          prev_status: string | null
+          reasoning: string | null
+          result: Json | null
+          workspace_id: string
+        }
+        Insert: {
+          action_id: string
+          action_type: string
+          actor_id?: string | null
+          actor_kind?: string
+          client_id?: number | null
+          error_message?: string | null
+          event: string
+          id?: string
+          new_status?: string | null
+          occurred_at?: string
+          payload?: Json | null
+          prev_status?: string | null
+          reasoning?: string | null
+          result?: Json | null
+          workspace_id: string
+        }
+        Update: {
+          action_id?: string
+          action_type?: string
+          actor_id?: string | null
+          actor_kind?: string
+          client_id?: number | null
+          error_message?: string | null
+          event?: string
+          id?: string
+          new_status?: string | null
+          occurred_at?: string
+          payload?: Json | null
+          prev_status?: string | null
+          reasoning?: string | null
+          result?: Json | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_audit_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_notification_settings: {
         Row: {
           alert_on: string
