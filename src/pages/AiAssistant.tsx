@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { OptimizationRulesPanel } from "@/components/ai/OptimizationRulesPanel";
 
 interface Message {
   id: string;
