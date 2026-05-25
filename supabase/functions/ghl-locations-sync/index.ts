@@ -71,12 +71,28 @@ Deno.serve(async (req) => {
     let lastErr = "";
 
     // v2: needs companyId. Decode JWT to find it (PIT/OAuth tokens are JWTs).
+    // GHL Agency PITs use authClass: "Company" with authClassId = companyId.
     let companyId: string | null = null;
+    let tokenDebug: any = null;
     try {
       const parts = cfg.ghl_api_key.split(".");
       if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-        companyId = payload.company_id ?? payload.companyId ?? null;
+        // pad base64url
+        const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+        const payload = JSON.parse(atob(padded));
+        companyId =
+          payload.company_id ??
+          payload.companyId ??
+          (payload.authClass === "Company" ? payload.authClassId : null) ??
+          payload.primaryAuthClassId ??
+          null;
+        tokenDebug = {
+          authClass: payload.authClass,
+          authClassId: payload.authClassId,
+          source: payload.source,
+          oauthMeta: payload.oauthMeta ? { scopes: payload.oauthMeta.scopes } : undefined,
+        };
       }
     } catch (_) { /* not a JWT */ }
 
