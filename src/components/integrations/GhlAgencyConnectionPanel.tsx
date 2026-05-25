@@ -153,7 +153,7 @@ export function GhlAgencyConnectionPanel() {
     const { error } = await (supabase as any)
       .from("integration_configs")
       .upsert(
-        { workspace_id: wsId, ghl_api_key: null },
+        { workspace_id: wsId, ghl_api_key: null, ghl_company_id: null },
         { onConflict: "workspace_id" },
       );
     if (error) {
@@ -162,6 +162,8 @@ export function GhlAgencyConnectionPanel() {
     }
     setToken("");
     setSavedToken("");
+    setCompanyId("");
+    setSavedCompanyId("");
     toast.success("Disconnected");
     load();
   };
@@ -169,7 +171,7 @@ export function GhlAgencyConnectionPanel() {
   if (!wsId) return null;
 
   const connected = !!savedToken;
-  const dirty = token !== savedToken;
+  const dirty = token !== savedToken || companyId.trim() !== savedCompanyId;
 
   return (
     <div className="rounded-lg border border-border bg-card p-5 space-y-4">
