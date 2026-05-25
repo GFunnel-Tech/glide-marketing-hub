@@ -369,6 +369,13 @@ export default function AiAssistant() {
           </div>
         )}
 
+        {selectedClient && workspaceId && (
+          <OptimizationRulesPanel
+            clientId={selectedClient.id}
+            workspaceId={workspaceId}
+          />
+        )}
+
         <div className="rounded-lg border border-border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
