@@ -1926,6 +1926,7 @@ export type Database = {
           clickup_default_list_id: string | null
           created_at: string
           ghl_api_key: string | null
+          ghl_company_id: string | null
           id: string
           updated_at: string
           workspace_id: string
@@ -1935,6 +1936,7 @@ export type Database = {
           clickup_default_list_id?: string | null
           created_at?: string
           ghl_api_key?: string | null
+          ghl_company_id?: string | null
           id?: string
           updated_at?: string
           workspace_id: string
@@ -1944,6 +1946,7 @@ export type Database = {
           clickup_default_list_id?: string | null
           created_at?: string
           ghl_api_key?: string | null
+          ghl_company_id?: string | null
           id?: string
           updated_at?: string
           workspace_id?: string
