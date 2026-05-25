@@ -12,6 +12,7 @@ import { KpiThresholdsPanel } from "@/components/settings/KpiThresholdsPanel";
 import { CustomKpisPanel } from "@/components/kpi/CustomKpisPanel";
 import { GuaranteeTemplatesPanel } from "@/components/guarantees/GuaranteeTemplatesPanel";
 import { GhlClickupPanel } from "@/components/integrations/GhlClickupPanel";
+import { GhlAgencyConnectionPanel } from "@/components/integrations/GhlAgencyConnectionPanel";
 import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
 import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
@@ -116,8 +117,10 @@ export default function Settings() {
 
         <TabsContent value="integrations" className="space-y-6">
           <MetaConnectionsPanel />
+          <GhlAgencyConnectionPanel />
           <GhlClickupPanel />
           <IntegrationMapper />
+
           <div className="grid grid-cols-2 gap-4">
             {integrations.map(int => (
               <div key={int.name} className={cn("rounded-lg border p-5 space-y-3", int.connected ? "border-border bg-card" : "border-destructive/30 bg-card")}>
