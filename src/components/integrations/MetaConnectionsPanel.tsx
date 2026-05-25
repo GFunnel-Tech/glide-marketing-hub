@@ -226,6 +226,13 @@ export function MetaConnectionsPanel() {
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const [expandedConnections, setExpandedConnections] = useState<Set<string>>(new Set());
+  const toggleExpanded = (id: string) =>
+    setExpandedConnections(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
   const [autoOpenGuide, setAutoOpenGuide] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const manualSectionRef = useRef<HTMLDivElement | null>(null);
@@ -847,6 +854,7 @@ export function MetaConnectionsPanel() {
             const isReconnecting = reconnectingId === c.id;
             const { lastSuccess, lastError, lastAny } = syncInfoFor(c.id);
             const showError = lastError && (!lastSuccess || new Date(lastError.started_at) > new Date(lastSuccess.started_at));
+            const isExpanded = expandedConnections.has(c.id) || manualReconnectId === c.id || !!testResults[c.id];
             return (
               <div key={c.id} className="rounded border border-border bg-accent/30 px-3 py-2 space-y-2">
                 <div className="flex items-center justify-between gap-3">
@@ -877,6 +885,14 @@ export function MetaConnectionsPanel() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => toggleExpanded(c.id)}
+                      className="text-muted-foreground hover:text-foreground p-1"
+                      title={isExpanded ? "Collapse" : "Expand details"}
+                      aria-label={isExpanded ? "Collapse" : "Expand"}
+                    >
+                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -944,6 +960,7 @@ export function MetaConnectionsPanel() {
                   </div>
                 </div>
 
+                {isExpanded && (<>
                 {testResults[c.id] && (() => {
                   const r = testResults[c.id];
                   const tone = r.ok
@@ -1096,6 +1113,7 @@ export function MetaConnectionsPanel() {
                       : "Token expires soon. Reconnect now to avoid sync interruptions."}
                   </p>
                 )}
+                </>)}
               </div>
             );
           })}
