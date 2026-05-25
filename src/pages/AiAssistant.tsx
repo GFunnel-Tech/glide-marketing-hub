@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { OptimizationRulesPanel } from "@/components/ai/OptimizationRulesPanel";
+import { OptimizationSchedulePanel } from "@/components/ai/OptimizationSchedulePanel";
 
 interface Message {
   id: string;
@@ -370,10 +371,10 @@ export default function AiAssistant() {
         )}
 
         {selectedClient && workspaceId && (
-          <OptimizationRulesPanel
-            clientId={selectedClient.id}
-            workspaceId={workspaceId}
-          />
+          <>
+            <OptimizationRulesPanel clientId={selectedClient.id} workspaceId={workspaceId} />
+            <OptimizationSchedulePanel clientId={selectedClient.id} workspaceId={workspaceId} />
+          </>
         )}
 
         <div className="rounded-lg border border-border bg-card p-5">
