@@ -854,6 +854,7 @@ export function MetaConnectionsPanel() {
             const isReconnecting = reconnectingId === c.id;
             const { lastSuccess, lastError, lastAny } = syncInfoFor(c.id);
             const showError = lastError && (!lastSuccess || new Date(lastError.started_at) > new Date(lastSuccess.started_at));
+            const isExpanded = expandedConnections.has(c.id) || manualReconnectId === c.id || !!testResults[c.id];
             return (
               <div key={c.id} className="rounded border border-border bg-accent/30 px-3 py-2 space-y-2">
                 <div className="flex items-center justify-between gap-3">
