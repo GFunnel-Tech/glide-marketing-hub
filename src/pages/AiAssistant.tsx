@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import { OptimizationRulesPanel } from "@/components/ai/OptimizationRulesPanel";
 import { OptimizationSchedulePanel } from "@/components/ai/OptimizationSchedulePanel";
+import { NotificationSettingsPanel } from "@/components/ai/NotificationSettingsPanel";
 
 interface Message {
   id: string;
@@ -376,6 +377,8 @@ export default function AiAssistant() {
             <OptimizationSchedulePanel clientId={selectedClient.id} workspaceId={workspaceId} />
           </>
         )}
+
+        {workspaceId && <NotificationSettingsPanel workspaceId={workspaceId} />}
 
         <div className="rounded-lg border border-border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
