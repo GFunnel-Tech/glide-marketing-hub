@@ -381,6 +381,10 @@ export default function AiAssistant() {
 
         {workspaceId && <NotificationSettingsPanel workspaceId={workspaceId} />}
 
+        {workspaceId && (
+          <AiAuditLogPanel workspaceId={workspaceId} clientId={selectedClient?.id} />
+        )}
+
         <div className="rounded-lg border border-border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
