@@ -960,6 +960,7 @@ export function MetaConnectionsPanel() {
                   </div>
                 </div>
 
+                {isExpanded && (<>
                 {testResults[c.id] && (() => {
                   const r = testResults[c.id];
                   const tone = r.ok
