@@ -640,6 +640,78 @@ export type Database = {
           },
         ]
       }
+      client_optimization_schedules: {
+        Row: {
+          active: boolean
+          cadence: string
+          client_id: number
+          created_at: string
+          created_by: string
+          day_of_week: number | null
+          id: string
+          last_run_at: string | null
+          last_status: string | null
+          last_summary: string | null
+          next_run_at: string
+          prompt_override: string | null
+          run_hour: number
+          timezone: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          active?: boolean
+          cadence?: string
+          client_id: number
+          created_at?: string
+          created_by: string
+          day_of_week?: number | null
+          id?: string
+          last_run_at?: string | null
+          last_status?: string | null
+          last_summary?: string | null
+          next_run_at?: string
+          prompt_override?: string | null
+          run_hour?: number
+          timezone?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          active?: boolean
+          cadence?: string
+          client_id?: number
+          created_at?: string
+          created_by?: string
+          day_of_week?: number | null
+          id?: string
+          last_run_at?: string | null
+          last_status?: string | null
+          last_summary?: string | null
+          next_run_at?: string
+          prompt_override?: string | null
+          run_hour?: number
+          timezone?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_optimization_schedules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_optimization_schedules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_report_schedules: {
         Row: {
           active: boolean
@@ -2972,6 +3044,50 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      optimization_run_log: {
+        Row: {
+          client_id: number
+          error: string | null
+          id: string
+          schedule_id: string | null
+          status: string
+          summary: string | null
+          tool_events: Json | null
+          triggered_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          error?: string | null
+          id?: string
+          schedule_id?: string | null
+          status: string
+          summary?: string | null
+          tool_events?: Json | null
+          triggered_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          error?: string | null
+          id?: string
+          schedule_id?: string | null
+          status?: string
+          summary?: string | null
+          tool_events?: Json | null
+          triggered_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "optimization_run_log_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "client_optimization_schedules"
             referencedColumns: ["id"]
           },
         ]

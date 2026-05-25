@@ -93,23 +93,30 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Missing auth" }, 401);
 
-    const userClient = createClient(
-      SUPABASE_URL,
-      Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: userData } = await userClient.auth.getUser();
-    if (!userData?.user) return json({ error: "Unauthorized" }, 401);
-    const userId = userData.user.id;
-
     const body = await req.json().catch(() => ({}));
-    const { messages, workspaceId, clientId } = body as {
+    const { messages, workspaceId, clientId, scheduled } = body as {
       messages: { role: "user" | "assistant"; content: string }[];
       workspaceId: string;
       clientId?: number;
+      scheduled?: boolean;
     };
     if (!workspaceId || !Array.isArray(messages) || !messages.length)
       return json({ error: "workspaceId and messages required" }, 400);
+
+    const isSystem = scheduled === true && authHeader === `Bearer ${SERVICE_KEY}`;
+    let userId: string;
+    if (isSystem) {
+      userId = "00000000-0000-0000-0000-000000000000";
+    } else {
+      const userClient = createClient(
+        SUPABASE_URL,
+        Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: userData } = await userClient.auth.getUser();
+      if (!userData?.user) return json({ error: "Unauthorized" }, 401);
+      userId = userData.user.id;
+    }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
