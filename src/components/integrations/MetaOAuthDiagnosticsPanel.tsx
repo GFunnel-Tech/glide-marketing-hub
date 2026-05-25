@@ -69,7 +69,7 @@ export function MetaOAuthDiagnosticsPanel() {
     // Live updates so a fresh callback appears without a page refresh.
     if (!currentWorkspace) return;
     const ch = (supabase as any)
-      .channel(`meta_oauth_events_${currentWorkspace.id}`)
+      .channel(`meta_oauth_events_${currentWorkspace.id}_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "meta_oauth_events", filter: `workspace_id=eq.${currentWorkspace.id}` },
