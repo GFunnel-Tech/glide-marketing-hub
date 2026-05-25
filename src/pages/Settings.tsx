@@ -12,6 +12,7 @@ import { KpiThresholdsPanel } from "@/components/settings/KpiThresholdsPanel";
 import { CustomKpisPanel } from "@/components/kpi/CustomKpisPanel";
 import { GuaranteeTemplatesPanel } from "@/components/guarantees/GuaranteeTemplatesPanel";
 import { GhlClickupPanel } from "@/components/integrations/GhlClickupPanel";
+import { GhlAgencyConnectionPanel } from "@/components/integrations/GhlAgencyConnectionPanel";
 import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
 import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
