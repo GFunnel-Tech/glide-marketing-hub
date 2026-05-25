@@ -580,6 +580,66 @@ export type Database = {
           },
         ]
       }
+      client_optimization_rules: {
+        Row: {
+          client_id: number
+          created_at: string
+          enabled: boolean
+          max_cpl_absolute: number | null
+          max_cpl_multiplier: number
+          max_frequency: number
+          min_ctr: number
+          min_leads_threshold: number
+          min_spend_before_pause: number
+          notes: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          enabled?: boolean
+          max_cpl_absolute?: number | null
+          max_cpl_multiplier?: number
+          max_frequency?: number
+          min_ctr?: number
+          min_leads_threshold?: number
+          min_spend_before_pause?: number
+          notes?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          enabled?: boolean
+          max_cpl_absolute?: number | null
+          max_cpl_multiplier?: number
+          max_frequency?: number
+          min_ctr?: number
+          min_leads_threshold?: number
+          min_spend_before_pause?: number
+          notes?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_optimization_rules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_optimization_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_report_schedules: {
         Row: {
           active: boolean

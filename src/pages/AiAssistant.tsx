@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { OptimizationRulesPanel } from "@/components/ai/OptimizationRulesPanel";
 
 interface Message {
   id: string;
@@ -366,6 +367,13 @@ export default function AiAssistant() {
           <div className="rounded-lg border border-border bg-card p-5 text-center">
             <p className="text-xs text-muted-foreground">Pick a client to enable optimization</p>
           </div>
+        )}
+
+        {selectedClient && workspaceId && (
+          <OptimizationRulesPanel
+            clientId={selectedClient.id}
+            workspaceId={workspaceId}
+          />
         )}
 
         <div className="rounded-lg border border-border bg-card p-5">
