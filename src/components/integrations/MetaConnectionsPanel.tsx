@@ -1113,6 +1113,7 @@ export function MetaConnectionsPanel() {
                       : "Token expires soon. Reconnect now to avoid sync interruptions."}
                   </p>
                 )}
+                </>)}
               </div>
             );
           })}
