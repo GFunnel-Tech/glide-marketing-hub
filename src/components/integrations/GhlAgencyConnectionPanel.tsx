@@ -218,41 +218,51 @@ export function GhlAgencyConnectionPanel() {
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="eyJhbGciOi... (Agency PIT with locations.readonly scope)"
+              placeholder="pit-... or eyJhbGciOi... (Agency PIT with locations.readonly)"
               className="mt-1 font-mono text-xs"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Get this in GHL → Agency Settings → Private Integrations. The token must
-              include at minimum <code className="font-mono">locations.readonly</code>.
-              Sub-account (location) tokens won't work — they only see one account.
+              GHL → Agency Settings → Private Integrations. Required scope:{" "}
+              <code className="font-mono">locations.readonly</code>.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground">
+              Agency Company ID
+            </label>
+            <Input
+              value={companyId}
+              onChange={(e) => setCompanyId(e.target.value)}
+              placeholder="e.g. abc123XYZ"
+              className="mt-1 font-mono text-xs"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Required for opaque <code className="font-mono">pit-…</code> tokens. Find it in
+              your GHL URL: <code className="font-mono">/agency/&lt;COMPANY_ID&gt;/</code>{" "}
+              or in Agency Settings → Company.
             </p>
           </div>
 
           {(token || savedToken) && (
             <div className="rounded-md border border-border bg-accent/30 p-3 text-xs space-y-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">Token type</span>
+                <span className="text-muted-foreground">Connection</span>
                 {isAgencyToken ? (
                   <Badge variant="outline" className="text-success border-success/40">
-                    Agency
+                    Agency ready
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-warning border-warning/40">
-                    Not an agency token
+                    Company ID missing
                   </Badge>
                 )}
               </div>
-              {meta.companyId && (
+              {effectiveCompanyId && (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Company ID</span>
-                  <code className="font-mono text-foreground">{meta.companyId}</code>
+                  <code className="font-mono text-foreground">{effectiveCompanyId}</code>
                 </div>
-              )}
-              {!isAgencyToken && (token || savedToken) && (
-                <p className="text-warning pt-1">
-                  This looks like a sub-account token. Use an Agency PIT to sync all
-                  accounts at once.
-                </p>
               )}
             </div>
           )}
