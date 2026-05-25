@@ -13,6 +13,7 @@ import ReactMarkdown from "react-markdown";
 import { OptimizationRulesPanel } from "@/components/ai/OptimizationRulesPanel";
 import { OptimizationSchedulePanel } from "@/components/ai/OptimizationSchedulePanel";
 import { NotificationSettingsPanel } from "@/components/ai/NotificationSettingsPanel";
+import { AiAuditLogPanel } from "@/components/ai/AiAuditLogPanel";
 
 interface Message {
   id: string;
