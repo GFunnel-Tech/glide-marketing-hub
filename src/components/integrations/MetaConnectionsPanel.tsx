@@ -226,6 +226,13 @@ export function MetaConnectionsPanel() {
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const [expandedConnections, setExpandedConnections] = useState<Set<string>>(new Set());
+  const toggleExpanded = (id: string) =>
+    setExpandedConnections(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
   const [autoOpenGuide, setAutoOpenGuide] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const manualSectionRef = useRef<HTMLDivElement | null>(null);
