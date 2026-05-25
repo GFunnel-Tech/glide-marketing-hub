@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
       } else {
         const t = await v1.text();
         return new Response(
-          JSON.stringify({ error: "GHL API error", detail: t, v2_error: lastErr, hint: companyId ? null : "Token is not an agency JWT — needs an Agency Private Integration Token with locations.readonly scope." }),
+          JSON.stringify({ error: "GHL API error", detail: t, v2_error: lastErr, companyId, tokenDebug, hint: companyId ? "Agency token detected but locations call failed — check that the PIT has locations.readonly scope." : "Could not extract companyId from token — confirm this is an Agency Private Integration Token (not a Location token)." }),
           { status: 502, headers: corsHeaders },
         );
       }
