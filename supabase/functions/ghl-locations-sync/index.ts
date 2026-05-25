@@ -59,42 +59,38 @@ Deno.serve(async (req) => {
       .from("workspace_members").select("role").eq("workspace_id", workspace_id).eq("user_id", user.id).maybeSingle();
     if (!membership) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: corsHeaders });
 
-    // Fetch GHL key
+    // Fetch GHL key + optional company id
     const { data: cfg } = await supabase
-      .from("integration_configs").select("ghl_api_key").eq("workspace_id", workspace_id).maybeSingle();
+      .from("integration_configs").select("ghl_api_key, ghl_company_id").eq("workspace_id", workspace_id).maybeSingle();
     if (!cfg?.ghl_api_key) {
       return new Response(JSON.stringify({ error: "GHL API key not configured" }), { status: 400, headers: corsHeaders });
     }
 
-    // Try GHL v2 first (new token format), fall back to v1 legacy.
     let locations: any[] = [];
     let lastErr = "";
 
-    // v2: needs companyId. Decode JWT to find it (PIT/OAuth tokens are JWTs).
-    // GHL Agency PITs use authClass: "Company" with authClassId = companyId.
-    let companyId: string | null = null;
+    // companyId resolution order:
+    //   1. Explicit value saved with the token (required for opaque `pit-...` tokens)
+    //   2. JWT claims (for legacy OAuth/JWT-style tokens)
+    let companyId: string | null = cfg.ghl_company_id ?? null;
     let tokenDebug: any = null;
-    try {
-      const parts = cfg.ghl_api_key.split(".");
-      if (parts.length === 3) {
-        // pad base64url
-        const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-        const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
-        const payload = JSON.parse(atob(padded));
-        companyId =
-          payload.company_id ??
-          payload.companyId ??
-          (payload.authClass === "Company" ? payload.authClassId : null) ??
-          payload.primaryAuthClassId ??
-          null;
-        tokenDebug = {
-          authClass: payload.authClass,
-          authClassId: payload.authClassId,
-          source: payload.source,
-          oauthMeta: payload.oauthMeta ? { scopes: payload.oauthMeta.scopes } : undefined,
-        };
-      }
-    } catch (_) { /* not a JWT */ }
+    if (!companyId) {
+      try {
+        const parts = cfg.ghl_api_key.split(".");
+        if (parts.length === 3) {
+          const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+          const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+          const payload = JSON.parse(atob(padded));
+          companyId =
+            payload.company_id ??
+            payload.companyId ??
+            (payload.authClass === "Company" ? payload.authClassId : null) ??
+            payload.primaryAuthClassId ??
+            null;
+          tokenDebug = { authClass: payload.authClass, authClassId: payload.authClassId };
+        }
+      } catch (_) { /* opaque token */ }
+    }
 
     if (companyId) {
       const v2 = await fetch(
@@ -124,7 +120,16 @@ Deno.serve(async (req) => {
       } else {
         const t = await v1.text();
         return new Response(
-          JSON.stringify({ error: "GHL API error", detail: t, v2_error: lastErr, companyId, tokenDebug, hint: companyId ? "Agency token detected but locations call failed — check that the PIT has locations.readonly scope." : "Could not extract companyId from token — confirm this is an Agency Private Integration Token (not a Location token)." }),
+          JSON.stringify({
+            error: "GHL API error",
+            detail: t,
+            v2_error: lastErr,
+            companyId,
+            tokenDebug,
+            hint: !companyId
+              ? "Add your GHL Company ID in the Agency Connection panel. Agency PITs (pit-...) are opaque, so the Company ID must be provided separately. Find it in GHL → Agency Settings → Company (URL contains /agency/<COMPANY_ID>/)."
+              : "Locations call failed — verify the PIT has scope `locations.readonly` and that the Company ID matches the token's agency.",
+          }),
           { status: 502, headers: corsHeaders },
         );
       }

@@ -45,11 +45,14 @@ export function GhlAgencyConnectionPanel() {
   const [syncing, setSyncing] = useState(false);
   const [token, setToken] = useState("");
   const [savedToken, setSavedToken] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [savedCompanyId, setSavedCompanyId] = useState("");
   const [stats, setStats] = useState<Stats>({ locations: 0, clientsLinked: 0, clientsTotal: 0 });
   const [threshold, setThreshold] = useState(0.9);
 
   const meta = useMemo(() => decodeJwt(token || savedToken), [token, savedToken]);
-  const isAgencyToken = !!meta.companyId;
+  const effectiveCompanyId = companyId || savedCompanyId || meta.companyId || "";
+  const isAgencyToken = !!effectiveCompanyId;
 
   const load = async () => {
     if (!wsId) return;
@@ -57,7 +60,7 @@ export function GhlAgencyConnectionPanel() {
     const [cfg, locs, clients] = await Promise.all([
       (supabase as any)
         .from("integration_configs")
-        .select("ghl_api_key")
+        .select("ghl_api_key, ghl_company_id")
         .eq("workspace_id", wsId)
         .maybeSingle(),
       (supabase as any)
@@ -71,6 +74,8 @@ export function GhlAgencyConnectionPanel() {
     ]);
     setSavedToken(cfg?.data?.ghl_api_key ?? "");
     setToken(cfg?.data?.ghl_api_key ?? "");
+    setSavedCompanyId(cfg?.data?.ghl_company_id ?? "");
+    setCompanyId(cfg?.data?.ghl_company_id ?? "");
     const all = (clients?.data ?? []) as Array<{ ghl_location_id: string | null }>;
     setStats({
       locations: locs?.count ?? 0,
@@ -90,7 +95,11 @@ export function GhlAgencyConnectionPanel() {
     const { error } = await (supabase as any)
       .from("integration_configs")
       .upsert(
-        { workspace_id: wsId, ghl_api_key: token || null },
+        {
+          workspace_id: wsId,
+          ghl_api_key: token || null,
+          ghl_company_id: companyId.trim() || null,
+        },
         { onConflict: "workspace_id" },
       );
     setSaving(false);
@@ -99,7 +108,8 @@ export function GhlAgencyConnectionPanel() {
       return;
     }
     setSavedToken(token);
-    toast.success("Agency token saved");
+    setSavedCompanyId(companyId.trim());
+    toast.success("Agency connection saved");
   };
 
   const syncAll = async () => {
@@ -143,7 +153,7 @@ export function GhlAgencyConnectionPanel() {
     const { error } = await (supabase as any)
       .from("integration_configs")
       .upsert(
-        { workspace_id: wsId, ghl_api_key: null },
+        { workspace_id: wsId, ghl_api_key: null, ghl_company_id: null },
         { onConflict: "workspace_id" },
       );
     if (error) {
@@ -152,6 +162,8 @@ export function GhlAgencyConnectionPanel() {
     }
     setToken("");
     setSavedToken("");
+    setCompanyId("");
+    setSavedCompanyId("");
     toast.success("Disconnected");
     load();
   };
@@ -159,7 +171,7 @@ export function GhlAgencyConnectionPanel() {
   if (!wsId) return null;
 
   const connected = !!savedToken;
-  const dirty = token !== savedToken;
+  const dirty = token !== savedToken || companyId.trim() !== savedCompanyId;
 
   return (
     <div className="rounded-lg border border-border bg-card p-5 space-y-4">
@@ -206,41 +218,51 @@ export function GhlAgencyConnectionPanel() {
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="eyJhbGciOi... (Agency PIT with locations.readonly scope)"
+              placeholder="pit-... or eyJhbGciOi... (Agency PIT with locations.readonly)"
               className="mt-1 font-mono text-xs"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Get this in GHL → Agency Settings → Private Integrations. The token must
-              include at minimum <code className="font-mono">locations.readonly</code>.
-              Sub-account (location) tokens won't work — they only see one account.
+              GHL → Agency Settings → Private Integrations. Required scope:{" "}
+              <code className="font-mono">locations.readonly</code>.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground">
+              Agency Company ID
+            </label>
+            <Input
+              value={companyId}
+              onChange={(e) => setCompanyId(e.target.value)}
+              placeholder="e.g. abc123XYZ"
+              className="mt-1 font-mono text-xs"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Required for opaque <code className="font-mono">pit-…</code> tokens. Find it in
+              your GHL URL: <code className="font-mono">/agency/&lt;COMPANY_ID&gt;/</code>{" "}
+              or in Agency Settings → Company.
             </p>
           </div>
 
           {(token || savedToken) && (
             <div className="rounded-md border border-border bg-accent/30 p-3 text-xs space-y-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">Token type</span>
+                <span className="text-muted-foreground">Connection</span>
                 {isAgencyToken ? (
                   <Badge variant="outline" className="text-success border-success/40">
-                    Agency
+                    Agency ready
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-warning border-warning/40">
-                    Not an agency token
+                    Company ID missing
                   </Badge>
                 )}
               </div>
-              {meta.companyId && (
+              {effectiveCompanyId && (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground">Company ID</span>
-                  <code className="font-mono text-foreground">{meta.companyId}</code>
+                  <code className="font-mono text-foreground">{effectiveCompanyId}</code>
                 </div>
-              )}
-              {!isAgencyToken && (token || savedToken) && (
-                <p className="text-warning pt-1">
-                  This looks like a sub-account token. Use an Agency PIT to sync all
-                  accounts at once.
-                </p>
               )}
             </div>
           )}
