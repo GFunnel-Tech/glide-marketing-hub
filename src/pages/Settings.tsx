@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaConnectionsPanel } from "@/components/integrations/MetaConnectionsPanel";
+import { MetaOAuthDiagnosticsPanel } from "@/components/integrations/MetaOAuthDiagnosticsPanel";
 import { KpiThresholdsPanel } from "@/components/settings/KpiThresholdsPanel";
 import { CustomKpisPanel } from "@/components/kpi/CustomKpisPanel";
 import { GuaranteeTemplatesPanel } from "@/components/guarantees/GuaranteeTemplatesPanel";
@@ -115,41 +116,61 @@ export default function Settings() {
           </div>
         </TabsContent>
 
-        <TabsContent value="integrations" className="space-y-6">
-          <MetaConnectionsPanel />
-          <GhlAgencyConnectionPanel />
-          <GhlClickupPanel />
-          <IntegrationMapper />
+        <TabsContent value="integrations" className="space-y-4">
+          <Tabs defaultValue="meta" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="meta">Meta Ads</TabsTrigger>
+              <TabsTrigger value="ghl">GoHighLevel</TabsTrigger>
+              <TabsTrigger value="mapping">Account Mapping</TabsTrigger>
+              <TabsTrigger value="other">Other</TabsTrigger>
+            </TabsList>
 
-          <div className="grid grid-cols-2 gap-4">
-            {integrations.map(int => (
-              <div key={int.name} className={cn("rounded-lg border p-5 space-y-3", int.connected ? "border-border bg-card" : "border-destructive/30 bg-card")}>
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-foreground">{int.name}</h4>
-                  <span className={cn("h-2.5 w-2.5 rounded-full", int.connected ? "bg-success" : "bg-destructive")} />
-                </div>
-                {int.lastSync && <p className="text-xs text-muted-foreground">Last synced: {int.lastSync}</p>}
-                {int.extra && <p className="text-xs text-muted-foreground">{int.extra}</p>}
-                {int.type === "apikey" && (
-                  <Input type="password" defaultValue={int.connected ? "sk-••••••••••••" : ""} placeholder="Enter API key..." className="text-xs" />
-                )}
-                {int.type === "display" && int.url && (
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 rounded bg-accent px-2 py-1 text-xs text-foreground">{int.url}</code>
-                    <button onClick={() => copyUrl(int.url!)} className="text-muted-foreground hover:text-foreground">
-                      {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
-                    </button>
+            <TabsContent value="meta" className="space-y-4">
+              <MetaConnectionsPanel />
+              <MetaOAuthDiagnosticsPanel />
+            </TabsContent>
+
+            <TabsContent value="ghl" className="space-y-4">
+              <GhlAgencyConnectionPanel />
+              <GhlClickupPanel />
+            </TabsContent>
+
+            <TabsContent value="mapping" className="space-y-4">
+              <IntegrationMapper />
+            </TabsContent>
+
+            <TabsContent value="other" className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {integrations.map(int => (
+                  <div key={int.name} className={cn("rounded-lg border p-5 space-y-3", int.connected ? "border-border bg-card" : "border-destructive/30 bg-card")}>
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-foreground">{int.name}</h4>
+                      <span className={cn("h-2.5 w-2.5 rounded-full", int.connected ? "bg-success" : "bg-destructive")} />
+                    </div>
+                    {int.lastSync && <p className="text-xs text-muted-foreground">Last synced: {int.lastSync}</p>}
+                    {int.extra && <p className="text-xs text-muted-foreground">{int.extra}</p>}
+                    {int.type === "apikey" && (
+                      <Input type="password" defaultValue={int.connected ? "sk-••••••••••••" : ""} placeholder="Enter API key..." className="text-xs" />
+                    )}
+                    {int.type === "display" && int.url && (
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 rounded bg-accent px-2 py-1 text-xs text-foreground">{int.url}</code>
+                        <button onClick={() => copyUrl(int.url!)} className="text-muted-foreground hover:text-foreground">
+                          {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      {int.type !== "display" && <button className="rounded bg-accent px-3 py-1.5 text-xs font-medium hover:bg-accent/80">Test Connection</button>}
+                      {!int.connected && <button className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">Connect</button>}
+                      {int.connected && int.type !== "display" && <button className="rounded border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent">Reconnect</button>}
+                      {int.docUrl && <a href={int.docUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">View docs <ExternalLink className="h-3 w-3" /></a>}
+                    </div>
                   </div>
-                )}
-                <div className="flex gap-2">
-                  {int.type !== "display" && <button className="rounded bg-accent px-3 py-1.5 text-xs font-medium hover:bg-accent/80">Test Connection</button>}
-                  {!int.connected && <button className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">Connect</button>}
-                  {int.connected && int.type !== "display" && <button className="rounded border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent">Reconnect</button>}
-                  {int.docUrl && <a href={int.docUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">View docs <ExternalLink className="h-3 w-3" /></a>}
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="team">
