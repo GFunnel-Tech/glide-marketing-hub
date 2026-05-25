@@ -71,12 +71,28 @@ Deno.serve(async (req) => {
     let lastErr = "";
 
     // v2: needs companyId. Decode JWT to find it (PIT/OAuth tokens are JWTs).
+    // GHL Agency PITs use authClass: "Company" with authClassId = companyId.
     let companyId: string | null = null;
+    let tokenDebug: any = null;
     try {
       const parts = cfg.ghl_api_key.split(".");
       if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-        companyId = payload.company_id ?? payload.companyId ?? null;
+        // pad base64url
+        const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+        const payload = JSON.parse(atob(padded));
+        companyId =
+          payload.company_id ??
+          payload.companyId ??
+          (payload.authClass === "Company" ? payload.authClassId : null) ??
+          payload.primaryAuthClassId ??
+          null;
+        tokenDebug = {
+          authClass: payload.authClass,
+          authClassId: payload.authClassId,
+          source: payload.source,
+          oauthMeta: payload.oauthMeta ? { scopes: payload.oauthMeta.scopes } : undefined,
+        };
       }
     } catch (_) { /* not a JWT */ }
 
@@ -108,7 +124,7 @@ Deno.serve(async (req) => {
       } else {
         const t = await v1.text();
         return new Response(
-          JSON.stringify({ error: "GHL API error", detail: t, v2_error: lastErr, hint: companyId ? null : "Token is not an agency JWT — needs an Agency Private Integration Token with locations.readonly scope." }),
+          JSON.stringify({ error: "GHL API error", detail: t, v2_error: lastErr, companyId, tokenDebug, hint: companyId ? "Agency token detected but locations call failed — check that the PIT has locations.readonly scope." : "Could not extract companyId from token — confirm this is an Agency Private Integration Token (not a Location token)." }),
           { status: 502, headers: corsHeaders },
         );
       }
