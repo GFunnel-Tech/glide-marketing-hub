@@ -885,6 +885,14 @@ export function MetaConnectionsPanel() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => toggleExpanded(c.id)}
+                      className="text-muted-foreground hover:text-foreground p-1"
+                      title={isExpanded ? "Collapse" : "Expand details"}
+                      aria-label={isExpanded ? "Collapse" : "Expand"}
+                    >
+                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </button>
                     <Button
                       size="sm"
                       variant="outline"
