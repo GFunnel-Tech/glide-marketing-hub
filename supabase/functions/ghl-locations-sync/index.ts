@@ -120,7 +120,16 @@ Deno.serve(async (req) => {
       } else {
         const t = await v1.text();
         return new Response(
-          JSON.stringify({ error: "GHL API error", detail: t, v2_error: lastErr, companyId, tokenDebug, hint: companyId ? "Agency token detected but locations call failed — check that the PIT has locations.readonly scope." : "Could not extract companyId from token — confirm this is an Agency Private Integration Token (not a Location token)." }),
+          JSON.stringify({
+            error: "GHL API error",
+            detail: t,
+            v2_error: lastErr,
+            companyId,
+            tokenDebug,
+            hint: !companyId
+              ? "Add your GHL Company ID in the Agency Connection panel. Agency PITs (pit-...) are opaque, so the Company ID must be provided separately. Find it in GHL → Agency Settings → Company (URL contains /agency/<COMPANY_ID>/)."
+              : "Locations call failed — verify the PIT has scope `locations.readonly` and that the Company ID matches the token's agency.",
+          }),
           { status: 502, headers: corsHeaders },
         );
       }
