@@ -302,6 +302,53 @@ export type Database = {
           },
         ]
       }
+      ai_notification_settings: {
+        Row: {
+          alert_on: string
+          created_at: string
+          email_enabled: boolean
+          extra_email_recipients: string[]
+          notify_workspace_members: boolean
+          slack_channel_id: string | null
+          slack_channel_name: string | null
+          slack_enabled: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          alert_on?: string
+          created_at?: string
+          email_enabled?: boolean
+          extra_email_recipients?: string[]
+          notify_workspace_members?: boolean
+          slack_channel_id?: string | null
+          slack_channel_name?: string | null
+          slack_enabled?: boolean
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          alert_on?: string
+          created_at?: string
+          email_enabled?: boolean
+          extra_email_recipients?: string[]
+          notify_workspace_members?: boolean
+          slack_channel_id?: string | null
+          slack_channel_name?: string | null
+          slack_enabled?: boolean
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_notification_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_pending_actions: {
         Row: {
           action_type: string
