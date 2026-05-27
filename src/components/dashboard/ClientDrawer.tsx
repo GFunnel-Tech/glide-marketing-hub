@@ -116,12 +116,12 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
 
           {activeTab === "Campaigns" && (
             <div className="space-y-3">
-              {campaigns.map((c) => (
+              {clientCampaigns.length > 0 ? clientCampaigns.map((c) => (
                 <div key={c.id} className="rounded-lg border border-border p-4 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-foreground">{c.name}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      ${c.spend} spend · {c.leads} leads · ${c.cpl.toFixed(2)} CPL
+                      ${c.spend.toLocaleString()} spend · {c.leads} leads · ${c.cpl.toFixed(2)} CPL
                     </p>
                   </div>
                   <span className={cn(
@@ -131,7 +131,9 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                     {c.status}
                   </span>
                 </div>
-              ))}
+              )) : (
+                <p className="text-xs text-muted-foreground italic">No campaigns found for this client</p>
+              )}
             </div>
           )}
 
