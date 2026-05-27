@@ -322,9 +322,17 @@ export function GhlAgencyConnectionPanel() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={save} disabled={saving || !dirty} size="sm">
+            <Button onClick={() => save()} disabled={saving || !dirty} size="sm">
               {saving && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-              {connected ? "Update token" : "Connect"}
+              {connected ? "Update" : "Connect"}
+            </Button>
+            <Button
+              onClick={() => save({ thenSync: true })}
+              disabled={saving || syncing || (!token && !savedToken) || (!companyId.trim() && !savedCompanyId)}
+              size="sm"
+              variant="secondary"
+            >
+              Save & Sync
             </Button>
             <Button
               onClick={syncAll}
