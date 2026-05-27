@@ -239,20 +239,36 @@ export function GhlAgencyConnectionPanel() {
           </div>
 
           <div>
-            <label className="text-xs text-muted-foreground">
+            <label className="text-xs text-muted-foreground flex items-center gap-1.5">
               Agency Company ID
+              <span className="text-destructive">*</span>
             </label>
             <Input
               value={companyId}
               onChange={(e) => setCompanyId(e.target.value)}
               onBlur={(e) => setCompanyId(extractCompanyId(e.target.value))}
               placeholder="Paste Company ID or full GHL URL (https://app.gohighlevel.com/agency/abc123/…)"
-              className="mt-1 font-mono text-xs"
+              className={`mt-1 font-mono text-xs ${
+                savedToken && !savedCompanyId && !companyId.trim()
+                  ? "border-destructive ring-1 ring-destructive/40"
+                  : ""
+              }`}
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Required for opaque <code className="font-mono">pit-…</code> tokens. Paste your
-              full GHL agency URL and we'll extract the Company ID automatically.
+              <strong className="text-foreground">Required.</strong> Open GHL → click your
+              agency name (top-left) → the URL will look like{" "}
+              <code className="font-mono">app.gohighlevel.com/agency/<span className="text-primary">aBc123XYZ</span>/dashboard</code>.
+              Paste the whole URL — we'll extract it.
             </p>
+            {savedToken && !savedCompanyId && !companyId.trim() && (
+              <div className="mt-2 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  Your PIT is saved, but sync can't run until you add the Company ID and
+                  click <strong>Save & Sync</strong>.
+                </span>
+              </div>
+            )}
           </div>
 
           {(token || savedToken) && (
