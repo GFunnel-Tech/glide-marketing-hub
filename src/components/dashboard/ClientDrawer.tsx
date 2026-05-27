@@ -1,6 +1,6 @@
 import { X, ExternalLink } from "lucide-react";
-import { Client, campaigns, notes } from "@/data/mockData";
-import { useLeads } from "@/hooks/useDatabase";
+import { Client } from "@/data/mockData";
+import { useLeads, useCampaigns } from "@/hooks/useDatabase";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
