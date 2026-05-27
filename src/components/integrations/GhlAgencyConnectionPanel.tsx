@@ -86,19 +86,12 @@ export function GhlAgencyConnectionPanel() {
         .order("received_at", { ascending: false })
         .limit(5),
     ]);
-      (supabase as any)
-        .from("ghl_locations")
-        .select("id", { count: "exact", head: true })
-        .eq("workspace_id", wsId),
-      (supabase as any)
-        .from("clients")
-        .select("id, ghl_location_id")
-        .eq("workspace_id", wsId),
-    ]);
     setSavedToken(cfg?.data?.ghl_api_key ?? "");
     setToken(cfg?.data?.ghl_api_key ?? "");
     setSavedCompanyId(cfg?.data?.ghl_company_id ?? "");
     setCompanyId(cfg?.data?.ghl_company_id ?? "");
+    setWebhookSecret(cfg?.data?.ghl_webhook_secret ?? "");
+    setRecentEvents((events?.data ?? []) as any);
     const all = (clients?.data ?? []) as Array<{ ghl_location_id: string | null }>;
     setStats({
       locations: locs?.count ?? 0,
