@@ -209,16 +209,7 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                   <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Notes</h4>
                   <Link to={`/client/${client.id}`} className="text-xs text-primary hover:underline" onClick={onClose}>View Full Activity Log →</Link>
                 </div>
-                {notes.map((n) => (
-                  <div key={n.id} className="rounded-lg border border-border p-3">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{n.timestamp}</span>
-                      <span>·</span>
-                      <span className="font-medium text-foreground">{n.author}</span>
-                    </div>
-                    <p className="mt-1 text-sm text-foreground">{n.text}</p>
-                  </div>
-                ))}
+                <p className="text-xs text-muted-foreground italic">No notes yet. Open the full profile to add one.</p>
               </div>
             </div>
           )}
