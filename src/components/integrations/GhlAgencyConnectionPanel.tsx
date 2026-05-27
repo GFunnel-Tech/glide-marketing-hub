@@ -89,16 +89,23 @@ export function GhlAgencyConnectionPanel() {
     load();
   }, [wsId]);
 
-  const save = async () => {
+  const extractCompanyId = (v: string) => {
+    const t = v.trim();
+    const m = t.match(/\/agency\/([A-Za-z0-9]+)/);
+    return m ? m[1] : t;
+  };
+
+  const save = async (opts: { thenSync?: boolean } = {}) => {
     if (!wsId) return;
     setSaving(true);
+    const cid = extractCompanyId(companyId);
     const { error } = await (supabase as any)
       .from("integration_configs")
       .upsert(
         {
           workspace_id: wsId,
           ghl_api_key: token || null,
-          ghl_company_id: companyId.trim() || null,
+          ghl_company_id: cid || null,
         },
         { onConflict: "workspace_id" },
       );
@@ -108,8 +115,12 @@ export function GhlAgencyConnectionPanel() {
       return;
     }
     setSavedToken(token);
-    setSavedCompanyId(companyId.trim());
+    setSavedCompanyId(cid);
+    setCompanyId(cid);
     toast.success("Agency connection saved");
+    if (opts.thenSync && token && cid) {
+      setTimeout(() => syncAll(), 150);
+    }
   };
 
   const syncAll = async () => {
@@ -234,13 +245,13 @@ export function GhlAgencyConnectionPanel() {
             <Input
               value={companyId}
               onChange={(e) => setCompanyId(e.target.value)}
-              placeholder="e.g. abc123XYZ"
+              onBlur={(e) => setCompanyId(extractCompanyId(e.target.value))}
+              placeholder="Paste Company ID or full GHL URL (https://app.gohighlevel.com/agency/abc123/…)"
               className="mt-1 font-mono text-xs"
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Required for opaque <code className="font-mono">pit-…</code> tokens. Find it in
-              your GHL URL: <code className="font-mono">/agency/&lt;COMPANY_ID&gt;/</code>{" "}
-              or in Agency Settings → Company.
+              Required for opaque <code className="font-mono">pit-…</code> tokens. Paste your
+              full GHL agency URL and we'll extract the Company ID automatically.
             </p>
           </div>
 
@@ -311,9 +322,17 @@ export function GhlAgencyConnectionPanel() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={save} disabled={saving || !dirty} size="sm">
+            <Button onClick={() => save()} disabled={saving || !dirty} size="sm">
               {saving && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-              {connected ? "Update token" : "Connect"}
+              {connected ? "Update" : "Connect"}
+            </Button>
+            <Button
+              onClick={() => save({ thenSync: true })}
+              disabled={saving || syncing || (!token && !savedToken) || (!companyId.trim() && !savedCompanyId)}
+              size="sm"
+              variant="secondary"
+            >
+              Save & Sync
             </Button>
             <Button
               onClick={syncAll}
