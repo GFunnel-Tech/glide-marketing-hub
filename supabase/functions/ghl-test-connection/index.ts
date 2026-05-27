@@ -37,27 +37,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use the same endpoint our workers use so we catch the same auth issues.
-    const res = await fetch(
-      "https://rest.gohighlevel.com/v1/contacts/lookup?email=metahub-test@example.invalid",
-      { headers: { Authorization: `Bearer ${apiKey}` } },
-    );
-
-    if (res.status === 401 || res.status === 403) {
-      const text = await res.text().catch(() => "");
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          status: res.status,
-          message: text || "Unauthorized — GHL rejected this key.",
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // 404 / 422 / 200 all mean auth worked. 5xx → treat as ok (transient).
+    const { testGhlKey } = await import("../_shared/ghlClient.ts");
+    const result = await testGhlKey(apiKey);
     return new Response(
-      JSON.stringify({ ok: true, status: res.status }),
+      JSON.stringify({ ok: result.ok, status: result.status, message: result.message }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
