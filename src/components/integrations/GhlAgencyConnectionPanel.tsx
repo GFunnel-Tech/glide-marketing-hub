@@ -89,16 +89,23 @@ export function GhlAgencyConnectionPanel() {
     load();
   }, [wsId]);
 
-  const save = async () => {
+  const extractCompanyId = (v: string) => {
+    const t = v.trim();
+    const m = t.match(/\/agency\/([A-Za-z0-9]+)/);
+    return m ? m[1] : t;
+  };
+
+  const save = async (opts: { thenSync?: boolean } = {}) => {
     if (!wsId) return;
     setSaving(true);
+    const cid = extractCompanyId(companyId);
     const { error } = await (supabase as any)
       .from("integration_configs")
       .upsert(
         {
           workspace_id: wsId,
           ghl_api_key: token || null,
-          ghl_company_id: companyId.trim() || null,
+          ghl_company_id: cid || null,
         },
         { onConflict: "workspace_id" },
       );
@@ -108,8 +115,12 @@ export function GhlAgencyConnectionPanel() {
       return;
     }
     setSavedToken(token);
-    setSavedCompanyId(companyId.trim());
+    setSavedCompanyId(cid);
+    setCompanyId(cid);
     toast.success("Agency connection saved");
+    if (opts.thenSync && token && cid) {
+      setTimeout(() => syncAll(), 150);
+    }
   };
 
   const syncAll = async () => {
