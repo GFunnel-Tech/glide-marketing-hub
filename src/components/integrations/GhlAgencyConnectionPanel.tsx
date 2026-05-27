@@ -115,6 +115,34 @@ export function GhlAgencyConnectionPanel() {
     if (!wsId) return;
     setSaving(true);
     const cid = extractCompanyId(companyId);
+
+    // Auto-test the key before persisting (only when it changed and is non-empty)
+    if (token && token !== savedToken) {
+      try {
+        const { data: test, error: testErr } = await supabase.functions.invoke(
+          "ghl-test-connection",
+          { body: { apiKey: token } },
+        );
+        if (testErr) {
+          setSaving(false);
+          toast.error(`Could not validate key: ${testErr.message}`);
+          return;
+        }
+        if (test && test.ok === false) {
+          setSaving(false);
+          toast.error(
+            `GHL rejected this key (HTTP ${test.status}). Key not saved.`,
+            { duration: 10000, description: (test.message ?? "").slice(0, 200) },
+          );
+          return;
+        }
+      } catch (e: any) {
+        setSaving(false);
+        toast.error(`Validation failed: ${e?.message ?? e}`);
+        return;
+      }
+    }
+
     const { error } = await (supabase as any)
       .from("integration_configs")
       .upsert(
