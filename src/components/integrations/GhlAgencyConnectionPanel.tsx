@@ -65,12 +65,27 @@ export function GhlAgencyConnectionPanel() {
   const load = async () => {
     if (!wsId) return;
     setLoading(true);
-    const [cfg, locs, clients] = await Promise.all([
+    const [cfg, locs, clients, events] = await Promise.all([
       (supabase as any)
         .from("integration_configs")
-        .select("ghl_api_key, ghl_company_id")
+        .select("ghl_api_key, ghl_company_id, ghl_webhook_secret")
         .eq("workspace_id", wsId)
         .maybeSingle(),
+      (supabase as any)
+        .from("ghl_locations")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", wsId),
+      (supabase as any)
+        .from("clients")
+        .select("id, ghl_location_id")
+        .eq("workspace_id", wsId),
+      (supabase as any)
+        .from("ghl_webhook_events")
+        .select("event_type, received_at, applied, error")
+        .eq("workspace_id", wsId)
+        .order("received_at", { ascending: false })
+        .limit(5),
+    ]);
       (supabase as any)
         .from("ghl_locations")
         .select("id", { count: "exact", head: true })
