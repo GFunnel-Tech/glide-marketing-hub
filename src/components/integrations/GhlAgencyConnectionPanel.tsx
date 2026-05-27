@@ -352,7 +352,7 @@ export function GhlAgencyConnectionPanel() {
             </Button>
             <Button
               onClick={syncAll}
-              disabled={syncing || !savedToken}
+              disabled={syncing || !savedToken || !savedCompanyId}
               variant="outline"
               size="sm"
             >
