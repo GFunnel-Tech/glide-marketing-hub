@@ -118,7 +118,7 @@ export function GhlAgencyConnectionPanel() {
     setSavedCompanyId(cid);
     setCompanyId(cid);
     toast.success("Agency connection saved");
-    if (opts.thenSync && token && cid) {
+    if (opts.thenSync && token) {
       setTimeout(() => syncAll(), 150);
     }
   };
