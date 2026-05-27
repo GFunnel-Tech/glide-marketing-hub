@@ -5,11 +5,9 @@ import { api } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 
 export function QuickActionBar() {
   const [loading, setLoading] = useState<string | null>(null);
-  const navigate = useNavigate();
   const { currentWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
 
@@ -37,25 +35,32 @@ export function QuickActionBar() {
   };
 
   const actions = [
-    { key: "Run Portfolio Audit", icon: Search, className: "bg-purple text-purple-foreground hover:bg-purple/90", fn: () => api.runAudit("all") },
-    { key: "Export Monthly Reports", icon: FileText, className: "bg-primary text-primary-foreground hover:bg-primary/90", fn: () => api.exportAllReports() },
-    { key: "Sync All Accounts", icon: RefreshCw, className: "bg-success text-success-foreground hover:bg-success/90", fn: syncAllMetaAccounts },
-    { key: "Add New Client", icon: UserPlus, className: "bg-primary text-primary-foreground hover:bg-primary/90", fn: async () => { window.open("https://forms.clickup.com/9014197198/f/8cmkeye-3094/RKUHI8R4POC323J6DY", "_blank", "noopener,noreferrer"); } },
+    { key: "Run Portfolio Audit", short: "Run audit", icon: Search, fn: () => api.runAudit("all") },
+    { key: "Export Monthly Reports", short: "Export reports", icon: FileText, fn: () => api.exportAllReports() },
+    { key: "Sync All Accounts", short: "Sync accounts", icon: RefreshCw, fn: syncAllMetaAccounts },
+    { key: "Add New Client", short: "Add client", icon: UserPlus, fn: async () => { window.open("https://forms.clickup.com/9014197198/f/8cmkeye-3094/RKUHI8R4POC323J6DY", "_blank", "noopener,noreferrer"); } },
   ];
 
   return (
-    <div className="flex flex-wrap gap-3">
-      {actions.map((a) => (
-        <button
-          key={a.key}
-          disabled={loading !== null}
-          onClick={() => handleAction(a.key, a.fn)}
-          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors active:scale-[0.98] disabled:opacity-50 ${a.className}`}
-        >
-          {loading === a.key ? <Loader2 className="h-4 w-4 animate-spin" /> : <a.icon className="h-4 w-4" />}
-          {a.key}
-        </button>
-      ))}
+    <div className="rounded-xl border border-border bg-card p-5">
+      <h3 className="text-sm font-semibold text-foreground mb-3">Quick Actions</h3>
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {actions.map((a) => (
+          <button
+            key={a.key}
+            disabled={loading !== null}
+            onClick={() => handleAction(a.key, a.fn)}
+            className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-accent active:scale-[0.99] disabled:opacity-50"
+          >
+            {loading === a.key ? (
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            ) : (
+              <a.icon className="h-4 w-4 text-primary" />
+            )}
+            <span className="truncate">{a.short}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
