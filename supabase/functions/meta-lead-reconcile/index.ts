@@ -6,6 +6,7 @@
 // - After 3 failed push attempts: marks 'failed', creates a ClickUp task, notifies
 // Invoked every minute via pg_cron (configured separately) or on-demand POST.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { searchGhlContact, upsertGhlContact } from "../_shared/ghlClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
         }
 
         const nextAttempt = (lead.sync_attempts ?? 0) + 1;
-        const pushResult = await pushToGhl(cfg.ghl_api_key, client?.ghl_location_id, lead);
+        const pushResult = await upsertGhlContact(cfg.ghl_api_key, client?.ghl_location_id, lead);
 
         if (pushResult.ok) {
           await admin.from("meta_leads").update({
@@ -213,81 +214,6 @@ async function notify(
   );
 }
 
-async function searchGhlContact(
-  apiKey: string,
-  locationId: string | undefined | null,
-  email: string | null,
-  phone: string | null,
-): Promise<{ id: string } | null> {
-  if (!email && !phone) return null;
-
-  const tryLookup = async (param: string, value: string) => {
-    const url = `https://rest.gohighlevel.com/v1/contacts/lookup?${param}=${encodeURIComponent(value)}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
-    if (!res.ok) return null;
-    const j = await res.json();
-    const contacts: any[] = j.contacts ?? [];
-    const match = locationId
-      ? contacts.find((c) => c.locationId === locationId)
-      : contacts[0];
-    return match ? { id: match.id } : null;
-  };
-
-  if (email) {
-    const m = await tryLookup("email", email);
-    if (m) return m;
-  }
-  if (phone) {
-    const m = await tryLookup("phone", phone);
-    if (m) return m;
-  }
-  return null;
-}
-
-async function pushToGhl(
-  apiKey: string,
-  locationId: string | undefined | null,
-  lead: any,
-): Promise<{ ok: true; contactId: string } | { ok: false; error: string }> {
-  try {
-    const [firstName, ...rest] = (lead.full_name || "").split(" ");
-    const body: Record<string, unknown> = {
-      firstName: firstName || undefined,
-      lastName: rest.join(" ") || undefined,
-      email: lead.email || undefined,
-      phone: lead.phone || undefined,
-      source: "Meta Lead Ads (recovery)",
-      tags: ["meta-lead-recovery"],
-      customField: {
-        meta_campaign: lead.campaign_name,
-        meta_adset: lead.adset_name,
-        meta_ad: lead.ad_name,
-        meta_form: lead.form_name,
-        meta_lead_id: lead.id,
-      },
-    };
-    if (locationId) (body as any).locationId = locationId;
-
-    const res = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return { ok: false, error: `GHL ${res.status}: ${text.slice(0, 300)}` };
-    }
-    const j = await res.json();
-    const id = j?.contact?.id || j?.id || "";
-    return { ok: true, contactId: String(id) };
-  } catch (e) {
-    return { ok: false, error: String(e) };
-  }
-}
 
 async function createClickupTask(
   token: string,
