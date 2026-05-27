@@ -2,6 +2,7 @@
 // GoHighLevel by email or phone, and creates a ClickUp task for any that didn't.
 // Triggered hourly by pg_cron, or on-demand with { workspaceId } in body.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { searchGhlContact } from "../_shared/ghlClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
