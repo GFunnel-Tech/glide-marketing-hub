@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { Users, Activity, DollarSign, Target, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClients } from "@/hooks/useDatabase";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
@@ -9,50 +9,35 @@ interface KPITileProps {
   label: string;
   kpiKey?: string;
   value: string;
-  delta?: number;
-  highlight?: boolean;
   sublabel?: string;
+  Icon: React.ComponentType<{ className?: string }>;
+  iconTone: "blue" | "green" | "amber" | "pink";
 }
 
-function KPITile({ label, kpiKey, value, delta, highlight, sublabel }: KPITileProps) {
-  const isPositive = delta !== undefined && delta > 0;
-  const isNegative = delta !== undefined && delta < 0;
+const TONE: Record<KPITileProps["iconTone"], string> = {
+  blue: "bg-primary/10 text-primary",
+  green: "bg-success/10 text-success",
+  amber: "bg-warning/10 text-warning",
+  pink: "bg-destructive/10 text-destructive",
+};
 
+function KPITile({ label, kpiKey, value, sublabel, Icon, iconTone }: KPITileProps) {
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-1 rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/40",
-        highlight && "bg-success/10 border-success/30"
-      )}
-    >
-      <KpiLabel
-        label={label}
-        kpiKey={kpiKey}
-        className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-      />
-      <span className="text-3xl font-bold tabular-nums text-foreground">{value}</span>
-      {delta !== undefined ? (
-        <div className="flex items-center gap-1">
-          {isPositive ? (
-            <TrendingUp className="h-3 w-3 text-success" />
-          ) : isNegative ? (
-            <TrendingDown className="h-3 w-3 text-destructive" />
-          ) : null}
-          <span
-            className={cn(
-              "text-xs font-medium tabular-nums",
-              isPositive && "text-success",
-              isNegative && "text-destructive"
-            )}
-          >
-            {isPositive ? "+" : ""}
-            {delta}%
-          </span>
-          {sublabel && <span className="text-xs text-muted-foreground">{sublabel}</span>}
+    <div className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/30">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <KpiLabel
+            label={label}
+            kpiKey={kpiKey}
+            className="text-xs font-medium text-muted-foreground"
+          />
+          <p className="mt-3 text-3xl font-bold tabular-nums text-foreground">{value}</p>
+          {sublabel && <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>}
         </div>
-      ) : sublabel ? (
-        <span className="text-xs text-muted-foreground">{sublabel}</span>
-      ) : null}
+        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", TONE[iconTone])}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -74,16 +59,14 @@ export function KPIStrip() {
 
   const totalLeads = totals.trueLeads > 0 ? totals.trueLeads : totals.reportedLeads;
   const blendedCpl = totalLeads > 0 ? totals.spend / totalLeads : 0;
-  const totalClients = clients.length;
   const sub = isFetching ? "updating…" : label;
 
   return (
-    <div className="grid grid-cols-5 gap-4">
-      <KPITile label="Total Active Clients" value={String(totalClients)} sublabel={sub} />
-      <KPITile label="Total Leads" kpiKey="leads" value={totalLeads.toLocaleString()} sublabel={sub} />
-      <KPITile label="Blended CPL" kpiKey="cpl" value={`$${blendedCpl.toFixed(2)}`} sublabel={sub} />
-      <KPITile label="Total Ad Spend" kpiKey="spend" value={`$${Math.round(totals.spend).toLocaleString()}`} sublabel={sub} />
-      <KPITile label="Closed Deals" value="—" sublabel="connect CRM" />
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <KPITile label="Active Clients" value={String(clients.length)} sublabel="in portfolio" Icon={Users} iconTone="blue" />
+      <KPITile label="Total Leads" kpiKey="leads" value={totalLeads.toLocaleString()} sublabel={sub} Icon={Activity} iconTone="green" />
+      <KPITile label="Blended CPL" kpiKey="cpl" value={`$${blendedCpl.toFixed(2)}`} sublabel={sub} Icon={Target} iconTone="amber" />
+      <KPITile label="Total Ad Spend" kpiKey="spend" value={`$${Math.round(totals.spend).toLocaleString()}`} sublabel={sub} Icon={DollarSign} iconTone="pink" />
     </div>
   );
 }
