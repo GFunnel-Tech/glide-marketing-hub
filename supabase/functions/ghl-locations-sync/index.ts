@@ -92,6 +92,16 @@ Deno.serve(async (req) => {
       } catch (_) { /* opaque token */ }
     }
 
+    // Fail fast: PITs require a Company ID — v1 fallback can't help
+    if (!companyId) {
+      return new Response(
+        JSON.stringify({
+          error: "GHL Company ID required",
+          hint: "Open GHL → click your agency name (top-left). The URL becomes app.gohighlevel.com/agency/<COMPANY_ID>/dashboard. Paste that URL in the Agency Connection panel and click Save & Sync.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+
     if (companyId) {
       const v2 = await fetch(
         `https://services.leadconnectorhq.com/locations/search?companyId=${encodeURIComponent(companyId)}&limit=500`,
