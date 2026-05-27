@@ -385,6 +385,76 @@ export function GhlAgencyConnectionPanel() {
               </span>
             </div>
           )}
+
+          {connected && webhookUrl && (
+            <div className="rounded-md border border-border bg-card p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <div className="rounded-md bg-primary/10 p-1.5 text-primary mt-0.5">
+                  <Webhook className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-foreground">
+                    Inbound webhook (GHL → MetaHub)
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Paste this URL into a GHL <strong>Workflow → Webhook</strong> action
+                    (trigger: <em>Opportunity Status Changed</em> or <em>Contact Stage
+                    Changed</em>). MetaHub will update each matching lead's stage
+                    automatically.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={webhookUrl}
+                  className="font-mono text-[11px] h-8"
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(webhookUrl);
+                    toast.success("Webhook URL copied");
+                  }}
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copy
+                </Button>
+              </div>
+              {recentEvents.length > 0 && (
+                <div className="border-t border-border pt-2">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">
+                    Recent events
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    {recentEvents.map((e, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-muted-foreground truncate">
+                          {e.event_type}
+                        </span>
+                        <span className="flex items-center gap-2 shrink-0">
+                          {e.applied ? (
+                            <Badge variant="outline" className="text-success border-success/40 text-[10px] h-4">
+                              applied
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground text-[10px] h-4">
+                              {e.error ?? "skipped"}
+                            </Badge>
+                          )}
+                          <span className="text-muted-foreground text-[10px]">
+                            {new Date(e.received_at).toLocaleString()}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
