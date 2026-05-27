@@ -2817,6 +2817,7 @@ export type Database = {
           ghl_check_status: string | null
           ghl_checked_at: string | null
           ghl_contact_id: string | null
+          ghl_stage: string | null
           id: string
           last_sync_error: string | null
           lead_id: string
@@ -2851,6 +2852,7 @@ export type Database = {
           ghl_check_status?: string | null
           ghl_checked_at?: string | null
           ghl_contact_id?: string | null
+          ghl_stage?: string | null
           id?: string
           last_sync_error?: string | null
           lead_id: string
@@ -2885,6 +2887,7 @@ export type Database = {
           ghl_check_status?: string | null
           ghl_checked_at?: string | null
           ghl_contact_id?: string | null
+          ghl_stage?: string | null
           id?: string
           last_sync_error?: string | null
           lead_id?: string
