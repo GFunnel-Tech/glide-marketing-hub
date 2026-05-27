@@ -1927,6 +1927,7 @@ export type Database = {
           created_at: string
           ghl_api_key: string | null
           ghl_company_id: string | null
+          ghl_webhook_secret: string | null
           id: string
           updated_at: string
           workspace_id: string
@@ -1937,6 +1938,7 @@ export type Database = {
           created_at?: string
           ghl_api_key?: string | null
           ghl_company_id?: string | null
+          ghl_webhook_secret?: string | null
           id?: string
           updated_at?: string
           workspace_id: string
@@ -1947,6 +1949,7 @@ export type Database = {
           created_at?: string
           ghl_api_key?: string | null
           ghl_company_id?: string | null
+          ghl_webhook_secret?: string | null
           id?: string
           updated_at?: string
           workspace_id?: string
@@ -2817,7 +2820,9 @@ export type Database = {
           ghl_check_status: string | null
           ghl_checked_at: string | null
           ghl_contact_id: string | null
+          ghl_opportunity_id: string | null
           ghl_stage: string | null
+          ghl_status_updated_at: string | null
           id: string
           last_sync_error: string | null
           lead_id: string
@@ -2852,7 +2857,9 @@ export type Database = {
           ghl_check_status?: string | null
           ghl_checked_at?: string | null
           ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
           ghl_stage?: string | null
+          ghl_status_updated_at?: string | null
           id?: string
           last_sync_error?: string | null
           lead_id: string
@@ -2887,7 +2894,9 @@ export type Database = {
           ghl_check_status?: string | null
           ghl_checked_at?: string | null
           ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
           ghl_stage?: string | null
+          ghl_status_updated_at?: string | null
           id?: string
           last_sync_error?: string | null
           lead_id?: string
