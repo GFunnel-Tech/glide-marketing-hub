@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useClients, useCampaigns } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Search, Loader2, X } from "lucide-react";
