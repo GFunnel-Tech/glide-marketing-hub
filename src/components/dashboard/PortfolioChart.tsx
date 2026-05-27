@@ -109,7 +109,7 @@ export function PortfolioChart() {
       </div>
       {dc ? (
         <Link
-          to="/campaigns?filter=issues"
+          to="/campaigns?filter=double-counting"
           className="mt-3 group flex items-center justify-between rounded-lg bg-destructive/10 border border-destructive/20 p-3 hover:bg-destructive/15 transition-colors"
         >
           <p className="text-xs text-destructive font-medium">

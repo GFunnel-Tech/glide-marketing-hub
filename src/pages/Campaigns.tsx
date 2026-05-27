@@ -11,7 +11,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type StatusFilter = "All" | "Active" | "Paused" | "Issues Only";
+type StatusFilter = "All" | "Active" | "Paused" | "Issues Only" | "Double-counting";
 
 function getCPLColor(cpl: number) {
   if (cpl < 30) return "text-success";
@@ -34,11 +34,17 @@ export default function Campaigns() {
   const { data: clients = [] } = useClients();
   const { data: campaignData = [], isLoading } = useCampaigns();
   const [searchParams] = useSearchParams();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
-    searchParams.get("filter") === "issues" ? "Issues Only" : "All"
-  );
+  const initialFilter: StatusFilter =
+    searchParams.get("filter") === "double-counting"
+      ? "Double-counting"
+      : searchParams.get("filter") === "issues"
+        ? "Issues Only"
+        : "All";
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialFilter);
   useEffect(() => {
-    if (searchParams.get("filter") === "issues") setStatusFilter("Issues Only");
+    const f = searchParams.get("filter");
+    if (f === "double-counting") setStatusFilter("Double-counting");
+    else if (f === "issues") setStatusFilter("Issues Only");
   }, [searchParams]);
   const [search, setSearch] = useState("");
   const [dcDismissed, setDcDismissed] = useState(false);
@@ -53,6 +59,7 @@ export default function Campaigns() {
     if (statusFilter === "Active") list = list.filter(c => c.status === "active");
     if (statusFilter === "Paused") list = list.filter(c => c.status !== "active");
     if (statusFilter === "Issues Only") list = list.filter(c => c.doubleCount || c.trueCpl > 60 || isRejected(c));
+    if (statusFilter === "Double-counting") list = list.filter(c => c.doubleCount);
     if (search) list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || getClient(c.clientId)?.name.toLowerCase().includes(search.toLowerCase()));
     return list;
   }, [campaignData, clients, statusFilter, search]);
@@ -84,7 +91,7 @@ export default function Campaigns() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        {(["All", "Active", "Paused", "Issues Only"] as StatusFilter[]).map(f => (
+        {(["All", "Active", "Paused", "Issues Only", "Double-counting"] as StatusFilter[]).map(f => (
           <button key={f} onClick={() => setStatusFilter(f)} className={cn("rounded-md px-3 py-1.5 text-xs font-medium transition-colors", statusFilter === f ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground hover:text-foreground")}>{f}</button>
         ))}
         <div className="relative ml-auto">
