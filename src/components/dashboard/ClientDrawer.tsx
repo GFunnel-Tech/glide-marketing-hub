@@ -1,6 +1,6 @@
 import { X, ExternalLink } from "lucide-react";
-import { Client, campaigns, notes } from "@/data/mockData";
-import { useLeads } from "@/hooks/useDatabase";
+import { Client } from "@/data/mockData";
+import { useLeads, useCampaigns } from "@/hooks/useDatabase";
 import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -22,6 +22,8 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
 
   const { data: allLeads = [] } = useLeads();
   const clientLeads = allLeads.filter(l => l.client_id === client.id);
+  const { data: allCampaigns = [] } = useCampaigns();
+  const clientCampaigns = allCampaigns.filter(c => String(c.clientId) === String(client.id));
 
   return (
     <>
@@ -114,12 +116,12 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
 
           {activeTab === "Campaigns" && (
             <div className="space-y-3">
-              {campaigns.map((c) => (
+              {clientCampaigns.length > 0 ? clientCampaigns.map((c) => (
                 <div key={c.id} className="rounded-lg border border-border p-4 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-foreground">{c.name}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      ${c.spend} spend · {c.leads} leads · ${c.cpl.toFixed(2)} CPL
+                      ${c.spend.toLocaleString()} spend · {c.leads} leads · ${c.cpl.toFixed(2)} CPL
                     </p>
                   </div>
                   <span className={cn(
@@ -129,7 +131,9 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                     {c.status}
                   </span>
                 </div>
-              ))}
+              )) : (
+                <p className="text-xs text-muted-foreground italic">No campaigns found for this client</p>
+              )}
             </div>
           )}
 
@@ -205,16 +209,7 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                   <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Notes</h4>
                   <Link to={`/client/${client.id}`} className="text-xs text-primary hover:underline" onClick={onClose}>View Full Activity Log →</Link>
                 </div>
-                {notes.map((n) => (
-                  <div key={n.id} className="rounded-lg border border-border p-3">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{n.timestamp}</span>
-                      <span>·</span>
-                      <span className="font-medium text-foreground">{n.author}</span>
-                    </div>
-                    <p className="mt-1 text-sm text-foreground">{n.text}</p>
-                  </div>
-                ))}
+                <p className="text-xs text-muted-foreground italic">No notes yet. Open the full profile to add one.</p>
               </div>
             </div>
           )}
