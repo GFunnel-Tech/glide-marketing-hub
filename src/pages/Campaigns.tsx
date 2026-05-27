@@ -11,7 +11,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type StatusFilter = "All" | "Active" | "Paused" | "Issues Only";
+type StatusFilter = "All" | "Active" | "Paused" | "Issues Only" | "Double-counting";
 
 function getCPLColor(cpl: number) {
   if (cpl < 30) return "text-success";
