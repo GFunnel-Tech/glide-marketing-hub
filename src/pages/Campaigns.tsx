@@ -91,7 +91,7 @@ export default function Campaigns() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        {(["All", "Active", "Paused", "Issues Only"] as StatusFilter[]).map(f => (
+        {(["All", "Active", "Paused", "Issues Only", "Double-counting"] as StatusFilter[]).map(f => (
           <button key={f} onClick={() => setStatusFilter(f)} className={cn("rounded-md px-3 py-1.5 text-xs font-medium transition-colors", statusFilter === f ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground hover:text-foreground")}>{f}</button>
         ))}
         <div className="relative ml-auto">
