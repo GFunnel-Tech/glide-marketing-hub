@@ -33,7 +33,13 @@ function isRejected(c: { issuesStatus?: string | null }) {
 export default function Campaigns() {
   const { data: clients = [] } = useClients();
   const { data: campaignData = [], isLoading } = useCampaigns();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
+  const [searchParams] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    searchParams.get("filter") === "issues" ? "Issues Only" : "All"
+  );
+  useEffect(() => {
+    if (searchParams.get("filter") === "issues") setStatusFilter("Issues Only");
+  }, [searchParams]);
   const [search, setSearch] = useState("");
   const [dcDismissed, setDcDismissed] = useState(false);
   const [rejDismissed, setRejDismissed] = useState(false);
