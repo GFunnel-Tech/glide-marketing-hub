@@ -51,6 +51,12 @@ export function GhlAgencyConnectionPanel() {
   const [savedCompanyId, setSavedCompanyId] = useState("");
   const [stats, setStats] = useState<Stats>({ locations: 0, clientsLinked: 0, clientsTotal: 0 });
   const [threshold, setThreshold] = useState(0.9);
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [recentEvents, setRecentEvents] = useState<Array<{ event_type: string; received_at: string; applied: boolean; error: string | null }>>([]);
+
+  const webhookUrl = webhookSecret
+    ? `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ghl-webhook-inbound?secret=${webhookSecret}`
+    : "";
 
   const meta = useMemo(() => decodeJwt(token || savedToken), [token, savedToken]);
   const effectiveCompanyId = companyId || savedCompanyId || meta.companyId || "";
