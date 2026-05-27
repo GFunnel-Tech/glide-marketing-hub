@@ -22,6 +22,8 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
 
   const { data: allLeads = [] } = useLeads();
   const clientLeads = allLeads.filter(l => l.client_id === client.id);
+  const { data: allCampaigns = [] } = useCampaigns();
+  const clientCampaigns = allCampaigns.filter(c => String(c.clientId) === String(client.id));
 
   return (
     <>
