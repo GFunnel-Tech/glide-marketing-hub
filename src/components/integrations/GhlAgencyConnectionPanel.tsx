@@ -328,7 +328,7 @@ export function GhlAgencyConnectionPanel() {
             </Button>
             <Button
               onClick={() => save({ thenSync: true })}
-              disabled={saving || syncing || (!token && !savedToken) || (!companyId.trim() && !savedCompanyId)}
+              disabled={saving || syncing || (!token && !savedToken)}
               size="sm"
               variant="secondary"
             >
@@ -336,7 +336,7 @@ export function GhlAgencyConnectionPanel() {
             </Button>
             <Button
               onClick={syncAll}
-              disabled={syncing || !savedToken || !savedCompanyId}
+              disabled={syncing || !savedToken}
               variant="outline"
               size="sm"
             >
