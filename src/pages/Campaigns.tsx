@@ -34,11 +34,17 @@ export default function Campaigns() {
   const { data: clients = [] } = useClients();
   const { data: campaignData = [], isLoading } = useCampaigns();
   const [searchParams] = useSearchParams();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
-    searchParams.get("filter") === "issues" ? "Issues Only" : "All"
-  );
+  const initialFilter: StatusFilter =
+    searchParams.get("filter") === "double-counting"
+      ? "Double-counting"
+      : searchParams.get("filter") === "issues"
+        ? "Issues Only"
+        : "All";
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialFilter);
   useEffect(() => {
-    if (searchParams.get("filter") === "issues") setStatusFilter("Issues Only");
+    const f = searchParams.get("filter");
+    if (f === "double-counting") setStatusFilter("Double-counting");
+    else if (f === "issues") setStatusFilter("Issues Only");
   }, [searchParams]);
   const [search, setSearch] = useState("");
   const [dcDismissed, setDcDismissed] = useState(false);
@@ -53,6 +59,7 @@ export default function Campaigns() {
     if (statusFilter === "Active") list = list.filter(c => c.status === "active");
     if (statusFilter === "Paused") list = list.filter(c => c.status !== "active");
     if (statusFilter === "Issues Only") list = list.filter(c => c.doubleCount || c.trueCpl > 60 || isRejected(c));
+    if (statusFilter === "Double-counting") list = list.filter(c => c.doubleCount);
     if (search) list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || getClient(c.clientId)?.name.toLowerCase().includes(search.toLowerCase()));
     return list;
   }, [campaignData, clients, statusFilter, search]);
