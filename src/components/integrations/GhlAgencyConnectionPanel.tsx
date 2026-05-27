@@ -13,6 +13,8 @@ import {
   Building2,
   Link2,
   Unlink,
+  Copy,
+  Webhook,
 } from "lucide-react";
 
 type Stats = {
@@ -49,6 +51,12 @@ export function GhlAgencyConnectionPanel() {
   const [savedCompanyId, setSavedCompanyId] = useState("");
   const [stats, setStats] = useState<Stats>({ locations: 0, clientsLinked: 0, clientsTotal: 0 });
   const [threshold, setThreshold] = useState(0.9);
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [recentEvents, setRecentEvents] = useState<Array<{ event_type: string; received_at: string; applied: boolean; error: string | null }>>([]);
+
+  const webhookUrl = webhookSecret
+    ? `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ghl-webhook-inbound?secret=${webhookSecret}`
+    : "";
 
   const meta = useMemo(() => decodeJwt(token || savedToken), [token, savedToken]);
   const effectiveCompanyId = companyId || savedCompanyId || meta.companyId || "";
@@ -57,10 +65,10 @@ export function GhlAgencyConnectionPanel() {
   const load = async () => {
     if (!wsId) return;
     setLoading(true);
-    const [cfg, locs, clients] = await Promise.all([
+    const [cfg, locs, clients, events] = await Promise.all([
       (supabase as any)
         .from("integration_configs")
-        .select("ghl_api_key, ghl_company_id")
+        .select("ghl_api_key, ghl_company_id, ghl_webhook_secret")
         .eq("workspace_id", wsId)
         .maybeSingle(),
       (supabase as any)
@@ -71,11 +79,19 @@ export function GhlAgencyConnectionPanel() {
         .from("clients")
         .select("id, ghl_location_id")
         .eq("workspace_id", wsId),
+      (supabase as any)
+        .from("ghl_webhook_events")
+        .select("event_type, received_at, applied, error")
+        .eq("workspace_id", wsId)
+        .order("received_at", { ascending: false })
+        .limit(5),
     ]);
     setSavedToken(cfg?.data?.ghl_api_key ?? "");
     setToken(cfg?.data?.ghl_api_key ?? "");
     setSavedCompanyId(cfg?.data?.ghl_company_id ?? "");
     setCompanyId(cfg?.data?.ghl_company_id ?? "");
+    setWebhookSecret(cfg?.data?.ghl_webhook_secret ?? "");
+    setRecentEvents((events?.data ?? []) as any);
     const all = (clients?.data ?? []) as Array<{ ghl_location_id: string | null }>;
     setStats({
       locations: locs?.count ?? 0,
@@ -367,6 +383,76 @@ export function GhlAgencyConnectionPanel() {
                 Use the <span className="font-medium text-foreground">Integration Mapper</span> below
                 to review fuzzy matches and link the remaining {stats.clientsTotal - stats.clientsLinked} client(s) to their GHL sub-account.
               </span>
+            </div>
+          )}
+
+          {connected && webhookUrl && (
+            <div className="rounded-md border border-border bg-card p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <div className="rounded-md bg-primary/10 p-1.5 text-primary mt-0.5">
+                  <Webhook className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-foreground">
+                    Inbound webhook (GHL → MetaHub)
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Paste this URL into a GHL <strong>Workflow → Webhook</strong> action
+                    (trigger: <em>Opportunity Status Changed</em> or <em>Contact Stage
+                    Changed</em>). MetaHub will update each matching lead's stage
+                    automatically.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={webhookUrl}
+                  className="font-mono text-[11px] h-8"
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(webhookUrl);
+                    toast.success("Webhook URL copied");
+                  }}
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copy
+                </Button>
+              </div>
+              {recentEvents.length > 0 && (
+                <div className="border-t border-border pt-2">
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1.5">
+                    Recent events
+                  </div>
+                  <ul className="space-y-1 text-xs">
+                    {recentEvents.map((e, i) => (
+                      <li key={i} className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-muted-foreground truncate">
+                          {e.event_type}
+                        </span>
+                        <span className="flex items-center gap-2 shrink-0">
+                          {e.applied ? (
+                            <Badge variant="outline" className="text-success border-success/40 text-[10px] h-4">
+                              applied
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground text-[10px] h-4">
+                              {e.error ?? "skipped"}
+                            </Badge>
+                          )}
+                          <span className="text-muted-foreground text-[10px]">
+                            {new Date(e.received_at).toLocaleString()}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </>

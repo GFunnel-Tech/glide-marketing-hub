@@ -1703,37 +1703,55 @@ export type Database = {
       }
       ghl_webhook_events: {
         Row: {
+          applied: boolean
           company_id: string | null
           created_at: string
           error: string | null
           event_type: string | null
+          ghl_contact_id: string | null
+          ghl_opportunity_id: string | null
           id: string
           location_id: string | null
+          matched_lead_id: string | null
           payload: Json | null
           processed_at: string | null
+          received_at: string
           signature_valid: boolean | null
+          workspace_id: string | null
         }
         Insert: {
+          applied?: boolean
           company_id?: string | null
           created_at?: string
           error?: string | null
           event_type?: string | null
+          ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
           id?: string
           location_id?: string | null
+          matched_lead_id?: string | null
           payload?: Json | null
           processed_at?: string | null
+          received_at?: string
           signature_valid?: boolean | null
+          workspace_id?: string | null
         }
         Update: {
+          applied?: boolean
           company_id?: string | null
           created_at?: string
           error?: string | null
           event_type?: string | null
+          ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
           id?: string
           location_id?: string | null
+          matched_lead_id?: string | null
           payload?: Json | null
           processed_at?: string | null
+          received_at?: string
           signature_valid?: boolean | null
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1927,6 +1945,7 @@ export type Database = {
           created_at: string
           ghl_api_key: string | null
           ghl_company_id: string | null
+          ghl_webhook_secret: string | null
           id: string
           updated_at: string
           workspace_id: string
@@ -1937,6 +1956,7 @@ export type Database = {
           created_at?: string
           ghl_api_key?: string | null
           ghl_company_id?: string | null
+          ghl_webhook_secret?: string | null
           id?: string
           updated_at?: string
           workspace_id: string
@@ -1947,6 +1967,7 @@ export type Database = {
           created_at?: string
           ghl_api_key?: string | null
           ghl_company_id?: string | null
+          ghl_webhook_secret?: string | null
           id?: string
           updated_at?: string
           workspace_id?: string
@@ -2817,6 +2838,9 @@ export type Database = {
           ghl_check_status: string | null
           ghl_checked_at: string | null
           ghl_contact_id: string | null
+          ghl_opportunity_id: string | null
+          ghl_stage: string | null
+          ghl_status_updated_at: string | null
           id: string
           last_sync_error: string | null
           lead_id: string
@@ -2851,6 +2875,9 @@ export type Database = {
           ghl_check_status?: string | null
           ghl_checked_at?: string | null
           ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_stage?: string | null
+          ghl_status_updated_at?: string | null
           id?: string
           last_sync_error?: string | null
           lead_id: string
@@ -2885,6 +2912,9 @@ export type Database = {
           ghl_check_status?: string | null
           ghl_checked_at?: string | null
           ghl_contact_id?: string | null
+          ghl_opportunity_id?: string | null
+          ghl_stage?: string | null
+          ghl_status_updated_at?: string | null
           id?: string
           last_sync_error?: string | null
           lead_id?: string
