@@ -125,29 +125,6 @@ Deno.serve(async (req) => {
   return json({ ok: true, ...stats });
 });
 
-async function searchGhlContact(
-  apiKey: string,
-  locationId: string | undefined | null,
-  email: string | null,
-  phone: string | null,
-): Promise<boolean> {
-  if (!email && !phone) return false;
-
-  // GHL v1 API — /contacts/lookup supports email & phone query
-  const tryLookup = async (param: string, value: string) => {
-    const url = `https://rest.gohighlevel.com/v1/contacts/lookup?${param}=${encodeURIComponent(value)}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
-    if (!res.ok) return false;
-    const j = await res.json();
-    const contacts = j.contacts ?? [];
-    if (!locationId) return contacts.length > 0;
-    return contacts.some((c: any) => c.locationId === locationId);
-  };
-
-  if (email && await tryLookup("email", email)) return true;
-  if (phone && await tryLookup("phone", phone)) return true;
-  return false;
-}
 
 async function createClickupTask(
   token: string,
