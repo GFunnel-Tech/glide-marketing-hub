@@ -67,13 +67,10 @@ Deno.serve(async (req) => {
     }
 
     let locations: any[] = [];
-    let lastErr = "";
-
-    // companyId resolution order:
-    //   1. Explicit value saved with the token (required for opaque `pit-...` tokens)
-    //   2. JWT claims (for legacy OAuth/JWT-style tokens)
     let companyId: string | null = cfg.ghl_company_id ?? null;
-    let tokenDebug: any = null;
+    const attempts: Array<{ endpoint: string; status: number; body: string }> = [];
+
+    // Try to extract companyId from JWT (legacy tokens). Opaque `pit-...` tokens skip this.
     if (!companyId) {
       try {
         const parts = cfg.ghl_api_key.split(".");
@@ -81,68 +78,82 @@ Deno.serve(async (req) => {
           const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
           const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
           const payload = JSON.parse(atob(padded));
-          companyId =
-            payload.company_id ??
-            payload.companyId ??
-            (payload.authClass === "Company" ? payload.authClassId : null) ??
-            payload.primaryAuthClassId ??
-            null;
-          tokenDebug = { authClass: payload.authClass, authClassId: payload.authClassId };
+          companyId = payload.company_id ?? payload.companyId
+            ?? (payload.authClass === "Company" ? payload.authClassId : null)
+            ?? payload.primaryAuthClassId ?? null;
         }
-      } catch (_) { /* opaque token */ }
+      } catch (_) { /* opaque */ }
     }
 
-    // Fail fast: PITs require a Company ID — v1 fallback can't help
+    const v2Headers = {
+      Authorization: `Bearer ${cfg.ghl_api_key}`,
+      Version: "2021-07-28",
+      Accept: "application/json",
+    };
+
+    // Attempt 1: auto-discover companyId via /oauth/userinfo (works with most agency PITs)
     if (!companyId) {
+      const r = await fetch("https://services.leadconnectorhq.com/oauth/userinfo", { headers: v2Headers });
+      const txt = await r.text();
+      attempts.push({ endpoint: "GET /oauth/userinfo", status: r.status, body: txt.slice(0, 400) });
+      if (r.ok) {
+        try {
+          const j = JSON.parse(txt);
+          companyId = j.companyId ?? j.company_id ?? j.activeLocation?.companyId ?? null;
+        } catch (_) {}
+      }
+    }
+
+    // Attempt 2: try /locations/search without companyId — some PITs allow this
+    if (!companyId) {
+      const r = await fetch("https://services.leadconnectorhq.com/locations/search?limit=500", { headers: v2Headers });
+      const txt = await r.text();
+      attempts.push({ endpoint: "GET /locations/search (no companyId)", status: r.status, body: txt.slice(0, 400) });
+      if (r.ok) {
+        try {
+          const j = JSON.parse(txt);
+          locations = j.locations || j.data || [];
+          if (locations[0]?.companyId) companyId = locations[0].companyId;
+        } catch (_) {}
+      } else {
+        // GHL sometimes echoes companyId in the error
+        const m = txt.match(/companyId["'\s:]+([A-Za-z0-9]{12,})/);
+        if (m) companyId = m[1];
+      }
+    }
+
+    // Attempt 3: with discovered companyId, do the real search
+    if (companyId && locations.length === 0) {
+      const r = await fetch(
+        `https://services.leadconnectorhq.com/locations/search?companyId=${encodeURIComponent(companyId)}&limit=500`,
+        { headers: v2Headers },
+      );
+      const txt = await r.text();
+      attempts.push({ endpoint: `GET /locations/search?companyId=${companyId}`, status: r.status, body: txt.slice(0, 400) });
+      if (r.ok) {
+        try { const j = JSON.parse(txt); locations = j.locations || j.data || []; } catch (_) {}
+      }
+    }
+
+    if (locations.length === 0) {
       return new Response(
         JSON.stringify({
-          error: "GHL Company ID required",
-          hint: "Open GHL → click your agency name (top-left). The URL becomes app.gohighlevel.com/agency/<COMPANY_ID>/dashboard. Paste that URL in the Agency Connection panel and click Save & Sync.",
+          error: "Could not fetch GHL sub-accounts",
+          companyId,
+          attempts,
+          hint: companyId
+            ? "Discovered Company ID but locations call failed. Verify the PIT has scope `locations.readonly`."
+            : "Could not auto-discover Company ID from the PIT. Either add it manually in the Agency Connection panel, or recreate the PIT in GHL Agency View → Settings → Private Integrations with scope `locations.readonly`.",
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-
-    if (companyId) {
-      const v2 = await fetch(
-        `https://services.leadconnectorhq.com/locations/search?companyId=${encodeURIComponent(companyId)}&limit=500`,
-        { headers: {
-            Authorization: `Bearer ${cfg.ghl_api_key}`,
-            Version: "2021-07-28",
-            Accept: "application/json",
-        } },
-      );
-      if (v2.ok) {
-        const j = await v2.json();
-        locations = j.locations || j.data || [];
-      } else {
-        lastErr = `v2 ${v2.status}: ${await v2.text()}`;
-      }
     }
 
-    // Fallback to v1 if v2 produced nothing.
-    if (locations.length === 0) {
-      const v1 = await fetch("https://rest.gohighlevel.com/v1/locations/", {
-        headers: { Authorization: `Bearer ${cfg.ghl_api_key}` },
-      });
-      if (v1.ok) {
-        const j = await v1.json();
-        locations = j.locations || j.data || [];
-      } else {
-        const t = await v1.text();
-        return new Response(
-          JSON.stringify({
-            error: "GHL API error",
-            detail: t,
-            v2_error: lastErr,
-            companyId,
-            tokenDebug,
-            hint: !companyId
-              ? "Add your GHL Company ID in the Agency Connection panel. Agency PITs (pit-...) are opaque, so the Company ID must be provided separately. Find it in GHL → Agency Settings → Company (URL contains /agency/<COMPANY_ID>/)."
-              : "Locations call failed — verify the PIT has scope `locations.readonly` and that the Company ID matches the token's agency.",
-          }),
-          { status: 502, headers: corsHeaders },
-        );
-      }
+    // Persist discovered companyId for future runs
+    if (companyId && !cfg.ghl_company_id) {
+      await supabase.from("integration_configs")
+        .update({ ghl_company_id: companyId })
+        .eq("workspace_id", workspace_id);
     }
 
     // Upsert cache
