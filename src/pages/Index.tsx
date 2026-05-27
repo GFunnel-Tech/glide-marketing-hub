@@ -6,6 +6,50 @@ import { QuickActionBar } from "@/components/dashboard/QuickActionBar";
 import { ConnectMetaPrompt } from "@/components/dashboard/ConnectMetaPrompt";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { useClients } from "@/hooks/useDatabase";
+import { useMemo } from "react";
+import { StatusBadge } from "@/components/dashboard/StatusBadge";
+
+function PortfolioHealthCard() {
+  const { data: clients = [] } = useClients();
+  const counts = useMemo(() => {
+    const c = { GREEN: 0, YELLOW: 0, RED: 0, BLOCKED: 0, other: 0 };
+    for (const cl of clients) {
+      if (cl.status in c) (c as any)[cl.status]++;
+      else c.other++;
+    }
+    return c;
+  }, [clients]);
+
+  const rows: { key: "GREEN" | "YELLOW" | "RED" | "BLOCKED"; label: string }[] = [
+    { key: "GREEN", label: "Performing" },
+    { key: "YELLOW", label: "Needs attention" },
+    { key: "RED", label: "At risk" },
+    { key: "BLOCKED", label: "Blocked" },
+  ];
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 h-full">
+      <h3 className="text-sm font-semibold text-foreground">Portfolio Health</h3>
+      <p className="mt-1 text-xs text-muted-foreground">Status breakdown across all clients.</p>
+      <dl className="mt-4 space-y-3">
+        {rows.map((r) => (
+          <div key={r.key} className="flex items-center justify-between gap-3">
+            <dt className="flex items-center gap-2">
+              <StatusBadge status={r.key} />
+              <span className="text-sm text-muted-foreground">{r.label}</span>
+            </dt>
+            <dd className="text-sm font-semibold tabular-nums text-foreground">{(counts as any)[r.key]}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-5 border-t border-border pt-4 flex items-center justify-between text-xs text-muted-foreground">
+        <span>Total clients</span>
+        <span className="font-semibold text-foreground tabular-nums">{clients.length}</span>
+      </div>
+    </div>
+  );
+}
 
 const Index = () => {
   const { hasConnection, isLoading } = useHasActiveMetaConnection();
@@ -17,14 +61,24 @@ const Index = () => {
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Portfolio performance at a glance.</p>
+          <h1 className="text-2xl font-semibold text-foreground">Overview</h1>
+          <p className="text-sm text-muted-foreground">What's happening across your portfolio.</p>
         </div>
         <DateRangePicker />
       </div>
+
       <KPIStrip />
-      <PortfolioChart />
       <QuickActionBar />
+
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <PortfolioChart />
+        </div>
+        <div className="lg:col-span-1">
+          <PortfolioHealthCard />
+        </div>
+      </div>
+
       <ClientTable />
       <LeadsByClient />
     </div>
