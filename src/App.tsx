@@ -47,8 +47,11 @@ import PortalOnboarding from "./pages/portal/PortalOnboarding";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
 import { useConversationsRealtime } from "@/hooks/useMessages";
+import { useGFunnel } from "@/hooks/useGFunnel";
 
 const queryClient = new QueryClient();
+
+const GFUNNEL_MODULE_SLUG = "metahub";
 
 function RealtimeProvider({ children }: { children: React.ReactNode }) {
   useRealtimeSync();
@@ -57,13 +60,29 @@ function RealtimeProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function GFunnelGate({ children }: { children: React.ReactNode }) {
+  const { isEmbedded, isReady, error } = useGFunnel(GFUNNEL_MODULE_SLUG);
+  if (isEmbedded && !isReady) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+        Connecting to GFunnel…
+      </div>
+    );
+  }
+  if (isEmbedded && error) {
+    console.warn("[GFunnel] SSO error:", error);
+  }
+  return <>{children}</>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <BrowserRouter>
         <AuthProvider>
-          <WorkspaceProvider>
-            <RealtimeProvider>
+          <GFunnelGate>
+            <WorkspaceProvider>
+              <RealtimeProvider>
               <Toaster />
               <Sonner />
               <Routes>
@@ -132,8 +151,9 @@ const App = () => (
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </RealtimeProvider>
-          </WorkspaceProvider>
+              </RealtimeProvider>
+            </WorkspaceProvider>
+          </GFunnelGate>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
