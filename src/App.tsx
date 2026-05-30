@@ -80,8 +80,9 @@ const App = () => (
     <TooltipProvider>
       <BrowserRouter>
         <AuthProvider>
-          <WorkspaceProvider>
-            <RealtimeProvider>
+          <GFunnelGate>
+            <WorkspaceProvider>
+              <RealtimeProvider>
               <Toaster />
               <Sonner />
               <Routes>
