@@ -3342,6 +3342,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string | null
+          gfunnel_user_profile_id: string | null
           id: string
           updated_at: string
         }
@@ -3350,6 +3351,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          gfunnel_user_profile_id?: string | null
           id: string
           updated_at?: string
         }
@@ -3358,6 +3360,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          gfunnel_user_profile_id?: string | null
           id?: string
           updated_at?: string
         }
@@ -3934,6 +3937,7 @@ export type Database = {
       }
       workspaces: {
         Row: {
+          auth_mode: string
           created_at: string
           created_by: string | null
           id: string
@@ -3942,6 +3946,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auth_mode?: string
           created_at?: string
           created_by?: string | null
           id?: string
@@ -3950,6 +3955,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auth_mode?: string
           created_at?: string
           created_by?: string | null
           id?: string
