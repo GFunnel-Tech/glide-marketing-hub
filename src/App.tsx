@@ -151,8 +151,9 @@ const App = () => (
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </RealtimeProvider>
-          </WorkspaceProvider>
+              </RealtimeProvider>
+            </WorkspaceProvider>
+          </GFunnelGate>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
