@@ -46,8 +46,12 @@ export function useClientsRangeMetrics() {
     queryFn: async (): Promise<Record<number, ClientRangeMetrics>> => {
       const fromStr = fmtDate(from);
       const toStr = fmtDate(to);
-      const fromISO = new Date(from).toISOString();
-      const toISO = new Date(to).toISOString();
+      // Align lead window with Meta's reporting-day bucket (date-only UTC bounds)
+      // instead of the picker's local-time-of-day, so a lead that lands the next
+      // morning in the DB doesn't fall out of the trueLeads count.
+      const fromISO = `${fromStr}T00:00:00.000Z`;
+      const toISO = `${toStr}T23:59:59.999Z`;
+
 
       // 1. Ad account -> client_id map
       const { data: accts, error: aErr } = await (supabase as any)
