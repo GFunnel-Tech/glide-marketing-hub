@@ -1018,6 +1018,87 @@ export type Database = {
         }
         Relationships: []
       }
+      client_stripe_accounts: {
+        Row: {
+          access_token: string
+          client_id: number
+          connect_type: string
+          connected_at: string
+          connected_by: string | null
+          created_at: string
+          disconnected_at: string | null
+          id: string
+          last_event_at: string | null
+          last_event_type: string | null
+          livemode: boolean
+          publishable_key: string | null
+          raw_oauth_response: Json | null
+          refresh_token: string | null
+          scope: string | null
+          stripe_user_id: string
+          token_type: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          access_token: string
+          client_id: number
+          connect_type?: string
+          connected_at?: string
+          connected_by?: string | null
+          created_at?: string
+          disconnected_at?: string | null
+          id?: string
+          last_event_at?: string | null
+          last_event_type?: string | null
+          livemode?: boolean
+          publishable_key?: string | null
+          raw_oauth_response?: Json | null
+          refresh_token?: string | null
+          scope?: string | null
+          stripe_user_id: string
+          token_type?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string
+          client_id?: number
+          connect_type?: string
+          connected_at?: string
+          connected_by?: string | null
+          created_at?: string
+          disconnected_at?: string | null
+          id?: string
+          last_event_at?: string | null
+          last_event_type?: string | null
+          livemode?: boolean
+          publishable_key?: string | null
+          raw_oauth_response?: Json | null
+          refresh_token?: string | null
+          scope?: string | null
+          stripe_user_id?: string
+          token_type?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_stripe_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_stripe_accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_wallets: {
         Row: {
           auto_topup_enabled: boolean
@@ -3645,6 +3726,147 @@ export type Database = {
           },
         ]
       }
+      stripe_charges: {
+        Row: {
+          amount: number
+          amount_refunded: number
+          client_id: number
+          created_at: string
+          created_at_stripe: string
+          currency: string
+          customer_email: string | null
+          description: string | null
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          livemode: boolean
+          paid: boolean
+          raw: Json | null
+          receipt_url: string | null
+          refunded: boolean
+          status: string
+          stripe_charge_id: string
+          stripe_customer_id: string | null
+          stripe_user_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          amount_refunded?: number
+          client_id: number
+          created_at?: string
+          created_at_stripe: string
+          currency: string
+          customer_email?: string | null
+          description?: string | null
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          livemode?: boolean
+          paid?: boolean
+          raw?: Json | null
+          receipt_url?: string | null
+          refunded?: boolean
+          status: string
+          stripe_charge_id: string
+          stripe_customer_id?: string | null
+          stripe_user_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          amount_refunded?: number
+          client_id?: number
+          created_at?: string
+          created_at_stripe?: string
+          currency?: string
+          customer_email?: string | null
+          description?: string | null
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          livemode?: boolean
+          paid?: boolean
+          raw?: Json | null
+          receipt_url?: string | null
+          refunded?: boolean
+          status?: string
+          stripe_charge_id?: string
+          stripe_customer_id?: string | null
+          stripe_user_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_charges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_charges_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stripe_connect_oauth_states: {
+        Row: {
+          client_id: number
+          connect_type: string
+          consumed_at: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          return_url: string | null
+          state: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          connect_type?: string
+          consumed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          return_url?: string | null
+          state: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          connect_type?: string
+          consumed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          return_url?: string | null
+          state?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_connect_oauth_states_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_connect_oauth_states_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           access_level: string
@@ -3967,7 +4189,69 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      client_stripe_connections: {
+        Row: {
+          client_id: number | null
+          connect_type: string | null
+          connected_at: string | null
+          disconnected_at: string | null
+          id: string | null
+          is_connected: boolean | null
+          last_event_at: string | null
+          last_event_type: string | null
+          livemode: boolean | null
+          publishable_key: string | null
+          scope: string | null
+          stripe_user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          client_id?: number | null
+          connect_type?: string | null
+          connected_at?: string | null
+          disconnected_at?: string | null
+          id?: string | null
+          is_connected?: never
+          last_event_at?: string | null
+          last_event_type?: string | null
+          livemode?: boolean | null
+          publishable_key?: string | null
+          scope?: string | null
+          stripe_user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          client_id?: number | null
+          connect_type?: string | null
+          connected_at?: string | null
+          disconnected_at?: string | null
+          id?: string | null
+          is_connected?: never
+          last_event_at?: string | null
+          last_event_type?: string | null
+          livemode?: boolean | null
+          publishable_key?: string | null
+          scope?: string | null
+          stripe_user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_stripe_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_stripe_accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_write_workspace: {
