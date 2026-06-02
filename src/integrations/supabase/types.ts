@@ -1038,6 +1038,7 @@ export type Database = {
           stripe_user_id: string
           token_type: string | null
           updated_at: string
+          webhook_signing_secret: string | null
           workspace_id: string
         }
         Insert: {
@@ -1059,6 +1060,7 @@ export type Database = {
           stripe_user_id: string
           token_type?: string | null
           updated_at?: string
+          webhook_signing_secret?: string | null
           workspace_id: string
         }
         Update: {
@@ -1080,6 +1082,7 @@ export type Database = {
           stripe_user_id?: string
           token_type?: string | null
           updated_at?: string
+          webhook_signing_secret?: string | null
           workspace_id?: string
         }
         Relationships: [

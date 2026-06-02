@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Link2, Link2Off, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { StripeConnectDialog } from "@/components/billing/StripeConnectDialog";
+import { useClientStripeConnections, useDisconnectClientStripe } from "@/hooks/useClientStripe";
 
 type PaymentStatus = "active" | "failed" | "overdue" | "pending";
 
@@ -67,35 +69,25 @@ export default function BillingDashboard() {
   const [filter, setFilter] = useState<"all" | PaymentStatus>("all");
   const [search, setSearch] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [stripeAccounts, setStripeAccounts] = useState<Record<string, { id: string; mode: "test" | "live" } | null>>({
-    "1": { id: "acct_1Nv••••8Qz", mode: "test" },
-    "4": { id: "acct_1Mp••••2Lx", mode: "test" },
-    "9": { id: "acct_1Kr••••9Wb", mode: "test" },
-  });
-  const [pendingStripe, setPendingStripe] = useState<Record<string, boolean>>({});
+  const [connectDialog, setConnectDialog] = useState<{ clientId: number; name: string } | null>(null);
+
+  const { data: connections = {} } = useClientStripeConnections();
+  const disconnect = useDisconnectClientStripe();
 
   const handleConnectStripe = (client: Client) => {
-    setPendingStripe((p) => ({ ...p, [client.id]: true }));
-    // TODO: redirect to /functions/v1/stripe-connect-start?client_id=...
-    setTimeout(() => {
-      setStripeAccounts((s) => ({
-        ...s,
-        [client.id]: { id: `acct_${Math.random().toString(36).slice(2, 10)}`, mode: "test" },
-      }));
-      setPendingStripe((p) => ({ ...p, [client.id]: false }));
-      toast.success(`Connected ${client.name}'s Stripe account (test mode)`);
-    }, 900);
+    setConnectDialog({ clientId: Number(client.id), name: client.name });
   };
 
-  const handleDisconnectStripe = (client: Client) => {
-    if (!confirm(`Disconnect ${client.name}'s Stripe account? They'll need to reconnect to view charges or rebill.`)) return;
-    setPendingStripe((p) => ({ ...p, [client.id]: true }));
-    setTimeout(() => {
-      setStripeAccounts((s) => ({ ...s, [client.id]: null }));
-      setPendingStripe((p) => ({ ...p, [client.id]: false }));
+  const handleDisconnectStripe = async (client: Client) => {
+    if (!confirm(`Disconnect ${client.name}'s Stripe account? Their stored API key will be deleted from our backend.`)) return;
+    try {
+      await disconnect.mutateAsync(Number(client.id));
       toast.success(`Disconnected ${client.name}'s Stripe account`);
-    }, 600);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to disconnect");
+    }
   };
+
 
   const stats = useMemo(() => ({
     active: CLIENTS.filter((c) => c.status === "active").length,
@@ -212,8 +204,8 @@ export default function BillingDashboard() {
                   </td>
                   <td className="px-3 py-2.5">
                     {(() => {
-                      const acct = stripeAccounts[client.id];
-                      const busy = pendingStripe[client.id];
+                      const conn = connections[Number(client.id)];
+                      const busy = disconnect.isPending && disconnect.variables === Number(client.id);
                       if (busy) {
                         return (
                           <span className="inline-flex items-center gap-1 text-xs text-gray-500">
@@ -221,16 +213,18 @@ export default function BillingDashboard() {
                           </span>
                         );
                       }
-                      if (acct) {
+                      if (conn?.is_connected) {
                         return (
                           <div className="flex items-center gap-2">
                             <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
                               <Link2 className="w-3 h-3" /> Connected
-                              <span className="ml-1 px-1 rounded bg-indigo-100 text-[10px] uppercase tracking-wide">{acct.mode}</span>
+                              <span className="ml-1 px-1 rounded bg-indigo-100 text-[10px] uppercase tracking-wide">
+                                {conn.livemode ? "live" : "test"}
+                              </span>
                             </span>
                             <button
                               onClick={() => handleDisconnectStripe(client)}
-                              title={`Disconnect ${acct.id}`}
+                              title={`Disconnect ${conn.stripe_user_id}`}
                               className="text-xs text-gray-400 hover:text-red-600 transition-colors"
                             >
                               <Link2Off className="w-3.5 h-3.5" />
@@ -298,6 +292,16 @@ export default function BillingDashboard() {
           <div className="py-10 text-center text-sm text-gray-400">No clients match your filter.</div>
         )}
       </div>
+
+      {connectDialog && (
+        <StripeConnectDialog
+          open={!!connectDialog}
+          onOpenChange={(v) => !v && setConnectDialog(null)}
+          clientId={connectDialog.clientId}
+          clientName={connectDialog.name}
+        />
+      )}
     </div>
   );
 }
+
