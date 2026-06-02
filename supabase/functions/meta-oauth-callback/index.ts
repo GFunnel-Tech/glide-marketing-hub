@@ -263,38 +263,50 @@ Deno.serve(async (req) => {
       }, 200);
     }
 
-    // Discover ad accounts (insert as inactive — selection step decides what's active)
-    const accountsRes = await fetch(
-      `https://graph.facebook.com/v21.0/me/adaccounts?fields=account_id,name,currency,timezone_name,account_status,business{id,name}&limit=200&access_token=${encodeURIComponent(accessToken)}`,
-    );
-    const accounts = await accountsRes.json();
-    if (!accountsRes.ok) {
+    // Discover ad accounts (paginated — Meta returns up to ~25 per page by default).
+    // Loop through paging.next so users with hundreds of ad accounts get them all.
+    const discoveredRaw: any[] = [];
+    let nextUrl: string | null =
+      `https://graph.facebook.com/v21.0/me/adaccounts?fields=account_id,name,currency,timezone_name,account_status,business{id,name}&limit=200&access_token=${encodeURIComponent(accessToken)}`;
+    let pageCount = 0;
+    let lastAccountsRes: Response | null = null;
+    let lastAccountsJson: any = null;
+    while (nextUrl && pageCount < 25) {
+      lastAccountsRes = await fetch(nextUrl);
+      lastAccountsJson = await lastAccountsRes.json();
+      if (!lastAccountsRes.ok) break;
+      if (Array.isArray(lastAccountsJson?.data)) discoveredRaw.push(...lastAccountsJson.data);
+      nextUrl = lastAccountsJson?.paging?.next ?? null;
+      pageCount++;
+    }
+    if (!lastAccountsRes || !lastAccountsRes.ok) {
       await recordEvent({
         workspaceId: parsed.w,
         userId: parsed.u,
         connectionId: conn.id,
         step: "discover_adaccounts",
         outcome: "error",
-        errorCode: accounts?.error?.code ? String(accounts.error.code) : "adaccounts_fetch_failed",
-        errorMessage: accounts?.error?.message || "Failed to fetch ad accounts from Meta.",
+        errorCode: lastAccountsJson?.error?.code ? String(lastAccountsJson.error.code) : "adaccounts_fetch_failed",
+        errorMessage: lastAccountsJson?.error?.message || "Failed to fetch ad accounts from Meta.",
         metaUserName: me.name ?? null,
         grantedScopes,
         declinedScopes,
-        httpStatus: accountsRes.status,
-        details: accounts,
+        httpStatus: lastAccountsRes?.status ?? 0,
+        details: lastAccountsJson,
       });
       return json({
         ok: false,
         error: "adaccounts_fetch_failed",
-        message: accounts?.error?.message || "Failed to fetch ad accounts from Meta.",
+        message: lastAccountsJson?.error?.message || "Failed to fetch ad accounts from Meta.",
         connectionId: conn.id,
         metaUserName: me.name ?? null,
         grantedScopes,
         declinedScopes,
-        details: accounts,
+        details: lastAccountsJson,
         correlationId,
       }, 200);
     }
+    const accounts = { data: discoveredRaw };
     const discovered = (accounts.data ?? []).map((a: any) => ({
       workspace_id: parsed.w,
       connection_id: conn.id,

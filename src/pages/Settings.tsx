@@ -15,6 +15,7 @@ import { GuaranteeTemplatesPanel } from "@/components/guarantees/GuaranteeTempla
 import { GhlClickupPanel } from "@/components/integrations/GhlClickupPanel";
 import { GhlAgencyConnectionPanel } from "@/components/integrations/GhlAgencyConnectionPanel";
 import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
+import { MatchReviewQueue } from "@/components/integrations/MatchReviewQueue";
 import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -136,6 +137,7 @@ export default function Settings() {
             </TabsContent>
 
             <TabsContent value="mapping" className="space-y-4">
+              <MatchReviewQueue />
               <IntegrationMapper />
             </TabsContent>
 

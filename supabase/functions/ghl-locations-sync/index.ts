@@ -39,14 +39,14 @@ Deno.serve(async (req) => {
 
   try {
     const auth = req.headers.get("Authorization") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const isServiceCall = auth === `Bearer ${serviceKey}`;
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      serviceKey,
       { global: { headers: { Authorization: auth } } },
     );
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if (!user) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: corsHeaders });
 
     const body = await req.json().catch(() => ({}));
     const { workspace_id, autoLink = true, threshold = 0.9 } = body as {
@@ -54,10 +54,14 @@ Deno.serve(async (req) => {
     };
     if (!workspace_id) return new Response(JSON.stringify({ error: "workspace_id required" }), { status: 400, headers: corsHeaders });
 
-    // Membership check
-    const { data: membership } = await supabase
-      .from("workspace_members").select("role").eq("workspace_id", workspace_id).eq("user_id", user.id).maybeSingle();
-    if (!membership) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: corsHeaders });
+    if (!isServiceCall) {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: corsHeaders });
+      const { data: membership } = await supabase
+        .from("workspace_members").select("role").eq("workspace_id", workspace_id).eq("user_id", user.id).maybeSingle();
+      if (!membership) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: corsHeaders });
+    }
 
     // Fetch GHL key + optional company id
     const { data: cfg } = await supabase
@@ -122,17 +126,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Attempt 3: with discovered companyId, do the real search
-    if (companyId && locations.length === 0) {
-      const r = await fetch(
-        `https://services.leadconnectorhq.com/locations/search?companyId=${encodeURIComponent(companyId)}&limit=500`,
-        { headers: v2Headers },
-      );
-      const txt = await r.text();
-      attempts.push({ endpoint: `GET /locations/search?companyId=${companyId}`, status: r.status, body: txt.slice(0, 400) });
-      if (r.ok) {
-        try { const j = JSON.parse(txt); locations = j.locations || j.data || []; } catch (_) {}
+    // Attempt 3: with discovered companyId, paginate through /locations/search
+    if (companyId) {
+      const collected: any[] = locations.slice();
+      let skip = collected.length; // honor whatever attempt 2 already returned
+      let page = 0;
+      while (page < 25) {
+        const r = await fetch(
+          `https://services.leadconnectorhq.com/locations/search?companyId=${encodeURIComponent(companyId)}&limit=500&skip=${skip}`,
+          { headers: v2Headers },
+        );
+        const txt = await r.text();
+        attempts.push({ endpoint: `GET /locations/search?companyId=${companyId}&skip=${skip}`, status: r.status, body: txt.slice(0, 200) });
+        if (!r.ok) break;
+        let chunk: any[] = [];
+        try { const j = JSON.parse(txt); chunk = j.locations || j.data || []; } catch (_) { break; }
+        if (!chunk.length) break;
+        collected.push(...chunk);
+        if (chunk.length < 500) break;
+        skip += chunk.length;
+        page++;
       }
+      locations = collected;
     }
 
     if (locations.length === 0) {
@@ -171,8 +186,9 @@ Deno.serve(async (req) => {
       await supabase.from("ghl_locations").upsert(rows, { onConflict: "workspace_id,location_id" });
     }
 
-    // Auto-link strong matches
+    // Auto-link strong matches + queue medium-confidence suggestions
     let linked = 0;
+    let suggested = 0;
     if (autoLink) {
       const { data: clients } = await supabase
         .from("clients").select("id,name,brand,bm_account_name,ghl_location_id").eq("workspace_id", workspace_id);
@@ -189,16 +205,29 @@ Deno.serve(async (req) => {
           );
           if (score > best.score) best = { client: c, score };
         }
-        if (best.client && best.score >= threshold) {
+        if (!best.client) continue;
+        if (best.score >= threshold) {
           await supabase.from("clients").update({ ghl_location_id: loc.id }).eq("id", best.client.id);
           best.client.ghl_location_id = loc.id;
           linked++;
+        } else if (best.score >= 0.6) {
+          await supabase.from("account_match_suggestions").upsert({
+            workspace_id,
+            source: "ghl",
+            source_ref: loc.id,
+            source_name: loc.name,
+            source_business_name: loc.business?.name ?? loc.businessName ?? null,
+            client_id: best.client.id,
+            score: Number(best.score.toFixed(3)),
+            status: "pending",
+          }, { onConflict: "workspace_id,source,source_ref" });
+          suggested++;
         }
       }
     }
 
     return new Response(
-      JSON.stringify({ ok: true, locations: locations.length, linked }),
+      JSON.stringify({ ok: true, locations: locations.length, linked, suggested }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
