@@ -292,6 +292,16 @@ export default function BillingDashboard() {
           <div className="py-10 text-center text-sm text-gray-400">No clients match your filter.</div>
         )}
       </div>
+
+      {connectDialog && (
+        <StripeConnectDialog
+          open={!!connectDialog}
+          onOpenChange={(v) => !v && setConnectDialog(null)}
+          clientId={connectDialog.clientId}
+          clientName={connectDialog.name}
+        />
+      )}
     </div>
   );
 }
+
