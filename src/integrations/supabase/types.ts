@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_match_suggestions: {
+        Row: {
+          client_id: number
+          created_at: string
+          id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          score: number
+          source: string
+          source_business_name: string | null
+          source_name: string | null
+          source_ref: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          score: number
+          source: string
+          source_business_name?: string | null
+          source_name?: string | null
+          source_ref: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          score?: number
+          source?: string
+          source_business_name?: string | null
+          source_name?: string | null
+          source_ref?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_match_suggestions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_match_suggestions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_log: {
         Row: {
           action: string
@@ -2768,6 +2831,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "meta_connections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_form_pipeline_map: {
+        Row: {
+          client_id: number
+          created_at: string
+          form_id: string
+          form_name: string | null
+          id: string
+          pipeline_id: string
+          pipeline_name: string | null
+          stage_id: string | null
+          stage_name: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          form_id: string
+          form_name?: string | null
+          id?: string
+          pipeline_id: string
+          pipeline_name?: string | null
+          stage_id?: string | null
+          stage_name?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          form_id?: string
+          form_name?: string | null
+          id?: string
+          pipeline_id?: string
+          pipeline_name?: string | null
+          stage_id?: string | null
+          stage_name?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_form_pipeline_map_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_form_pipeline_map_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
