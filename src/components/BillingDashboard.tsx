@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search } from "lucide-react";
+import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Link2, Link2Off, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 type PaymentStatus = "active" | "failed" | "overdue" | "pending";
 
@@ -66,6 +67,35 @@ export default function BillingDashboard() {
   const [filter, setFilter] = useState<"all" | PaymentStatus>("all");
   const [search, setSearch] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [stripeAccounts, setStripeAccounts] = useState<Record<string, { id: string; mode: "test" | "live" } | null>>({
+    "1": { id: "acct_1Nv••••8Qz", mode: "test" },
+    "4": { id: "acct_1Mp••••2Lx", mode: "test" },
+    "9": { id: "acct_1Kr••••9Wb", mode: "test" },
+  });
+  const [pendingStripe, setPendingStripe] = useState<Record<string, boolean>>({});
+
+  const handleConnectStripe = (client: Client) => {
+    setPendingStripe((p) => ({ ...p, [client.id]: true }));
+    // TODO: redirect to /functions/v1/stripe-connect-start?client_id=...
+    setTimeout(() => {
+      setStripeAccounts((s) => ({
+        ...s,
+        [client.id]: { id: `acct_${Math.random().toString(36).slice(2, 10)}`, mode: "test" },
+      }));
+      setPendingStripe((p) => ({ ...p, [client.id]: false }));
+      toast.success(`Connected ${client.name}'s Stripe account (test mode)`);
+    }, 900);
+  };
+
+  const handleDisconnectStripe = (client: Client) => {
+    if (!confirm(`Disconnect ${client.name}'s Stripe account? They'll need to reconnect to view charges or rebill.`)) return;
+    setPendingStripe((p) => ({ ...p, [client.id]: true }));
+    setTimeout(() => {
+      setStripeAccounts((s) => ({ ...s, [client.id]: null }));
+      setPendingStripe((p) => ({ ...p, [client.id]: false }));
+      toast.success(`Disconnected ${client.name}'s Stripe account`);
+    }, 600);
+  };
 
   const stats = useMemo(() => ({
     active: CLIENTS.filter((c) => c.status === "active").length,
@@ -156,7 +186,7 @@ export default function BillingDashboard() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
-              {["Client", "Status", "Last charge", "Next due", "Amount", "Notes", ""].map((h) => (
+              {["Client", "Status", "Stripe", "Last charge", "Next due", "Amount", "Notes", ""].map((h) => (
                 <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
@@ -179,6 +209,44 @@ export default function BillingDashboard() {
                     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cfg.classes}`}>
                       <Icon className="w-3 h-3" />{cfg.label}
                     </span>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {(() => {
+                      const acct = stripeAccounts[client.id];
+                      const busy = pendingStripe[client.id];
+                      if (busy) {
+                        return (
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Working…
+                          </span>
+                        );
+                      }
+                      if (acct) {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              <Link2 className="w-3 h-3" /> Connected
+                              <span className="ml-1 px-1 rounded bg-indigo-100 text-[10px] uppercase tracking-wide">{acct.mode}</span>
+                            </span>
+                            <button
+                              onClick={() => handleDisconnectStripe(client)}
+                              title={`Disconnect ${acct.id}`}
+                              className="text-xs text-gray-400 hover:text-red-600 transition-colors"
+                            >
+                              <Link2Off className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      }
+                      return (
+                        <button
+                          onClick={() => handleConnectStripe(client)}
+                          className="inline-flex items-center gap-1 text-xs px-2.5 py-1 border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
+                        >
+                          <Link2 className="w-3 h-3" /> Connect Stripe
+                        </button>
+                      );
+                    })()}
                   </td>
                   <td className="px-3 py-2.5 text-gray-600">
                     {client.lastCharge ? (
