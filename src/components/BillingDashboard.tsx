@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Link2, Link2Off, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { StripeConnectDialog } from "@/components/billing/StripeConnectDialog";
+import { ClientRevenueReport } from "@/components/billing/ClientRevenueReport";
 import { useClientStripeConnections, useDisconnectClientStripe } from "@/hooks/useClientStripe";
 
 type PaymentStatus = "active" | "failed" | "overdue" | "pending";
@@ -292,6 +293,9 @@ export default function BillingDashboard() {
           <div className="py-10 text-center text-sm text-gray-400">No clients match your filter.</div>
         )}
       </div>
+
+      <ClientRevenueReport clients={CLIENTS.map((c) => ({ id: c.id, name: c.name, company: c.company }))} />
+
 
       {connectDialog && (
         <StripeConnectDialog
