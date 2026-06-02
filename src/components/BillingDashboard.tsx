@@ -67,6 +67,35 @@ export default function BillingDashboard() {
   const [filter, setFilter] = useState<"all" | PaymentStatus>("all");
   const [search, setSearch] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [stripeAccounts, setStripeAccounts] = useState<Record<string, { id: string; mode: "test" | "live" } | null>>({
+    "1": { id: "acct_1Nv••••8Qz", mode: "test" },
+    "4": { id: "acct_1Mp••••2Lx", mode: "test" },
+    "9": { id: "acct_1Kr••••9Wb", mode: "test" },
+  });
+  const [pendingStripe, setPendingStripe] = useState<Record<string, boolean>>({});
+
+  const handleConnectStripe = (client: Client) => {
+    setPendingStripe((p) => ({ ...p, [client.id]: true }));
+    // TODO: redirect to /functions/v1/stripe-connect-start?client_id=...
+    setTimeout(() => {
+      setStripeAccounts((s) => ({
+        ...s,
+        [client.id]: { id: `acct_${Math.random().toString(36).slice(2, 10)}`, mode: "test" },
+      }));
+      setPendingStripe((p) => ({ ...p, [client.id]: false }));
+      toast.success(`Connected ${client.name}'s Stripe account (test mode)`);
+    }, 900);
+  };
+
+  const handleDisconnectStripe = (client: Client) => {
+    if (!confirm(`Disconnect ${client.name}'s Stripe account? They'll need to reconnect to view charges or rebill.`)) return;
+    setPendingStripe((p) => ({ ...p, [client.id]: true }));
+    setTimeout(() => {
+      setStripeAccounts((s) => ({ ...s, [client.id]: null }));
+      setPendingStripe((p) => ({ ...p, [client.id]: false }));
+      toast.success(`Disconnected ${client.name}'s Stripe account`);
+    }, 600);
+  };
 
   const stats = useMemo(() => ({
     active: CLIENTS.filter((c) => c.status === "active").length,
