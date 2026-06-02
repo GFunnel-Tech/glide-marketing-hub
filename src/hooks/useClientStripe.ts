@@ -66,7 +66,7 @@ export function useClientStripeCharges(clientId: number | null, enabled = true) 
     enabled: !!clientId && enabled,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("stripe-client-charges", {
-        body: { clientId, limit: 50 },
+        body: { clientId, limit: 100 },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
@@ -74,3 +74,19 @@ export function useClientStripeCharges(clientId: number | null, enabled = true) 
     },
   });
 }
+
+export function useClientStripePayouts(clientId: number | null, enabled = true) {
+  return useQuery({
+    queryKey: ["client-stripe-payouts", clientId],
+    enabled: !!clientId && enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("stripe-client-payouts", {
+        body: { clientId, limit: 100 },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      return data as { payouts: any[]; livemode: boolean; stripe_user_id: string };
+    },
+  });
+}
+
