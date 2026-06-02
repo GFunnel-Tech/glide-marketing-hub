@@ -1152,6 +1152,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          archived_at: string | null
           autonomous_optimization: boolean
           bm_account_name: string | null
           bm_id: string | null
@@ -1180,6 +1181,7 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          archived_at?: string | null
           autonomous_optimization?: boolean
           bm_account_name?: string | null
           bm_id?: string | null
@@ -1208,6 +1210,7 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          archived_at?: string | null
           autonomous_optimization?: boolean
           bm_account_name?: string | null
           bm_id?: string | null
