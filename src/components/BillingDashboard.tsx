@@ -248,6 +248,7 @@ export default function BillingDashboard() {
                       );
                     })()}
                   </td>
+                  <td className="px-3 py-2.5 text-gray-600">
                     {client.lastCharge ? (
                       <>
                         <div>{fmtDate(new Date(client.lastCharge))}</div>
