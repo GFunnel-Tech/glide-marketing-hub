@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Link2, Link2Off, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { StripeConnectDialog } from "@/components/billing/StripeConnectDialog";
+import { useClientStripeConnections, useDisconnectClientStripe } from "@/hooks/useClientStripe";
 
 type PaymentStatus = "active" | "failed" | "overdue" | "pending";
 
