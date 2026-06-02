@@ -46,8 +46,12 @@ export function useClientsRangeMetrics() {
     queryFn: async (): Promise<Record<number, ClientRangeMetrics>> => {
       const fromStr = fmtDate(from);
       const toStr = fmtDate(to);
-      const fromISO = new Date(from).toISOString();
-      const toISO = new Date(to).toISOString();
+      // Align lead window with Meta's reporting-day bucket (date-only UTC bounds)
+      // instead of the picker's local-time-of-day, so a lead that lands the next
+      // morning in the DB doesn't fall out of the trueLeads count.
+      const fromISO = `${fromStr}T00:00:00.000Z`;
+      const toISO = `${toStr}T23:59:59.999Z`;
+
 
       // 1. Ad account -> client_id map
       const { data: accts, error: aErr } = await (supabase as any)
@@ -132,9 +136,15 @@ export function useClientsRangeMetrics() {
       for (const [cidStr, b] of Object.entries(agg)) {
         const cid = Number(cidStr);
         const trueLeads = b.leadKeys.size;
+        // Sync coverage: how much of Meta's reported leads have actually landed
+        // in `public.leads` for the window. Below 80% we treat trueCPL as
+        // unreliable and fall back to the reported CPL so the UI doesn't show
+        // wildly inflated "True Cost / Lead" values caused by sync gaps.
+        const coverage = b.reportedLeads > 0 ? trueLeads / b.reportedLeads : 1;
         const effectiveLeads = trueLeads > 0 ? trueLeads : b.reportedLeads;
         const cpl = effectiveLeads > 0 ? b.spend / effectiveLeads : 0;
-        const trueCpl = trueLeads > 0 ? b.spend / trueLeads : cpl;
+        const reliableTrueCpl = trueLeads > 0 && coverage >= 0.8;
+        const trueCpl = reliableTrueCpl ? b.spend / trueLeads : cpl;
         const cpm = b.impressions > 0 ? (b.spend / b.impressions) * 1000 : 0;
         const formCvr = b.clicks > 0 ? (b.reportedLeads / b.clicks) * 100 : 0;
         const frequency = b.freqWeight > 0 ? b.freqSum / b.freqWeight : 0;
@@ -150,10 +160,13 @@ export function useClientsRangeMetrics() {
           cpm,
           formCvr,
           frequency,
-          doubleCount: trueLeads > 0 && b.reportedLeads > trueLeads * 1.15,
+          // Only flag double-count when sync coverage is healthy; otherwise the
+          // gap is almost certainly missing leads, not duplicate reporting.
+          doubleCount: reliableTrueCpl && b.reportedLeads > trueLeads * 1.15,
         };
       }
       return out;
+
     },
   });
 }
