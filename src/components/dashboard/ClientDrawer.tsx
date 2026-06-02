@@ -89,12 +89,12 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                 </thead>
                 <tbody className="text-foreground">
                   {[
-                    ["CPL", `$${client.cpl}`, "< $30"],
-                    ...(client.doubleCount ? [["True CPL", `$${client.trueCpl}`, "< $30"]] : []),
-                    ["CPM", `$${client.cpm}`, "< $120"],
+                    ["CPL", `$${Number(client.cpl ?? 0).toFixed(2)}`, "< $30"],
+                    ...(client.doubleCount ? [["True CPL", `$${Number(client.trueCpl ?? 0).toFixed(2)}`, "< $30"]] : []),
+                    ["CPM", `$${Number(client.cpm ?? 0).toFixed(2)}`, "< $120"],
                     ["Leads (MTD)", client.leads, "50+"],
-                    ["Form CVR", `${client.formCvr.toFixed(2)}%`, "> 15%"],
-                    ["Frequency", client.frequency, "< 3.0"],
+                    ["Form CVR", `${Number(client.formCvr ?? 0).toFixed(2)}%`, "> 15%"],
+                    ["Frequency", Number(client.frequency ?? 0).toFixed(2), "< 3.0"],
                   ].map(([m, v, b]) => (
                     <tr key={String(m)} className="border-b border-border">
                       <td className="py-2 text-muted-foreground">{m}</td>
