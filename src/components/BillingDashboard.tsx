@@ -204,8 +204,8 @@ export default function BillingDashboard() {
                   </td>
                   <td className="px-3 py-2.5">
                     {(() => {
-                      const acct = stripeAccounts[client.id];
-                      const busy = pendingStripe[client.id];
+                      const conn = connections[Number(client.id)];
+                      const busy = disconnect.isPending && disconnect.variables === Number(client.id);
                       if (busy) {
                         return (
                           <span className="inline-flex items-center gap-1 text-xs text-gray-500">
@@ -213,16 +213,18 @@ export default function BillingDashboard() {
                           </span>
                         );
                       }
-                      if (acct) {
+                      if (conn?.is_connected) {
                         return (
                           <div className="flex items-center gap-2">
                             <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
                               <Link2 className="w-3 h-3" /> Connected
-                              <span className="ml-1 px-1 rounded bg-indigo-100 text-[10px] uppercase tracking-wide">{acct.mode}</span>
+                              <span className="ml-1 px-1 rounded bg-indigo-100 text-[10px] uppercase tracking-wide">
+                                {conn.livemode ? "live" : "test"}
+                              </span>
                             </span>
                             <button
                               onClick={() => handleDisconnectStripe(client)}
-                              title={`Disconnect ${acct.id}`}
+                              title={`Disconnect ${conn.stripe_user_id}`}
                               className="text-xs text-gray-400 hover:text-red-600 transition-colors"
                             >
                               <Link2Off className="w-3.5 h-3.5" />
