@@ -228,8 +228,8 @@ function buildSystemPrompt(client: any, autonomous: boolean): string {
     ? "AUTONOMOUS MODE: when you call an action tool (pause_ads, resume_ads, update_adset_budget, duplicate_ad), it will execute on Meta IMMEDIATELY. Be conservative and explain your reasoning before each call."
     : "REVIEW MODE: action tool calls will be QUEUED for human approval (not executed). State clearly what you're queueing and why.";
   const ctx = client
-    ? `Active client: ${client.name} (${client.brand}). Current rollups — CPL: $${(client.cpl ?? 0).toFixed?.(2) ?? client.cpl}, Leads: ${client.leads ?? 0}, Spend: $${client.spend ?? 0}, Form CVR: ${client.form_cvr ?? "—"}%, Frequency: ${client.frequency ?? "—"}, Status: ${client.status}.`
-    : "No active client selected. Ask the user to pick one before taking actions.";
+    ? `Active client: ${client.name} (${client.brand}) — client_id=${client.id}. Always pass client_id=${client.id} to tools that require it. Current rollups — CPL: $${(client.cpl ?? 0).toFixed?.(2) ?? client.cpl}, Leads: ${client.leads ?? 0}, Spend: $${client.spend ?? 0}, Form CVR: ${client.form_cvr ?? "—"}%, Frequency: ${client.frequency ?? "—"}, Status: ${client.status}.`
+    : "No active client selected. Ask the user to pick one in the client dropdown before taking actions.";
   return `You are the Meta Ads Optimization Agent for an agency dashboard. Today is ${today}.
 ${ctx}
 ${mode}
