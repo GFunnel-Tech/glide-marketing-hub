@@ -259,18 +259,20 @@ async function executeTool(
 
   // list_ads is always safe to execute
   if (tool === "list_ads") {
-    if (!args.client_id) throw new Error("client_id required");
+    // Auto-fill client_id from active client context when Claude omits it
+    const cid = args.client_id ?? clientId;
+    if (!cid) throw new Error("client_id required — no active client selected. Pick a client in the dropdown.");
     let q = admin
       .from("meta_ads")
       .select("id,adset_id,adset_name,campaign_name,name,effective_status,spend,impressions,clicks,leads,ctr,cpl,days_active")
       .eq("workspace_id", workspaceId)
-      .eq("client_id", args.client_id)
+      .eq("client_id", cid)
       .order("spend", { ascending: false })
       .limit(200);
     if (args.only_active) q = q.eq("effective_status", "ACTIVE");
     const { data, error } = await q;
     if (error) throw new Error(error.message);
-    return { result: { ads: data ?? [] } };
+    return { result: { ads: data ?? [], client_id: cid } };
   }
 
   // Action tools: queue or execute
