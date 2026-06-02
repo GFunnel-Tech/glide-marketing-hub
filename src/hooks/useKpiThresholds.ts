@@ -39,10 +39,10 @@ export interface WorkspaceKpiSettings {
 export const KPI_LABELS: Record<string, { label: string; unit: string; direction: KpiDirection }> = {
   cpl: { label: "CPL", unit: "$", direction: "lower" },
   cpm: { label: "CPM", unit: "$", direction: "lower" },
-  form_cvr: { label: "Form CVR", unit: "%", direction: "higher" },
+  leads: { label: "# Leads", unit: "", direction: "higher" },
+  lead_quality: { label: "Quality (credit ≥640)", unit: "%", direction: "higher" },
   frequency: { label: "Frequency", unit: "x", direction: "lower" },
   spend_pacing: { label: "Spend Pacing", unit: "%", direction: "band" },
-  lead_quality: { label: "Lead Quality", unit: "%", direction: "higher" },
 };
 
 export function useKpiPresets() {
