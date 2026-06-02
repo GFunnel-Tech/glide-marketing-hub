@@ -39,14 +39,14 @@ Deno.serve(async (req) => {
 
   try {
     const auth = req.headers.get("Authorization") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const isServiceCall = auth === `Bearer ${serviceKey}`;
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      serviceKey,
       { global: { headers: { Authorization: auth } } },
     );
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if (!user) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: corsHeaders });
 
     const body = await req.json().catch(() => ({}));
     const { workspace_id, autoLink = true, threshold = 0.9 } = body as {
@@ -54,10 +54,14 @@ Deno.serve(async (req) => {
     };
     if (!workspace_id) return new Response(JSON.stringify({ error: "workspace_id required" }), { status: 400, headers: corsHeaders });
 
-    // Membership check
-    const { data: membership } = await supabase
-      .from("workspace_members").select("role").eq("workspace_id", workspace_id).eq("user_id", user.id).maybeSingle();
-    if (!membership) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: corsHeaders });
+    if (!isServiceCall) {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: corsHeaders });
+      const { data: membership } = await supabase
+        .from("workspace_members").select("role").eq("workspace_id", workspace_id).eq("user_id", user.id).maybeSingle();
+      if (!membership) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: corsHeaders });
+    }
 
     // Fetch GHL key + optional company id
     const { data: cfg } = await supabase
