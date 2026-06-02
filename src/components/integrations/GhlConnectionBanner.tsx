@@ -17,7 +17,7 @@ export function GhlConnectionBanner() {
         </span>
       </div>
       <Button asChild size="sm" variant="outline" className="h-7 border-destructive/40 text-destructive hover:bg-destructive/10">
-        <Link to="/settings/integrations">
+        <Link to="/settings?tab=integrations">
           Fix key <ArrowRight className="h-3 w-3 ml-1" />
         </Link>
       </Button>
