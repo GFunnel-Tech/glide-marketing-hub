@@ -61,17 +61,13 @@ function RealtimeProvider({ children }: { children: React.ReactNode }) {
 }
 
 function GFunnelGate({ children }: { children: React.ReactNode }) {
-  const { isEmbedded, isReady, error } = useGFunnel(GFUNNEL_MODULE_SLUG);
-  if (isEmbedded && !isReady) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Connecting to GFunnel…
-      </div>
-    );
-  }
+  const { isEmbedded, error } = useGFunnel(GFUNNEL_MODULE_SLUG);
   if (isEmbedded && error) {
     console.warn("[GFunnel] SSO error:", error);
   }
+  // Never block render on the GFunnel handshake — SSO completes in the background
+  // and AuthProvider will pick up the session. Blocking caused a white screen
+  // when the handshake didn't arrive (e.g. opened outside GFunnel iframe).
   return <>{children}</>;
 }
 
