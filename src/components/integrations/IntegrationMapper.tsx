@@ -72,22 +72,26 @@ export function IntegrationMapper() {
 
   useEffect(() => { load(); }, [wsId]);
 
+  const callFn = async (name: string, body: any) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return fetch(
+      `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/${name}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+  };
+
   const syncGhl = async () => {
     setSyncing(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const resp = await fetch(
-        `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/ghl-locations-sync`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.access_token ?? ""}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({ workspace_id: wsId, autoLink: true, threshold: 0.9 }),
-        },
-      );
+      const resp = await callFn("ghl-locations-sync", { workspace_id: wsId, autoLink: true, threshold: 0.9 });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
         const detail = data?.detail || data?.error || `HTTP ${resp.status}`;
@@ -95,7 +99,23 @@ export function IntegrationMapper() {
         toast.error(`GHL sync failed: ${detail}${hint}`, { duration: 10000 });
         return;
       }
-      toast.success(`Synced ${data?.locations ?? 0} locations · auto-linked ${data?.linked ?? 0}`);
+      toast.success(`Synced ${data?.locations ?? 0} locations · auto-linked ${data?.linked ?? 0} · ${data?.suggested ?? 0} to review`);
+      load();
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const syncMeta = async () => {
+    setSyncing(true);
+    try {
+      const resp = await callFn("meta-accounts-refresh", { workspace_id: wsId, threshold: 0.9 });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        toast.error(`Meta refresh failed: ${data?.error || resp.status}`, { duration: 8000 });
+        return;
+      }
+      toast.success(`Refreshed ${data?.discovered ?? 0} accounts · auto-linked ${data?.linked ?? 0} · ${data?.suggested ?? 0} to review`);
       load();
     } finally {
       setSyncing(false);
@@ -194,6 +214,12 @@ export function IntegrationMapper() {
             <Button size="sm" onClick={syncGhl} disabled={syncing}>
               {syncing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
               Sync from GHL
+            </Button>
+          )}
+          {tab === "meta" && (
+            <Button size="sm" onClick={syncMeta} disabled={syncing}>
+              {syncing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+              Refresh + automap
             </Button>
           )}
         </div>
