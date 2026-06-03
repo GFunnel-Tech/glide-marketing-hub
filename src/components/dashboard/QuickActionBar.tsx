@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Search, FileText, RefreshCw, UserPlus, NotebookPen, Bell, Check, Trash2, X, Users, Building2, User as UserIcon } from "lucide-react";
+import { Loader2, Search, FileText, RefreshCw, UserPlus, NotebookPen, Bell, Check, Trash2, X, Users, Building2, User as UserIcon, Archive, CheckCircle2, Clock, MessageCircleQuestion } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
