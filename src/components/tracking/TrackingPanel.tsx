@@ -168,25 +168,35 @@ export function TrackingPanel({ clientId = null, title = "Tracking" }: Props) {
   );
 }
 
+function scopeHint(value: string) {
+  if (value === "none") return "Default. Events are stored but not linked to any ad account report.";
+  if (value === "all") return "Notification only. Events trigger alerts but are not added to any individual account report.";
+  return "Events from this container are attached to this specific account's report and log.";
+}
+
 function ContainerAccountRow({
   container, accounts, onChange,
 }: { container: any; accounts: { id: string; name: string }[]; onChange: (a: string | null) => void }) {
   const value = container.ad_account_id ?? "none";
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <span className="text-muted-foreground">Ad Account:</span>
-      <Select
-        value={value}
-        onValueChange={(v) => onChange(v === "none" ? null : v)}
-      >
-        <SelectTrigger className="h-8 w-64"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="none">N/A (no account)</SelectItem>
-          {accounts.map((a) => (
-            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="rounded-md border border-border bg-muted/30 p-3 space-y-1.5">
+      <div className="flex items-center gap-2 text-sm flex-wrap">
+        <span className="text-muted-foreground">Ad Account scope:</span>
+        <Select
+          value={value}
+          onValueChange={(v) => onChange(v === "none" ? null : v)}
+        >
+          <SelectTrigger className="h-8 w-64"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">N/A (default — no account)</SelectItem>
+            <SelectItem value="all">All accounts (notifications only)</SelectItem>
+            {accounts.map((a) => (
+              <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <p className="text-xs text-muted-foreground">{scopeHint(value)}</p>
     </div>
   );
 }
@@ -196,7 +206,7 @@ function NewContainerDialog({
 }: { accounts: { id: string; name: string }[]; onCreate: (n: string, adAccountId: string | null) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [account, setAccount] = useState<string>("none");
+  const [account, setAccount] = useState<string>("none"); // default N/A
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -210,16 +220,18 @@ function NewContainerDialog({
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Main site" />
           </div>
           <div>
-            <Label>Ad Account</Label>
+            <Label>Ad Account scope</Label>
             <Select value={account} onValueChange={setAccount}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">N/A (no account)</SelectItem>
+                <SelectItem value="none">N/A (default — no account)</SelectItem>
+                <SelectItem value="all">All accounts (notifications only)</SelectItem>
                 {accounts.map((a) => (
                   <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground mt-1">{scopeHint(account)}</p>
           </div>
         </div>
         <DialogFooter>
