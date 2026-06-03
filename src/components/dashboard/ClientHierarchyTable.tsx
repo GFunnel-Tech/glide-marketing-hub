@@ -363,6 +363,7 @@ export function ClientHierarchyTable() {
                             isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           ) : null}
                         </td>
+                        <td className="px-2 py-2.5"></td>
                         <td className="px-2 py-2.5"><StatusBadge status={client.status as any} /></td>
                         <td className="px-2 py-2.5">
                           <div className="flex items-center gap-2">
