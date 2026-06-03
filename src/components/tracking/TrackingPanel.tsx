@@ -46,7 +46,7 @@ export function TrackingPanel({ clientId = null, title = "Tracking" }: Props) {
   const qc = useQueryClient();
   const workspaceId = currentWorkspace?.id;
   const [activeContainerId, setActiveContainerId] = useState<string | null>(null);
-  const [accountFilter, setAccountFilter] = useState<string>("all"); // "all" | "none" | act_id
+  const [accountFilter, setAccountFilter] = useState<string>("__any"); // "__any" | "none" | "all" | act_id
 
   const { data: containers = [] } = useQuery({
     queryKey: ["tracking_containers", workspaceId, clientId],
@@ -141,8 +141,9 @@ export function TrackingPanel({ clientId = null, title = "Tracking" }: Props) {
           <Select value={accountFilter} onValueChange={setAccountFilter}>
             <SelectTrigger className="h-8 w-56"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All ad accounts</SelectItem>
-              <SelectItem value="none">N/A (no account)</SelectItem>
+              <SelectItem value="__any">Any scope</SelectItem>
+              <SelectItem value="none">N/A (default)</SelectItem>
+              <SelectItem value="all">All accounts (notifications)</SelectItem>
               {accounts.map((a) => (
                 <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
               ))}
