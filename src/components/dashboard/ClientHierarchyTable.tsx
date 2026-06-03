@@ -676,6 +676,19 @@ export function ClientHierarchyTable() {
               {bulkRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PauseIcon className="h-3.5 w-3.5" />}
               Pause
             </Button>
+            {showArchived ? (
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
+                disabled={unarchiveMut.isPending} onClick={() => runArchive(true)}>
+                {unarchiveMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArchiveRestore className="h-3.5 w-3.5" />}
+                Unarchive
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
+                disabled={archiveMut.isPending} onClick={() => runArchive(false)}>
+                {archiveMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
+                Archive
+              </Button>
+            )}
             <Button size="sm" variant="outline"
               className="h-8 gap-1.5 text-xs text-destructive hover:text-destructive"
               disabled={bulkRunning} onClick={() => setConfirmDelete(true)}>
