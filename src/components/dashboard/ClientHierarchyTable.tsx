@@ -146,11 +146,12 @@ export function ClientHierarchyTable() {
         if (archivedSet.has(`ad:${ad.id}`)) continue;
         if (ad.adset_id && archivedSet.has(`adset:${ad.adset_id}`)) continue;
       }
+      if (hideZero && !(ad.impressions || 0) && !(ad.spend || 0) && !(ad.clicks || 0) && !(ad.leads || 0)) continue;
       if (!byCamp.has(ad.campaign_id)) byCamp.set(ad.campaign_id, []);
       byCamp.get(ad.campaign_id)!.push(ad);
     }
     return byCamp;
-  }, [allAds, showArchived, archivedSet]);
+  }, [allAds, showArchived, archivedSet, hideZero]);
 
   const visibleClients = useMemo(() => {
     if (!isAllClients) return focusedClient ? [focusedClient] : [];
