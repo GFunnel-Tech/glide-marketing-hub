@@ -65,6 +65,7 @@ export function ClientHierarchyTable() {
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
   const [showArchived, setShowArchived] = useState(false);
+  const [hideZero, setHideZero] = useState(true);
 
   // Archived items
   const archivedSet = useArchivedSet();
@@ -114,6 +115,7 @@ export function ClientHierarchyTable() {
     if (statusFilter === "Paused") list = list.filter((c) => c.status === "paused");
     if (statusFilter === "Issues") list = list.filter((c) => c.doubleCount || c.issuesStatus);
     if (!showArchived) list = list.filter((c) => !archivedSet.has(`campaign:${c.id}`));
+    if (hideZero) list = list.filter((c) => (c.spend || 0) > 0 || (c.leads || 0) > 0 || (c.cpm || 0) > 0 || (c.impressions || 0) > 0);
     if (search) {
       const s = search.toLowerCase();
       list = list.filter((c) =>
@@ -122,7 +124,7 @@ export function ClientHierarchyTable() {
       );
     }
     return list;
-  }, [allCampaigns, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet]);
+  }, [allCampaigns, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet, hideZero]);
 
   // Group campaigns by client
   const campaignsByClient = useMemo(() => {
@@ -144,11 +146,12 @@ export function ClientHierarchyTable() {
         if (archivedSet.has(`ad:${ad.id}`)) continue;
         if (ad.adset_id && archivedSet.has(`adset:${ad.adset_id}`)) continue;
       }
+      if (hideZero && !(ad.impressions || 0) && !(ad.spend || 0) && !(ad.clicks || 0) && !(ad.leads || 0)) continue;
       if (!byCamp.has(ad.campaign_id)) byCamp.set(ad.campaign_id, []);
       byCamp.get(ad.campaign_id)!.push(ad);
     }
     return byCamp;
-  }, [allAds, showArchived, archivedSet]);
+  }, [allAds, showArchived, archivedSet, hideZero]);
 
   const visibleClients = useMemo(() => {
     if (!isAllClients) return focusedClient ? [focusedClient] : [];
@@ -344,6 +347,17 @@ export function ClientHierarchyTable() {
           >
             {showArchived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
             {showArchived ? "Hide archived" : "Show archived"}
+          </Button>
+
+          {/* Hide zero-activity toggle */}
+          <Button
+            variant={hideZero ? "default" : "outline"}
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => setHideZero((v) => !v)}
+            title="Hide campaigns, ad sets and ads with no impressions, spend, or leads"
+          >
+            {hideZero ? "Hide zero activity" : "Show zero activity"}
           </Button>
 
           {/* Status filter pills */}
