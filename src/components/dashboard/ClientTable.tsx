@@ -509,6 +509,108 @@ export function ClientTable() {
       </div>
 
       {selectedClient && <ClientDrawer client={selectedClient} onClose={() => setSelectedClient(null)} />}
+
+      <CampaignImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        clientId={focusedClient?.id ?? null}
+        clientName={focusedClient?.name ?? ""}
+      />
     </div>
   );
 }
+
+function CampaignImportDialog({
+  open,
+  onOpenChange,
+  clientId,
+  clientName,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  clientId: number | null;
+  clientName: string;
+}) {
+  const { data: allCampaigns = [], isLoading } = useCampaigns();
+  const campaigns = useMemo(
+    () => allCampaigns.filter((c: any) => c.clientId === clientId || c.client_id === clientId),
+    [allCampaigns, clientId]
+  );
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState(false);
+
+  useEffect(() => {
+    if (open) setSelected(new Set(campaigns.map((c: any) => String(c.id))));
+  }, [open, campaigns]);
+
+  const toggle = (id: string) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const handleImport = async () => {
+    if (!clientId) return;
+    setImporting(true);
+    try {
+      await api.syncMetaAds(String(clientId));
+      toast.success(`Imported ${selected.size} campaign${selected.size === 1 ? "" : "s"} for ${clientName}`);
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Import campaigns</DialogTitle>
+          <DialogDescription>
+            Select which campaigns to import for <span className="font-medium text-foreground">{clientName}</span>.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-[360px] overflow-y-auto rounded-md border border-border">
+          {isLoading ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">Loading campaigns…</div>
+          ) : campaigns.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              No campaigns found for this client yet. Use “Sync Meta campaigns now” to pull them from Meta.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {campaigns.map((c: any) => {
+                const id = String(c.id);
+                const checked = selected.has(id);
+                return (
+                  <li key={id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                    <Checkbox checked={checked} onCheckedChange={() => toggle(id)} />
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate font-medium text-foreground">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {c.status} · {c.leads ?? 0} leads · ${Number(c.spend ?? 0).toLocaleString()} spend
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleImport} disabled={importing || selected.size === 0 || campaigns.length === 0}>
+            {importing && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+            Import {selected.size > 0 ? `(${selected.size})` : ""}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
