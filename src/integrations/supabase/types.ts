@@ -3580,6 +3580,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          department: string | null
           display_name: string | null
           email: string | null
           gfunnel_user_profile_id: string | null
@@ -3589,6 +3590,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          department?: string | null
           display_name?: string | null
           email?: string | null
           gfunnel_user_profile_id?: string | null
@@ -3598,6 +3600,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          department?: string | null
           display_name?: string | null
           email?: string | null
           gfunnel_user_profile_id?: string | null
@@ -4131,35 +4134,78 @@ export type Database = {
         }
         Relationships: []
       }
-      user_logs: {
+      user_log_reads: {
         Row: {
-          body: string | null
-          created_at: string
-          id: string
-          is_read: boolean
-          title: string
-          updated_at: string
+          log_id: string
+          read_at: string
           user_id: string
         }
         Insert: {
-          body?: string | null
-          created_at?: string
-          id?: string
-          is_read?: boolean
-          title: string
-          updated_at?: string
+          log_id: string
+          read_at?: string
           user_id: string
         }
         Update: {
+          log_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_log_reads_log_id_fkey"
+            columns: ["log_id"]
+            isOneToOne: false
+            referencedRelation: "user_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_logs: {
+        Row: {
+          audience_kind: string
+          body: string | null
+          created_at: string
+          department: string | null
+          id: string
+          recipient_user_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          audience_kind?: string
           body?: string | null
           created_at?: string
+          department?: string | null
           id?: string
-          is_read?: boolean
+          recipient_user_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          audience_kind?: string
+          body?: string | null
+          created_at?: string
+          department?: string | null
+          id?: string
+          recipient_user_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
