@@ -312,6 +312,7 @@ export function ClientHierarchyTable() {
             <thead>
               <tr className="border-b border-border bg-accent/40">
                 <th className="w-8 px-2 py-2.5"></th>
+                <th className="w-8 px-2 py-2.5"></th>
                 <th className="w-16 px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
                 {showCompanyCol && (
                   <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Company</th>
