@@ -15,6 +15,12 @@ export const api = {
   swapForm: (clientId: string) => post("form-swap", { clientId }),
   scaleBudget: (clientId: string, campaignIds: string[]) => post("budget-scale", { clientId, campaignIds, percentage: 20 }),
   pauseCampaigns: (clientId: string, campaignIds: string[]) => post("pause-campaigns", { clientId, campaignIds }),
+  bulkAction: (
+    action: "pause" | "activate" | "delete",
+    entity: "campaign" | "adset" | "ad",
+    clientId: string,
+    ids: string[],
+  ) => post(`bulk-${entity}-${action}`, { clientId, ids, action, entity }),
   generateReport: (clientId: string, month: string) => post("generate-report", { clientId, month }),
   exportAllReports: () => post("export-all-reports"),
   getAgentEmbed: (clientId: string) => post("playai-agent", { clientId }),
