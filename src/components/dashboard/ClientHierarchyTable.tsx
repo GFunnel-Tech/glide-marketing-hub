@@ -251,6 +251,23 @@ export function ClientHierarchyTable() {
     }
   };
 
+  const runArchive = async (unarchive = false) => {
+    if (selectedCount === 0) return;
+    try {
+      const items = selectedList.map((s) => ({ entity: s.entity, id: s.id }));
+      if (unarchive) {
+        await unarchiveMut.mutateAsync(items);
+        toast.success(`Unarchived ${selectedCount} item${selectedCount === 1 ? "" : "s"}`);
+      } else {
+        await archiveMut.mutateAsync(items);
+        toast.success(`Archived ${selectedCount} item${selectedCount === 1 ? "" : "s"}`);
+      }
+      clearSel();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Archive failed");
+    }
+  };
+
   const showCompanyCol = isAllClients;
 
   const filters: StatusFilter[] = ["All", "Active", "Paused", "Issues"];
