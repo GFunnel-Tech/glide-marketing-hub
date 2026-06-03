@@ -496,6 +496,13 @@ export function ClientHierarchyTable() {
                                       </button>
                                     )}
                                   </td>
+                                  <td className="px-2 py-2">
+                                    <Checkbox
+                                      checked={isSelected("adset", adsetId)}
+                                      onCheckedChange={() => toggleSel("adset", adsetId, String(camp.clientId))}
+                                      aria-label="Select ad set"
+                                    />
+                                  </td>
                                   <td className="px-2 py-2"></td>
                                   {showCompanyCol && <td className="px-2 py-2"></td>}
                                   <td className="px-2 py-2">
