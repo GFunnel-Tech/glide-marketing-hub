@@ -148,6 +148,32 @@ export function ClientTable() {
     if (typeof window === "undefined") return "all";
     return (localStorage.getItem(CHANNEL_KEY) as Channel) ?? "all";
   });
+  const navigate = useNavigate();
+  const [selectedClientId, setSelectedClientId] = useState<number | "all">("all");
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const focusedClient = useMemo(
+    () => (selectedClientId === "all" ? null : baseClients.find((c) => c.id === selectedClientId) ?? null),
+    [baseClients, selectedClientId]
+  );
+
+  const handleQuickSync = async () => {
+    if (selectedClientId === "all" || !focusedClient) {
+      toast.error("Select a specific client to sync");
+      return;
+    }
+    setSyncing(true);
+    try {
+      await api.syncMetaAds(String(focusedClient.id));
+      toast.success(`Synced Meta campaigns for ${focusedClient.name}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Lookup for custom KPI values: { kpiId: { clientId|"_global": value } }
   const evalMap = useMemo(() => {
