@@ -130,7 +130,6 @@ const Index = () => {
       </div>
 
       <ClientHierarchyTable />
-      <LeadsByClient />
     </div>
   );
 };
