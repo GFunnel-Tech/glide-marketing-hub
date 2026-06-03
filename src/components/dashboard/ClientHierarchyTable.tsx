@@ -22,7 +22,7 @@ import {
   Search, ChevronDown, ChevronRight, Check, RefreshCw, Loader2,
   ExternalLink, Building2, Layers, Image as ImageIcon, FolderKanban,
   Sparkles, DollarSign, Settings2, Pause as PauseIcon, AlertTriangle,
-  Play, Trash2, X,
+  Play, Trash2, X, ChevronsDownUp, ChevronsUpDown,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -159,6 +159,34 @@ export function ClientHierarchyTable() {
     }
   };
 
+  const collapseAll = () => {
+    setOpenClients({});
+    setOpenCampaigns({});
+    setOpenAdSets({});
+  };
+
+  const expandAll = () => {
+    const nextClients: Record<string, boolean> = {};
+    const nextCamps: Record<string, boolean> = {};
+    const nextAdsets: Record<string, boolean> = {};
+    for (const client of visibleClients) {
+      nextClients[String(client.id)] = true;
+    }
+    for (const camp of campaigns) {
+      nextCamps[camp.id] = true;
+      const campAds = adsByCampaign.get(camp.id) ?? [];
+      for (const ad of campAds) {
+        const k = ad.adset_id ?? "_unassigned";
+        nextAdsets[k] = true;
+      }
+    }
+    setOpenClients(nextClients);
+    setOpenCampaigns(nextCamps);
+    setOpenAdSets(nextAdsets);
+  };
+
+
+
   const handleToggleCampaign = async (camp: any, next: boolean) => {
     if (next === (camp.status === "active")) return;
     setPending((p) => ({ ...p, [camp.id]: true }));
@@ -263,6 +291,16 @@ export function ClientHierarchyTable() {
               <ExternalLink className="h-3.5 w-3.5" /> Open Profile
             </Button>
           )}
+
+          {/* Expand / Collapse all */}
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={expandAll}>
+              <ChevronsUpDown className="h-3.5 w-3.5" /> Expand all
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={collapseAll}>
+              <ChevronsDownUp className="h-3.5 w-3.5" /> Collapse all
+            </Button>
+          </div>
 
           {/* Status filter pills */}
           <div className="flex items-center gap-1 rounded-lg bg-accent p-0.5">
