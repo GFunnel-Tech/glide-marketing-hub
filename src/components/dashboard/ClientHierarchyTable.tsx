@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useClients, useCampaigns } from "@/hooks/useDatabase";
 import { useMetaAds, type MetaAd } from "@/hooks/useMetaAds";
+import {
+  useArchivedSet, useArchiveEntities, useUnarchiveEntities,
+} from "@/hooks/useArchivedEntities";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -22,7 +25,7 @@ import {
   Search, ChevronDown, ChevronRight, Check, RefreshCw, Loader2,
   ExternalLink, Building2, Layers, Image as ImageIcon, FolderKanban,
   Sparkles, DollarSign, Settings2, Pause as PauseIcon, AlertTriangle,
-  Play, Trash2, X, ChevronsDownUp, ChevronsUpDown,
+  Play, Trash2, X, ChevronsDownUp, ChevronsUpDown, Archive, ArchiveRestore,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -61,6 +64,14 @@ export function ClientHierarchyTable() {
   const [openClients, setOpenClients] = useState<Record<string, boolean>>({});
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Archived items
+  const archivedSet = useArchivedSet();
+  const archiveMut = useArchiveEntities();
+  const unarchiveMut = useUnarchiveEntities();
+  const isArchived = (entity: "campaign" | "adset" | "ad", id: string) =>
+    archivedSet.has(`${entity}:${id}`);
 
   // Bulk selection — keyed by `${entity}:${id}` -> {entity, id, clientId}
   type EntityType = "campaign" | "adset" | "ad";
@@ -102,6 +113,7 @@ export function ClientHierarchyTable() {
     if (statusFilter === "Active") list = list.filter((c) => c.status === "active");
     if (statusFilter === "Paused") list = list.filter((c) => c.status === "paused");
     if (statusFilter === "Issues") list = list.filter((c) => c.doubleCount || c.issuesStatus);
+    if (!showArchived) list = list.filter((c) => !archivedSet.has(`campaign:${c.id}`));
     if (search) {
       const s = search.toLowerCase();
       list = list.filter((c) =>
@@ -110,7 +122,7 @@ export function ClientHierarchyTable() {
       );
     }
     return list;
-  }, [allCampaigns, isAllClients, clientId, statusFilter, search, clients]);
+  }, [allCampaigns, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet]);
 
   // Group campaigns by client
   const campaignsByClient = useMemo(() => {
@@ -123,16 +135,20 @@ export function ClientHierarchyTable() {
     return map;
   }, [campaigns]);
 
-  // Group ads by campaign_id → adset_id
+  // Group ads by campaign_id → adset_id (filter out archived ads + ads whose adset is archived)
   const adsByCampaign = useMemo(() => {
     const byCamp = new Map<string, MetaAd[]>();
     for (const ad of allAds) {
       if (!ad.campaign_id) continue;
+      if (!showArchived) {
+        if (archivedSet.has(`ad:${ad.id}`)) continue;
+        if (ad.adset_id && archivedSet.has(`adset:${ad.adset_id}`)) continue;
+      }
       if (!byCamp.has(ad.campaign_id)) byCamp.set(ad.campaign_id, []);
       byCamp.get(ad.campaign_id)!.push(ad);
     }
     return byCamp;
-  }, [allAds]);
+  }, [allAds, showArchived, archivedSet]);
 
   const visibleClients = useMemo(() => {
     if (!isAllClients) return focusedClient ? [focusedClient] : [];
@@ -235,6 +251,23 @@ export function ClientHierarchyTable() {
     }
   };
 
+  const runArchive = async (unarchive = false) => {
+    if (selectedCount === 0) return;
+    try {
+      const items = selectedList.map((s) => ({ entity: s.entity, id: s.id }));
+      if (unarchive) {
+        await unarchiveMut.mutateAsync(items);
+        toast.success(`Unarchived ${selectedCount} item${selectedCount === 1 ? "" : "s"}`);
+      } else {
+        await archiveMut.mutateAsync(items);
+        toast.success(`Archived ${selectedCount} item${selectedCount === 1 ? "" : "s"}`);
+      }
+      clearSel();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Archive failed");
+    }
+  };
+
   const showCompanyCol = isAllClients;
 
   const filters: StatusFilter[] = ["All", "Active", "Paused", "Issues"];
@@ -301,6 +334,17 @@ export function ClientHierarchyTable() {
               <ChevronsDownUp className="h-3.5 w-3.5" /> Collapse all
             </Button>
           </div>
+
+          {/* Show archived toggle */}
+          <Button
+            variant={showArchived ? "default" : "outline"}
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => setShowArchived((v) => !v)}
+          >
+            {showArchived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+            {showArchived ? "Hide archived" : "Show archived"}
+          </Button>
 
           {/* Status filter pills */}
           <div className="flex items-center gap-1 rounded-lg bg-accent p-0.5">
@@ -632,6 +676,19 @@ export function ClientHierarchyTable() {
               {bulkRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PauseIcon className="h-3.5 w-3.5" />}
               Pause
             </Button>
+            {showArchived ? (
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
+                disabled={unarchiveMut.isPending} onClick={() => runArchive(true)}>
+                {unarchiveMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArchiveRestore className="h-3.5 w-3.5" />}
+                Unarchive
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
+                disabled={archiveMut.isPending} onClick={() => runArchive(false)}>
+                {archiveMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
+                Archive
+              </Button>
+            )}
             <Button size="sm" variant="outline"
               className="h-8 gap-1.5 text-xs text-destructive hover:text-destructive"
               disabled={bulkRunning} onClick={() => setConfirmDelete(true)}>

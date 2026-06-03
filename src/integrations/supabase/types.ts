@@ -525,6 +525,41 @@ export type Database = {
         }
         Relationships: []
       }
+      archived_entities: {
+        Row: {
+          archived_at: string
+          archived_by: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string
+          archived_by?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string
+          archived_by?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archived_entities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           ad_sets: number
