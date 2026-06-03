@@ -95,7 +95,14 @@ export function MetaOAuthDiagnosticsPanel() {
       return next;
     });
 
-  const errorCount = events.filter(e => e.outcome === "error").length;
+  const latestSuccess = events.find(e => e.outcome === "success" && e.step === "complete");
+  const latestSuccessTime = latestSuccess ? new Date(latestSuccess.created_at).getTime() : 0;
+  const currentErrorCount = events.filter(e => {
+    if (e.outcome !== "error") return false;
+    if (!latestSuccessTime) return true;
+    return new Date(e.created_at).getTime() > latestSuccessTime;
+  }).length;
+  const historicalErrorCount = events.filter(e => e.outcome === "error").length - currentErrorCount;
 
   return (
     <div className="rounded-lg border border-border bg-card p-5 space-y-3">
@@ -104,15 +111,25 @@ export function MetaOAuthDiagnosticsPanel() {
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Activity className="h-4 w-4 text-primary" />
             Meta OAuth diagnostics
-            {errorCount > 0 && (
+            {latestSuccess && currentErrorCount === 0 && (
+              <Badge variant="outline" className="text-[10px] text-success border-success/40">
+                Latest successful
+              </Badge>
+            )}
+            {currentErrorCount > 0 && (
               <Badge variant="destructive" className="text-[10px]">
-                {errorCount} error{errorCount === 1 ? "" : "s"}
+                {currentErrorCount} current error{currentErrorCount === 1 ? "" : "s"}
+              </Badge>
+            )}
+            {historicalErrorCount > 0 && currentErrorCount === 0 && (
+              <Badge variant="secondary" className="text-[10px]">
+                {historicalErrorCount} historical error{historicalErrorCount === 1 ? "" : "s"}
               </Badge>
             )}
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Latest 25 callback attempts with correlation IDs. Use the ID to cross-reference Lovable Cloud
-            edge-function logs when a connection fails silently.
+            Latest 25 callback attempts with correlation IDs. Older errors stay visible for troubleshooting, but a newer
+            complete success means the connection is currently healthy.
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
