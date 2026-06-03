@@ -21,6 +21,8 @@ const DEPARTMENTS = [
 
 type AudienceKind = "general" | "department" | "user";
 
+type LogStatus = "new" | "in_process" | "needs_feedback" | "completed" | "archived";
+
 type UserLog = {
   id: string;
   title: string;
@@ -31,7 +33,13 @@ type UserLog = {
   workspace_id: string | null;
   user_id: string;
   created_at: string;
+  status: LogStatus;
+  status_note: string | null;
+  completed_by: string | null;
+  completed_at: string | null;
+  archived_at: string | null;
 };
+
 
 const LOGS_QK = (wsId: string | null | undefined) => ["user-logs", wsId ?? "none"] as const;
 const READS_QK = ["user-log-reads"] as const;
