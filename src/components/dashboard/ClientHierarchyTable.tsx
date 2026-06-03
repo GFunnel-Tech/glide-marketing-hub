@@ -579,11 +579,15 @@ export function ClientHierarchyTable() {
                               <>
                                 <tr key={`as-${adsetId}`} className="border-b border-border bg-muted/20 hover:bg-muted/30">
                                   <td className={cn("px-2 py-2", showCompanyCol ? "pl-14" : "pl-8")}>
-                                    {ads.length > 0 && (
-                                      <button onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}>
-                                        {asOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
-                                      </button>
-                                    )}
+                                    <button
+                                      onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
+                                      className="flex h-6 w-6 items-center justify-center rounded hover:bg-accent transition-colors"
+                                      aria-label={asOpen ? "Collapse ad set" : "Expand ad set"}
+                                    >
+                                      {asOpen
+                                        ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                        : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                                    </button>
                                   </td>
                                   <td className="px-2 py-2">
                                     <Checkbox
@@ -595,13 +599,16 @@ export function ClientHierarchyTable() {
                                   <td className="px-2 py-2"></td>
                                   {showCompanyCol && <td className="px-2 py-2"></td>}
                                   <td className="px-2 py-2">
-                                    <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
+                                      className="flex items-center gap-2 text-left w-full"
+                                    >
                                       <div className="flex h-6 w-6 items-center justify-center rounded bg-warning/10 text-warning">
                                         <Layers className="h-3 w-3" />
                                       </div>
-                                      <p className="text-sm text-foreground truncate max-w-[340px]">{adsetName}</p>
+                                      <p className="text-sm text-foreground hover:text-primary truncate max-w-[340px]">{adsetName}</p>
                                       <span className="text-[10px] text-muted-foreground">· {ads.length} ad{ads.length === 1 ? "" : "s"}</span>
-                                    </div>
+                                    </button>
                                   </td>
                                   <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(impr)}</td>
                                   <td className="px-2 py-2 text-right tabular-nums text-foreground">{clicks || "—"}</td>
