@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
 
     const { data: container } = await admin
       .from("tracking_containers")
-      .select("id, workspace_id, client_id, enabled")
+      .select("id, workspace_id, client_id, enabled, ad_account_id")
       .eq("public_key", k)
       .maybeSingle();
     if (!container || !container.enabled)
@@ -120,10 +120,18 @@ Deno.serve(async (req) => {
     const ip = req.headers.get("x-forwarded-for") || "";
     const ipHash = ip ? btoa(ip).slice(0, 24) : null;
 
+    // Only stamp account on events when a specific account is selected.
+    // "all" = notifications only, do not attach to per-account report.
+    const eventAccountId =
+      container.ad_account_id && container.ad_account_id !== "all"
+        ? container.ad_account_id
+        : null;
+
     await admin.from("tracking_events").insert({
       container_id: container.id,
       workspace_id: container.workspace_id,
       client_id: container.client_id,
+      ad_account_id: eventAccountId,
       event_name: String(n).slice(0, 120),
       properties: p || {},
       url: u ? String(u).slice(0, 2000) : null,
