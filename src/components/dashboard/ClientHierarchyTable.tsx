@@ -62,6 +62,28 @@ export function ClientHierarchyTable() {
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
 
+  // Bulk selection — keyed by `${entity}:${id}` -> {entity, id, clientId}
+  type EntityType = "campaign" | "adset" | "ad";
+  type SelKey = string;
+  type SelVal = { entity: EntityType; id: string; clientId: string };
+  const [selected, setSelected] = useState<Record<SelKey, SelVal>>({});
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const keyOf = (entity: EntityType, id: string) => `${entity}:${id}`;
+  const isSelected = (entity: EntityType, id: string) => !!selected[keyOf(entity, id)];
+  const toggleSel = (entity: EntityType, id: string, clientId: string) => {
+    setSelected((s) => {
+      const k = keyOf(entity, id);
+      const next = { ...s };
+      if (next[k]) delete next[k];
+      else next[k] = { entity, id, clientId: String(clientId) };
+      return next;
+    });
+  };
+  const clearSel = () => setSelected({});
+  const selectedList = Object.values(selected);
+  const selectedCount = selectedList.length;
+
   const isAllClients = clientId === "all";
   const focusedClient = useMemo(
     () => (isAllClients ? null : clients.find((c) => c.id === clientId) ?? null),
