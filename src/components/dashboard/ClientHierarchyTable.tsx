@@ -530,6 +530,13 @@ export function ClientHierarchyTable() {
                                   return (
                                     <tr key={`ad-${ad.id}`} className="border-b border-border/50 hover:bg-accent/20">
                                       <td className={cn("px-2 py-2", showCompanyCol ? "pl-20" : "pl-14")}></td>
+                                      <td className="px-2 py-2">
+                                        <Checkbox
+                                          checked={isSelected("ad", ad.id)}
+                                          onCheckedChange={() => toggleSel("ad", ad.id, String(camp.clientId))}
+                                          aria-label="Select ad"
+                                        />
+                                      </td>
                                       <td className="px-2 py-2"></td>
                                       {showCompanyCol && <td className="px-2 py-2"></td>}
                                       <td className="px-2 py-2">
