@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useClients, useCampaigns } from "@/hooks/useDatabase";
 import { useMetaAds, type MetaAd } from "@/hooks/useMetaAds";
+import {
+  useArchivedSet, useArchiveEntities, useUnarchiveEntities,
+} from "@/hooks/useArchivedEntities";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
