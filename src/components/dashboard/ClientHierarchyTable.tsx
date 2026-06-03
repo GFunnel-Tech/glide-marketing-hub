@@ -575,6 +575,61 @@ export function ClientHierarchyTable() {
           </table>
         </div>
       </div>
+
+      {/* Floating bulk action bar */}
+      {selectedCount > 0 && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 shadow-lg">
+            <span className="text-xs font-semibold text-foreground">
+              {selectedCount} selected
+            </span>
+            <span className="mx-1 h-4 w-px bg-border" />
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
+              disabled={bulkRunning} onClick={() => runBulk("activate")}>
+              {bulkRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              Activate
+            </Button>
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
+              disabled={bulkRunning} onClick={() => runBulk("pause")}>
+              {bulkRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PauseIcon className="h-3.5 w-3.5" />}
+              Pause
+            </Button>
+            <Button size="sm" variant="outline"
+              className="h-8 gap-1.5 text-xs text-destructive hover:text-destructive"
+              disabled={bulkRunning} onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </Button>
+            <span className="mx-1 h-4 w-px bg-border" />
+            <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs"
+              onClick={clearSel} disabled={bulkRunning}>
+              <X className="h-3.5 w-3.5" /> Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedCount} item{selectedCount === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the selected campaigns, ad sets, and ads from Meta. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkRunning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); runBulk("delete"); }}
+              disabled={bulkRunning}
+            >
+              {bulkRunning ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
