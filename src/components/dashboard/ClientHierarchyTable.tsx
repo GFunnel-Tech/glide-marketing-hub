@@ -349,6 +349,17 @@ export function ClientHierarchyTable() {
             {showArchived ? "Hide archived" : "Show archived"}
           </Button>
 
+          {/* Hide zero-activity toggle */}
+          <Button
+            variant={hideZero ? "default" : "outline"}
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => setHideZero((v) => !v)}
+            title="Hide campaigns, ad sets and ads with no impressions, spend, or leads"
+          >
+            {hideZero ? "Hide zero activity" : "Show zero activity"}
+          </Button>
+
           {/* Status filter pills */}
           <div className="flex items-center gap-1 rounded-lg bg-accent p-0.5">
             {filters.map((f) => (
