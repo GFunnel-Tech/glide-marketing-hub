@@ -1,7 +1,7 @@
 import { KPIStrip } from "@/components/dashboard/KPIStrip";
 import { ClientHierarchyTable } from "@/components/dashboard/ClientHierarchyTable";
 import { DailyFocus } from "@/components/dashboard/DailyFocus";
-import { LeadsByClient } from "@/components/leads/LeadsByClient";
+
 import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
 import { QuickActionBar } from "@/components/dashboard/QuickActionBar";
 import { ConnectMetaPrompt } from "@/components/dashboard/ConnectMetaPrompt";
@@ -130,7 +130,6 @@ const Index = () => {
       </div>
 
       <ClientHierarchyTable />
-      <LeadsByClient />
     </div>
   );
 };
