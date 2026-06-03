@@ -183,6 +183,9 @@ export function ClientHierarchyTable() {
     setOpenClients(nextClients);
     setOpenCampaigns(nextCamps);
     setOpenAdSets(nextAdsets);
+  };
+
+
 
   const handleToggleCampaign = async (camp: any, next: boolean) => {
     if (next === (camp.status === "active")) return;
