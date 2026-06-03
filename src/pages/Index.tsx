@@ -75,6 +75,7 @@ const Index = () => {
 
       <LaunchPlatforms />
       <KPIStrip />
+      <DailyFocus />
       <QuickActionBar />
 
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
@@ -86,7 +87,6 @@ const Index = () => {
         </div>
       </div>
 
-      <DailyFocus />
       <ClientTable />
       <LeadsByClient />
     </div>
