@@ -105,6 +105,14 @@ export function TopNav() {
           )}
 
           <button
+            onClick={() => navigate("/ai")}
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            aria-label="AI Assistant"
+          >
+            <Bot className="h-4 w-4" />
+          </button>
+
+          <button
             onClick={() => navigate("/messages")}
             className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             aria-label={`Messages${unreadMessages ? `, ${unreadMessages} unread` : ""}`}
@@ -116,6 +124,7 @@ export function TopNav() {
               </span>
             )}
           </button>
+
 
           <NotificationsBell />
 
