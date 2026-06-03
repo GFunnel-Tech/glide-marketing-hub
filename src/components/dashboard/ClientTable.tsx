@@ -19,6 +19,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
+import { AdAccountSelector } from "./AdAccountSelector";
 import type { Client } from "@/data/mockData";
 
 type StatusFilter = "ALL" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
@@ -459,6 +460,8 @@ export function ClientTable() {
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="h-8 w-48 pl-8 text-xs" />
           </div>
+
+          <AdAccountSelector />
         </div>
       </div>
 
