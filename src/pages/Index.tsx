@@ -10,6 +10,8 @@ import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { useClients } from "@/hooks/useDatabase";
 import { useMemo } from "react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { LaunchPlatforms } from "@/components/dashboard/LaunchPlatforms";
+import { AdAccountSelector } from "@/components/dashboard/AdAccountSelector";
 
 function PortfolioHealthCard() {
   const { data: clients = [] } = useClients();
