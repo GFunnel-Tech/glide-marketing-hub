@@ -351,17 +351,6 @@ function AudienceBadge({ log, recipientName }: { log: UserLog; recipientName?: s
   return <span className={cn(base, "bg-pink-500/10 text-pink-600 dark:text-pink-400")}><UserIcon className="h-3 w-3" />{recipientName ?? "User"}</span>;
 }
 
-function LogList() {
-  const qc = useQueryClient();
-  const { currentWorkspace } = useWorkspace();
-  const { data: logs = [], isLoading } = useUserLogs();
-  const { data: reads = new Set<string>() } = useMyReads();
-  const { data: members = [] } = useWorkspaceMembers();
-  const memberMap = useMemo(() => {
-    const m = new Map<string, string>();
-    members.forEach((p) => m.set(p.id, p.display_name || p.email || p.id.slice(0, 8)));
-    return m;
-  }, [members]);
 
 type TabKey = "new" | "completed" | "archived";
 
