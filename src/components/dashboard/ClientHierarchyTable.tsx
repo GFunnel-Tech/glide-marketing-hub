@@ -25,7 +25,7 @@ import {
   Search, ChevronDown, ChevronRight, Check, RefreshCw, Loader2,
   ExternalLink, Building2, Layers, Image as ImageIcon, FolderKanban,
   Sparkles, DollarSign, Settings2, Pause as PauseIcon, AlertTriangle,
-  Play, Trash2, X, ChevronsDownUp, ChevronsUpDown,
+  Play, Trash2, X, ChevronsDownUp, ChevronsUpDown, Archive, ArchiveRestore,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
