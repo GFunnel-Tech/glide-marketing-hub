@@ -1530,6 +1530,39 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_focus_items: {
+        Row: {
+          created_at: string
+          id: string
+          is_done: boolean
+          notes: string | null
+          position: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          notes?: string | null
+          position?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          notes?: string | null
+          position?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ghl_appointments: {
         Row: {
           assigned_to: string | null
