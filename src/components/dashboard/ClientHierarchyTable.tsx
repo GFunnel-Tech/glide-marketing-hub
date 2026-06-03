@@ -22,7 +22,12 @@ import {
   Search, ChevronDown, ChevronRight, Check, RefreshCw, Loader2,
   ExternalLink, Building2, Layers, Image as ImageIcon, FolderKanban,
   Sparkles, DollarSign, Settings2, Pause as PauseIcon, AlertTriangle,
+  Play, Trash2, X,
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { StatusBadge } from "./StatusBadge";
 
 // ---------- helpers ----------
@@ -56,6 +61,28 @@ export function ClientHierarchyTable() {
   const [openClients, setOpenClients] = useState<Record<string, boolean>>({});
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
+
+  // Bulk selection — keyed by `${entity}:${id}` -> {entity, id, clientId}
+  type EntityType = "campaign" | "adset" | "ad";
+  type SelKey = string;
+  type SelVal = { entity: EntityType; id: string; clientId: string };
+  const [selected, setSelected] = useState<Record<SelKey, SelVal>>({});
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const keyOf = (entity: EntityType, id: string) => `${entity}:${id}`;
+  const isSelected = (entity: EntityType, id: string) => !!selected[keyOf(entity, id)];
+  const toggleSel = (entity: EntityType, id: string, clientId: string) => {
+    setSelected((s) => {
+      const k = keyOf(entity, id);
+      const next = { ...s };
+      if (next[k]) delete next[k];
+      else next[k] = { entity, id, clientId: String(clientId) };
+      return next;
+    });
+  };
+  const clearSel = () => setSelected({});
+  const selectedList = Object.values(selected);
+  const selectedCount = selectedList.length;
 
   const isAllClients = clientId === "all";
   const focusedClient = useMemo(
@@ -149,7 +176,37 @@ export function ClientHierarchyTable() {
     }
   };
 
-  // Columns: when "All" show Company column; otherwise hide
+  const runBulk = async (action: "pause" | "activate" | "delete") => {
+    if (selectedCount === 0) return;
+    setBulkRunning(true);
+    try {
+      // Group by entity + clientId
+      const groups = new Map<string, { entity: EntityType; clientId: string; ids: string[] }>();
+      for (const s of selectedList) {
+        const k = `${s.entity}:${s.clientId}`;
+        if (!groups.has(k)) groups.set(k, { entity: s.entity, clientId: s.clientId, ids: [] });
+        groups.get(k)!.ids.push(s.id);
+      }
+      const results = await Promise.allSettled(
+        Array.from(groups.values()).map((g) =>
+          action === "pause" && g.entity === "campaign"
+            ? api.pauseCampaigns(g.clientId, g.ids)
+            : api.bulkAction(action, g.entity, g.clientId, g.ids),
+        ),
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      const verb = action === "pause" ? "Paused" : action === "activate" ? "Activated" : "Deleted";
+      if (failed === 0) toast.success(`${verb} ${selectedCount} item${selectedCount === 1 ? "" : "s"}`);
+      else toast.error(`${verb} ${selectedCount - failed}/${selectedCount} — ${failed} failed`);
+      clearSel();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Bulk action failed");
+    } finally {
+      setBulkRunning(false);
+      setConfirmDelete(false);
+    }
+  };
+
   const showCompanyCol = isAllClients;
 
   const filters: StatusFilter[] = ["All", "Active", "Paused", "Issues"];
@@ -255,6 +312,7 @@ export function ClientHierarchyTable() {
             <thead>
               <tr className="border-b border-border bg-accent/40">
                 <th className="w-8 px-2 py-2.5"></th>
+                <th className="w-8 px-2 py-2.5"></th>
                 <th className="w-16 px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
                 {showCompanyCol && (
                   <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Company</th>
@@ -272,11 +330,11 @@ export function ClientHierarchyTable() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={showCompanyCol ? 10 : 9} className="py-10 text-center text-muted-foreground text-sm">Loading…</td></tr>
+                <tr><td colSpan={showCompanyCol ? 11 : 10} className="py-10 text-center text-muted-foreground text-sm">Loading…</td></tr>
               )}
 
               {!isLoading && visibleClients.length === 0 && (
-                <tr><td colSpan={showCompanyCol ? 10 : 9} className="py-10 text-center text-muted-foreground text-sm">No clients match your filters.</td></tr>
+                <tr><td colSpan={showCompanyCol ? 11 : 10} className="py-10 text-center text-muted-foreground text-sm">No clients match your filters.</td></tr>
               )}
 
               {!isLoading && visibleClients.map((client) => {
@@ -305,6 +363,7 @@ export function ClientHierarchyTable() {
                             isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           ) : null}
                         </td>
+                        <td className="px-2 py-2.5"></td>
                         <td className="px-2 py-2.5"><StatusBadge status={client.status as any} /></td>
                         <td className="px-2 py-2.5">
                           <div className="flex items-center gap-2">
@@ -339,7 +398,7 @@ export function ClientHierarchyTable() {
                     {/* Campaign rows */}
                     {isOpen && clientCampaigns.length === 0 && (
                       <tr className="border-b border-border">
-                        <td colSpan={showCompanyCol ? 10 : 9} className="px-12 py-6 text-xs text-muted-foreground">
+                        <td colSpan={showCompanyCol ? 11 : 10} className="px-12 py-6 text-xs text-muted-foreground">
                           No campaigns for this client.
                           <Button variant="link" size="sm" className="ml-1 h-auto p-0 text-xs"
                             onClick={() => { setClientId(client.id); setTimeout(handleQuickSync, 0); }}>
@@ -376,6 +435,13 @@ export function ClientHierarchyTable() {
                                   {campOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
                                 </button>
                               )}
+                            </td>
+                            <td className="px-2 py-2">
+                              <Checkbox
+                                checked={isSelected("campaign", camp.id)}
+                                onCheckedChange={() => toggleSel("campaign", camp.id, String(camp.clientId))}
+                                aria-label="Select campaign"
+                              />
                             </td>
                             <td className="px-2 py-2">
                               {pending[camp.id]
@@ -430,6 +496,13 @@ export function ClientHierarchyTable() {
                                       </button>
                                     )}
                                   </td>
+                                  <td className="px-2 py-2">
+                                    <Checkbox
+                                      checked={isSelected("adset", adsetId)}
+                                      onCheckedChange={() => toggleSel("adset", adsetId, String(camp.clientId))}
+                                      aria-label="Select ad set"
+                                    />
+                                  </td>
                                   <td className="px-2 py-2"></td>
                                   {showCompanyCol && <td className="px-2 py-2"></td>}
                                   <td className="px-2 py-2">
@@ -457,6 +530,13 @@ export function ClientHierarchyTable() {
                                   return (
                                     <tr key={`ad-${ad.id}`} className="border-b border-border/50 hover:bg-accent/20">
                                       <td className={cn("px-2 py-2", showCompanyCol ? "pl-20" : "pl-14")}></td>
+                                      <td className="px-2 py-2">
+                                        <Checkbox
+                                          checked={isSelected("ad", ad.id)}
+                                          onCheckedChange={() => toggleSel("ad", ad.id, String(camp.clientId))}
+                                          aria-label="Select ad"
+                                        />
+                                      </td>
                                       <td className="px-2 py-2"></td>
                                       {showCompanyCol && <td className="px-2 py-2"></td>}
                                       <td className="px-2 py-2">
@@ -495,6 +575,61 @@ export function ClientHierarchyTable() {
           </table>
         </div>
       </div>
+
+      {/* Floating bulk action bar */}
+      {selectedCount > 0 && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 shadow-lg">
+            <span className="text-xs font-semibold text-foreground">
+              {selectedCount} selected
+            </span>
+            <span className="mx-1 h-4 w-px bg-border" />
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
+              disabled={bulkRunning} onClick={() => runBulk("activate")}>
+              {bulkRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              Activate
+            </Button>
+            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
+              disabled={bulkRunning} onClick={() => runBulk("pause")}>
+              {bulkRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PauseIcon className="h-3.5 w-3.5" />}
+              Pause
+            </Button>
+            <Button size="sm" variant="outline"
+              className="h-8 gap-1.5 text-xs text-destructive hover:text-destructive"
+              disabled={bulkRunning} onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </Button>
+            <span className="mx-1 h-4 w-px bg-border" />
+            <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs"
+              onClick={clearSel} disabled={bulkRunning}>
+              <X className="h-3.5 w-3.5" /> Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedCount} item{selectedCount === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the selected campaigns, ad sets, and ads from Meta. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkRunning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); runBulk("delete"); }}
+              disabled={bulkRunning}
+            >
+              {bulkRunning ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
