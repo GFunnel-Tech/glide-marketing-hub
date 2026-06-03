@@ -72,14 +72,15 @@ function useUserLogs() {
       if (!auth.user) return [];
       const { data, error } = await supabase
         .from("user_logs")
-        .select("id,title,body,audience_kind,department,recipient_user_id,workspace_id,user_id,created_at")
+        .select("id,title,body,audience_kind,department,recipient_user_id,workspace_id,user_id,created_at,status,status_note,completed_by,completed_at,archived_at")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(100);
       if (error) throw error;
       return (data ?? []) as UserLog[];
     },
   });
 }
+
 
 function useMyReads() {
   return useQuery({
