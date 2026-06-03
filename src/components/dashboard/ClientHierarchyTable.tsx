@@ -113,6 +113,7 @@ export function ClientHierarchyTable() {
     if (statusFilter === "Active") list = list.filter((c) => c.status === "active");
     if (statusFilter === "Paused") list = list.filter((c) => c.status === "paused");
     if (statusFilter === "Issues") list = list.filter((c) => c.doubleCount || c.issuesStatus);
+    if (!showArchived) list = list.filter((c) => !archivedSet.has(`campaign:${c.id}`));
     if (search) {
       const s = search.toLowerCase();
       list = list.filter((c) =>
@@ -121,7 +122,7 @@ export function ClientHierarchyTable() {
       );
     }
     return list;
-  }, [allCampaigns, isAllClients, clientId, statusFilter, search, clients]);
+  }, [allCampaigns, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet]);
 
   // Group campaigns by client
   const campaignsByClient = useMemo(() => {
@@ -134,16 +135,20 @@ export function ClientHierarchyTable() {
     return map;
   }, [campaigns]);
 
-  // Group ads by campaign_id → adset_id
+  // Group ads by campaign_id → adset_id (filter out archived ads + ads whose adset is archived)
   const adsByCampaign = useMemo(() => {
     const byCamp = new Map<string, MetaAd[]>();
     for (const ad of allAds) {
       if (!ad.campaign_id) continue;
+      if (!showArchived) {
+        if (archivedSet.has(`ad:${ad.id}`)) continue;
+        if (ad.adset_id && archivedSet.has(`adset:${ad.adset_id}`)) continue;
+      }
       if (!byCamp.has(ad.campaign_id)) byCamp.set(ad.campaign_id, []);
       byCamp.get(ad.campaign_id)!.push(ad);
     }
     return byCamp;
-  }, [allAds]);
+  }, [allAds, showArchived, archivedSet]);
 
   const visibleClients = useMemo(() => {
     if (!isAllClients) return focusedClient ? [focusedClient] : [];
