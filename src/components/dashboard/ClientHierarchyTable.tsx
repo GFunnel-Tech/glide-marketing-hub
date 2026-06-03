@@ -176,7 +176,37 @@ export function ClientHierarchyTable() {
     }
   };
 
-  // Columns: when "All" show Company column; otherwise hide
+  const runBulk = async (action: "pause" | "activate" | "delete") => {
+    if (selectedCount === 0) return;
+    setBulkRunning(true);
+    try {
+      // Group by entity + clientId
+      const groups = new Map<string, { entity: EntityType; clientId: string; ids: string[] }>();
+      for (const s of selectedList) {
+        const k = `${s.entity}:${s.clientId}`;
+        if (!groups.has(k)) groups.set(k, { entity: s.entity, clientId: s.clientId, ids: [] });
+        groups.get(k)!.ids.push(s.id);
+      }
+      const results = await Promise.allSettled(
+        Array.from(groups.values()).map((g) =>
+          action === "pause" && g.entity === "campaign"
+            ? api.pauseCampaigns(g.clientId, g.ids)
+            : api.bulkAction(action, g.entity, g.clientId, g.ids),
+        ),
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      const verb = action === "pause" ? "Paused" : action === "activate" ? "Activated" : "Deleted";
+      if (failed === 0) toast.success(`${verb} ${selectedCount} item${selectedCount === 1 ? "" : "s"}`);
+      else toast.error(`${verb} ${selectedCount - failed}/${selectedCount} — ${failed} failed`);
+      clearSel();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Bulk action failed");
+    } finally {
+      setBulkRunning(false);
+      setConfirmDelete(false);
+    }
+  };
+
   const showCompanyCol = isAllClients;
 
   const filters: StatusFilter[] = ["All", "Active", "Paused", "Issues"];
