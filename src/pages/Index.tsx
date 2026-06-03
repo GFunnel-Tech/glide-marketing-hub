@@ -10,6 +10,8 @@ import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { useClients } from "@/hooks/useDatabase";
 import { useMemo } from "react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { LaunchPlatforms } from "@/components/dashboard/LaunchPlatforms";
+import { AdAccountSelector } from "@/components/dashboard/AdAccountSelector";
 
 function PortfolioHealthCard() {
   const { data: clients = [] } = useClients();
@@ -65,9 +67,13 @@ const Index = () => {
           <h1 className="text-2xl font-semibold text-foreground">Overview</h1>
           <p className="text-sm text-muted-foreground">What's happening across your portfolio.</p>
         </div>
-        <DateRangePicker />
+        <div className="flex items-center gap-2 flex-wrap">
+          <AdAccountSelector />
+          <DateRangePicker />
+        </div>
       </div>
 
+      <LaunchPlatforms />
       <KPIStrip />
       <QuickActionBar />
 
