@@ -10,9 +10,10 @@ import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { useClients } from "@/hooks/useDatabase";
 import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
-import { LaunchPlatforms } from "@/components/dashboard/LaunchPlatforms";
 import { ChevronDown, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 function PortfolioHealthCard() {
   const { data: clients = [] } = useClients();
@@ -59,6 +60,18 @@ const Index = () => {
   const { hasConnection, isLoading } = useHasActiveMetaConnection();
   const [focusOpen, setFocusOpen] = useState(false);
 
+  const { data: focusItems = [] } = useQuery({
+    queryKey: ["daily-focus-items"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("daily_focus_items")
+        .select("id,is_done");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const pendingCount = focusItems.filter((i: any) => !i.is_done).length;
+
   if (isLoading) return null;
   if (!hasConnection) return <ConnectMetaPrompt />;
 
@@ -72,8 +85,6 @@ const Index = () => {
         <DateRangePicker />
       </div>
 
-      <LaunchPlatforms />
-
       <div className="rounded-xl border border-border bg-card">
         <button
           type="button"
@@ -82,10 +93,20 @@ const Index = () => {
           aria-expanded={focusOpen}
         >
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="relative flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
               <Zap className="h-4 w-4" />
+              {pendingCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground ring-2 ring-card">
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
             </span>
             <span className="text-sm font-semibold text-foreground">Daily Focus & Quick Actions</span>
+            {pendingCount > 0 && (
+              <span className="ml-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+                {pendingCount} pending
+              </span>
+            )}
           </div>
           <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", focusOpen && "rotate-180")} />
         </button>
