@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useUnreadMessageCount } from "@/hooks/useMessages";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown
+  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown, Radar
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -48,6 +48,7 @@ const navItems: NavEntry[] = [
   {
     icon: FileBarChart, label: "Insights", children: [
       { icon: FileBarChart, label: "Reports", path: "/reports" },
+      { icon: Radar, label: "Tracking", path: "/tracking", badge: "NEW" },
       { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
     ]
   },

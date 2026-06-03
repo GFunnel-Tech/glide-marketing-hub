@@ -30,6 +30,7 @@ import DemoGfunnel from "./pages/DemoGfunnel";
 import BillingPage from "./pages/BillingPage";
 import AffiliatePage from "./pages/AffiliatePage";
 import ForecastPage from "./pages/ForecastPage";
+import Tracking from "./pages/Tracking";
 import NotFound from "./pages/NotFound";
 import PortalLayout from "./pages/portal/PortalLayout";
 import PortalAuth from "./pages/portal/PortalAuth";
@@ -139,6 +140,7 @@ const App = () => (
                   <Route path="billing" element={<BillingPage />} />
                   <Route path="affiliate" element={<AffiliatePage />} />
                   <Route path="forecast" element={<ForecastPage />} />
+                  <Route path="tracking" element={<Tracking />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="rebilling" element={<Rebilling />} />
