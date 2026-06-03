@@ -78,6 +78,7 @@ const App = () => (
         <AuthProvider>
           <GFunnelGate>
             <WorkspaceProvider>
+              <AdAccountProvider>
               <RealtimeProvider>
               <Toaster />
               <Sonner />
