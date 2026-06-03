@@ -8,9 +8,11 @@ import { ConnectMetaPrompt } from "@/components/dashboard/ConnectMetaPrompt";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { useClients } from "@/hooks/useDatabase";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { LaunchPlatforms } from "@/components/dashboard/LaunchPlatforms";
+import { ChevronDown, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 function PortfolioHealthCard() {
   const { data: clients = [] } = useClients();
