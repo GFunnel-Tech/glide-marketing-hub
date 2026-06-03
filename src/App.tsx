@@ -149,6 +149,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </RealtimeProvider>
+              </AdAccountProvider>
             </WorkspaceProvider>
           </GFunnelGate>
         </AuthProvider>
