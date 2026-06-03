@@ -1,18 +1,23 @@
 import { useState, useMemo, useEffect } from "react";
-import { useClients } from "@/hooks/useDatabase";
+import { useClients, useCampaigns } from "@/hooks/useDatabase";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
 import { useDateRange } from "@/hooks/useDateRange";
 import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { StatusBadge } from "./StatusBadge";
 import { ClientDrawer } from "./ClientDrawer";
 import { cn } from "@/lib/utils";
-import { ArrowUpDown, Building2, User, Search, SlidersHorizontal, Plus } from "lucide-react";
+import { ArrowUpDown, Building2, User, Search, SlidersHorizontal, Plus, ExternalLink, Download, ChevronDown, Loader2, Check, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
 import type { Client } from "@/data/mockData";
 
@@ -143,6 +148,32 @@ export function ClientTable() {
     if (typeof window === "undefined") return "all";
     return (localStorage.getItem(CHANNEL_KEY) as Channel) ?? "all";
   });
+  const navigate = useNavigate();
+  const [selectedClientId, setSelectedClientId] = useState<number | "all">("all");
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const focusedClient = useMemo(
+    () => (selectedClientId === "all" ? null : baseClients.find((c) => c.id === selectedClientId) ?? null),
+    [baseClients, selectedClientId]
+  );
+
+  const handleQuickSync = async () => {
+    if (selectedClientId === "all" || !focusedClient) {
+      toast.error("Select a specific client to sync");
+      return;
+    }
+    setSyncing(true);
+    try {
+      await api.syncMetaAds(String(focusedClient.id));
+      toast.success(`Synced Meta campaigns for ${focusedClient.name}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Lookup for custom KPI values: { kpiId: { clientId|"_global": value } }
   const evalMap = useMemo(() => {
@@ -216,6 +247,7 @@ export function ClientTable() {
 
   const filtered = useMemo(() => {
     let list = clients;
+    if (selectedClientId !== "all") list = list.filter((c) => c.id === selectedClientId);
     if (filter !== "ALL") list = list.filter((c) => c.status === filter);
     if (search) list = list.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.brand.toLowerCase().includes(search.toLowerCase()));
     const sorted = [...list].sort((a, b) => {
@@ -230,7 +262,7 @@ export function ClientTable() {
       return sortDir === "asc" ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
     });
     return sorted.map((c, i) => ({ ...c, _rank: i + 1 }));
-  }, [clients, filter, search, sortKey, sortDir]);
+  }, [clients, filter, search, sortKey, sortDir, selectedClientId]);
 
   const toggleSort = (key?: string) => {
     if (!key) return;
@@ -255,6 +287,94 @@ export function ClientTable() {
           <span className="text-xs text-muted-foreground">· {rangeLabel}{rangeLoading && " · updating…"}</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Client picker */}
+          <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 min-w-[180px] justify-between gap-1.5 text-xs">
+                <span className="truncate">
+                  {focusedClient ? focusedClient.name : "All Clients"}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search client..." className="text-xs" />
+                <CommandList>
+                  <CommandEmpty>No clients found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => { setSelectedClientId("all"); setClientPickerOpen(false); }}
+                      className="text-xs"
+                    >
+                      <Check className={cn("mr-2 h-3.5 w-3.5", selectedClientId === "all" ? "opacity-100" : "opacity-0")} />
+                      All Clients
+                    </CommandItem>
+                  </CommandGroup>
+                  <CommandGroup heading="Clients">
+                    {baseClients.map((c) => (
+                      <CommandItem
+                        key={c.id}
+                        onSelect={() => { setSelectedClientId(c.id); setClientPickerOpen(false); }}
+                        className="text-xs"
+                      >
+                        <Check className={cn("mr-2 h-3.5 w-3.5", selectedClientId === c.id ? "opacity-100" : "opacity-0")} />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{c.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{c.brand}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          {focusedClient && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => navigate(`/client/${focusedClient.id}`)}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open Profile
+            </Button>
+          )}
+
+          {/* Import split-button */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={!focusedClient}
+                title={!focusedClient ? "Select a client first" : undefined}
+              >
+                {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                Import
+                <ChevronDown className="h-3 w-3 opacity-80" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={handleQuickSync} disabled={syncing}>
+                <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                Sync Meta campaigns now
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                <SlidersHorizontal className="mr-2 h-3.5 w-3.5" />
+                Choose campaigns to import…
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => focusedClient && navigate(`/client/${focusedClient.id}?tab=campaigns`)}>
+                <ExternalLink className="mr-2 h-3.5 w-3.5" />
+                View imported campaigns
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+
           {filters.map((f) => (
             <button
               key={f}
@@ -389,6 +509,108 @@ export function ClientTable() {
       </div>
 
       {selectedClient && <ClientDrawer client={selectedClient} onClose={() => setSelectedClient(null)} />}
+
+      <CampaignImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        clientId={focusedClient?.id ?? null}
+        clientName={focusedClient?.name ?? ""}
+      />
     </div>
   );
 }
+
+function CampaignImportDialog({
+  open,
+  onOpenChange,
+  clientId,
+  clientName,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  clientId: number | null;
+  clientName: string;
+}) {
+  const { data: allCampaigns = [], isLoading } = useCampaigns();
+  const campaigns = useMemo(
+    () => allCampaigns.filter((c: any) => c.clientId === clientId || c.client_id === clientId),
+    [allCampaigns, clientId]
+  );
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState(false);
+
+  useEffect(() => {
+    if (open) setSelected(new Set(campaigns.map((c: any) => String(c.id))));
+  }, [open, campaigns]);
+
+  const toggle = (id: string) =>
+    setSelected((s) => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const handleImport = async () => {
+    if (!clientId) return;
+    setImporting(true);
+    try {
+      await api.syncMetaAds(String(clientId));
+      toast.success(`Imported ${selected.size} campaign${selected.size === 1 ? "" : "s"} for ${clientName}`);
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Import campaigns</DialogTitle>
+          <DialogDescription>
+            Select which campaigns to import for <span className="font-medium text-foreground">{clientName}</span>.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="max-h-[360px] overflow-y-auto rounded-md border border-border">
+          {isLoading ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">Loading campaigns…</div>
+          ) : campaigns.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              No campaigns found for this client yet. Use “Sync Meta campaigns now” to pull them from Meta.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {campaigns.map((c: any) => {
+                const id = String(c.id);
+                const checked = selected.has(id);
+                return (
+                  <li key={id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                    <Checkbox checked={checked} onCheckedChange={() => toggle(id)} />
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate font-medium text-foreground">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {c.status} · {c.leads ?? 0} leads · ${Number(c.spend ?? 0).toLocaleString()} spend
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleImport} disabled={importing || selected.size === 0 || campaigns.length === 0}>
+            {importing && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+            Import {selected.size > 0 ? `(${selected.size})` : ""}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
