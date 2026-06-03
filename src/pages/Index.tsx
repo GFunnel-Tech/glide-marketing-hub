@@ -68,7 +68,6 @@ const Index = () => {
           <p className="text-sm text-muted-foreground">What's happening across your portfolio.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <AdAccountSelector />
           <DateRangePicker />
         </div>
       </div>
