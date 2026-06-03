@@ -247,6 +247,7 @@ export function ClientTable() {
 
   const filtered = useMemo(() => {
     let list = clients;
+    if (selectedClientId !== "all") list = list.filter((c) => c.id === selectedClientId);
     if (filter !== "ALL") list = list.filter((c) => c.status === filter);
     if (search) list = list.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.brand.toLowerCase().includes(search.toLowerCase()));
     const sorted = [...list].sort((a, b) => {
