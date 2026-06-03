@@ -437,6 +437,13 @@ export function ClientHierarchyTable() {
                               )}
                             </td>
                             <td className="px-2 py-2">
+                              <Checkbox
+                                checked={isSelected("campaign", camp.id)}
+                                onCheckedChange={() => toggleSel("campaign", camp.id, String(camp.clientId))}
+                                aria-label="Select campaign"
+                              />
+                            </td>
+                            <td className="px-2 py-2">
                               {pending[camp.id]
                                 ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                                 : <Switch checked={camp.status === "active"} onCheckedChange={(v) => handleToggleCampaign(camp, v)} className="scale-75 origin-left" />}
