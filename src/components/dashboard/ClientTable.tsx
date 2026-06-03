@@ -1,18 +1,23 @@
 import { useState, useMemo, useEffect } from "react";
-import { useClients } from "@/hooks/useDatabase";
+import { useClients, useCampaigns } from "@/hooks/useDatabase";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
 import { useDateRange } from "@/hooks/useDateRange";
 import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { StatusBadge } from "./StatusBadge";
 import { ClientDrawer } from "./ClientDrawer";
 import { cn } from "@/lib/utils";
-import { ArrowUpDown, Building2, User, Search, SlidersHorizontal, Plus } from "lucide-react";
+import { ArrowUpDown, Building2, User, Search, SlidersHorizontal, Plus, ExternalLink, Download, ChevronDown, Loader2, Check, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
 import type { Client } from "@/data/mockData";
 
