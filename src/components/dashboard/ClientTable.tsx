@@ -287,6 +287,94 @@ export function ClientTable() {
           <span className="text-xs text-muted-foreground">· {rangeLabel}{rangeLoading && " · updating…"}</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Client picker */}
+          <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 min-w-[180px] justify-between gap-1.5 text-xs">
+                <span className="truncate">
+                  {focusedClient ? focusedClient.name : "All Clients"}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search client..." className="text-xs" />
+                <CommandList>
+                  <CommandEmpty>No clients found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => { setSelectedClientId("all"); setClientPickerOpen(false); }}
+                      className="text-xs"
+                    >
+                      <Check className={cn("mr-2 h-3.5 w-3.5", selectedClientId === "all" ? "opacity-100" : "opacity-0")} />
+                      All Clients
+                    </CommandItem>
+                  </CommandGroup>
+                  <CommandGroup heading="Clients">
+                    {baseClients.map((c) => (
+                      <CommandItem
+                        key={c.id}
+                        onSelect={() => { setSelectedClientId(c.id); setClientPickerOpen(false); }}
+                        className="text-xs"
+                      >
+                        <Check className={cn("mr-2 h-3.5 w-3.5", selectedClientId === c.id ? "opacity-100" : "opacity-0")} />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{c.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{c.brand}</span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          {focusedClient && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => navigate(`/client/${focusedClient.id}`)}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open Profile
+            </Button>
+          )}
+
+          {/* Import split-button */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={!focusedClient}
+                title={!focusedClient ? "Select a client first" : undefined}
+              >
+                {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                Import
+                <ChevronDown className="h-3 w-3 opacity-80" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={handleQuickSync} disabled={syncing}>
+                <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                Sync Meta campaigns now
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                <SlidersHorizontal className="mr-2 h-3.5 w-3.5" />
+                Choose campaigns to import…
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => focusedClient && navigate(`/client/${focusedClient.id}?tab=campaigns`)}>
+                <ExternalLink className="mr-2 h-3.5 w-3.5" />
+                View imported campaigns
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+
           {filters.map((f) => (
             <button
               key={f}
