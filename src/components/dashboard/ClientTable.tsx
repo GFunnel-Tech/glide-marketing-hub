@@ -19,6 +19,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
+import { AdAccountSelector } from "./AdAccountSelector";
 import type { Client } from "@/data/mockData";
 
 type StatusFilter = "ALL" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
