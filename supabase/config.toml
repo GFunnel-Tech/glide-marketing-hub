@@ -7,3 +7,7 @@ verify_jwt = true
 
 [functions.admin-impersonate]
 verify_jwt = true
+
+# Public tracking collector + snippet
+[functions.track]
+verify_jwt = false

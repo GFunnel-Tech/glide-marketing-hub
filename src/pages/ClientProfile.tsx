@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { LeadsByClient } from "@/components/leads/LeadsByClient";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
+import { TrackingPanel } from "@/components/tracking/TrackingPanel";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -371,6 +372,8 @@ export default function ClientProfile() {
         workspaceId={(client as any).workspace_id ?? null}
         clientName={client.name}
       />
+
+      <TrackingPanel clientId={client.id} title={`Tracking · ${client.name}`} />
 
 
       <AlertDialog open={showPause} onOpenChange={setShowPause}>

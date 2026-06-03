@@ -4134,6 +4134,254 @@ export type Database = {
         }
         Relationships: []
       }
+      tracking_containers: {
+        Row: {
+          client_id: number | null
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          enabled: boolean
+          id: string
+          name: string
+          public_key: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          created_at?: string
+          created_by?: string | null
+          domain?: string | null
+          enabled?: boolean
+          id?: string
+          name: string
+          public_key?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          created_at?: string
+          created_by?: string | null
+          domain?: string | null
+          enabled?: boolean
+          id?: string
+          name?: string
+          public_key?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_containers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_containers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_events: {
+        Row: {
+          anon_id: string | null
+          client_id: number | null
+          container_id: string
+          event_name: string
+          id: string
+          ip_hash: string | null
+          occurred_at: string
+          properties: Json
+          referrer: string | null
+          session_id: string | null
+          url: string | null
+          user_agent: string | null
+          workspace_id: string
+        }
+        Insert: {
+          anon_id?: string | null
+          client_id?: number | null
+          container_id: string
+          event_name: string
+          id?: string
+          ip_hash?: string | null
+          occurred_at?: string
+          properties?: Json
+          referrer?: string | null
+          session_id?: string | null
+          url?: string | null
+          user_agent?: string | null
+          workspace_id: string
+        }
+        Update: {
+          anon_id?: string | null
+          client_id?: number | null
+          container_id?: string
+          event_name?: string
+          id?: string
+          ip_hash?: string | null
+          occurred_at?: string
+          properties?: Json
+          referrer?: string | null
+          session_id?: string | null
+          url?: string | null
+          user_agent?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_events_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_containers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_pixels: {
+        Row: {
+          client_id: number | null
+          config: Json
+          container_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          label: string | null
+          pixel_id: string
+          platform: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          config?: Json
+          container_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string | null
+          pixel_id: string
+          platform: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          config?: Json
+          container_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string | null
+          pixel_id?: string
+          platform?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_pixels_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_pixels_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_containers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_pixels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_tags: {
+        Row: {
+          code: string | null
+          conditions: Json
+          container_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string
+          tag_type: string
+          trigger_event: string | null
+          trigger_type: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          code?: string | null
+          conditions?: Json
+          container_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          tag_type?: string
+          trigger_event?: string | null
+          trigger_type?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          code?: string | null
+          conditions?: Json
+          container_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          tag_type?: string
+          trigger_event?: string | null
+          trigger_type?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_tags_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_containers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_tags_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_log_reads: {
         Row: {
           log_id: string
