@@ -4176,13 +4176,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "tracking_containers_ad_account_id_fkey"
-            columns: ["ad_account_id"]
-            isOneToOne: false
-            referencedRelation: "meta_ad_accounts"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "tracking_containers_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
