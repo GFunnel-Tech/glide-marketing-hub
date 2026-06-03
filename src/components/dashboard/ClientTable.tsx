@@ -262,7 +262,7 @@ export function ClientTable() {
       return sortDir === "asc" ? String(aVal).localeCompare(String(bVal)) : String(bVal).localeCompare(String(aVal));
     });
     return sorted.map((c, i) => ({ ...c, _rank: i + 1 }));
-  }, [clients, filter, search, sortKey, sortDir]);
+  }, [clients, filter, search, sortKey, sortDir, selectedClientId]);
 
   const toggleSort = (key?: string) => {
     if (!key) return;
