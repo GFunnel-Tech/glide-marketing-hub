@@ -64,6 +64,14 @@ export function ClientHierarchyTable() {
   const [openClients, setOpenClients] = useState<Record<string, boolean>>({});
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Archived items
+  const archivedSet = useArchivedSet();
+  const archiveMut = useArchiveEntities();
+  const unarchiveMut = useUnarchiveEntities();
+  const isArchived = (entity: "campaign" | "adset" | "ad", id: string) =>
+    archivedSet.has(`${entity}:${id}`);
 
   // Bulk selection — keyed by `${entity}:${id}` -> {entity, id, clientId}
   type EntityType = "campaign" | "adset" | "ad";
