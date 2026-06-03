@@ -335,6 +335,17 @@ export function ClientHierarchyTable() {
             </Button>
           </div>
 
+          {/* Show archived toggle */}
+          <Button
+            variant={showArchived ? "default" : "outline"}
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => setShowArchived((v) => !v)}
+          >
+            {showArchived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+            {showArchived ? "Hide archived" : "Show archived"}
+          </Button>
+
           {/* Status filter pills */}
           <div className="flex items-center gap-1 rounded-lg bg-accent p-0.5">
             {filters.map((f) => (
