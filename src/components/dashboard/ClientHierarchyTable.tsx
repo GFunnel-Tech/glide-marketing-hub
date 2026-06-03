@@ -292,6 +292,16 @@ export function ClientHierarchyTable() {
             </Button>
           )}
 
+          {/* Expand / Collapse all */}
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={expandAll}>
+              <ChevronsUpDown className="h-3.5 w-3.5" /> Expand all
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={collapseAll}>
+              <ChevronsDownUp className="h-3.5 w-3.5" /> Collapse all
+            </Button>
+          </div>
+
           {/* Status filter pills */}
           <div className="flex items-center gap-1 rounded-lg bg-accent p-0.5">
             {filters.map((f) => (
