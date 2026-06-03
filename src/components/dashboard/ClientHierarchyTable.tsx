@@ -512,11 +512,15 @@ export function ClientHierarchyTable() {
                         <>
                           <tr key={`camp-${camp.id}`} className="border-b border-border hover:bg-accent/30">
                             <td className={cn("px-2 py-2", showCompanyCol && "pl-8")}>
-                              {adsByAdset.size > 0 && (
-                                <button onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}>
-                                  {campOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
-                                </button>
-                              )}
+                              <button
+                                onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
+                                className="flex h-6 w-6 items-center justify-center rounded hover:bg-accent transition-colors"
+                                aria-label={campOpen ? "Collapse campaign" : "Expand campaign"}
+                              >
+                                {campOpen
+                                  ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                  : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                              </button>
                             </td>
                             <td className="px-2 py-2">
                               <Checkbox
@@ -532,12 +536,15 @@ export function ClientHierarchyTable() {
                             </td>
                             {showCompanyCol && <td className="px-2 py-2 text-xs text-muted-foreground truncate max-w-[160px]">{client.name}</td>}
                             <td className="px-2 py-2">
-                              <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
+                                className="flex items-center gap-2 text-left w-full"
+                              >
                                 <div className="flex h-6 w-6 items-center justify-center rounded bg-success/10 text-success">
                                   <FolderKanban className="h-3 w-3" />
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-sm font-medium text-foreground truncate max-w-[360px]">{camp.name}</p>
+                                  <p className="text-sm font-medium text-foreground hover:text-primary truncate max-w-[360px]">{camp.name}</p>
                                   {(camp.issuesStatus || camp.doubleCount) && (
                                     <p className="text-[10px] text-destructive flex items-center gap-1">
                                       <AlertTriangle className="h-3 w-3" />
@@ -545,7 +552,7 @@ export function ClientHierarchyTable() {
                                     </p>
                                   )}
                                 </div>
-                              </div>
+                              </button>
                             </td>
                             <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(campImpr)}</td>
                             <td className="px-2 py-2 text-right tabular-nums text-foreground">{campClicks || "—"}</td>
