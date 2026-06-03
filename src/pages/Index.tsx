@@ -57,6 +57,7 @@ function PortfolioHealthCard() {
 
 const Index = () => {
   const { hasConnection, isLoading } = useHasActiveMetaConnection();
+  const [focusOpen, setFocusOpen] = useState(false);
 
   if (isLoading) return null;
   if (!hasConnection) return <ConnectMetaPrompt />;
@@ -72,8 +73,29 @@ const Index = () => {
       </div>
 
       <LaunchPlatforms />
-      <DailyFocus />
-      <QuickActionBar />
+
+      <div className="rounded-xl border border-border bg-card">
+        <button
+          type="button"
+          onClick={() => setFocusOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left"
+          aria-expanded={focusOpen}
+        >
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Zap className="h-4 w-4" />
+            </span>
+            <span className="text-sm font-semibold text-foreground">Daily Focus & Quick Actions</span>
+          </div>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", focusOpen && "rotate-180")} />
+        </button>
+        {focusOpen && (
+          <div className="border-t border-border p-5 space-y-6">
+            <DailyFocus />
+            <QuickActionBar />
+          </div>
+        )}
+      </div>
 
       <KPIStrip />
 
