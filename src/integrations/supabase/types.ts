@@ -4193,6 +4193,7 @@ export type Database = {
       }
       tracking_events: {
         Row: {
+          ad_account_id: string | null
           anon_id: string | null
           client_id: number | null
           container_id: string
@@ -4208,6 +4209,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          ad_account_id?: string | null
           anon_id?: string | null
           client_id?: number | null
           container_id: string
@@ -4223,6 +4225,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          ad_account_id?: string | null
           anon_id?: string | null
           client_id?: number | null
           container_id?: string
