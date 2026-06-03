@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Search, FileText, RefreshCw, UserPlus, NotebookPen, Bell, Check, Trash2, X, Users, Building2, User as UserIcon } from "lucide-react";
+import { Loader2, Search, FileText, RefreshCw, UserPlus, NotebookPen, Bell, Check, Trash2, X, Users, Building2, User as UserIcon, Archive, CheckCircle2, Clock, MessageCircleQuestion, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +21,8 @@ const DEPARTMENTS = [
 
 type AudienceKind = "general" | "department" | "user";
 
+type LogStatus = "new" | "in_process" | "needs_feedback" | "completed" | "archived";
+
 type UserLog = {
   id: string;
   title: string;
@@ -31,7 +33,13 @@ type UserLog = {
   workspace_id: string | null;
   user_id: string;
   created_at: string;
+  status: LogStatus;
+  status_note: string | null;
+  completed_by: string | null;
+  completed_at: string | null;
+  archived_at: string | null;
 };
+
 
 const LOGS_QK = (wsId: string | null | undefined) => ["user-logs", wsId ?? "none"] as const;
 const READS_QK = ["user-log-reads"] as const;
@@ -64,14 +72,15 @@ function useUserLogs() {
       if (!auth.user) return [];
       const { data, error } = await supabase
         .from("user_logs")
-        .select("id,title,body,audience_kind,department,recipient_user_id,workspace_id,user_id,created_at")
+        .select("id,title,body,audience_kind,department,recipient_user_id,workspace_id,user_id,created_at,status,status_note,completed_by,completed_at,archived_at")
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(100);
       if (error) throw error;
       return (data ?? []) as UserLog[];
     },
   });
 }
+
 
 function useMyReads() {
   return useQuery({
@@ -342,25 +351,167 @@ function AudienceBadge({ log, recipientName }: { log: UserLog; recipientName?: s
   return <span className={cn(base, "bg-pink-500/10 text-pink-600 dark:text-pink-400")}><UserIcon className="h-3 w-3" />{recipientName ?? "User"}</span>;
 }
 
+
+type TabKey = "new" | "completed" | "archived";
+
+const STATUS_META: Record<LogStatus, { label: string; tone: string; icon: typeof Check }> = {
+  new: { label: "New", tone: "bg-blue-500/10 text-blue-600 dark:text-blue-400", icon: Inbox },
+  in_process: { label: "In process", tone: "bg-amber-500/10 text-amber-600 dark:text-amber-400", icon: Clock },
+  needs_feedback: { label: "Needs feedback", tone: "bg-pink-500/10 text-pink-600 dark:text-pink-400", icon: MessageCircleQuestion },
+  completed: { label: "Completed", tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", icon: CheckCircle2 },
+  archived: { label: "Archived", tone: "bg-muted text-muted-foreground", icon: Archive },
+};
+
+function StatusBadge({ status }: { status: LogStatus }) {
+  const m = STATUS_META[status];
+  const Icon = m.icon;
+  return (
+    <span className={cn("inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded", m.tone)}>
+      <Icon className="h-3 w-3" />
+      {m.label}
+    </span>
+  );
+}
+
+function FinalizeDialog({
+  log,
+  onClose,
+  onSave,
+  isSaving,
+}: {
+  log: UserLog | null;
+  onClose: () => void;
+  onSave: (status: LogStatus, note: string) => void;
+  isSaving: boolean;
+}) {
+  const [status, setStatus] = useState<LogStatus>("completed");
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (log) {
+      setStatus(log.status === "new" ? "completed" : log.status);
+      setNote(log.status_note ?? "");
+    }
+  }, [log]);
+
+  if (!log) return null;
+
+  const choices: { value: LogStatus; label: string; desc: string }[] = [
+    { value: "completed", label: "Completed", desc: "Finished and resolved" },
+    { value: "needs_feedback", label: "Needs feedback", desc: "Waiting on input" },
+    { value: "in_process", label: "In process", desc: "Actively working on it" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-xl border border-border bg-card shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-border px-5 py-3">
+          <h4 className="text-sm font-semibold text-foreground">Finalize log</h4>
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="space-y-4 px-5 py-4">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1">Log</p>
+            <p className="text-sm font-medium text-foreground">{log.title}</p>
+            {log.body && <p className="text-xs text-muted-foreground mt-1 line-clamp-3 whitespace-pre-wrap">{log.body}</p>}
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Status</label>
+            <div className="mt-1 grid grid-cols-1 gap-1.5">
+              {choices.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setStatus(c.value)}
+                  className={cn(
+                    "flex items-start gap-2 text-left rounded-md border px-3 py-2 transition-colors",
+                    status === c.value
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:bg-accent"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "mt-0.5 h-3.5 w-3.5 rounded-full border-2 shrink-0",
+                      status === c.value ? "border-primary bg-primary" : "border-border"
+                    )}
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-foreground">{c.label}</span>
+                    <span className="block text-[11px] text-muted-foreground">{c.desc}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Note (optional)</label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+              maxLength={1000}
+              placeholder="What's the resolution or next step?"
+              className="mt-1 w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
+          <button type="button" onClick={onClose} className="h-9 px-3 rounded-md border border-border bg-background text-sm font-medium text-foreground hover:bg-accent">
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => onSave(status, note)}
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+          >
+            {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LogList() {
   const qc = useQueryClient();
   const { currentWorkspace } = useWorkspace();
   const { data: logs = [], isLoading } = useUserLogs();
   const { data: reads = new Set<string>() } = useMyReads();
   const { data: members = [] } = useWorkspaceMembers();
+  const [tab, setTab] = useState<TabKey>("new");
+  const [finalizing, setFinalizing] = useState<UserLog | null>(null);
+
   const memberMap = useMemo(() => {
     const m = new Map<string, string>();
     members.forEach((p) => m.set(p.id, p.display_name || p.email || p.id.slice(0, 8)));
     return m;
   }, [members]);
 
-  const sorted = useMemo(() => {
-    return [...logs].sort((a, b) => {
+  const buckets = useMemo(() => {
+    const newOnes: UserLog[] = [];
+    const completed: UserLog[] = [];
+    const archived: UserLog[] = [];
+    logs.forEach((l) => {
+      if (l.status === "archived") archived.push(l);
+      else if (l.status === "completed") completed.push(l);
+      else newOnes.push(l);
+    });
+    const sortDesc = (a: UserLog, b: UserLog) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    newOnes.sort((a, b) => {
       const aRead = reads.has(a.id) ? 1 : 0;
       const bRead = reads.has(b.id) ? 1 : 0;
       if (aRead !== bRead) return aRead - bRead;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return sortDesc(a, b);
     });
+    completed.sort(sortDesc);
+    archived.sort(sortDesc);
+    return { new: newOnes, completed, archived };
   }, [logs, reads]);
 
   const markRead = useMutation({
@@ -381,51 +532,190 @@ function LogList() {
     onSuccess: () => qc.invalidateQueries({ queryKey: LOGS_QK(currentWorkspace?.id) }),
   });
 
-  if (isLoading) return <p className="text-xs text-muted-foreground">Loading logs…</p>;
-  if (sorted.length === 0) return <p className="text-xs text-muted-foreground">No logs yet. Use "Add Log" to record one.</p>;
+  const archive = useMutation({
+    mutationFn: async (log: UserLog) => {
+      const nextArchived = log.status !== "archived";
+      const { error } = await supabase
+        .from("user_logs")
+        .update({
+          status: nextArchived ? "archived" : "new",
+          archived_at: nextArchived ? new Date().toISOString() : null,
+        })
+        .eq("id", log.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: LOGS_QK(currentWorkspace?.id) }),
+    onError: (e: any) => toast.error(e?.message ?? "Could not update log"),
+  });
+
+  const finalize = useMutation({
+    mutationFn: async ({ log, status, note }: { log: UserLog; status: LogStatus; note: string }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) throw new Error("Not signed in");
+      const patch: any = {
+        status,
+        status_note: note.trim() || null,
+      };
+      if (status === "completed") {
+        patch.completed_by = auth.user.id;
+        patch.completed_at = new Date().toISOString();
+      } else {
+        patch.completed_by = null;
+        patch.completed_at = null;
+      }
+      const { error } = await supabase.from("user_logs").update(patch).eq("id", log.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: LOGS_QK(currentWorkspace?.id) });
+      setFinalizing(null);
+      toast.success("Log updated");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not update log"),
+  });
+
+  const tabs: { key: TabKey; label: string; count: number }[] = [
+    { key: "new", label: "New", count: buckets.new.length },
+    { key: "completed", label: "Completed", count: buckets.completed.length },
+    { key: "archived", label: "Archived", count: buckets.archived.length },
+  ];
+
+  const visible = buckets[tab];
 
   return (
-    <ul className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-      {sorted.map((log) => {
-        const isRead = reads.has(log.id);
-        const recipientName = log.recipient_user_id ? memberMap.get(log.recipient_user_id) : undefined;
-        return (
-          <li
-            key={log.id}
+    <div>
+      <div className="mb-2 inline-flex items-center gap-1 rounded-md border border-border bg-background p-0.5">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
             className={cn(
-              "group flex items-start gap-2 rounded-md border px-3 py-2 transition-colors",
-              isRead ? "border-border bg-background" : "border-primary/30 bg-primary/5"
+              "inline-flex items-center gap-1.5 h-7 px-2.5 rounded text-[11px] font-medium transition-colors",
+              tab === t.key
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
           >
-            {!isRead && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-medium truncate text-foreground">{log.title}</p>
-                <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
-                  {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
-                </span>
-              </div>
-              <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-                <AudienceBadge log={log} recipientName={recipientName} />
-              </div>
-              {log.body && (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 whitespace-pre-wrap">{log.body}</p>
+            {t.label}
+            <span
+              className={cn(
+                "min-w-[16px] h-[16px] px-1 rounded-full text-[10px] font-semibold flex items-center justify-center",
+                tab === t.key ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-foreground"
               )}
-            </div>
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              {!isRead && (
-                <button onClick={() => markRead.mutate(log.id)} aria-label="Mark read" className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
-                  <Check className="h-3.5 w-3.5" />
-                </button>
-              )}
-              <button onClick={() => remove.mutate(log.id)} aria-label="Delete log" className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+            >
+              {t.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <p className="text-xs text-muted-foreground">Loading logs…</p>
+      ) : visible.length === 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {tab === "new" && "Nothing pending. You're all caught up."}
+          {tab === "completed" && "No completed logs yet."}
+          {tab === "archived" && "No archived logs."}
+        </p>
+      ) : (
+        <ul className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+          {visible.map((log) => {
+            const isRead = reads.has(log.id);
+            const recipientName = log.recipient_user_id ? memberMap.get(log.recipient_user_id) : undefined;
+            const completedByName = log.completed_by ? memberMap.get(log.completed_by) : undefined;
+            const isArchived = log.status === "archived";
+            const isCompleted = log.status === "completed";
+            return (
+              <li
+                key={log.id}
+                className={cn(
+                  "group flex items-start gap-2 rounded-md border px-3 py-2 transition-colors",
+                  !isRead && !isCompleted && !isArchived
+                    ? "border-primary/30 bg-primary/5"
+                    : "border-border bg-background"
+                )}
+              >
+                {!isRead && !isCompleted && !isArchived && (
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p
+                      className={cn(
+                        "text-sm font-medium truncate",
+                        isCompleted || isArchived ? "text-muted-foreground line-through" : "text-foreground"
+                      )}
+                    >
+                      {log.title}
+                    </p>
+                    <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
+                      {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <StatusBadge status={log.status} />
+                    <AudienceBadge log={log} recipientName={recipientName} />
+                    {isCompleted && completedByName && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                        by {completedByName}
+                        {log.completed_at && ` · ${formatDistanceToNow(new Date(log.completed_at), { addSuffix: true })}`}
+                      </span>
+                    )}
+                  </div>
+                  {log.body && (
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2 whitespace-pre-wrap">{log.body}</p>
+                  )}
+                  {log.status_note && (
+                    <p className="text-[11px] text-foreground/80 mt-1 italic line-clamp-2 whitespace-pre-wrap">
+                      “{log.status_note}”
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {!isArchived && (
+                    <button
+                      onClick={() => {
+                        if (!isRead) markRead.mutate(log.id);
+                        setFinalizing(log);
+                      }}
+                      aria-label="Finalize log"
+                      title="Finalize"
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => archive.mutate(log)}
+                    aria-label={isArchived ? "Unarchive log" : "Archive log"}
+                    title={isArchived ? "Unarchive" : "Archive"}
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    <Archive className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => remove.mutate(log.id)}
+                    aria-label="Delete log"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <FinalizeDialog
+        log={finalizing}
+        onClose={() => setFinalizing(null)}
+        onSave={(status, note) => finalizing && finalize.mutate({ log: finalizing, status, note })}
+        isSaving={finalize.isPending}
+      />
+    </div>
   );
 }
 
@@ -436,7 +726,8 @@ export function QuickActionBar() {
   const queryClient = useQueryClient();
   const { data: logs = [] } = useUserLogs();
   const { data: reads = new Set<string>() } = useMyReads();
-  const unreadCount = logs.filter((l) => !reads.has(l.id)).length;
+  const unreadCount = logs.filter((l) => !reads.has(l.id) && l.status !== "archived" && l.status !== "completed").length;
+
 
   const handleAction = async (key: string, fn: () => Promise<unknown>) => {
     setLoading(key);

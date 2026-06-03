@@ -4416,36 +4416,51 @@ export type Database = {
       }
       user_logs: {
         Row: {
+          archived_at: string | null
           audience_kind: string
           body: string | null
+          completed_at: string | null
+          completed_by: string | null
           created_at: string
           department: string | null
           id: string
           recipient_user_id: string | null
+          status: string
+          status_note: string | null
           title: string
           updated_at: string
           user_id: string
           workspace_id: string | null
         }
         Insert: {
+          archived_at?: string | null
           audience_kind?: string
           body?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           department?: string | null
           id?: string
           recipient_user_id?: string | null
+          status?: string
+          status_note?: string | null
           title: string
           updated_at?: string
           user_id: string
           workspace_id?: string | null
         }
         Update: {
+          archived_at?: string | null
           audience_kind?: string
           body?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           department?: string | null
           id?: string
           recipient_user_id?: string | null
+          status?: string
+          status_note?: string | null
           title?: string
           updated_at?: string
           user_id?: string
