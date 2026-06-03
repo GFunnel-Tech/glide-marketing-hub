@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Copy, Trash2, Code2, Activity, Tag, Box, FlaskConical } from "lucide-react";
+import { useAdAccount } from "@/contexts/AdAccountContext";
 
 type Props = { clientId?: number | null; title?: string };
 
@@ -41,9 +42,11 @@ const TRIGGER_TYPES = [
 
 export function TrackingPanel({ clientId = null, title = "Tracking" }: Props) {
   const { currentWorkspace } = useWorkspace();
+  const { accounts } = useAdAccount();
   const qc = useQueryClient();
   const workspaceId = currentWorkspace?.id;
   const [activeContainerId, setActiveContainerId] = useState<string | null>(null);
+  const [accountFilter, setAccountFilter] = useState<string>("all"); // "all" | "none" | act_id
 
   const { data: containers = [] } = useQuery({
     queryKey: ["tracking_containers", workspaceId, clientId],
@@ -57,16 +60,27 @@ export function TrackingPanel({ clientId = null, title = "Tracking" }: Props) {
     },
   });
 
+  const filteredContainers = useMemo(() => {
+    if (accountFilter === "all") return containers;
+    if (accountFilter === "none") return containers.filter((c: any) => !c.ad_account_id);
+    return containers.filter((c: any) => c.ad_account_id === accountFilter);
+  }, [containers, accountFilter]);
+
   const container = useMemo(
-    () => containers.find((c) => c.id === activeContainerId) || containers[0] || null,
-    [containers, activeContainerId],
+    () => filteredContainers.find((c) => c.id === activeContainerId) || filteredContainers[0] || null,
+    [filteredContainers, activeContainerId],
   );
 
   const createContainer = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (input: { name: string; ad_account_id: string | null }) => {
       const { data, error } = await supabase
         .from("tracking_containers")
-        .insert({ name, workspace_id: workspaceId!, client_id: clientId })
+        .insert({
+          name: input.name,
+          workspace_id: workspaceId!,
+          client_id: clientId,
+          ad_account_id: input.ad_account_id,
+        })
         .select()
         .single();
       if (error) throw error;
@@ -77,6 +91,18 @@ export function TrackingPanel({ clientId = null, title = "Tracking" }: Props) {
       qc.invalidateQueries({ queryKey: ["tracking_containers"] });
       setActiveContainerId(c.id);
     },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateContainer = useMutation({
+    mutationFn: async (input: { id: string; ad_account_id: string | null }) => {
+      const { error } = await supabase
+        .from("tracking_containers")
+        .update({ ad_account_id: input.ad_account_id })
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Updated"); qc.invalidateQueries({ queryKey: ["tracking_containers"] }); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -91,7 +117,7 @@ export function TrackingPanel({ clientId = null, title = "Tracking" }: Props) {
         <div className="flex flex-col items-center gap-3 py-6">
           <div className="rounded-full bg-primary/10 p-3"><Box className="h-6 w-6 text-primary" /></div>
           <p className="text-sm text-muted-foreground">No tracking container yet</p>
-          <NewContainerDialog onCreate={(n) => createContainer.mutate(n)} />
+          <NewContainerDialog accounts={accounts} onCreate={(n, a) => createContainer.mutate({ name: n, ad_account_id: a })} />
         </div>
       </div>
     );
@@ -100,30 +126,77 @@ export function TrackingPanel({ clientId = null, title = "Tracking" }: Props) {
   return (
     <div className="rounded-xl border border-border bg-card p-6 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <h3 className="text-lg font-semibold">{title}</h3>
-          {containers.length > 1 && (
+          {filteredContainers.length > 1 && (
             <Select value={container?.id} onValueChange={setActiveContainerId}>
               <SelectTrigger className="h-8 w-56"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {containers.map((c) => (
+                {filteredContainers.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
+          <Select value={accountFilter} onValueChange={setAccountFilter}>
+            <SelectTrigger className="h-8 w-56"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All ad accounts</SelectItem>
+              <SelectItem value="none">N/A (no account)</SelectItem>
+              {accounts.map((a) => (
+                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <NewContainerDialog onCreate={(n) => createContainer.mutate(n)} />
+        <NewContainerDialog accounts={accounts} onCreate={(n, a) => createContainer.mutate({ name: n, ad_account_id: a })} />
       </div>
 
-      {container && <ContainerView container={container} />}
+      {container ? (
+        <>
+          <ContainerAccountRow
+            container={container}
+            accounts={accounts}
+            onChange={(a) => updateContainer.mutate({ id: container.id, ad_account_id: a })}
+          />
+          <ContainerView container={container} />
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground text-center py-6">No containers match this ad account.</p>
+      )}
     </div>
   );
 }
 
-function NewContainerDialog({ onCreate }: { onCreate: (n: string) => void }) {
+function ContainerAccountRow({
+  container, accounts, onChange,
+}: { container: any; accounts: { id: string; name: string }[]; onChange: (a: string | null) => void }) {
+  const value = container.ad_account_id ?? "none";
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-muted-foreground">Ad Account:</span>
+      <Select
+        value={value}
+        onValueChange={(v) => onChange(v === "none" ? null : v)}
+      >
+        <SelectTrigger className="h-8 w-64"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">N/A (no account)</SelectItem>
+          {accounts.map((a) => (
+            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function NewContainerDialog({
+  accounts, onCreate,
+}: { accounts: { id: string; name: string }[]; onCreate: (n: string, adAccountId: string | null) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [account, setAccount] = useState<string>("none");
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -131,12 +204,31 @@ function NewContainerDialog({ onCreate }: { onCreate: (n: string) => void }) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>New tracking container</DialogTitle></DialogHeader>
-        <div className="space-y-2">
-          <Label>Name</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Main site" />
+        <div className="space-y-3">
+          <div>
+            <Label>Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Main site" />
+          </div>
+          <div>
+            <Label>Ad Account</Label>
+            <Select value={account} onValueChange={setAccount}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">N/A (no account)</SelectItem>
+                {accounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => { onCreate(name || "Untitled"); setOpen(false); setName(""); }}>Create</Button>
+          <Button
+            onClick={() => {
+              onCreate(name || "Untitled", account === "none" ? null : account);
+              setOpen(false); setName(""); setAccount("none");
+            }}
+          >Create</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
