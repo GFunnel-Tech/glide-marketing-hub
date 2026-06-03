@@ -80,6 +80,7 @@ const Index = () => {
         </div>
       </div>
 
+      <DailyFocus />
       <ClientTable />
       <LeadsByClient />
     </div>
