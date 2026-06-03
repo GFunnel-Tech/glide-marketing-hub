@@ -4136,6 +4136,7 @@ export type Database = {
       }
       tracking_containers: {
         Row: {
+          ad_account_id: string | null
           client_id: number | null
           created_at: string
           created_by: string | null
@@ -4148,6 +4149,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          ad_account_id?: string | null
           client_id?: number | null
           created_at?: string
           created_by?: string | null
@@ -4160,6 +4162,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          ad_account_id?: string | null
           client_id?: number | null
           created_at?: string
           created_by?: string | null
@@ -4172,6 +4175,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tracking_containers_ad_account_id_fkey"
+            columns: ["ad_account_id"]
+            isOneToOne: false
+            referencedRelation: "meta_ad_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tracking_containers_client_id_fkey"
             columns: ["client_id"]
