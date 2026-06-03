@@ -159,6 +159,31 @@ export function ClientHierarchyTable() {
     }
   };
 
+  const collapseAll = () => {
+    setOpenClients({});
+    setOpenCampaigns({});
+    setOpenAdSets({});
+  };
+
+  const expandAll = () => {
+    const nextClients: Record<string, boolean> = {};
+    const nextCamps: Record<string, boolean> = {};
+    const nextAdsets: Record<string, boolean> = {};
+    for (const client of visibleClients) {
+      nextClients[String(client.id)] = true;
+    }
+    for (const camp of campaigns) {
+      nextCamps[camp.id] = true;
+      const campAds = adsByCampaign.get(camp.id) ?? [];
+      for (const ad of campAds) {
+        const k = ad.adset_id ?? "_unassigned";
+        nextAdsets[k] = true;
+      }
+    }
+    setOpenClients(nextClients);
+    setOpenCampaigns(nextCamps);
+    setOpenAdSets(nextAdsets);
+
   const handleToggleCampaign = async (camp: any, next: boolean) => {
     if (next === (camp.status === "active")) return;
     setPending((p) => ({ ...p, [camp.id]: true }));
