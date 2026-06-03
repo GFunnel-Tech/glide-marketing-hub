@@ -61,7 +61,7 @@ export function TrackingPanel({ clientId = null, title = "Tracking" }: Props) {
   });
 
   const filteredContainers = useMemo(() => {
-    if (accountFilter === "all") return containers;
+    if (accountFilter === "__any") return containers;
     if (accountFilter === "none") return containers.filter((c: any) => !c.ad_account_id);
     return containers.filter((c: any) => c.ad_account_id === accountFilter);
   }, [containers, accountFilter]);
