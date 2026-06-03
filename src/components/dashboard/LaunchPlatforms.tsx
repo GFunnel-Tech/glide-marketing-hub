@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Facebook, Search, Music2, Linkedin, Music, Globe, Ghost, Mail, Sparkles, Lock } from "lucide-react";
+import { Facebook, Search, Music2, Linkedin, Music, Globe, Ghost, Mail, Sparkles, Lock, Rocket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 
@@ -9,9 +9,11 @@ type Platform = {
   icon: any;
   tint: string;
   status: "active" | "coming-soon";
+  featured?: boolean;
 };
 
 const PLATFORMS: Platform[] = [
+  { key: "all",        label: "All Platforms", icon: Rocket,    tint: "bg-primary/15 text-primary",              status: "active", featured: true },
   { key: "meta",       label: "Meta",        icon: Facebook,  tint: "bg-blue-500/10 text-blue-600",            status: "active" },
   { key: "google",     label: "Google",      icon: Search,    tint: "bg-amber-500/10 text-amber-600",          status: "coming-soon" },
   { key: "tiktok",     label: "TikTok",      icon: Music2,    tint: "bg-foreground/10 text-foreground",        status: "coming-soon" },
@@ -40,12 +42,14 @@ export function LaunchPlatforms() {
         </div>
       </div>
 
-      <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 lg:grid-cols-9">
         {PLATFORMS.map((p) => {
           const isActive = p.status === "active";
-          const cta = isActive
-            ? (hasConnection ? "Create Ad" : "Connect")
-            : "Coming soon";
+          const cta = p.key === "all"
+            ? "Launch all"
+            : isActive
+              ? (hasConnection ? "Create Ad" : "Connect")
+              : "Coming soon";
           return (
             <button
               key={p.key}
@@ -53,20 +57,28 @@ export function LaunchPlatforms() {
               disabled={!isActive}
               onClick={() => {
                 if (!isActive) return;
+                if (p.key === "all") { navigate("/ads/new?platforms=all"); return; }
                 if (!hasConnection) navigate("/settings?tab=integrations");
                 else navigate("/ads/new");
               }}
               className={cn(
                 "group relative flex flex-col items-center justify-between rounded-lg border p-3 transition-all",
-                isActive
-                  ? "border-border bg-background hover:border-primary/50 hover:bg-accent/40 active:scale-[0.99] cursor-pointer"
-                  : "border-dashed border-border bg-muted/30 cursor-not-allowed opacity-70"
+                p.featured && isActive
+                  ? "border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary cursor-pointer ring-1 ring-primary/20"
+                  : isActive
+                    ? "border-border bg-background hover:border-primary/50 hover:bg-accent/40 active:scale-[0.99] cursor-pointer"
+                    : "border-dashed border-border bg-muted/30 cursor-not-allowed opacity-70"
               )}
             >
               {!isActive && (
                 <span className="absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 rounded-full bg-background/80 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground border border-border">
                   <Lock className="h-2.5 w-2.5" />
                   Soon
+                </span>
+              )}
+              {p.featured && (
+                <span className="absolute top-1.5 right-1.5 inline-flex items-center rounded-full bg-primary/15 text-primary px-1.5 py-0.5 text-[9px] font-semibold">
+                  NEW
                 </span>
               )}
               <div className={cn("flex h-10 w-10 items-center justify-center rounded-full mb-2", p.tint)}>
