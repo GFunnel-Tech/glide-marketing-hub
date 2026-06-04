@@ -27,6 +27,7 @@ import {
   ExternalLink, Building2, Layers, Image as ImageIcon, FolderKanban,
   Sparkles, DollarSign, Settings2, Pause as PauseIcon, AlertTriangle,
   Play, Trash2, X, ChevronsDownUp, ChevronsUpDown, Archive, ArchiveRestore,
+  Trophy, TrendingDown, Hourglass,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -47,6 +48,59 @@ function cplColor(v: number) {
 function deriveImpressionsFromCpm(spend: number, cpm: number) {
   if (!cpm || cpm <= 0) return 0;
   return (spend / cpm) * 1000;
+}
+
+// ---------- Ad performance rating within an ad set ----------
+type AdRating = "best" | "ok" | "worst" | "learning";
+function rateAdsInAdset(ads: MetaAd[]): Map<string, AdRating> {
+  const out = new Map<string, AdRating>();
+  // Mark "learning" when not enough signal
+  const mature = ads.filter((a) => (a.spend ?? 0) >= 50 && (a.leads ?? 0) >= 3 && (a.cpl ?? 0) > 0);
+  for (const a of ads) {
+    const isMature = (a.spend ?? 0) >= 50 && (a.leads ?? 0) >= 3 && (a.cpl ?? 0) > 0;
+    if (!isMature) { out.set(a.id, "learning"); continue; }
+    out.set(a.id, "ok");
+  }
+  if (mature.length < 2) return out;
+  const sorted = [...mature].sort((x, y) => (x.cpl ?? 0) - (y.cpl ?? 0));
+  const min = sorted[0].cpl;
+  const max = sorted[sorted.length - 1].cpl;
+  // Best: within 10% of the lowest CPL
+  for (const a of mature) {
+    if (a.cpl <= min * 1.1) out.set(a.id, "best");
+  }
+  // Worst: >= 1.5x the lowest AND is the max (or within 5% of it)
+  if (max >= min * 1.5) {
+    for (const a of mature) {
+      if (a.cpl >= max * 0.95 && a.cpl > min * 1.5) out.set(a.id, "worst");
+    }
+  }
+  return out;
+}
+
+function AdRatingBadge({ rating }: { rating: AdRating }) {
+  if (rating === "best") {
+    return (
+      <span title="Best CPL in this ad set" className="inline-flex h-5 items-center gap-1 rounded-full bg-success/10 px-1.5 text-[10px] font-semibold text-success">
+        <Trophy className="h-3 w-3" /> Best
+      </span>
+    );
+  }
+  if (rating === "worst") {
+    return (
+      <span title="Worst CPL in this ad set — consider pausing" className="inline-flex h-5 items-center gap-1 rounded-full bg-destructive/10 px-1.5 text-[10px] font-semibold text-destructive">
+        <TrendingDown className="h-3 w-3" /> Worse
+      </span>
+    );
+  }
+  if (rating === "learning") {
+    return (
+      <span title="Not enough data yet (needs ≥ $50 spend & 3 leads)" className="inline-flex h-5 items-center gap-1 rounded-full bg-warning/10 px-1.5 text-[10px] font-semibold text-warning">
+        <Hourglass className="h-3 w-3" /> Learning
+      </span>
+    );
+  }
+  return null;
 }
 
 type StatusFilter = "All" | "Active" | "Paused" | "Issues";
@@ -721,32 +775,36 @@ export function ClientHierarchyTable() {
                                 </tr>
 
                                 {/* Ads */}
-                                {asOpen && ads.map((ad) => {
-                                  const adCtr = ad.impressions > 0 ? (ad.clicks / ad.impressions) * 100 : 0;
-                                  return (
-                                    <tr key={`ad-${ad.id}`} className="border-b border-border/50 hover:bg-accent/20">
-                                      <td className={cn("px-2 py-2", showCompanyCol ? "pl-20" : "pl-14")}></td>
-                                      <td className="px-2 py-2">
-                                        <Checkbox
-                                          checked={isSelected("ad", ad.id)}
-                                          onCheckedChange={() => toggleSel("ad", ad.id, String(camp.clientId))}
-                                          aria-label="Select ad"
-                                        />
-                                      </td>
-                                      <td className="px-2 py-2"></td>
-                                      {showCompanyCol && <td className="px-2 py-2"></td>}
-                                      <td className="px-2 py-2">
-                                        <div className="flex items-center gap-2">
-                                          {ad.thumbnail_url ? (
-                                            <img src={ad.thumbnail_url} alt="" className="h-6 w-6 rounded object-cover" />
-                                          ) : (
-                                            <div className="flex h-6 w-6 items-center justify-center rounded bg-accent text-muted-foreground">
-                                              <ImageIcon className="h-3 w-3" />
-                                            </div>
-                                          )}
-                                          <p className="text-xs text-foreground truncate max-w-[320px]">{ad.name ?? "Untitled"}</p>
-                                        </div>
-                                      </td>
+                                {asOpen && (() => {
+                                  const ratings = rateAdsInAdset(ads);
+                                  return ads.map((ad) => {
+                                    const adCtr = ad.impressions > 0 ? (ad.clicks / ad.impressions) * 100 : 0;
+                                    const rating = ratings.get(ad.id) ?? "ok";
+                                    return (
+                                      <tr key={`ad-${ad.id}`} className="border-b border-border/50 hover:bg-accent/20">
+                                        <td className={cn("px-2 py-2", showCompanyCol ? "pl-20" : "pl-14")}></td>
+                                        <td className="px-2 py-2">
+                                          <Checkbox
+                                            checked={isSelected("ad", ad.id)}
+                                            onCheckedChange={() => toggleSel("ad", ad.id, String(camp.clientId))}
+                                            aria-label="Select ad"
+                                          />
+                                        </td>
+                                        <td className="px-2 py-2"></td>
+                                        {showCompanyCol && <td className="px-2 py-2"></td>}
+                                        <td className="px-2 py-2">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            {ad.thumbnail_url ? (
+                                              <img src={ad.thumbnail_url} alt="" className="h-6 w-6 rounded object-cover flex-shrink-0" />
+                                            ) : (
+                                              <div className="flex h-6 w-6 items-center justify-center rounded bg-accent text-muted-foreground flex-shrink-0">
+                                                <ImageIcon className="h-3 w-3" />
+                                              </div>
+                                            )}
+                                            <p className="text-xs text-foreground truncate max-w-[280px]">{ad.name ?? "Untitled"}</p>
+                                            <AdRatingBadge rating={rating} />
+                                          </div>
+                                        </td>
                                       <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(ad.impressions)}</td>
                                       <td className="px-2 py-2 text-right tabular-nums text-foreground">{ad.clicks || "—"}</td>
                                       <td className="px-2 py-2 text-right tabular-nums text-foreground">{adCtr > 0 ? `${adCtr.toFixed(2)}%` : "—"}</td>
@@ -759,8 +817,9 @@ export function ClientHierarchyTable() {
                                       <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                                       <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                                     </tr>
-                                  );
-                                })}
+                                    );
+                                  });
+                                })()}
                               </>
                             );
                           })}
