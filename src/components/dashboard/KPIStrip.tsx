@@ -57,7 +57,7 @@ export function KPIStrip() {
     { spend: 0, reportedLeads: 0, trueLeads: 0 }
   );
 
-  const totalLeads = totals.trueLeads > 0 ? totals.trueLeads : totals.reportedLeads;
+  const totalLeads = Math.max(totals.reportedLeads, totals.trueLeads);
   const blendedCpl = totalLeads > 0 ? totals.spend / totalLeads : 0;
   const sub = isFetching ? "updating…" : label;
 
