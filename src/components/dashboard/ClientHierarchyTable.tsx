@@ -115,7 +115,10 @@ export function ClientHierarchyTable() {
     if (statusFilter === "Paused") list = list.filter((c) => c.status === "paused");
     if (statusFilter === "Issues") list = list.filter((c) => c.doubleCount || c.issuesStatus);
     if (!showArchived) list = list.filter((c) => !archivedSet.has(`campaign:${c.id}`));
-    if (hideZero) list = list.filter((c) => (c.spend || 0) > 0 || (c.leads || 0) > 0 || (c.cpm || 0) > 0 || (c.impressions || 0) > 0);
+    if (hideZero) list = list.filter((c) => {
+      const impr = (c.impressions || 0) > 0 ? (c.impressions || 0) : deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0);
+      return (c.spend || 0) > 0 && impr > 0;
+    });
     if (search) {
       const s = search.toLowerCase();
       list = list.filter((c) =>
