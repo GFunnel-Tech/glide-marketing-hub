@@ -706,6 +706,9 @@ export function ClientHierarchyTable() {
                                   <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cpl))}>
                                     {cpl > 0 ? `$${cpl.toFixed(2)}` : "—"}
                                   </td>
+                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                                 </tr>
 
                                 {/* Ads */}
