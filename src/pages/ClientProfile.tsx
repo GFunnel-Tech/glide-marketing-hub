@@ -650,6 +650,57 @@ export default function ClientProfile() {
                             View in Meta <ExternalLink className="h-3 w-3" />
                           </button>
                         </div>
+
+                        {/* Ad sets + ads breakdown (range-aware) */}
+                        {(c as any).adSetsDetail && (c as any).adSetsDetail.length > 0 ? (
+                          <div className="space-y-2 pt-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Ad sets ({(c as any).adSetsDetail.length})
+                            </p>
+                            {(c as any).adSetsDetail.map((as: any) => (
+                              <div key={as.id} className="rounded border border-border bg-card">
+                                <button
+                                  onClick={() => setExpandedAdset(expandedAdset === as.id ? null : as.id)}
+                                  className="w-full flex items-center justify-between p-2.5 text-left hover:bg-accent/40"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-medium text-foreground truncate">{as.name}</p>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                                      ${as.spend.toFixed(0)} · {as.leads} leads ·{" "}
+                                      <span className={cplTone(as.cpl)}>${as.cpl.toFixed(2)} CPL</span> · {as.ads.length} ads
+                                    </p>
+                                  </div>
+                                  {expandedAdset === as.id ? (
+                                    <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                  )}
+                                </button>
+                                {expandedAdset === as.id && (
+                                  <div className="border-t border-border p-2 space-y-1.5 bg-muted/20">
+                                    {as.ads.length === 0 ? (
+                                      <p className="text-[11px] text-muted-foreground">No ads in range.</p>
+                                    ) : (
+                                      as.ads.map((ad: any) => (
+                                        <div key={ad.id} className="flex items-center justify-between gap-3 rounded px-2 py-1.5 hover:bg-accent/40">
+                                          <p className="text-[11px] font-medium text-foreground truncate min-w-0">{ad.name}</p>
+                                          <p className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
+                                            ${ad.spend.toFixed(0)} · {ad.leads}L ·{" "}
+                                            <span className={cplTone(ad.cpl)}>${ad.cpl.toFixed(2)}</span> · {ad.ctr.toFixed(2)}% CTR
+                                          </p>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground pt-2">
+                            No ad set / ad breakdown for the selected range.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
