@@ -150,7 +150,7 @@ export default function ClientProfile() {
   const clientCampaigns = [
     ...baseCampaigns.map((b) => {
       const r = rangeMap.get(b.id);
-      if (!r) return { ...b, adSetsDetail: [] as RangeCampaignRow["adSets"] };
+      if (!r) return { ...b, impressions: 0, clicks: 0, ctr: 0, adSetsDetail: [] as RangeCampaignRow["adSets"] };
       return {
         ...b,
         spend: r.spend,
@@ -159,6 +159,9 @@ export default function ClientProfile() {
         cpl: r.cpl,
         trueCpl: r.cpl,
         cpm: r.cpm,
+        impressions: r.impressions,
+        clicks: r.clicks,
+        ctr: r.impressions > 0 ? (r.clicks / r.impressions) * 100 : 0,
         frequency: r.frequency || b.frequency,
         adSets: r.adSets.length || b.adSets,
         ads: r.adSets.reduce((n, s) => n + s.ads.length, 0) || b.ads,
@@ -179,6 +182,9 @@ export default function ClientProfile() {
         cpl: r.cpl,
         trueCpl: r.cpl,
         cpm: r.cpm,
+        impressions: r.impressions,
+        clicks: r.clicks,
+        ctr: r.impressions > 0 ? (r.clicks / r.impressions) * 100 : 0,
         frequency: r.frequency,
         adSets: r.adSets.length,
         ads: r.adSets.reduce((n, s) => n + s.ads.length, 0),
