@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { useClient, useCampaigns, useActivityLog, useLeads } from "@/hooks/useDatabase";
+import { useClient, useCampaigns, useActivityLog, useLeads, useClientsWithMetaAccount } from "@/hooks/useDatabase";
 import { useClientCampaignsRange, type RangeCampaignRow } from "@/hooks/useClientCampaignsRange";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { cn } from "@/lib/utils";
@@ -128,6 +128,7 @@ export default function ClientProfile() {
   const { data: rangeCampaignsData = [] } = useClientCampaignsRange(Number(id));
   const { data: allActivity = [] } = useActivityLog();
   const { data: allLeads = [] } = useLeads();
+  const { data: metaMappedSet } = useClientsWithMetaAccount();
   const [loading, setLoading] = useState<string | null>(null);
   const [showPause, setShowPause] = useState(false);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
@@ -201,13 +202,38 @@ export default function ClientProfile() {
       ? clientActivity
       : clientActivity.filter((a) => a.type === actFilter.toLowerCase());
 
+  // Live aggregates from range data (Meta insights). Fall back to client snapshot.
+  const agg = clientCampaigns.reduce(
+    (a, c: any) => {
+      a.spend += Number(c.spend) || 0;
+      a.leads += Number(c.trueLeads ?? c.leads) || 0;
+      a.impressions += Number(c.impressions) || 0;
+      a.clicks += Number(c.clicks) || 0;
+      a.freqSum += (Number(c.frequency) || 0) * (Number(c.spend) || 0);
+      a.cpmSum += (Number(c.cpm) || 0) * (Number(c.spend) || 0);
+      return a;
+    },
+    { spend: 0, leads: 0, impressions: 0, clicks: 0, freqSum: 0, cpmSum: 0 },
+  );
+  const hasLiveData = agg.spend > 0 || agg.leads > 0 || agg.impressions > 0;
+  const liveSpend = hasLiveData ? agg.spend : client.spend;
+  const liveLeads = hasLiveData ? agg.leads : client.leads;
+  const liveCpl = liveLeads > 0 ? liveSpend / liveLeads : client.cpl;
+  const liveCpm = hasLiveData && agg.spend > 0 ? agg.cpmSum / agg.spend : client.cpm;
+  const liveFreq = hasLiveData && agg.spend > 0 ? agg.freqSum / agg.spend : client.frequency;
+  const liveCvr = client.formCvr; // form CVR still snapshot-sourced
+
+  const isMetaMapped = !!(metaMappedSet?.has(client.id) || client.bmId);
+  const isGhlMapped = !!client.ghlLocationId;
+  const isSyncing = (isMetaMapped || isGhlMapped) && !hasLiveData;
+
   const kpis: { label: string; value: string; benchmark?: string; status: KpiStatus; tone?: string }[] = [
     {
       label: "CPL",
-      value: `$${client.cpl.toFixed(2)}`,
+      value: `$${liveCpl.toFixed(2)}`,
       benchmark: "< $30",
-      status: client.cpl < 30 ? "Good" : client.cpl <= 60 ? "Watch" : "Fix",
-      tone: cplTone(client.cpl),
+      status: liveCpl < 30 ? "Good" : liveCpl <= 60 ? "Watch" : "Fix",
+      tone: cplTone(liveCpl),
     },
     ...(client.doubleCount
       ? [
@@ -222,32 +248,32 @@ export default function ClientProfile() {
       : []),
     {
       label: "Leads MTD",
-      value: String(client.leads),
+      value: String(liveLeads),
       benchmark: "50+",
-      status: client.leads >= 50 ? "Good" : client.leads >= 20 ? "Watch" : "Fix",
+      status: liveLeads >= 50 ? "Good" : liveLeads >= 20 ? "Watch" : "Fix",
     },
     {
       label: "Spend",
-      value: `$${client.spend.toLocaleString()}`,
+      value: `$${Math.round(liveSpend).toLocaleString()}`,
       status: "Good",
     },
     {
       label: "CPM",
-      value: `$${client.cpm.toFixed(2)}`,
+      value: `$${liveCpm.toFixed(2)}`,
       benchmark: "< $120",
-      status: client.cpm < 120 ? "Good" : "Watch",
+      status: liveCpm < 120 ? "Good" : "Watch",
     },
     {
       label: "Form CVR",
-      value: `${client.formCvr.toFixed(2)}%`,
+      value: `${liveCvr.toFixed(2)}%`,
       benchmark: "> 15%",
-      status: client.formCvr > 15 ? "Good" : client.formCvr >= 10 ? "Watch" : "Fix",
+      status: liveCvr > 15 ? "Good" : liveCvr >= 10 ? "Watch" : "Fix",
     },
     {
       label: "Frequency",
-      value: String(client.frequency),
+      value: liveFreq.toFixed(2),
       benchmark: "< 3.0",
-      status: client.frequency < 3 ? "Good" : client.frequency <= 4 ? "Watch" : "Fix",
+      status: liveFreq < 3 ? "Good" : liveFreq <= 4 ? "Watch" : "Fix",
     },
   ];
 
@@ -310,6 +336,14 @@ export default function ClientProfile() {
                   </h1>
                 )}
                 <StatusBadge status={client.status} />
+                {isSyncing && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-warning/10 border border-warning/30 text-warning px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                    title={`Mapped to ${[isMetaMapped && "Meta", isGhlMapped && "GHL"].filter(Boolean).join(" + ")} but no data in this date range yet.`}
+                  >
+                    <Loader2 className="h-3 w-3 animate-spin" /> Syncing
+                  </span>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {client.bmAccountName || client.brand}
@@ -317,7 +351,7 @@ export default function ClientProfile() {
                 {client.plaiConnected ? " · Plai connected" : ""}
               </p>
               <p className="text-[11px] text-muted-foreground mt-1">
-                ${client.spend.toLocaleString()} spend · Last synced just now
+                ${Math.round(liveSpend).toLocaleString()} spend · Last synced just now
               </p>
             </div>
           </div>
