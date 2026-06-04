@@ -789,6 +789,7 @@ export type Database = {
       }
       client_notes: {
         Row: {
+          assigned_to: string | null
           client_id: number | null
           content: string
           created_at: string
@@ -801,6 +802,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          assigned_to?: string | null
           client_id?: number | null
           content: string
           created_at?: string
@@ -813,6 +815,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          assigned_to?: string | null
           client_id?: number | null
           content?: string
           created_at?: string
