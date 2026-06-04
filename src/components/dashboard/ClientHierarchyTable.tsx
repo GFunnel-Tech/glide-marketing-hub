@@ -33,6 +33,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { StatusBadge } from "./StatusBadge";
+import { NoteBubble } from "@/components/notes/NoteBubble";
 
 // ---------- helpers ----------
 function fmtMoney(n: number) { return `$${(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`; }
