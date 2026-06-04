@@ -150,7 +150,7 @@ export default function ClientProfile() {
   const clientCampaigns = [
     ...baseCampaigns.map((b) => {
       const r = rangeMap.get(b.id);
-      if (!r) return { ...b, adSetsDetail: [] as RangeCampaignRow["adSets"] };
+      if (!r) return { ...b, impressions: 0, clicks: 0, ctr: 0, adSetsDetail: [] as RangeCampaignRow["adSets"] };
       return {
         ...b,
         spend: r.spend,
@@ -159,6 +159,9 @@ export default function ClientProfile() {
         cpl: r.cpl,
         trueCpl: r.cpl,
         cpm: r.cpm,
+        impressions: r.impressions,
+        clicks: r.clicks,
+        ctr: r.impressions > 0 ? (r.clicks / r.impressions) * 100 : 0,
         frequency: r.frequency || b.frequency,
         adSets: r.adSets.length || b.adSets,
         ads: r.adSets.reduce((n, s) => n + s.ads.length, 0) || b.ads,
@@ -179,6 +182,9 @@ export default function ClientProfile() {
         cpl: r.cpl,
         trueCpl: r.cpl,
         cpm: r.cpm,
+        impressions: r.impressions,
+        clicks: r.clicks,
+        ctr: r.impressions > 0 ? (r.clicks / r.impressions) * 100 : 0,
         frequency: r.frequency,
         adSets: r.adSets.length,
         ads: r.adSets.reduce((n, s) => n + s.ads.length, 0),
@@ -430,7 +436,7 @@ export default function ClientProfile() {
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            ${c.spend} spend · {c.trueLeads} leads ·{" "}
+                            ${c.spend} spend · {(c as any).clicks ?? 0} clicks · {((c as any).ctr ?? 0).toFixed(2)}% CTR · {c.trueLeads} leads ·{" "}
                             <span className={cplTone(c.trueCpl)}>
                               ${c.trueCpl.toFixed(2)} CPL
                             </span>
@@ -594,7 +600,7 @@ export default function ClientProfile() {
                           {c.name}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          ${c.spend} spend · {c.trueLeads} leads ·{" "}
+                          ${c.spend} spend · {(c as any).clicks ?? 0} clicks · {((c as any).ctr ?? 0).toFixed(2)}% CTR · {c.trueLeads} leads ·{" "}
                           <span className={cplTone(c.trueCpl)}>
                             ${c.trueCpl.toFixed(2)} CPL
                           </span>{" "}
@@ -616,22 +622,30 @@ export default function ClientProfile() {
                     </button>
                     {expandedCampaign === c.id && (
                       <div className="border-t border-border p-3 space-y-3 bg-muted/30">
-                        <div className="grid grid-cols-4 gap-3 text-xs">
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Clicks</span>
+                            <p className="font-semibold tabular-nums">{((c as any).clicks ?? 0).toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">CTR</span>
+                            <p className="font-semibold tabular-nums">{((c as any).ctr ?? 0).toFixed(2)}%</p>
+                          </div>
                           <div>
                             <span className="text-muted-foreground">CPM</span>
-                            <p className="font-semibold">${c.cpm.toFixed(2)}</p>
+                            <p className="font-semibold tabular-nums">${c.cpm.toFixed(2)}</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Frequency</span>
-                            <p className="font-semibold">{c.frequency}</p>
+                            <p className="font-semibold tabular-nums">{c.frequency}</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Ad Sets</span>
-                            <p className="font-semibold">{c.adSets}</p>
+                            <p className="font-semibold tabular-nums">{c.adSets}</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Ads</span>
-                            <p className="font-semibold">{c.ads}</p>
+                            <p className="font-semibold tabular-nums">{c.ads}</p>
                           </div>
                         </div>
                         {c.doubleCount && (
@@ -666,7 +680,7 @@ export default function ClientProfile() {
                                   <div className="min-w-0">
                                     <p className="text-xs font-medium text-foreground truncate">{as.name}</p>
                                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                                      ${as.spend.toFixed(0)} · {as.leads} leads ·{" "}
+                                      ${as.spend.toFixed(0)} · {as.clicks ?? 0} clicks · {as.impressions > 0 ? ((as.clicks / as.impressions) * 100).toFixed(2) : "0.00"}% CTR · {as.leads} leads ·{" "}
                                       <span className={cplTone(as.cpl)}>${as.cpl.toFixed(2)} CPL</span> · {as.ads.length} ads
                                     </p>
                                   </div>
@@ -685,8 +699,8 @@ export default function ClientProfile() {
                                         <div key={ad.id} className="flex items-center justify-between gap-3 rounded px-2 py-1.5 hover:bg-accent/40">
                                           <p className="text-[11px] font-medium text-foreground truncate min-w-0">{ad.name}</p>
                                           <p className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
-                                            ${ad.spend.toFixed(0)} · {ad.leads}L ·{" "}
-                                            <span className={cplTone(ad.cpl)}>${ad.cpl.toFixed(2)}</span> · {ad.ctr.toFixed(2)}% CTR
+                                            ${ad.spend.toFixed(0)} · {ad.clicks ?? 0} clicks · {ad.ctr.toFixed(2)}% CTR · {ad.leads}L ·{" "}
+                                            <span className={cplTone(ad.cpl)}>${ad.cpl.toFixed(2)}</span>
                                           </p>
                                         </div>
                                       ))
