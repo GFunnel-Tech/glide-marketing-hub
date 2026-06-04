@@ -23,14 +23,12 @@ function PortfolioHealthCard() {
     return c;
   }, [clients]);
 
-  const rows: { key: "NEW" | "BLOCKED" | "RELAUNCH" | "GREEN" | "YELLOW" | "RED" | "CANCELLED"; label: string }[] = [
+  const rows: { key: "NEW" | "RELAUNCH" | "GREEN" | "YELLOW" | "RED"; label: string }[] = [
     { key: "NEW", label: "New" },
-    { key: "BLOCKED", label: "Paused" },
     { key: "RELAUNCH", label: "Re-Launch" },
     { key: "GREEN", label: "Green" },
     { key: "YELLOW", label: "Yellow" },
     { key: "RED", label: "Red" },
-    { key: "CANCELLED", label: "Cancelled" },
   ];
 
   return (
