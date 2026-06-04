@@ -580,6 +580,9 @@ export function ClientHierarchyTable() {
                                 <span onClick={(e) => e.stopPropagation()}>
                                   <NoteBubble clientId={client.id} variant="icon" align="start" />
                                 </span>
+                                <span onClick={(e) => e.stopPropagation()}>
+                                  <GhlLocationLink clientId={client.id} currentLocationId={client.ghlLocationId} variant="chip" />
+                                </span>
                               </div>
                               {client.brand && client.name && (
                                 <p className="text-[10px] text-muted-foreground truncate">{client.name}</p>
