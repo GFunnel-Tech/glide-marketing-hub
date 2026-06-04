@@ -226,6 +226,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Keep client.name aligned with the linked GHL sub-account name
+    let renamed = 0;
+    {
+      const { data: linkedClients } = await supabase
+        .from("clients")
+        .select("id, name, ghl_location_id")
+        .eq("workspace_id", workspace_id)
+        .not("ghl_location_id", "is", null);
+      const locById = new Map<string, any>();
+      for (const l of locations) locById.set(l.id, l);
+      for (const c of linkedClients || []) {
+        const loc = locById.get(c.ghl_location_id);
+        const ghlName = loc?.name;
+        if (ghlName && ghlName !== c.name) {
+          await supabase.from("clients").update({ name: ghlName }).eq("id", c.id);
+          renamed++;
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ ok: true, locations: locations.length, linked, suggested }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
