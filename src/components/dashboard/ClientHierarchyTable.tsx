@@ -520,13 +520,15 @@ export function ClientHierarchyTable() {
                                   onClick={(e) => { e.stopPropagation(); navigate(`/client/${client.id}`); }}
                                   className="font-semibold text-foreground hover:text-primary truncate"
                                 >
-                                  {client.name}
+                                  {client.brand || client.name}
                                 </button>
                                 <span onClick={(e) => e.stopPropagation()}>
                                   <NoteBubble clientId={client.id} variant="icon" align="start" />
                                 </span>
                               </div>
-                              <p className="text-[10px] text-muted-foreground truncate">{client.brand}</p>
+                              {client.brand && client.name && (
+                                <p className="text-[10px] text-muted-foreground truncate">{client.name}</p>
+                              )}
                             </div>
                           </div>
                         </td>
