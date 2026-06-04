@@ -775,32 +775,36 @@ export function ClientHierarchyTable() {
                                 </tr>
 
                                 {/* Ads */}
-                                {asOpen && ads.map((ad) => {
-                                  const adCtr = ad.impressions > 0 ? (ad.clicks / ad.impressions) * 100 : 0;
-                                  return (
-                                    <tr key={`ad-${ad.id}`} className="border-b border-border/50 hover:bg-accent/20">
-                                      <td className={cn("px-2 py-2", showCompanyCol ? "pl-20" : "pl-14")}></td>
-                                      <td className="px-2 py-2">
-                                        <Checkbox
-                                          checked={isSelected("ad", ad.id)}
-                                          onCheckedChange={() => toggleSel("ad", ad.id, String(camp.clientId))}
-                                          aria-label="Select ad"
-                                        />
-                                      </td>
-                                      <td className="px-2 py-2"></td>
-                                      {showCompanyCol && <td className="px-2 py-2"></td>}
-                                      <td className="px-2 py-2">
-                                        <div className="flex items-center gap-2">
-                                          {ad.thumbnail_url ? (
-                                            <img src={ad.thumbnail_url} alt="" className="h-6 w-6 rounded object-cover" />
-                                          ) : (
-                                            <div className="flex h-6 w-6 items-center justify-center rounded bg-accent text-muted-foreground">
-                                              <ImageIcon className="h-3 w-3" />
-                                            </div>
-                                          )}
-                                          <p className="text-xs text-foreground truncate max-w-[320px]">{ad.name ?? "Untitled"}</p>
-                                        </div>
-                                      </td>
+                                {asOpen && (() => {
+                                  const ratings = rateAdsInAdset(ads);
+                                  return ads.map((ad) => {
+                                    const adCtr = ad.impressions > 0 ? (ad.clicks / ad.impressions) * 100 : 0;
+                                    const rating = ratings.get(ad.id) ?? "ok";
+                                    return (
+                                      <tr key={`ad-${ad.id}`} className="border-b border-border/50 hover:bg-accent/20">
+                                        <td className={cn("px-2 py-2", showCompanyCol ? "pl-20" : "pl-14")}></td>
+                                        <td className="px-2 py-2">
+                                          <Checkbox
+                                            checked={isSelected("ad", ad.id)}
+                                            onCheckedChange={() => toggleSel("ad", ad.id, String(camp.clientId))}
+                                            aria-label="Select ad"
+                                          />
+                                        </td>
+                                        <td className="px-2 py-2"></td>
+                                        {showCompanyCol && <td className="px-2 py-2"></td>}
+                                        <td className="px-2 py-2">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            {ad.thumbnail_url ? (
+                                              <img src={ad.thumbnail_url} alt="" className="h-6 w-6 rounded object-cover flex-shrink-0" />
+                                            ) : (
+                                              <div className="flex h-6 w-6 items-center justify-center rounded bg-accent text-muted-foreground flex-shrink-0">
+                                                <ImageIcon className="h-3 w-3" />
+                                              </div>
+                                            )}
+                                            <p className="text-xs text-foreground truncate max-w-[280px]">{ad.name ?? "Untitled"}</p>
+                                            <AdRatingBadge rating={rating} />
+                                          </div>
+                                        </td>
                                       <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(ad.impressions)}</td>
                                       <td className="px-2 py-2 text-right tabular-nums text-foreground">{ad.clicks || "—"}</td>
                                       <td className="px-2 py-2 text-right tabular-nums text-foreground">{adCtr > 0 ? `${adCtr.toFixed(2)}%` : "—"}</td>
