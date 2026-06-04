@@ -303,6 +303,47 @@ export function MatchReviewQueue() {
                             )}
                           </td>
                           <td className="py-2 px-2">
+                            {(() => {
+                              const selectedClientId =
+                                sel === CREATE_NEW ? null : Number(sel);
+                              const selectedClient = clients.find((c) => c.id === selectedClientId);
+                              const defaultGhl =
+                                s.source === "ghl"
+                                  ? s.source_ref
+                                  : selectedClient?.ghl_location_id || NONE;
+                              const ghlVal = ghlSelections[s.id] ?? defaultGhl;
+                              if (!isPending) {
+                                const linked = ghlLocations.find((l) => l.location_id === ghlVal);
+                                return (
+                                  <div className="text-foreground py-1">
+                                    {linked?.name ?? (ghlVal && ghlVal !== NONE ? ghlVal : <span className="text-muted-foreground">—</span>)}
+                                  </div>
+                                );
+                              }
+                              return (
+                                <Select
+                                  value={ghlVal}
+                                  onValueChange={(v) => setGhlSelections((p) => ({ ...p, [s.id]: v }))}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Select GHL sub-account" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={NONE} className="text-xs text-muted-foreground">
+                                      None
+                                    </SelectItem>
+                                    {ghlLocations.map((l) => (
+                                      <SelectItem key={l.location_id} value={l.location_id} className="text-xs">
+                                        {l.name ?? l.location_id}
+                                        {s.source === "ghl" && l.location_id === s.source_ref ? "  · suggested" : ""}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              );
+                            })()}
+                          </td>
+                          <td className="py-2 px-2">
                             <Badge variant="outline" className="text-warning border-warning/40">
                               {Math.round(s.score * 100)}%
                             </Badge>
