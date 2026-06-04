@@ -680,7 +680,7 @@ export default function ClientProfile() {
                                   <div className="min-w-0">
                                     <p className="text-xs font-medium text-foreground truncate">{as.name}</p>
                                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                                      ${as.spend.toFixed(0)} · {as.leads} leads ·{" "}
+                                      ${as.spend.toFixed(0)} · {as.clicks ?? 0} clicks · {as.impressions > 0 ? ((as.clicks / as.impressions) * 100).toFixed(2) : "0.00"}% CTR · {as.leads} leads ·{" "}
                                       <span className={cplTone(as.cpl)}>${as.cpl.toFixed(2)} CPL</span> · {as.ads.length} ads
                                     </p>
                                   </div>
