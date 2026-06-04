@@ -7,6 +7,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { MetaOAuthDiagnosticsPanel } from "@/components/integrations/MetaOAuthDiagnosticsPanel";
 
 const DEPARTMENTS = [
   "Leadership",
