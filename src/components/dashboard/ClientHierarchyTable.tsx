@@ -65,9 +65,11 @@ export function ClientHierarchyTable() {
   const [openClients, setOpenClients] = useState<Record<string, boolean>>({});
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
-  const [view, setView] = useState<"active" | "inactive" | "archived">("active");
-  const showArchived = view === "archived";
-  const hideZero = view === "active";
+  // Single unified view: hide manually-archived + non-fully-synced clients,
+  // hide campaigns with no spend/impressions. The All/Active/Paused/Issues
+  // filter is the only view toggle.
+  const showArchived = false;
+  const hideZero = true;
 
   // Archived items
   const archivedSet = useArchivedSet();
@@ -180,15 +182,11 @@ export function ClientHierarchyTable() {
       const archived = archivedSet.has(`client:${c.id}`);
       const synced = isFullySynced(c);
       const hasActivity = clientsWithActivity.has(String(c.id));
-      // Archived tab = manually archived OR not fully synced (auto-archived)
-      if (view === "archived") return archived || !synced;
-      // Hide from Active/Inactive if manually archived or not fully synced
+      // Single view: only fully-synced, non-archived clients with activity.
       if (archived || !synced) return false;
-      if (view === "inactive") return !hasActivity;
-      // active: fully synced + has recent activity
       return hasActivity;
     });
-  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, view]);
+  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct]);
 
   const handleQuickSync = async () => {
     if (!focusedClient) {
@@ -367,23 +365,8 @@ export function ClientHierarchyTable() {
             </Button>
           </div>
 
-          {/* View tabs: Active / Inactive / Archived */}
-          <div className="flex items-center gap-1 rounded-lg bg-accent p-0.5">
-            {([
-              { k: "active", label: "Active" },
-              { k: "inactive", label: "Inactive" },
-              { k: "archived", label: "Archived" },
-            ] as const).map((t) => (
-              <button
-                key={t.k}
-                onClick={() => setView(t.k)}
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                  view === t.k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-                )}
-              >{t.label}</button>
-            ))}
-          </div>
+
+
 
 
           {/* Status filter pills */}
