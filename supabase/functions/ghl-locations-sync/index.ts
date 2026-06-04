@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, locations: locations.length, linked, suggested }),
+      JSON.stringify({ ok: true, locations: locations.length, linked, suggested, renamed }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
