@@ -534,7 +534,32 @@ export function ClientHierarchyTable() {
                         <td className={cn("px-2 py-2.5 text-right tabular-nums font-semibold", cplColor(avgCpl))}>
                           {avgCpl > 0 ? `$${avgCpl.toFixed(2)}` : "—"}
                         </td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
+                          {cAvgCpm > 0 ? `$${cAvgCpm.toFixed(2)}` : "—"}
+                        </td>
+                        <td className={cn(
+                          "px-2 py-2.5 text-right tabular-nums",
+                          cAvgFreq >= 3.5 ? "text-destructive font-semibold" : "text-foreground"
+                        )}>
+                          {cAvgFreq > 0 ? cAvgFreq.toFixed(2) : "—"}
+                        </td>
+                        <td
+                          className={cn(
+                            "px-2 py-2.5 text-right tabular-nums",
+                            cAbove640 === null
+                              ? "text-muted-foreground"
+                              : cAbove640 >= 60
+                                ? "text-success font-semibold"
+                                : cAbove640 >= 30
+                                  ? "text-warning font-semibold"
+                                  : "text-destructive font-semibold"
+                          )}
+                          title={cAbove640 !== null ? `${cScored} scored lead${cScored === 1 ? "" : "s"} in range` : "No credit-score answers in range"}
+                        >
+                          {cAbove640 === null ? "—" : `${cAbove640.toFixed(0)}%`}
+                        </td>
                       </tr>
+
                     )}
 
                     {/* Campaign rows */}
