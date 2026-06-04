@@ -182,11 +182,13 @@ export function ClientHierarchyTable() {
       const archived = archivedSet.has(`client:${c.id}`);
       const synced = isFullySynced(c);
       const hasActivity = clientsWithActivity.has(String(c.id));
-      // Single view: only fully-synced, non-archived clients with activity.
+      // Single view: only fully-synced, non-archived clients.
+      // When hideZero is on, also require activity in the current range.
       if (archived || !synced) return false;
-      return hasActivity;
+      if (hideZero && !hasActivity) return false;
+      return true;
     });
-  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct]);
+  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero]);
 
   const handleQuickSync = async () => {
     if (!focusedClient) {
