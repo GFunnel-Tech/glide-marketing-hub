@@ -397,8 +397,9 @@ export default function ClientProfile() {
         </div>
 
         {/* CRM sync health */}
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <ClientSyncStatus clientId={client.id} />
+          <GhlLocationLink clientId={client.id} currentLocationId={client.ghlLocationId} variant="panel" />
         </div>
 
         {client.doubleCount && (
