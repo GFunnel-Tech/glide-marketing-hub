@@ -54,6 +54,7 @@ export function ClientHierarchyTable() {
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const { data: allCampaigns = [], isLoading: campLoading } = useCampaigns();
   const { data: allAds = [] } = useMetaAds();
+  const { data: clientsWithMetaAcct = new Set<number>() } = useClientsWithMetaAccount();
 
   const [clientId, setClientId] = useState<number | "all">("all");
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
