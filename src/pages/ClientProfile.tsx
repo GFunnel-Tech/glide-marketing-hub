@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { LeadsByClient } from "@/components/leads/LeadsByClient";
 import { ClientSyncStatus } from "@/components/dashboard/ClientSyncStatus";
+import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { TrackingPanel } from "@/components/tracking/TrackingPanel";
@@ -396,8 +397,9 @@ export default function ClientProfile() {
         </div>
 
         {/* CRM sync health */}
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <ClientSyncStatus clientId={client.id} />
+          <GhlLocationLink clientId={client.id} currentLocationId={client.ghlLocationId} variant="panel" />
         </div>
 
         {client.doubleCount && (

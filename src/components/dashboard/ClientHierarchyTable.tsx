@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { StatusBadge } from "./StatusBadge";
 import { NoteBubble } from "@/components/notes/NoteBubble";
+import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
 
 // ---------- helpers ----------
 function fmtMoney(n: number) { return `$${(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`; }
@@ -578,6 +579,9 @@ export function ClientHierarchyTable() {
                                 </button>
                                 <span onClick={(e) => e.stopPropagation()}>
                                   <NoteBubble clientId={client.id} variant="icon" align="start" />
+                                </span>
+                                <span onClick={(e) => e.stopPropagation()}>
+                                  <GhlLocationLink clientId={client.id} currentLocationId={client.ghlLocationId} variant="chip" />
                                 </span>
                               </div>
                               {client.brand && client.name && (
