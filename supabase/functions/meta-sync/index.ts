@@ -15,7 +15,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let workspaceFilter: string | null = null;
-  let includeDetails = false;
+  // Default to true so scheduled (cron) syncs always refresh granular
+  // campaign/adset/ad insights — otherwise the per-campaign breakdown in the
+  // Client Profile / date-range views drifts out of date.
+  let includeDetails = true;
   let adsOnly = false;
   // Manual UI invocations should return immediately and let the long-running
   // Meta API loop finish in the background (avoids "connection closed before
@@ -25,7 +28,10 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
     adsOnly = body.adsOnly === true || (body.syncAds === true && body.includeDetails !== true);
-    includeDetails = body.includeDetails === true || body.syncAds === true || adsOnly;
+    // Explicit `includeDetails: false` opts out; otherwise granular sync runs.
+    includeDetails = body.includeDetails === false
+      ? false
+      : (body.includeDetails === true || body.syncAds === true || adsOnly || true);
     waitForCompletion = body.wait === true;
   }
 
