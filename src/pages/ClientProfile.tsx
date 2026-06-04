@@ -336,6 +336,14 @@ export default function ClientProfile() {
                   </h1>
                 )}
                 <StatusBadge status={client.status} />
+                {isSyncing && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-warning/10 border border-warning/30 text-warning px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                    title={`Mapped to ${[isMetaMapped && "Meta", isGhlMapped && "GHL"].filter(Boolean).join(" + ")} but no data in this date range yet.`}
+                  >
+                    <Loader2 className="h-3 w-3 animate-spin" /> Syncing
+                  </span>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {client.bmAccountName || client.brand}
@@ -343,7 +351,7 @@ export default function ClientProfile() {
                 {client.plaiConnected ? " · Plai connected" : ""}
               </p>
               <p className="text-[11px] text-muted-foreground mt-1">
-                ${client.spend.toLocaleString()} spend · Last synced just now
+                ${Math.round(liveSpend).toLocaleString()} spend · Last synced just now
               </p>
             </div>
           </div>
