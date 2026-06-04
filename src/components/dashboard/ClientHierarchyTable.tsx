@@ -65,9 +65,11 @@ export function ClientHierarchyTable() {
   const [openClients, setOpenClients] = useState<Record<string, boolean>>({});
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
-  const [view, setView] = useState<"active" | "inactive" | "archived">("active");
-  const showArchived = view === "archived";
-  const hideZero = view === "active";
+  // Single unified view: hide manually-archived + non-fully-synced clients,
+  // hide campaigns with no spend/impressions. The All/Active/Paused/Issues
+  // filter is the only view toggle.
+  const showArchived = false;
+  const hideZero = true;
 
   // Archived items
   const archivedSet = useArchivedSet();
