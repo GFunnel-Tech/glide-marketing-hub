@@ -128,6 +128,7 @@ export default function ClientProfile() {
   const { data: rangeCampaignsData = [] } = useClientCampaignsRange(Number(id));
   const { data: allActivity = [] } = useActivityLog();
   const { data: allLeads = [] } = useLeads();
+  const { data: metaMappedSet } = useClientsWithMetaAccount();
   const [loading, setLoading] = useState<string | null>(null);
   const [showPause, setShowPause] = useState(false);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
