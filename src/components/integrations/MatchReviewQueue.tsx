@@ -28,9 +28,11 @@ type Suggestion = {
   clients?: { name: string | null } | null;
 };
 
-type ClientLite = { id: number; name: string | null; brand: string | null };
+type ClientLite = { id: number; name: string | null; brand: string | null; ghl_location_id?: string | null };
+type GhlLoc = { location_id: string; name: string | null; business_name: string | null };
 
 const CREATE_NEW = "__create_new__";
+const NONE = "__none__";
 const ARCHIVE_DAYS = 30;
 
 type TabKey = "active" | "pending" | "errors" | "archived";
@@ -40,16 +42,18 @@ export function MatchReviewQueue() {
   const wsId = currentWorkspace?.id;
   const [items, setItems] = useState<Suggestion[]>([]);
   const [clients, setClients] = useState<ClientLite[]>([]);
+  const [ghlLocations, setGhlLocations] = useState<GhlLoc[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("pending");
   const [selections, setSelections] = useState<Record<string, string>>({});
+  const [ghlSelections, setGhlSelections] = useState<Record<string, string>>({});
   const [newNames, setNewNames] = useState<Record<string, string>>({});
 
   const load = async () => {
     if (!wsId) return;
     setLoading(true);
-    const [{ data: sData, error: sErr }, { data: cData, error: cErr }] = await Promise.all([
+    const [{ data: sData, error: sErr }, { data: cData, error: cErr }, { data: gData }] = await Promise.all([
       (supabase as any)
         .from("account_match_suggestions")
         .select("id, source, source_ref, source_name, source_business_name, client_id, score, status, resolved_at, clients(name)")
@@ -57,7 +61,12 @@ export function MatchReviewQueue() {
         .order("score", { ascending: false }),
       (supabase as any)
         .from("clients")
-        .select("id, name, brand")
+        .select("id, name, brand, ghl_location_id")
+        .eq("workspace_id", wsId)
+        .order("name", { ascending: true }),
+      (supabase as any)
+        .from("ghl_locations")
+        .select("location_id, name, business_name")
         .eq("workspace_id", wsId)
         .order("name", { ascending: true }),
     ]);
@@ -65,6 +74,7 @@ export function MatchReviewQueue() {
     if (cErr) toast.error(cErr.message);
     setItems(sData || []);
     setClients(cData || []);
+    setGhlLocations(gData || []);
     setLoading(false);
   };
 
@@ -117,10 +127,22 @@ export function MatchReviewQueue() {
           .update({ client_id: clientId })
           .eq("id", s.source_ref);
         if (error) throw error;
+        // Optionally link a GHL sub at the same time
+        const ghlSel = ghlSelections[s.id];
+        if (ghlSel && ghlSel !== NONE) {
+          const { error: gErr } = await (supabase as any)
+            .from("clients")
+            .update({ ghl_location_id: ghlSel })
+            .eq("id", clientId);
+          if (gErr) throw gErr;
+        }
       } else {
+        const ghlRef = ghlSelections[s.id] && ghlSelections[s.id] !== NONE
+          ? ghlSelections[s.id]
+          : s.source_ref;
         const { error } = await (supabase as any)
           .from("clients")
-          .update({ ghl_location_id: s.source_ref })
+          .update({ ghl_location_id: ghlRef })
           .eq("id", clientId);
         if (error) throw error;
       }
@@ -220,6 +242,7 @@ export function MatchReviewQueue() {
                       <th className="text-left py-2 px-2">Source</th>
                       <th className="text-left py-2 px-2">Account</th>
                       <th className="text-left py-2 px-2 min-w-[220px]">Client</th>
+                      <th className="text-left py-2 px-2 min-w-[200px]">GHL sub-account</th>
                       <th className="text-left py-2 px-2">Score</th>
                       <th className="py-2 px-2"></th>
                     </tr>
@@ -278,6 +301,47 @@ export function MatchReviewQueue() {
                                 {s.clients?.name ?? `#${s.client_id}`}
                               </div>
                             )}
+                          </td>
+                          <td className="py-2 px-2">
+                            {(() => {
+                              const selectedClientId =
+                                sel === CREATE_NEW ? null : Number(sel);
+                              const selectedClient = clients.find((c) => c.id === selectedClientId);
+                              const defaultGhl =
+                                s.source === "ghl"
+                                  ? s.source_ref
+                                  : selectedClient?.ghl_location_id || NONE;
+                              const ghlVal = ghlSelections[s.id] ?? defaultGhl;
+                              if (!isPending) {
+                                const linked = ghlLocations.find((l) => l.location_id === ghlVal);
+                                return (
+                                  <div className="text-foreground py-1">
+                                    {linked?.name ?? (ghlVal && ghlVal !== NONE ? ghlVal : <span className="text-muted-foreground">—</span>)}
+                                  </div>
+                                );
+                              }
+                              return (
+                                <Select
+                                  value={ghlVal}
+                                  onValueChange={(v) => setGhlSelections((p) => ({ ...p, [s.id]: v }))}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Select GHL sub-account" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={NONE} className="text-xs text-muted-foreground">
+                                      None
+                                    </SelectItem>
+                                    {ghlLocations.map((l) => (
+                                      <SelectItem key={l.location_id} value={l.location_id} className="text-xs">
+                                        {l.name ?? l.location_id}
+                                        {s.source === "ghl" && l.location_id === s.source_ref ? "  · suggested" : ""}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              );
+                            })()}
                           </td>
                           <td className="py-2 px-2">
                             <Badge variant="outline" className="text-warning border-warning/40">
