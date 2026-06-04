@@ -168,18 +168,27 @@ export function ClientHierarchyTable() {
     return s;
   }, [allCampaigns]);
 
+  // A client is considered "fully synced" when it is (1) linked to a GHL
+  // sub-account and (2) has at least one Meta ad account mapped to it.
+  // Clients that don't meet this bar are auto-archived from the main list.
+  const isFullySynced = (c: any) =>
+    !!c.ghlLocationId && clientsWithMetaAcct.has(Number(c.id));
+
   const visibleClients = useMemo(() => {
     const base = isAllClients ? clients : (focusedClient ? [focusedClient] : []);
     return base.filter((c) => {
       const archived = archivedSet.has(`client:${c.id}`);
+      const synced = isFullySynced(c);
       const hasActivity = clientsWithActivity.has(String(c.id));
-      if (view === "archived") return archived;
-      if (archived) return false;
+      // Archived tab = manually archived OR not fully synced (auto-archived)
+      if (view === "archived") return archived || !synced;
+      // Hide from Active/Inactive if manually archived or not fully synced
+      if (archived || !synced) return false;
       if (view === "inactive") return !hasActivity;
-      // active
+      // active: fully synced + has recent activity
       return hasActivity;
     });
-  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, view]);
+  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, view]);
 
   const handleQuickSync = async () => {
     if (!focusedClient) {
