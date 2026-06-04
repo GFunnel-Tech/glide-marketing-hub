@@ -787,6 +787,60 @@ export type Database = {
           },
         ]
       }
+      client_notes: {
+        Row: {
+          client_id: number | null
+          content: string
+          created_at: string
+          done: boolean
+          due_at: string | null
+          id: string
+          reminded_at: string | null
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          content: string
+          created_at?: string
+          done?: boolean
+          due_at?: string | null
+          id?: string
+          reminded_at?: string | null
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          content?: string
+          created_at?: string
+          done?: boolean
+          due_at?: string | null
+          id?: string
+          reminded_at?: string | null
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_notes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_optimization_rules: {
         Row: {
           client_id: number
@@ -4798,6 +4852,7 @@ export type Database = {
         Returns: boolean
       }
       compute_client_status: { Args: { _client_id: number }; Returns: string }
+      fire_due_client_notes: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
