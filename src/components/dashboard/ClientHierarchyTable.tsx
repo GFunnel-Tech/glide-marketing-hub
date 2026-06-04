@@ -514,13 +514,18 @@ export function ClientHierarchyTable() {
                             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                               <Building2 className="h-3.5 w-3.5" />
                             </div>
-                            <div className="min-w-0">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); navigate(`/client/${client.id}`); }}
-                                className="font-semibold text-foreground hover:text-primary truncate"
-                              >
-                                {client.name}
-                              </button>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/client/${client.id}`); }}
+                                  className="font-semibold text-foreground hover:text-primary truncate"
+                                >
+                                  {client.name}
+                                </button>
+                                <span onClick={(e) => e.stopPropagation()}>
+                                  <NoteBubble clientId={client.id} variant="icon" align="start" />
+                                </span>
+                              </div>
                               <p className="text-[10px] text-muted-foreground truncate">{client.brand}</p>
                             </div>
                           </div>
