@@ -17,19 +17,48 @@ Deno.serve(async (req) => {
   let workspaceFilter: string | null = null;
   let includeDetails = false;
   let adsOnly = false;
+  // Manual UI invocations should return immediately and let the long-running
+  // Meta API loop finish in the background (avoids "connection closed before
+  // message completed" timeouts when a workspace has many ad accounts).
+  let waitForCompletion = false;
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
-    // Support both the current flag and the older/manual "syncAds" flag used
-    // by quick backfills so creative images are actually refreshed.
     adsOnly = body.adsOnly === true || (body.syncAds === true && body.includeDetails !== true);
     includeDetails = body.includeDetails === true || body.syncAds === true || adsOnly;
+    waitForCompletion = body.wait === true;
   }
 
   const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+
+  const work = async () => {
+    return await runSync(admin, { workspaceFilter, includeDetails, adsOnly });
+  };
+
+  // Background mode: return 202 immediately, keep the loop running via waitUntil.
+  if (!waitForCompletion) {
+    // @ts-ignore -- EdgeRuntime is provided by Supabase's Deno runtime
+    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(work().catch((e) => console.error("meta-sync bg error", e)));
+    } else {
+      work().catch((e) => console.error("meta-sync bg error", e));
+    }
+    return json({ ok: true, queued: true, message: "Sync started in background" }, 202);
+  }
+
+  const result = await work();
+  return json(result);
+});
+
+async function runSync(
+  admin: any,
+  opts: { workspaceFilter: string | null; includeDetails: boolean; adsOnly: boolean },
+) {
+  const { workspaceFilter, includeDetails, adsOnly } = opts;
 
   // Fetch active connections
   let connQ = admin
@@ -38,7 +67,7 @@ Deno.serve(async (req) => {
     .eq("status", "active");
   if (workspaceFilter) connQ = connQ.eq("workspace_id", workspaceFilter);
   const { data: connections, error: connErr } = await connQ;
-  if (connErr) return json({ error: connErr.message }, 500);
+  if (connErr) return { error: connErr.message };
 
   let totalRows = 0;
   const errors: any[] = [];
@@ -161,8 +190,8 @@ Deno.serve(async (req) => {
   // ROLLUP to clients table — sum last 30 days per linked client
   await rollupClients(admin, workspaceFilter);
 
-  return json({ ok: true, rowsSynced: totalRows, errors });
-});
+  return { ok: true, rowsSynced: totalRows, errors };
+}
 
 async function rollupClients(admin: any, workspaceFilter: string | null) {
   let q = admin

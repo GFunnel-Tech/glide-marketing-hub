@@ -743,13 +743,21 @@ export function QuickActionBar() {
 
   const syncAllMetaAccounts = async () => {
     if (!currentWorkspace?.id) throw new Error("No workspace selected");
+    // Fire-and-forget: the function runs the Meta API loop in the background
+    // and returns 202 immediately so the UI doesn't hit edge-runtime timeouts.
     const { data, error } = await supabase.functions.invoke("meta-sync", {
       body: { workspaceId: currentWorkspace.id },
     });
     if (error) throw new Error(error.message);
     if (data?.error) throw new Error(data.error);
-    queryClient.invalidateQueries({ queryKey: ["clients"] });
-    queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+    toast.info("Meta sync started — data will refresh shortly");
+    // Refresh cached views once the background job has had time to write rows.
+    setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["clients-range-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["client-campaigns-range"] });
+    }, 8000);
   };
 
   const actions = [
