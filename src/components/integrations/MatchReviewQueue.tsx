@@ -242,6 +242,7 @@ export function MatchReviewQueue() {
                       <th className="text-left py-2 px-2">Source</th>
                       <th className="text-left py-2 px-2">Account</th>
                       <th className="text-left py-2 px-2 min-w-[220px]">Client</th>
+                      <th className="text-left py-2 px-2 min-w-[200px]">GHL sub-account</th>
                       <th className="text-left py-2 px-2">Score</th>
                       <th className="py-2 px-2"></th>
                     </tr>
