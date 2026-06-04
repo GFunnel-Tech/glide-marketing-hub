@@ -33,6 +33,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { StatusBadge } from "./StatusBadge";
+import { NoteBubble } from "@/components/notes/NoteBubble";
 
 // ---------- helpers ----------
 function fmtMoney(n: number) { return `$${(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`; }
@@ -315,6 +316,7 @@ export function ClientHierarchyTable() {
           <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary tabular-nums">
             {visibleClients.length}
           </span>
+          <NoteBubble variant="button" label="Notes" align="start" />
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -512,13 +514,18 @@ export function ClientHierarchyTable() {
                             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                               <Building2 className="h-3.5 w-3.5" />
                             </div>
-                            <div className="min-w-0">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); navigate(`/client/${client.id}`); }}
-                                className="font-semibold text-foreground hover:text-primary truncate"
-                              >
-                                {client.name}
-                              </button>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/client/${client.id}`); }}
+                                  className="font-semibold text-foreground hover:text-primary truncate"
+                                >
+                                  {client.name}
+                                </button>
+                                <span onClick={(e) => e.stopPropagation()}>
+                                  <NoteBubble clientId={client.id} variant="icon" align="start" />
+                                </span>
+                              </div>
                               <p className="text-[10px] text-muted-foreground truncate">{client.brand}</p>
                             </div>
                           </div>
