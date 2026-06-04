@@ -228,9 +228,10 @@ export function ClientHierarchyTable() {
     if (selectedCount === 0) return;
     setBulkRunning(true);
     try {
-      // Group by entity + clientId
-      const groups = new Map<string, { entity: EntityType; clientId: string; ids: string[] }>();
+      // Group by entity + clientId (skip "client" entities — pause/activate/delete don't apply)
+      const groups = new Map<string, { entity: "campaign" | "adset" | "ad"; clientId: string; ids: string[] }>();
       for (const s of selectedList) {
+        if (s.entity === "client") continue;
         const k = `${s.entity}:${s.clientId}`;
         if (!groups.has(k)) groups.set(k, { entity: s.entity, clientId: s.clientId, ids: [] });
         groups.get(k)!.ids.push(s.id);
