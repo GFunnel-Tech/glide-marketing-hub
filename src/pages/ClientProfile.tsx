@@ -202,13 +202,38 @@ export default function ClientProfile() {
       ? clientActivity
       : clientActivity.filter((a) => a.type === actFilter.toLowerCase());
 
+  // Live aggregates from range data (Meta insights). Fall back to client snapshot.
+  const agg = clientCampaigns.reduce(
+    (a, c: any) => {
+      a.spend += Number(c.spend) || 0;
+      a.leads += Number(c.trueLeads ?? c.leads) || 0;
+      a.impressions += Number(c.impressions) || 0;
+      a.clicks += Number(c.clicks) || 0;
+      a.freqSum += (Number(c.frequency) || 0) * (Number(c.spend) || 0);
+      a.cpmSum += (Number(c.cpm) || 0) * (Number(c.spend) || 0);
+      return a;
+    },
+    { spend: 0, leads: 0, impressions: 0, clicks: 0, freqSum: 0, cpmSum: 0 },
+  );
+  const hasLiveData = agg.spend > 0 || agg.leads > 0 || agg.impressions > 0;
+  const liveSpend = hasLiveData ? agg.spend : client.spend;
+  const liveLeads = hasLiveData ? agg.leads : client.leads;
+  const liveCpl = liveLeads > 0 ? liveSpend / liveLeads : client.cpl;
+  const liveCpm = hasLiveData && agg.spend > 0 ? agg.cpmSum / agg.spend : client.cpm;
+  const liveFreq = hasLiveData && agg.spend > 0 ? agg.freqSum / agg.spend : client.frequency;
+  const liveCvr = client.formCvr; // form CVR still snapshot-sourced
+
+  const isMetaMapped = !!(metaMappedSet?.has(client.id) || client.bmId);
+  const isGhlMapped = !!client.ghlLocationId;
+  const isSyncing = (isMetaMapped || isGhlMapped) && !hasLiveData;
+
   const kpis: { label: string; value: string; benchmark?: string; status: KpiStatus; tone?: string }[] = [
     {
       label: "CPL",
-      value: `$${client.cpl.toFixed(2)}`,
+      value: `$${liveCpl.toFixed(2)}`,
       benchmark: "< $30",
-      status: client.cpl < 30 ? "Good" : client.cpl <= 60 ? "Watch" : "Fix",
-      tone: cplTone(client.cpl),
+      status: liveCpl < 30 ? "Good" : liveCpl <= 60 ? "Watch" : "Fix",
+      tone: cplTone(liveCpl),
     },
     ...(client.doubleCount
       ? [
@@ -223,32 +248,32 @@ export default function ClientProfile() {
       : []),
     {
       label: "Leads MTD",
-      value: String(client.leads),
+      value: String(liveLeads),
       benchmark: "50+",
-      status: client.leads >= 50 ? "Good" : client.leads >= 20 ? "Watch" : "Fix",
+      status: liveLeads >= 50 ? "Good" : liveLeads >= 20 ? "Watch" : "Fix",
     },
     {
       label: "Spend",
-      value: `$${client.spend.toLocaleString()}`,
+      value: `$${Math.round(liveSpend).toLocaleString()}`,
       status: "Good",
     },
     {
       label: "CPM",
-      value: `$${client.cpm.toFixed(2)}`,
+      value: `$${liveCpm.toFixed(2)}`,
       benchmark: "< $120",
-      status: client.cpm < 120 ? "Good" : "Watch",
+      status: liveCpm < 120 ? "Good" : "Watch",
     },
     {
       label: "Form CVR",
-      value: `${client.formCvr.toFixed(2)}%`,
+      value: `${liveCvr.toFixed(2)}%`,
       benchmark: "> 15%",
-      status: client.formCvr > 15 ? "Good" : client.formCvr >= 10 ? "Watch" : "Fix",
+      status: liveCvr > 15 ? "Good" : liveCvr >= 10 ? "Watch" : "Fix",
     },
     {
       label: "Frequency",
-      value: String(client.frequency),
+      value: liveFreq.toFixed(2),
       benchmark: "< 3.0",
-      status: client.frequency < 3 ? "Good" : client.frequency <= 4 ? "Watch" : "Fix",
+      status: liveFreq < 3 ? "Good" : liveFreq <= 4 ? "Watch" : "Fix",
     },
   ];
 
