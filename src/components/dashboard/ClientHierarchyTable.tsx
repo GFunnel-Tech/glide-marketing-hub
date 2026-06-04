@@ -65,7 +65,7 @@ export function ClientHierarchyTable() {
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
   const [showArchived, setShowArchived] = useState(false);
-  const [hideZero, setHideZero] = useState(true);
+  const hideZero = true;
 
   // Archived items
   const archivedSet = useArchivedSet();
@@ -158,12 +158,9 @@ export function ClientHierarchyTable() {
 
   const visibleClients = useMemo(() => {
     if (!isAllClients) return focusedClient ? [focusedClient] : [];
-    // only clients that have at least one matching campaign (or always show all when no filters)
-    if (search || statusFilter !== "All") {
-      return clients.filter((c) => campaignsByClient.has(String(c.id)));
-    }
-    return clients;
-  }, [isAllClients, focusedClient, clients, campaignsByClient, search, statusFilter]);
+    // Always hide clients with no active (non-zero) campaigns in view
+    return clients.filter((c) => campaignsByClient.has(String(c.id)));
+  }, [isAllClients, focusedClient, clients, campaignsByClient]);
 
   const handleQuickSync = async () => {
     if (!focusedClient) {
@@ -352,16 +349,6 @@ export function ClientHierarchyTable() {
             {showArchived ? "Hide archived" : "Show archived"}
           </Button>
 
-          {/* Hide zero-activity toggle */}
-          <Button
-            variant={hideZero ? "default" : "outline"}
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => setHideZero((v) => !v)}
-            title="Hide campaigns, ad sets and ads with no impressions, spend, or leads"
-          >
-            {hideZero ? "Hide zero activity" : "Show zero activity"}
-          </Button>
 
           {/* Status filter pills */}
           <div className="flex items-center gap-1 rounded-lg bg-accent p-0.5">
