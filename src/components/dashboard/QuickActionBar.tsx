@@ -7,6 +7,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { MetaOAuthDiagnosticsPanel } from "@/components/integrations/MetaOAuthDiagnosticsPanel";
 
 const DEPARTMENTS = [
   "Leadership",
@@ -817,6 +818,11 @@ export function QuickActionBar() {
       <div className="mt-5 border-t border-border pt-4">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Recent Logs</h4>
         <LogList />
+      </div>
+
+      <div className="mt-5 border-t border-border pt-4">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Audit · Meta OAuth</h4>
+        <MetaOAuthDiagnosticsPanel />
       </div>
 
       <AddLogDialog open={logOpen} onClose={() => setLogOpen(false)} />
