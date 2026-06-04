@@ -121,6 +121,7 @@ export function toClient(c: DbClient) {
     lastAudit: c.last_audit || "",
     bmId: c.bm_id || "",
     bmAccountName: c.bm_account_name || "",
+    ghlLocationId: c.ghl_location_id || null,
     autonomousOptimization: !!(c as any).autonomous_optimization,
   };
 }
