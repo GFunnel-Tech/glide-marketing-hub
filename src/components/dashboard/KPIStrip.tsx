@@ -1,7 +1,7 @@
 import { Users, Activity, DollarSign, Target, Headphones } from "lucide-react";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useClients, useCampaigns } from "@/hooks/useDatabase";
+import { useClients, useCampaigns, useClientsWithMetaAccount } from "@/hooks/useDatabase";
 import { useArchivedSet } from "@/hooks/useArchivedEntities";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
 import { useDateRange } from "@/hooks/useDateRange";
