@@ -238,12 +238,14 @@ export function ClientHierarchyTable() {
     const base = isAllClients ? clients : (focusedClient ? [focusedClient] : []);
     return base.filter((c) => {
       const archived = archivedSet.has(`client:${c.id}`);
+      if (archived) return false;
+      // Show ALL clients (connected or not). Unconnected clients get an
+      // indicator chip so users can quickly spot what still needs setup.
+      // hideZero only filters fully-synced clients with no activity in range;
+      // unconnected clients are always shown so they don't disappear.
       const synced = isFullySynced(c);
       const hasActivity = clientsWithActivity.has(String(c.id));
-      // Single view: only fully-synced, non-archived clients.
-      // When hideZero is on, also require activity in the current range.
-      if (archived || !synced) return false;
-      if (hideZero && !hasActivity) return false;
+      if (synced && hideZero && !hasActivity) return false;
       return true;
     });
   }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero]);
@@ -583,6 +585,22 @@ export function ClientHierarchyTable() {
                                 <span onClick={(e) => e.stopPropagation()}>
                                   <GhlLocationLink clientId={client.id} currentLocationId={client.ghlLocationId} variant="chip" />
                                 </span>
+                                {!clientsWithMetaAcct.has(Number(client.id)) && (
+                                  <span
+                                    title="No Meta ad account mapped to this client"
+                                    className="inline-flex h-5 items-center gap-1 rounded-full bg-warning/10 px-1.5 text-[10px] font-semibold text-warning"
+                                  >
+                                    <AlertTriangle className="h-3 w-3" /> Meta not connected
+                                  </span>
+                                )}
+                                {!client.ghlLocationId && (
+                                  <span
+                                    title="No GHL sub-account linked"
+                                    className="inline-flex h-5 items-center gap-1 rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground"
+                                  >
+                                    <AlertTriangle className="h-3 w-3" /> GHL not linked
+                                  </span>
+                                )}
                               </div>
                               {client.brand && client.name && (
                                 <p className="text-[10px] text-muted-foreground truncate">{client.name}</p>
