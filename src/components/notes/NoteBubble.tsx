@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, StickyNote, Trash2, Plus, Loader2 } from "lucide-react";
+import { CalendarIcon, StickyNote, Trash2, Plus, Loader2, User, Check } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -19,9 +20,12 @@ type Note = {
   done: boolean;
   due_at: string | null;
   reminded_at: string | null;
+  assigned_to: string | null;
   created_at: string;
   user_id: string;
 };
+
+type Member = { id: string; display_name: string | null; email: string | null };
 
 interface NoteBubbleProps {
   clientId?: number | null;
@@ -40,6 +44,32 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   const [draftDate, setDraftDate] = useState<Date | undefined>(undefined);
   const [draftTime, setDraftTime] = useState<string>("09:00");
   const [calOpen, setCalOpen] = useState(false);
+  const [assigneeId, setAssigneeId] = useState<string | null>(null);
+  const [assigneeOpen, setAssigneeOpen] = useState(false);
+
+  const { data: members = [] } = useQuery<Member[]>({
+    queryKey: ["ws-members-for-notes", wsId],
+    enabled: !!wsId && open,
+    queryFn: async () => {
+      const { data: m, error } = await supabase
+        .from("workspace_members").select("user_id").eq("workspace_id", wsId!);
+      if (error) throw error;
+      const ids = (m ?? []).map((r: any) => r.user_id);
+      if (ids.length === 0) return [];
+      const { data: p } = await supabase
+        .from("profiles").select("id, display_name, email").in("id", ids);
+      return (p ?? []) as Member[];
+    },
+  });
+  const memberMap = useMemo(() => {
+    const map = new Map<string, Member>();
+    for (const m of members) map.set(m.id, m);
+    return map;
+  }, [members]);
+  const memberLabel = (id: string) => {
+    const m = memberMap.get(id);
+    return m?.display_name || m?.email || "Member";
+  };
 
   const queryKey = ["client-notes", wsId, clientId ?? "ws"];
   const { data: notes = [], isLoading } = useQuery<Note[]>({
@@ -81,6 +111,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
         user_id: u.user.id,
         content: draft.trim(),
         due_at: dueAt,
+        assigned_to: assigneeId,
       });
       if (error) throw error;
     },
@@ -88,6 +119,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
       setDraft("");
       setDraftDate(undefined);
       setDraftTime("09:00");
+      setAssigneeId(null);
       qc.invalidateQueries({ queryKey });
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not save note"),
@@ -205,6 +237,60 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
               </Button>
             )}
           </div>
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-7 flex-1 justify-start gap-1.5 text-xs font-normal",
+                    !assigneeId && "text-muted-foreground",
+                  )}
+                >
+                  <User className="h-3 w-3" />
+                  {assigneeId ? memberLabel(assigneeId) : "Assign to…"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search teammate…" className="text-xs" />
+                  <CommandList>
+                    <CommandEmpty>No teammates.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        onSelect={() => { setAssigneeId(null); setAssigneeOpen(false); }}
+                        className="text-xs"
+                      >
+                        <Check className={cn("mr-2 h-3.5 w-3.5", !assigneeId ? "opacity-100" : "opacity-0")} />
+                        Unassigned
+                      </CommandItem>
+                      {members.map((m) => (
+                        <CommandItem
+                          key={m.id}
+                          onSelect={() => { setAssigneeId(m.id); setAssigneeOpen(false); }}
+                          className="text-xs"
+                        >
+                          <Check className={cn("mr-2 h-3.5 w-3.5", assigneeId === m.id ? "opacity-100" : "opacity-0")} />
+                          <div className="flex flex-col">
+                            <span className="font-medium">{m.display_name || m.email}</span>
+                            {m.display_name && m.email && (
+                              <span className="text-[10px] text-muted-foreground">{m.email}</span>
+                            )}
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {assigneeId && (
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setAssigneeId(null)}>
+                Clear
+              </Button>
+            )}
+          </div>
           <Button
             size="sm"
             className="mt-2 h-7 w-full gap-1.5 text-xs"
@@ -244,16 +330,24 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   >
                     {n.content}
                   </p>
-                  {n.due_at && (
-                    <div
-                      className={cn(
-                        "mt-0.5 flex items-center gap-1 text-[10px]",
-                        overdue ? "text-destructive font-medium" : "text-muted-foreground",
+                  {(n.due_at || n.assigned_to) && (
+                    <div className="mt-0.5 flex items-center gap-2 text-[10px]">
+                      {n.due_at && (
+                        <span className={cn(
+                          "inline-flex items-center gap-1",
+                          overdue ? "text-destructive font-medium" : "text-muted-foreground",
+                        )}>
+                          <CalendarIcon className="h-2.5 w-2.5" />
+                          {format(new Date(n.due_at), "MMM d, h:mm a")}
+                          {n.reminded_at && <span className="ml-1">· sent</span>}
+                        </span>
                       )}
-                    >
-                      <CalendarIcon className="h-2.5 w-2.5" />
-                      {format(new Date(n.due_at), "MMM d, h:mm a")}
-                      {n.reminded_at && <span className="ml-1">· sent</span>}
+                      {n.assigned_to && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-primary font-medium">
+                          <User className="h-2.5 w-2.5" />
+                          {memberLabel(n.assigned_to)}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
