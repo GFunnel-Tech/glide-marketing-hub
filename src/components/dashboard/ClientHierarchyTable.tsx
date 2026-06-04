@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useClients, useCampaigns } from "@/hooks/useDatabase";
+import { useClients, useCampaigns, useClientsWithMetaAccount } from "@/hooks/useDatabase";
 import { useMetaAds, type MetaAd } from "@/hooks/useMetaAds";
 import {
   useArchivedSet, useArchiveEntities, useUnarchiveEntities,
