@@ -817,8 +817,9 @@ export function ClientHierarchyTable() {
                                       <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                                       <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                                     </tr>
-                                  );
-                                })}
+                                    );
+                                  });
+                                })()}
                               </>
                             );
                           })}
