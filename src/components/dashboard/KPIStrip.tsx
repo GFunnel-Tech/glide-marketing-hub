@@ -1,9 +1,16 @@
 import { Users, Activity, DollarSign, Target, Headphones } from "lucide-react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useClients } from "@/hooks/useDatabase";
+import { useClients, useCampaigns } from "@/hooks/useDatabase";
+import { useArchivedSet } from "@/hooks/useArchivedEntities";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
 import { useDateRange } from "@/hooks/useDateRange";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
+
+function deriveImpressionsFromCpm(spend: number, cpm: number) {
+  if (!cpm || cpm <= 0) return 0;
+  return (spend / cpm) * 1000;
+}
 
 interface KPITileProps {
   label: string;
@@ -44,8 +51,21 @@ function KPITile({ label, kpiKey, value, sublabel, Icon, iconTone }: KPITileProp
 
 export function KPIStrip() {
   const { data: clients = [] } = useClients();
+  const { data: allCampaigns = [] } = useCampaigns();
+  const archivedSet = useArchivedSet();
   const { data: rangeMetrics = {}, isFetching } = useClientsRangeMetrics();
   const { label } = useDateRange();
+
+  const activeClientCount = useMemo(() => {
+    const withActivity = new Set<string>();
+    for (const c of allCampaigns as any[]) {
+      const impr = (c.impressions || 0) > 0 ? (c.impressions || 0) : deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0);
+      if ((c.spend || 0) > 0 && impr > 0) withActivity.add(String(c.clientId));
+    }
+    return clients.filter(
+      (c) => withActivity.has(String(c.id)) && !archivedSet.has(`client:${c.id}`),
+    ).length;
+  }, [clients, allCampaigns, archivedSet]);
 
   const totals = Object.values(rangeMetrics).reduce(
     (acc, m) => {
@@ -63,7 +83,7 @@ export function KPIStrip() {
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-      <KPITile label="Active Clients" value={String(clients.length)} sublabel="in portfolio" Icon={Users} iconTone="blue" />
+      <KPITile label="Active Clients" value={String(activeClientCount)} sublabel={`of ${clients.length} in portfolio`} Icon={Users} iconTone="blue" />
       <KPITile label="Total Leads" kpiKey="leads" value={totalLeads.toLocaleString()} sublabel={sub} Icon={Activity} iconTone="green" />
       <KPITile label="Blended CPL" kpiKey="cpl" value={`$${blendedCpl.toFixed(2)}`} sublabel={sub} Icon={Target} iconTone="amber" />
       <KPITile label="Total Ad Spend" kpiKey="spend" value={`$${Math.round(totals.spend).toLocaleString()}`} sublabel={sub} Icon={DollarSign} iconTone="pink" />
