@@ -647,6 +647,9 @@ export function ClientHierarchyTable() {
                             <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(camp.cpl || 0))}>
                               {camp.cpl > 0 ? `$${camp.cpl.toFixed(2)}` : "—"}
                             </td>
+                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{(camp.cpm || 0) > 0 ? `$${Number(camp.cpm).toFixed(2)}` : "—"}</td>
+                            <td className={cn("px-2 py-2 text-right tabular-nums", (camp.frequency || 0) >= 3.5 ? "text-destructive font-semibold" : "text-foreground")}>{(camp.frequency || 0) > 0 ? Number(camp.frequency).toFixed(2) : "—"}</td>
+                            <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                           </tr>
 
                           {/* Ad sets */}
