@@ -42,16 +42,18 @@ export function MatchReviewQueue() {
   const wsId = currentWorkspace?.id;
   const [items, setItems] = useState<Suggestion[]>([]);
   const [clients, setClients] = useState<ClientLite[]>([]);
+  const [ghlLocations, setGhlLocations] = useState<GhlLoc[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("pending");
   const [selections, setSelections] = useState<Record<string, string>>({});
+  const [ghlSelections, setGhlSelections] = useState<Record<string, string>>({});
   const [newNames, setNewNames] = useState<Record<string, string>>({});
 
   const load = async () => {
     if (!wsId) return;
     setLoading(true);
-    const [{ data: sData, error: sErr }, { data: cData, error: cErr }] = await Promise.all([
+    const [{ data: sData, error: sErr }, { data: cData, error: cErr }, { data: gData }] = await Promise.all([
       (supabase as any)
         .from("account_match_suggestions")
         .select("id, source, source_ref, source_name, source_business_name, client_id, score, status, resolved_at, clients(name)")
@@ -59,7 +61,12 @@ export function MatchReviewQueue() {
         .order("score", { ascending: false }),
       (supabase as any)
         .from("clients")
-        .select("id, name, brand")
+        .select("id, name, brand, ghl_location_id")
+        .eq("workspace_id", wsId)
+        .order("name", { ascending: true }),
+      (supabase as any)
+        .from("ghl_locations")
+        .select("location_id, name, business_name")
         .eq("workspace_id", wsId)
         .order("name", { ascending: true }),
     ]);
@@ -67,6 +74,7 @@ export function MatchReviewQueue() {
     if (cErr) toast.error(cErr.message);
     setItems(sData || []);
     setClients(cData || []);
+    setGhlLocations(gData || []);
     setLoading(false);
   };
 
