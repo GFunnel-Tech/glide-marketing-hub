@@ -288,3 +288,27 @@ export function useAdAccounts() {
     enabled: !!wsId,
   });
 }
+
+/**
+ * Returns the set of client ids that have at least one Meta ad account
+ * mapped to them in the current workspace. Used to gate the "fully synced"
+ * filter on the main dashboard.
+ */
+export function useClientsWithMetaAccount() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
+  return useQuery({
+    queryKey: ["clients_with_meta_account", wsId],
+    enabled: !!wsId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("meta_ad_accounts")
+        .select("client_id")
+        .eq("workspace_id", wsId)
+        .not("client_id", "is", null);
+      if (error) throw error;
+      return new Set<number>((data || []).map((r: any) => Number(r.client_id)));
+    },
+  });
+}
+
