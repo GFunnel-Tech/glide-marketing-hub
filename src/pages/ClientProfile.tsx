@@ -125,11 +125,13 @@ export default function ClientProfile() {
   const { id } = useParams();
   const { data: client, isLoading } = useClient(Number(id));
   const { data: allCampaigns = [] } = useCampaigns();
+  const { data: rangeCampaignsData = [] } = useClientCampaignsRange(Number(id));
   const { data: allActivity = [] } = useActivityLog();
   const { data: allLeads = [] } = useLeads();
   const [loading, setLoading] = useState<string | null>(null);
   const [showPause, setShowPause] = useState(false);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
+  const [expandedAdset, setExpandedAdset] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [actFilter, setActFilter] = useState("All");
   const [tab, setTab] = useState("overview");
