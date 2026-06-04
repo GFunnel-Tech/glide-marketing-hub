@@ -463,10 +463,18 @@ export function ClientHierarchyTable() {
                 const clientCampaigns = campaignsByClient.get(String(client.id)) ?? [];
                 const isOpen = !!effectiveOpenClients[String(client.id)];
 
-                // Company-level rollup
+                // Company-level rollup — sum ad-level clicks/impressions so
+                // CTR is a true weighted average (sum clicks / sum impressions)
+                // rather than an average of per-campaign rates.
                 const totSpend = clientCampaigns.reduce((s, c) => s + (c.spend || 0), 0);
                 const totLeads = clientCampaigns.reduce((s, c) => s + (c.leads || 0), 0);
-                const totImpr = clientCampaigns.reduce((s, c) => s + deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0), 0);
+                const allClientAds = clientCampaigns.flatMap((c) => adsByCampaign.get(c.id) ?? []);
+                const totClicks = allClientAds.reduce((s, a) => s + (a.clicks || 0), 0);
+                const totImprFromAds = allClientAds.reduce((s, a) => s + (a.impressions || 0), 0);
+                const totImpr = totImprFromAds > 0
+                  ? totImprFromAds
+                  : clientCampaigns.reduce((s, c) => s + deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0), 0);
+                const avgCtr = totImpr > 0 ? (totClicks / totImpr) * 100 : 0;
                 const avgCpl = totLeads > 0 ? totSpend / totLeads : 0;
 
                 return (
@@ -513,8 +521,8 @@ export function ClientHierarchyTable() {
                           {clientCampaigns.length} campaign{clientCampaigns.length === 1 ? "" : "s"}
                         </td>
                         <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtInt(totImpr)}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">—</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground">—</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totClicks > 0 ? fmtInt(totClicks) : "—"}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{avgCtr > 0 ? `${avgCtr.toFixed(2)}%` : "—"}</td>
                         <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtMoney(totSpend)}</td>
                         <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totLeads}</td>
                         <td className={cn("px-2 py-2.5 text-right tabular-nums font-semibold", cplColor(avgCpl))}>
