@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
 import { useClient, useCampaigns, useActivityLog, useLeads } from "@/hooks/useDatabase";
+import { useClientCampaignsRange, type RangeCampaignRow } from "@/hooks/useClientCampaignsRange";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { cn } from "@/lib/utils";
 import {
@@ -124,11 +125,13 @@ export default function ClientProfile() {
   const { id } = useParams();
   const { data: client, isLoading } = useClient(Number(id));
   const { data: allCampaigns = [] } = useCampaigns();
+  const { data: rangeCampaignsData = [] } = useClientCampaignsRange(Number(id));
   const { data: allActivity = [] } = useActivityLog();
   const { data: allLeads = [] } = useLeads();
   const [loading, setLoading] = useState<string | null>(null);
   const [showPause, setShowPause] = useState(false);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
+  const [expandedAdset, setExpandedAdset] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [actFilter, setActFilter] = useState("All");
   const [tab, setTab] = useState("overview");
@@ -138,7 +141,52 @@ export default function ClientProfile() {
   if (!client)
     return <div className="p-10 text-center text-muted-foreground">Client not found</div>;
 
-  const clientCampaigns = allCampaigns.filter((c) => c.clientId === String(client.id));
+  const baseCampaigns = allCampaigns.filter((c) => c.clientId === String(client.id));
+  // Merge range insights on top of the static campaign rows so spend/leads/CPL react
+  // to the date picker. Campaigns with range activity but no static row still show up.
+  const rangeMap = new Map<string, RangeCampaignRow>();
+  rangeCampaignsData.forEach((rc) => rangeMap.set(rc.id, rc));
+  const baseIds = new Set(baseCampaigns.map((b) => b.id));
+  const clientCampaigns = [
+    ...baseCampaigns.map((b) => {
+      const r = rangeMap.get(b.id);
+      if (!r) return { ...b, adSetsDetail: [] as RangeCampaignRow["adSets"] };
+      return {
+        ...b,
+        spend: r.spend,
+        leads: r.leads,
+        trueLeads: r.leads,
+        cpl: r.cpl,
+        trueCpl: r.cpl,
+        cpm: r.cpm,
+        frequency: r.frequency || b.frequency,
+        adSets: r.adSets.length || b.adSets,
+        ads: r.adSets.reduce((n, s) => n + s.ads.length, 0) || b.ads,
+        adSetsDetail: r.adSets,
+      };
+    }),
+    // Campaigns surfaced only by range data (e.g. new campaigns not yet in the snapshot table)
+    ...rangeCampaignsData
+      .filter((r) => !baseIds.has(r.id))
+      .map((r) => ({
+        id: r.id,
+        clientId: String(client.id),
+        name: r.name,
+        status: "active" as const,
+        spend: r.spend,
+        leads: r.leads,
+        trueLeads: r.leads,
+        cpl: r.cpl,
+        trueCpl: r.cpl,
+        cpm: r.cpm,
+        frequency: r.frequency,
+        adSets: r.adSets.length,
+        ads: r.adSets.reduce((n, s) => n + s.ads.length, 0),
+        doubleCount: false,
+        issuesStatus: null,
+        adSetsDetail: r.adSets,
+      })),
+  ];
   const activeCampaigns = clientCampaigns.filter((c) => c.status === "active");
   const clientActivity = allActivity.filter((a) => a.client_id === client.id);
   const clientLeads = allLeads.filter((l) => l.client_id === client.id);
@@ -602,6 +650,57 @@ export default function ClientProfile() {
                             View in Meta <ExternalLink className="h-3 w-3" />
                           </button>
                         </div>
+
+                        {/* Ad sets + ads breakdown (range-aware) */}
+                        {(c as any).adSetsDetail && (c as any).adSetsDetail.length > 0 ? (
+                          <div className="space-y-2 pt-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Ad sets ({(c as any).adSetsDetail.length})
+                            </p>
+                            {(c as any).adSetsDetail.map((as: any) => (
+                              <div key={as.id} className="rounded border border-border bg-card">
+                                <button
+                                  onClick={() => setExpandedAdset(expandedAdset === as.id ? null : as.id)}
+                                  className="w-full flex items-center justify-between p-2.5 text-left hover:bg-accent/40"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-medium text-foreground truncate">{as.name}</p>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                                      ${as.spend.toFixed(0)} · {as.leads} leads ·{" "}
+                                      <span className={cplTone(as.cpl)}>${as.cpl.toFixed(2)} CPL</span> · {as.ads.length} ads
+                                    </p>
+                                  </div>
+                                  {expandedAdset === as.id ? (
+                                    <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                  )}
+                                </button>
+                                {expandedAdset === as.id && (
+                                  <div className="border-t border-border p-2 space-y-1.5 bg-muted/20">
+                                    {as.ads.length === 0 ? (
+                                      <p className="text-[11px] text-muted-foreground">No ads in range.</p>
+                                    ) : (
+                                      as.ads.map((ad: any) => (
+                                        <div key={ad.id} className="flex items-center justify-between gap-3 rounded px-2 py-1.5 hover:bg-accent/40">
+                                          <p className="text-[11px] font-medium text-foreground truncate min-w-0">{ad.name}</p>
+                                          <p className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
+                                            ${ad.spend.toFixed(0)} · {ad.leads}L ·{" "}
+                                            <span className={cplTone(ad.cpl)}>${ad.cpl.toFixed(2)}</span> · {ad.ctr.toFixed(2)}% CTR
+                                          </p>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground pt-2">
+                            No ad set / ad breakdown for the selected range.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
