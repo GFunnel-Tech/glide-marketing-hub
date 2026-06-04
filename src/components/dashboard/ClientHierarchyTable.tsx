@@ -76,7 +76,7 @@ export function ClientHierarchyTable() {
     archivedSet.has(`${entity}:${id}`);
 
   // Bulk selection — keyed by `${entity}:${id}` -> {entity, id, clientId}
-  type EntityType = "campaign" | "adset" | "ad";
+  type EntityType = "campaign" | "adset" | "ad" | "client";
   type SelKey = string;
   type SelVal = { entity: EntityType; id: string; clientId: string };
   const [selected, setSelected] = useState<Record<SelKey, SelVal>>({});
