@@ -1,9 +1,16 @@
 import { Users, Activity, DollarSign, Target, Headphones } from "lucide-react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useClients } from "@/hooks/useDatabase";
+import { useClients, useCampaigns } from "@/hooks/useDatabase";
+import { useArchivedSet } from "@/hooks/useArchivedEntities";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
 import { useDateRange } from "@/hooks/useDateRange";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
+
+function deriveImpressionsFromCpm(spend: number, cpm: number) {
+  if (!cpm || cpm <= 0) return 0;
+  return (spend / cpm) * 1000;
+}
 
 interface KPITileProps {
   label: string;
