@@ -28,9 +28,11 @@ type Suggestion = {
   clients?: { name: string | null } | null;
 };
 
-type ClientLite = { id: number; name: string | null; brand: string | null };
+type ClientLite = { id: number; name: string | null; brand: string | null; ghl_location_id?: string | null };
+type GhlLoc = { location_id: string; name: string | null; business_name: string | null };
 
 const CREATE_NEW = "__create_new__";
+const NONE = "__none__";
 const ARCHIVE_DAYS = 30;
 
 type TabKey = "active" | "pending" | "errors" | "archived";
