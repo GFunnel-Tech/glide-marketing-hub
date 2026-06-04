@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useClients, useCampaigns, useClientsWithMetaAccount } from "@/hooks/useDatabase";
+import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
 import { useMetaAds, type MetaAd } from "@/hooks/useMetaAds";
 import {
   useArchivedSet, useArchiveEntities, useUnarchiveEntities,
@@ -55,6 +56,7 @@ export function ClientHierarchyTable() {
   const { data: allCampaigns = [], isLoading: campLoading } = useCampaigns();
   const { data: allAds = [] } = useMetaAds();
   const { data: clientsWithMetaAcct = new Set<number>() } = useClientsWithMetaAccount();
+  const { data: rangeMetrics = {} } = useClientsRangeMetrics();
 
   const [clientId, setClientId] = useState<number | "all">("all");
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
@@ -444,15 +446,18 @@ export function ClientHierarchyTable() {
                 <th className="w-24 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Spend</th>
                 <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Leads</th>
                 <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPL</th>
+                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPM</th>
+                <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Freq</th>
+                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" title="Percentage of leads in window self-reporting a credit score above 640">Above 640</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={showCompanyCol ? 11 : 10} className="py-10 text-center text-muted-foreground text-sm">Loading…</td></tr>
+                <tr><td colSpan={showCompanyCol ? 14 : 13} className="py-10 text-center text-muted-foreground text-sm">Loading…</td></tr>
               )}
 
               {!isLoading && visibleClients.length === 0 && (
-                <tr><td colSpan={showCompanyCol ? 11 : 10} className="py-10 text-center text-muted-foreground text-sm">No clients match your filters.</td></tr>
+                <tr><td colSpan={showCompanyCol ? 14 : 13} className="py-10 text-center text-muted-foreground text-sm">No clients match your filters.</td></tr>
               )}
 
               {!isLoading && visibleClients.map((client) => {
@@ -472,6 +477,11 @@ export function ClientHierarchyTable() {
                   : clientCampaigns.reduce((s, c) => s + deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0), 0);
                 const avgCtr = totImpr > 0 ? (totClicks / totImpr) * 100 : 0;
                 const avgCpl = totLeads > 0 ? totSpend / totLeads : 0;
+                const rm = (rangeMetrics as any)[client.id];
+                const cAvgCpm = rm?.cpm ?? (totImpr > 0 ? (totSpend / totImpr) * 1000 : 0);
+                const cAvgFreq = rm?.frequency ?? 0;
+                const cAbove640 = rm?.above640Pct ?? null;
+                const cScored = rm?.scoredLeads ?? 0;
 
                 return (
                   <>
@@ -524,13 +534,38 @@ export function ClientHierarchyTable() {
                         <td className={cn("px-2 py-2.5 text-right tabular-nums font-semibold", cplColor(avgCpl))}>
                           {avgCpl > 0 ? `$${avgCpl.toFixed(2)}` : "—"}
                         </td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
+                          {cAvgCpm > 0 ? `$${cAvgCpm.toFixed(2)}` : "—"}
+                        </td>
+                        <td className={cn(
+                          "px-2 py-2.5 text-right tabular-nums",
+                          cAvgFreq >= 3.5 ? "text-destructive font-semibold" : "text-foreground"
+                        )}>
+                          {cAvgFreq > 0 ? cAvgFreq.toFixed(2) : "—"}
+                        </td>
+                        <td
+                          className={cn(
+                            "px-2 py-2.5 text-right tabular-nums",
+                            cAbove640 === null
+                              ? "text-muted-foreground"
+                              : cAbove640 >= 60
+                                ? "text-success font-semibold"
+                                : cAbove640 >= 30
+                                  ? "text-warning font-semibold"
+                                  : "text-destructive font-semibold"
+                          )}
+                          title={cAbove640 !== null ? `${cScored} scored lead${cScored === 1 ? "" : "s"} in range` : "No credit-score answers in range"}
+                        >
+                          {cAbove640 === null ? "—" : `${cAbove640.toFixed(0)}%`}
+                        </td>
                       </tr>
+
                     )}
 
                     {/* Campaign rows */}
                     {isOpen && clientCampaigns.length === 0 && (
                       <tr className="border-b border-border">
-                        <td colSpan={showCompanyCol ? 11 : 10} className="px-12 py-6 text-xs text-muted-foreground">
+                        <td colSpan={showCompanyCol ? 14 : 13} className="px-12 py-6 text-xs text-muted-foreground">
                           No campaigns for this client.
                           <Button variant="link" size="sm" className="ml-1 h-auto p-0 text-xs"
                             onClick={() => { setClientId(client.id); setTimeout(handleQuickSync, 0); }}>
@@ -612,6 +647,9 @@ export function ClientHierarchyTable() {
                             <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(camp.cpl || 0))}>
                               {camp.cpl > 0 ? `$${camp.cpl.toFixed(2)}` : "—"}
                             </td>
+                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{(camp.cpm || 0) > 0 ? `$${Number(camp.cpm).toFixed(2)}` : "—"}</td>
+                            <td className={cn("px-2 py-2 text-right tabular-nums", (camp.frequency || 0) >= 3.5 ? "text-destructive font-semibold" : "text-foreground")}>{(camp.frequency || 0) > 0 ? Number(camp.frequency).toFixed(2) : "—"}</td>
+                            <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                           </tr>
 
                           {/* Ad sets */}
@@ -668,6 +706,9 @@ export function ClientHierarchyTable() {
                                   <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cpl))}>
                                     {cpl > 0 ? `$${cpl.toFixed(2)}` : "—"}
                                   </td>
+                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                                 </tr>
 
                                 {/* Ads */}
@@ -705,6 +746,9 @@ export function ClientHierarchyTable() {
                                       <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(ad.cpl))}>
                                         {ad.cpl > 0 ? `$${ad.cpl.toFixed(2)}` : "—"}
                                       </td>
+                                      <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                                      <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                                      <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                                     </tr>
                                   );
                                 })}
