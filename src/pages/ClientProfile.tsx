@@ -699,8 +699,8 @@ export default function ClientProfile() {
                                         <div key={ad.id} className="flex items-center justify-between gap-3 rounded px-2 py-1.5 hover:bg-accent/40">
                                           <p className="text-[11px] font-medium text-foreground truncate min-w-0">{ad.name}</p>
                                           <p className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
-                                            ${ad.spend.toFixed(0)} · {ad.leads}L ·{" "}
-                                            <span className={cplTone(ad.cpl)}>${ad.cpl.toFixed(2)}</span> · {ad.ctr.toFixed(2)}% CTR
+                                            ${ad.spend.toFixed(0)} · {ad.clicks ?? 0} clicks · {ad.ctr.toFixed(2)}% CTR · {ad.leads}L ·{" "}
+                                            <span className={cplTone(ad.cpl)}>${ad.cpl.toFixed(2)}</span>
                                           </p>
                                         </div>
                                       ))
