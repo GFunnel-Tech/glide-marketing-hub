@@ -622,22 +622,30 @@ export default function ClientProfile() {
                     </button>
                     {expandedCampaign === c.id && (
                       <div className="border-t border-border p-3 space-y-3 bg-muted/30">
-                        <div className="grid grid-cols-4 gap-3 text-xs">
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Clicks</span>
+                            <p className="font-semibold tabular-nums">{((c as any).clicks ?? 0).toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">CTR</span>
+                            <p className="font-semibold tabular-nums">{((c as any).ctr ?? 0).toFixed(2)}%</p>
+                          </div>
                           <div>
                             <span className="text-muted-foreground">CPM</span>
-                            <p className="font-semibold">${c.cpm.toFixed(2)}</p>
+                            <p className="font-semibold tabular-nums">${c.cpm.toFixed(2)}</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Frequency</span>
-                            <p className="font-semibold">{c.frequency}</p>
+                            <p className="font-semibold tabular-nums">{c.frequency}</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Ad Sets</span>
-                            <p className="font-semibold">{c.adSets}</p>
+                            <p className="font-semibold tabular-nums">{c.adSets}</p>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Ads</span>
-                            <p className="font-semibold">{c.ads}</p>
+                            <p className="font-semibold tabular-nums">{c.ads}</p>
                           </div>
                         </div>
                         {c.doubleCount && (
