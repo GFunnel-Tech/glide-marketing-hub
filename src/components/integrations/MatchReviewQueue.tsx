@@ -127,10 +127,22 @@ export function MatchReviewQueue() {
           .update({ client_id: clientId })
           .eq("id", s.source_ref);
         if (error) throw error;
+        // Optionally link a GHL sub at the same time
+        const ghlSel = ghlSelections[s.id];
+        if (ghlSel && ghlSel !== NONE) {
+          const { error: gErr } = await (supabase as any)
+            .from("clients")
+            .update({ ghl_location_id: ghlSel })
+            .eq("id", clientId);
+          if (gErr) throw gErr;
+        }
       } else {
+        const ghlRef = ghlSelections[s.id] && ghlSelections[s.id] !== NONE
+          ? ghlSelections[s.id]
+          : s.source_ref;
         const { error } = await (supabase as any)
           .from("clients")
-          .update({ ghl_location_id: s.source_ref })
+          .update({ ghl_location_id: ghlRef })
           .eq("id", clientId);
         if (error) throw error;
       }
