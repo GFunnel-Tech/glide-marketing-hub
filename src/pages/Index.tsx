@@ -18,19 +18,19 @@ import { supabase } from "@/integrations/supabase/client";
 function PortfolioHealthCard() {
   const { data: clients = [] } = useClients();
   const counts = useMemo(() => {
-    const c = { GREEN: 0, YELLOW: 0, RED: 0, BLOCKED: 0, other: 0 };
-    for (const cl of clients) {
-      if (cl.status in c) (c as any)[cl.status]++;
-      else c.other++;
-    }
+    const c: Record<string, number> = {};
+    for (const cl of clients) c[cl.status] = (c[cl.status] || 0) + 1;
     return c;
   }, [clients]);
 
-  const rows: { key: "GREEN" | "YELLOW" | "RED" | "BLOCKED"; label: string }[] = [
-    { key: "GREEN", label: "Performing" },
-    { key: "YELLOW", label: "Needs attention" },
-    { key: "RED", label: "At risk" },
-    { key: "BLOCKED", label: "Blocked" },
+  const rows: { key: "NEW" | "BLOCKED" | "RELAUNCH" | "GREEN" | "YELLOW" | "RED" | "CANCELLED"; label: string }[] = [
+    { key: "NEW", label: "New" },
+    { key: "BLOCKED", label: "Paused" },
+    { key: "RELAUNCH", label: "Re-Launch" },
+    { key: "GREEN", label: "Green" },
+    { key: "YELLOW", label: "Yellow" },
+    { key: "RED", label: "Red" },
+    { key: "CANCELLED", label: "Cancelled" },
   ];
 
   return (
@@ -44,7 +44,7 @@ function PortfolioHealthCard() {
               <StatusBadge status={r.key} />
               <span className="text-sm text-muted-foreground">{r.label}</span>
             </dt>
-            <dd className="text-sm font-semibold tabular-nums text-foreground">{(counts as any)[r.key]}</dd>
+            <dd className="text-sm font-semibold tabular-nums text-foreground">{counts[r.key] || 0}</dd>
           </div>
         ))}
       </dl>
