@@ -64,15 +64,8 @@ export function KPIStrip() {
     [clients, clientsWithMetaAcct],
   );
 
-  // Active = any client not cancelled/blocked/archived. CSV-imported clients
-  // count even before Meta/GHL are linked.
-  const INACTIVE_STATUSES = new Set(["CANCELLED", "BLOCKED", "PENDING_CANCELLATION"]);
-  const activeClientCount = useMemo(() => {
-    return (clients as any[]).filter((c) => {
-      const status = String(c.status ?? "").toUpperCase();
-      return !INACTIVE_STATUSES.has(status) && !archivedSet.has(`client:${c.id}`);
-    }).length;
-  }, [clients, archivedSet]);
+  // Active = every client. Cancelled/blocked clients can be marked later.
+  const activeClientCount = clients.length;
 
   const totals = Object.values(rangeMetrics).reduce(
     (acc, m) => {
