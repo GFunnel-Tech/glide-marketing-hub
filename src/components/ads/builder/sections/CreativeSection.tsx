@@ -106,6 +106,31 @@ export function CreativeSection() {
         )}
       </div>
 
+      {/* Descriptions */}
+      <div>
+        <label className="text-xs font-medium text-foreground">Descriptions (Optional)</label>
+        <div className="space-y-2 mt-1.5">
+          {state.descriptions.map((d, i) => (
+            <div key={i} className="flex gap-2">
+              <Input
+                value={d}
+                onChange={(e) => { const n = [...state.descriptions]; n[i] = e.target.value; patch("descriptions", n); }}
+                placeholder="Add supporting text to reinforce your headline"
+                className="text-sm"
+              />
+              <button onClick={() => patch("descriptions", state.descriptions.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+        {state.descriptions.length < 5 && (
+          <Button variant="ghost" size="sm" className="mt-1.5 text-xs" onClick={() => patch("descriptions", [...state.descriptions, ""])}>
+            <Plus className="h-3 w-3 mr-1" /> Add Description
+          </Button>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-medium text-foreground">Call To Action</label>
