@@ -316,6 +316,7 @@ export function ClientHierarchyTable() {
           <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary tabular-nums">
             {visibleClients.length}
           </span>
+          <NoteBubble variant="button" label="Notes" align="start" />
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
