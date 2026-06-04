@@ -91,7 +91,7 @@ export function KPIStrip() {
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-      <KPITile label="Active Clients" value={String(activeClientCount)} sublabel={`of ${fullySyncedClients.length} fully synced`} Icon={Users} iconTone="blue" />
+      <KPITile label="Total Clients" value={String(clients.length)} sublabel={`${activeClientCount} active · ${fullySyncedClients.length} synced`} Icon={Users} iconTone="blue" />
       <KPITile label="Total Leads" kpiKey="leads" value={totalLeads.toLocaleString()} sublabel={sub} Icon={Activity} iconTone="green" />
       <KPITile label="Blended CPL" kpiKey="cpl" value={`$${blendedCpl.toFixed(2)}`} sublabel={sub} Icon={Target} iconTone="amber" />
       <KPITile label="Total Ad Spend" kpiKey="spend" value={`$${Math.round(totals.spend).toLocaleString()}`} sublabel={sub} Icon={DollarSign} iconTone="pink" />

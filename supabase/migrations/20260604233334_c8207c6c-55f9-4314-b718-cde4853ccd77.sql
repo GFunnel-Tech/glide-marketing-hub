@@ -1,0 +1,2 @@
+ALTER TABLE public.archived_entities DROP CONSTRAINT IF EXISTS archived_entities_entity_type_check;
+ALTER TABLE public.archived_entities ADD CONSTRAINT archived_entities_entity_type_check CHECK (entity_type = ANY (ARRAY['campaign'::text, 'adset'::text, 'ad'::text, 'client'::text]));
