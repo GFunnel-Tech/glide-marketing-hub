@@ -22,6 +22,7 @@ export interface DbClient {
   last_audit: string | null;
   bm_id?: string | null;
   bm_account_name?: string | null;
+  ghl_location_id?: string | null;
 }
 
 export interface DbCampaign {
