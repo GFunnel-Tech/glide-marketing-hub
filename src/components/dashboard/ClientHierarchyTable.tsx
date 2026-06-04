@@ -238,12 +238,14 @@ export function ClientHierarchyTable() {
     const base = isAllClients ? clients : (focusedClient ? [focusedClient] : []);
     return base.filter((c) => {
       const archived = archivedSet.has(`client:${c.id}`);
+      if (archived) return false;
+      // Show ALL clients (connected or not). Unconnected clients get an
+      // indicator chip so users can quickly spot what still needs setup.
+      // hideZero only filters fully-synced clients with no activity in range;
+      // unconnected clients are always shown so they don't disappear.
       const synced = isFullySynced(c);
       const hasActivity = clientsWithActivity.has(String(c.id));
-      // Single view: only fully-synced, non-archived clients.
-      // When hideZero is on, also require activity in the current range.
-      if (archived || !synced) return false;
-      if (hideZero && !hasActivity) return false;
+      if (synced && hideZero && !hasActivity) return false;
       return true;
     });
   }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero]);
