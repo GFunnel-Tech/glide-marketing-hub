@@ -157,11 +157,28 @@ export function ClientHierarchyTable() {
     return byCamp;
   }, [allAds, showArchived, archivedSet, hideZero]);
 
+  // Compute which clients have ANY non-zero campaign activity (regardless of archive state)
+  const clientsWithActivity = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of allCampaigns as any[]) {
+      const impr = (c.impressions || 0) > 0 ? (c.impressions || 0) : deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0);
+      if ((c.spend || 0) > 0 && impr > 0) s.add(String(c.clientId));
+    }
+    return s;
+  }, [allCampaigns]);
+
   const visibleClients = useMemo(() => {
-    if (!isAllClients) return focusedClient ? [focusedClient] : [];
-    // Always hide clients with no active (non-zero) campaigns in view
-    return clients.filter((c) => campaignsByClient.has(String(c.id)));
-  }, [isAllClients, focusedClient, clients, campaignsByClient]);
+    const base = isAllClients ? clients : (focusedClient ? [focusedClient] : []);
+    return base.filter((c) => {
+      const archived = archivedSet.has(`client:${c.id}`);
+      const hasActivity = clientsWithActivity.has(String(c.id));
+      if (view === "archived") return archived;
+      if (archived) return false;
+      if (view === "inactive") return !hasActivity;
+      // active
+      return hasActivity;
+    });
+  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, view]);
 
   const handleQuickSync = async () => {
     if (!focusedClient) {
