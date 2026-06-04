@@ -365,23 +365,8 @@ export function ClientHierarchyTable() {
             </Button>
           </div>
 
-          {/* View tabs: Active / Inactive / Archived */}
-          <div className="flex items-center gap-1 rounded-lg bg-accent p-0.5">
-            {([
-              { k: "active", label: "Active" },
-              { k: "inactive", label: "Inactive" },
-              { k: "archived", label: "Archived" },
-            ] as const).map((t) => (
-              <button
-                key={t.k}
-                onClick={() => setView(t.k)}
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                  view === t.k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-                )}
-              >{t.label}</button>
-            ))}
-          </div>
+
+
 
 
           {/* Status filter pills */}
