@@ -50,6 +50,59 @@ function deriveImpressionsFromCpm(spend: number, cpm: number) {
   return (spend / cpm) * 1000;
 }
 
+// ---------- Ad performance rating within an ad set ----------
+type AdRating = "best" | "ok" | "worst" | "learning";
+function rateAdsInAdset(ads: MetaAd[]): Map<string, AdRating> {
+  const out = new Map<string, AdRating>();
+  // Mark "learning" when not enough signal
+  const mature = ads.filter((a) => (a.spend ?? 0) >= 50 && (a.leads ?? 0) >= 3 && (a.cpl ?? 0) > 0);
+  for (const a of ads) {
+    const isMature = (a.spend ?? 0) >= 50 && (a.leads ?? 0) >= 3 && (a.cpl ?? 0) > 0;
+    if (!isMature) { out.set(a.id, "learning"); continue; }
+    out.set(a.id, "ok");
+  }
+  if (mature.length < 2) return out;
+  const sorted = [...mature].sort((x, y) => (x.cpl ?? 0) - (y.cpl ?? 0));
+  const min = sorted[0].cpl;
+  const max = sorted[sorted.length - 1].cpl;
+  // Best: within 10% of the lowest CPL
+  for (const a of mature) {
+    if (a.cpl <= min * 1.1) out.set(a.id, "best");
+  }
+  // Worst: >= 1.5x the lowest AND is the max (or within 5% of it)
+  if (max >= min * 1.5) {
+    for (const a of mature) {
+      if (a.cpl >= max * 0.95 && a.cpl > min * 1.5) out.set(a.id, "worst");
+    }
+  }
+  return out;
+}
+
+function AdRatingBadge({ rating }: { rating: AdRating }) {
+  if (rating === "best") {
+    return (
+      <span title="Best CPL in this ad set" className="inline-flex h-5 items-center gap-1 rounded-full bg-success/10 px-1.5 text-[10px] font-semibold text-success">
+        <Trophy className="h-3 w-3" /> Best
+      </span>
+    );
+  }
+  if (rating === "worst") {
+    return (
+      <span title="Worst CPL in this ad set — consider pausing" className="inline-flex h-5 items-center gap-1 rounded-full bg-destructive/10 px-1.5 text-[10px] font-semibold text-destructive">
+        <TrendingDown className="h-3 w-3" /> Worse
+      </span>
+    );
+  }
+  if (rating === "learning") {
+    return (
+      <span title="Not enough data yet (needs ≥ $50 spend & 3 leads)" className="inline-flex h-5 items-center gap-1 rounded-full bg-warning/10 px-1.5 text-[10px] font-semibold text-warning">
+        <Hourglass className="h-3 w-3" /> Learning
+      </span>
+    );
+  }
+  return null;
+}
+
 type StatusFilter = "All" | "Active" | "Paused" | "Issues";
 
 export function ClientHierarchyTable() {
