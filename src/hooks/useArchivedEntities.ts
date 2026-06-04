@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
-export type ArchivedEntityType = "campaign" | "adset" | "ad";
+export type ArchivedEntityType = "campaign" | "adset" | "ad" | "client";
 
 export interface ArchivedEntity {
   id: string;

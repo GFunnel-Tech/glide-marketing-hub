@@ -64,8 +64,9 @@ export function ClientHierarchyTable() {
   const [openClients, setOpenClients] = useState<Record<string, boolean>>({});
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
-  const [showArchived, setShowArchived] = useState(false);
-  const hideZero = true;
+  const [view, setView] = useState<"active" | "inactive" | "archived">("active");
+  const showArchived = view === "archived";
+  const hideZero = view === "active";
 
   // Archived items
   const archivedSet = useArchivedSet();
@@ -75,7 +76,7 @@ export function ClientHierarchyTable() {
     archivedSet.has(`${entity}:${id}`);
 
   // Bulk selection — keyed by `${entity}:${id}` -> {entity, id, clientId}
-  type EntityType = "campaign" | "adset" | "ad";
+  type EntityType = "campaign" | "adset" | "ad" | "client";
   type SelKey = string;
   type SelVal = { entity: EntityType; id: string; clientId: string };
   const [selected, setSelected] = useState<Record<SelKey, SelVal>>({});
@@ -156,11 +157,28 @@ export function ClientHierarchyTable() {
     return byCamp;
   }, [allAds, showArchived, archivedSet, hideZero]);
 
+  // Compute which clients have ANY non-zero campaign activity (regardless of archive state)
+  const clientsWithActivity = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of allCampaigns as any[]) {
+      const impr = (c.impressions || 0) > 0 ? (c.impressions || 0) : deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0);
+      if ((c.spend || 0) > 0 && impr > 0) s.add(String(c.clientId));
+    }
+    return s;
+  }, [allCampaigns]);
+
   const visibleClients = useMemo(() => {
-    if (!isAllClients) return focusedClient ? [focusedClient] : [];
-    // Always hide clients with no active (non-zero) campaigns in view
-    return clients.filter((c) => campaignsByClient.has(String(c.id)));
-  }, [isAllClients, focusedClient, clients, campaignsByClient]);
+    const base = isAllClients ? clients : (focusedClient ? [focusedClient] : []);
+    return base.filter((c) => {
+      const archived = archivedSet.has(`client:${c.id}`);
+      const hasActivity = clientsWithActivity.has(String(c.id));
+      if (view === "archived") return archived;
+      if (archived) return false;
+      if (view === "inactive") return !hasActivity;
+      // active
+      return hasActivity;
+    });
+  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, view]);
 
   const handleQuickSync = async () => {
     if (!focusedClient) {
@@ -227,9 +245,10 @@ export function ClientHierarchyTable() {
     if (selectedCount === 0) return;
     setBulkRunning(true);
     try {
-      // Group by entity + clientId
-      const groups = new Map<string, { entity: EntityType; clientId: string; ids: string[] }>();
+      // Group by entity + clientId (skip "client" entities — pause/activate/delete don't apply)
+      const groups = new Map<string, { entity: "campaign" | "adset" | "ad"; clientId: string; ids: string[] }>();
       for (const s of selectedList) {
+        if (s.entity === "client") continue;
         const k = `${s.entity}:${s.clientId}`;
         if (!groups.has(k)) groups.set(k, { entity: s.entity, clientId: s.clientId, ids: [] });
         groups.get(k)!.ids.push(s.id);
@@ -338,16 +357,23 @@ export function ClientHierarchyTable() {
             </Button>
           </div>
 
-          {/* Show archived toggle */}
-          <Button
-            variant={showArchived ? "default" : "outline"}
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => setShowArchived((v) => !v)}
-          >
-            {showArchived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-            {showArchived ? "Hide archived" : "Show archived"}
-          </Button>
+          {/* View tabs: Active / Inactive / Archived */}
+          <div className="flex items-center gap-1 rounded-lg bg-accent p-0.5">
+            {([
+              { k: "active", label: "Active" },
+              { k: "inactive", label: "Inactive" },
+              { k: "archived", label: "Archived" },
+            ] as const).map((t) => (
+              <button
+                key={t.k}
+                onClick={() => setView(t.k)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                  view === t.k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >{t.label}</button>
+            ))}
+          </div>
 
 
           {/* Status filter pills */}
@@ -449,7 +475,13 @@ export function ClientHierarchyTable() {
                             isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           ) : null}
                         </td>
-                        <td className="px-2 py-2.5"></td>
+                        <td className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected("client", String(client.id))}
+                            onCheckedChange={() => toggleSel("client", String(client.id), String(client.id))}
+                            aria-label="Select client"
+                          />
+                        </td>
                         <td className="px-2 py-2.5"><StatusBadge status={client.status as any} /></td>
                         <td className="px-2 py-2.5">
                           <div className="flex items-center gap-2">
