@@ -330,16 +330,24 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   >
                     {n.content}
                   </p>
-                  {n.due_at && (
-                    <div
-                      className={cn(
-                        "mt-0.5 flex items-center gap-1 text-[10px]",
-                        overdue ? "text-destructive font-medium" : "text-muted-foreground",
+                  {(n.due_at || n.assigned_to) && (
+                    <div className="mt-0.5 flex items-center gap-2 text-[10px]">
+                      {n.due_at && (
+                        <span className={cn(
+                          "inline-flex items-center gap-1",
+                          overdue ? "text-destructive font-medium" : "text-muted-foreground",
+                        )}>
+                          <CalendarIcon className="h-2.5 w-2.5" />
+                          {format(new Date(n.due_at), "MMM d, h:mm a")}
+                          {n.reminded_at && <span className="ml-1">· sent</span>}
+                        </span>
                       )}
-                    >
-                      <CalendarIcon className="h-2.5 w-2.5" />
-                      {format(new Date(n.due_at), "MMM d, h:mm a")}
-                      {n.reminded_at && <span className="ml-1">· sent</span>}
+                      {n.assigned_to && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-primary font-medium">
+                          <User className="h-2.5 w-2.5" />
+                          {memberLabel(n.assigned_to)}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
