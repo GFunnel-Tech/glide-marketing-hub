@@ -436,7 +436,7 @@ export default function ClientProfile() {
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            ${c.spend} spend · {c.trueLeads} leads ·{" "}
+                            ${c.spend} spend · {(c as any).clicks ?? 0} clicks · {((c as any).ctr ?? 0).toFixed(2)}% CTR · {c.trueLeads} leads ·{" "}
                             <span className={cplTone(c.trueCpl)}>
                               ${c.trueCpl.toFixed(2)} CPL
                             </span>
