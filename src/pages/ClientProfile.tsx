@@ -143,6 +143,53 @@ export default function ClientProfile() {
 
   const clientCampaigns = allCampaigns.filter((c) => c.clientId === String(client.id));
   const activeCampaigns = clientCampaigns.filter((c) => c.status === "active");
+  const baseCampaigns = allCampaigns.filter((c) => c.clientId === String(client.id));
+  // Merge range insights on top of the static campaign rows so spend/leads/CPL react
+  // to the date picker. Campaigns with range activity but no static row still show up.
+  const rangeMap = new Map<string, RangeCampaignRow>();
+  rangeCampaignsData.forEach((rc) => rangeMap.set(rc.id, rc));
+  const baseIds = new Set(baseCampaigns.map((b) => b.id));
+  const clientCampaigns = [
+    ...baseCampaigns.map((b) => {
+      const r = rangeMap.get(b.id);
+      if (!r) return { ...b, adSetsDetail: [] as RangeCampaignRow["adSets"] };
+      return {
+        ...b,
+        spend: r.spend,
+        leads: r.leads,
+        trueLeads: r.leads,
+        cpl: r.cpl,
+        trueCpl: r.cpl,
+        cpm: r.cpm,
+        frequency: r.frequency || b.frequency,
+        adSets: r.adSets.length || b.adSets,
+        ads: r.adSets.reduce((n, s) => n + s.ads.length, 0) || b.ads,
+        adSetsDetail: r.adSets,
+      };
+    }),
+    // Campaigns surfaced only by range data (e.g. new campaigns not yet in the snapshot table)
+    ...rangeCampaignsData
+      .filter((r) => !baseIds.has(r.id))
+      .map((r) => ({
+        id: r.id,
+        clientId: String(client.id),
+        name: r.name,
+        status: "active" as const,
+        spend: r.spend,
+        leads: r.leads,
+        trueLeads: r.leads,
+        cpl: r.cpl,
+        trueCpl: r.cpl,
+        cpm: r.cpm,
+        frequency: r.frequency,
+        adSets: r.adSets.length,
+        ads: r.adSets.reduce((n, s) => n + s.ads.length, 0),
+        doubleCount: false,
+        issuesStatus: null,
+        adSetsDetail: r.adSets,
+      })),
+  ];
+  const activeCampaigns = clientCampaigns.filter((c) => c.status === "active");
   const clientActivity = allActivity.filter((a) => a.client_id === client.id);
   const clientLeads = allLeads.filter((l) => l.client_id === client.id);
   const filteredActivity =
