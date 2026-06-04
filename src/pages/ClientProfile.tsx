@@ -306,6 +306,11 @@ export default function ClientProfile() {
           ))}
         </div>
 
+        {/* CRM sync health */}
+        <div className="mt-4">
+          <ClientSyncStatus clientId={client.id} />
+        </div>
+
         {client.doubleCount && (
           <div className="mt-4 rounded-lg bg-destructive/10 border border-destructive/20 p-3 flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
