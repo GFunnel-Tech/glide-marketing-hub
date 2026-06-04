@@ -16,7 +16,12 @@ export interface ClientRangeMetrics {
   formCvr: number;
   frequency: number;
   doubleCount: boolean;
+  /** % of leads in window whose credit-score answer starts with "above" (typically above_640). null if no scored leads. */
+  above640Pct: number | null;
+  /** Count of leads with a credit-score answer (denominator for above640Pct). */
+  scoredLeads: number;
 }
+
 
 const fmtDate = (d: Date) => {
   const y = d.getFullYear();
