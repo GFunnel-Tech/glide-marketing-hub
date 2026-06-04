@@ -20,9 +20,12 @@ type Note = {
   done: boolean;
   due_at: string | null;
   reminded_at: string | null;
+  assigned_to: string | null;
   created_at: string;
   user_id: string;
 };
+
+type Member = { id: string; display_name: string | null; email: string | null };
 
 interface NoteBubbleProps {
   clientId?: number | null;
