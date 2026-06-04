@@ -819,6 +819,11 @@ export function QuickActionBar() {
         <LogList />
       </div>
 
+      <div className="mt-5 border-t border-border pt-4">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Audit · Meta OAuth</h4>
+        <MetaOAuthDiagnosticsPanel />
+      </div>
+
       <AddLogDialog open={logOpen} onClose={() => setLogOpen(false)} />
     </div>
   );
