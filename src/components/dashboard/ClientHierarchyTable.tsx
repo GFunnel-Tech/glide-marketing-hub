@@ -446,6 +446,9 @@ export function ClientHierarchyTable() {
                 <th className="w-24 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Spend</th>
                 <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Leads</th>
                 <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPL</th>
+                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPM</th>
+                <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Freq</th>
+                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" title="Percentage of leads in window self-reporting a credit score above 640">Above 640</th>
               </tr>
             </thead>
             <tbody>
