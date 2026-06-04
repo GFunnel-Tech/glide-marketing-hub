@@ -42,6 +42,18 @@ export function CreativeSection() {
 
       <MediaUploader value={state.media} onChange={(v) => patch("media", v)} max={10} accept="both" label="Add" />
 
+      {/* Caption (above media) */}
+      <div>
+        <label className="text-xs font-medium text-foreground">Caption (above media)</label>
+        <Textarea
+          value={state.caption}
+          onChange={(e) => patch("caption", e.target.value)}
+          placeholder="Add the caption which comes before the graphics/media content"
+          rows={2}
+          className="text-sm mt-1.5"
+        />
+      </div>
+
       {/* Primary Texts */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
