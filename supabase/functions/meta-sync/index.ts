@@ -67,7 +67,7 @@ async function runSync(
     .eq("status", "active");
   if (workspaceFilter) connQ = connQ.eq("workspace_id", workspaceFilter);
   const { data: connections, error: connErr } = await connQ;
-  if (connErr) return json({ error: connErr.message }, 500);
+  if (connErr) return { error: connErr.message };
 
   let totalRows = 0;
   const errors: any[] = [];
