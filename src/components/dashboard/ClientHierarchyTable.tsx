@@ -64,8 +64,9 @@ export function ClientHierarchyTable() {
   const [openClients, setOpenClients] = useState<Record<string, boolean>>({});
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
-  const [showArchived, setShowArchived] = useState(false);
-  const hideZero = true;
+  const [view, setView] = useState<"active" | "inactive" | "archived">("active");
+  const showArchived = view === "archived";
+  const hideZero = view === "active";
 
   // Archived items
   const archivedSet = useArchivedSet();
