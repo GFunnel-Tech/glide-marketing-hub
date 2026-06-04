@@ -158,12 +158,9 @@ export function ClientHierarchyTable() {
 
   const visibleClients = useMemo(() => {
     if (!isAllClients) return focusedClient ? [focusedClient] : [];
-    // only clients that have at least one matching campaign (or always show all when no filters)
-    if (search || statusFilter !== "All") {
-      return clients.filter((c) => campaignsByClient.has(String(c.id)));
-    }
-    return clients;
-  }, [isAllClients, focusedClient, clients, campaignsByClient, search, statusFilter]);
+    // Always hide clients with no active (non-zero) campaigns in view
+    return clients.filter((c) => campaignsByClient.has(String(c.id)));
+  }, [isAllClients, focusedClient, clients, campaignsByClient]);
 
   const handleQuickSync = async () => {
     if (!focusedClient) {
