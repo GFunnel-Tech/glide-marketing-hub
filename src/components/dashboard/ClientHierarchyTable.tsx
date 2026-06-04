@@ -236,7 +236,7 @@ export function ClientHierarchyTable() {
 
   const visibleClients = useMemo(() => {
     const base = isAllClients ? clients : (focusedClient ? [focusedClient] : []);
-    return base.filter((c) => {
+    const filtered = base.filter((c) => {
       const archived = archivedSet.has(`client:${c.id}`);
       if (archived) return false;
       // Show ALL clients (connected or not). Unconnected clients get an
@@ -248,6 +248,17 @@ export function ClientHierarchyTable() {
       if (synced && hideZero && !hasActivity) return false;
       return true;
     });
+    // Rank: active (synced + activity) first, then synced-no-activity,
+    // then unconnected. Keeps the KPI "Active Clients" rows above the
+    // long tail of clients still waiting on setup.
+    const rank = (c: any) => {
+      const synced = isFullySynced(c);
+      const hasActivity = clientsWithActivity.has(String(c.id));
+      if (synced && hasActivity) return 0;
+      if (synced) return 1;
+      return 2;
+    };
+    return [...filtered].sort((a, b) => rank(a) - rank(b));
   }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero]);
 
   const handleQuickSync = async () => {
