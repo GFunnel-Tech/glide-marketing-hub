@@ -42,6 +42,18 @@ export function CreativeSection() {
 
       <MediaUploader value={state.media} onChange={(v) => patch("media", v)} max={10} accept="both" label="Add" />
 
+      {/* Caption (above media) */}
+      <div>
+        <label className="text-xs font-medium text-foreground">Caption (above media)</label>
+        <Textarea
+          value={state.caption}
+          onChange={(e) => patch("caption", e.target.value)}
+          placeholder="Add the caption which comes before the graphics/media content"
+          rows={2}
+          className="text-sm mt-1.5"
+        />
+      </div>
+
       {/* Primary Texts */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
@@ -90,6 +102,31 @@ export function CreativeSection() {
         {state.headlines.length < 5 && (
           <Button variant="ghost" size="sm" className="mt-1.5 text-xs" onClick={() => patch("headlines", [...state.headlines, ""])}>
             <Plus className="h-3 w-3 mr-1" /> Add Headline
+          </Button>
+        )}
+      </div>
+
+      {/* Descriptions */}
+      <div>
+        <label className="text-xs font-medium text-foreground">Descriptions (Optional)</label>
+        <div className="space-y-2 mt-1.5">
+          {state.descriptions.map((d, i) => (
+            <div key={i} className="flex gap-2">
+              <Input
+                value={d}
+                onChange={(e) => { const n = [...state.descriptions]; n[i] = e.target.value; patch("descriptions", n); }}
+                placeholder="Add supporting text to reinforce your headline"
+                className="text-sm"
+              />
+              <button onClick={() => patch("descriptions", state.descriptions.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+        {state.descriptions.length < 5 && (
+          <Button variant="ghost" size="sm" className="mt-1.5 text-xs" onClick={() => patch("descriptions", [...state.descriptions, ""])}>
+            <Plus className="h-3 w-3 mr-1" /> Add Description
           </Button>
         )}
       </div>

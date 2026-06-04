@@ -54,6 +54,45 @@ export interface LeadFormDraft {
   questions?: LeadFormQuestion[];
 }
 
+// ----- Multi ad-set / multi-ad data model (GHL-style) -----
+export interface AdSnapshot {
+  id: string;
+  name: string;
+  media: MediaAsset[];
+  primaryTexts: string[];
+  headlines: string[];
+  descriptions: string[];
+  caption: string;
+  cta: CTA;
+  displayLink: string;
+  websiteUrl: string;
+}
+
+export interface AdSetSnapshot {
+  id: string;
+  name: string;
+  ads: AdSnapshot[];
+  interests: InterestTarget[];
+  ageMin: number;
+  ageMax: number;
+  genders: ("male" | "female" | "all")[];
+  placements: "advantage_plus" | "manual";
+  budgetType: BudgetType;
+  budgetAmount: number;
+}
+
+// Keys that mirror to the selected Ad snapshot
+export const AD_LEVEL_KEYS = [
+  "media", "primaryTexts", "headlines", "descriptions", "caption",
+  "cta", "displayLink", "websiteUrl",
+] as const;
+
+// Keys that mirror to the selected Ad Set snapshot
+export const ADSET_LEVEL_KEYS = [
+  "interests", "ageMin", "ageMax", "genders", "placements",
+  "budgetType", "budgetAmount",
+] as const;
+
 export interface AdBuilderState {
   // Meta
   objective: Objective;
@@ -62,6 +101,9 @@ export interface AdBuilderState {
   channel: "meta";
   clientId: number | null;
 
+  // Draft / campaign label
+  draftName: string;
+
   // Mode
   mode: BuilderMode;
 
@@ -69,12 +111,14 @@ export interface AdBuilderState {
   genPrompt: string;
   genCreativeType: "ai_images" | "use_own";
 
-  // Creative
+  // Creative (live mirror of selected ad)
   creativeType: CreativeType;
   media: MediaAsset[];
   primaryTexts: string[];
   headlines: string[];
-  description: string;
+  descriptions: string[];
+  caption: string;
+  description: string; // legacy single field kept for back-compat
   cta: CTA;
   displayLink: string;
   websiteUrl: string;
@@ -84,17 +128,17 @@ export interface AdBuilderState {
   bankVideos: MediaAsset[];
   bankCopy: string[];
 
-  // Lead Form (when objective=leads)
+  // Lead Form (when objective=leads) — campaign-level
   leadForm: LeadFormDraft;
 
-  // Targeting
+  // Targeting (live mirror of selected ad set)
   interests: InterestTarget[];
   ageMin: number;
   ageMax: number;
   genders: ("male" | "female" | "all")[];
   placements: "advantage_plus" | "manual";
 
-  // Budget
+  // Budget (live mirror of selected ad set)
   budgetType: BudgetType;
   budgetAmount: number;
   currency: string;
@@ -115,33 +159,74 @@ export interface AdBuilderState {
   igUsername: string | null;
   adAccountId: string | null;
   adAccountName: string | null;
+
+  // Ad set hierarchy
+  adSets: AdSetSnapshot[];
+  selectedAdSetId: string;
+  selectedAdId: string;
 }
 
 export const DEFAULT_UTM =
   "utm_source=fb_ad&utm_medium={{adset.name}}&utm_campaign={{campaign.name}}&utm_content={{ad.name}}&campaign_id={{campaign.id}}";
+
+export function makeAd(name = "Ad 1", cta: CTA = "LEARN_MORE"): AdSnapshot {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    media: [],
+    primaryTexts: [""],
+    headlines: [],
+    descriptions: [],
+    caption: "",
+    cta,
+    displayLink: "",
+    websiteUrl: "",
+  };
+}
+
+export function makeAdSet(name = "Ad Set 1", cta: CTA = "LEARN_MORE"): AdSetSnapshot {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    ads: [makeAd("Ad 1", cta)],
+    interests: [],
+    ageMin: 18,
+    ageMax: 65,
+    genders: ["all"],
+    placements: "advantage_plus",
+    budgetType: "daily",
+    budgetAmount: 50,
+  };
+}
 
 export function makeInitialState(
   objective: Objective,
   specialAdCategory: SpecialAdCategory = null,
   countries: string[] = ["US"],
 ): AdBuilderState {
+  const cta: CTA = objective === "leads" ? "APPLY_NOW" : "LEARN_MORE";
+  const firstSet = makeAdSet("Ad Set 1", cta);
+  const firstAd = firstSet.ads[0];
   return {
     objective,
     specialAdCategory,
     countries,
     channel: "meta",
     clientId: null,
+    draftName: "Untitled Campaign",
     mode: "manual",
     genPrompt: "",
     genCreativeType: "ai_images",
     creativeType: "dynamic",
-    media: [],
-    primaryTexts: [""],
-    headlines: [],
+    media: firstAd.media,
+    primaryTexts: firstAd.primaryTexts,
+    headlines: firstAd.headlines,
+    descriptions: firstAd.descriptions,
+    caption: firstAd.caption,
     description: "",
-    cta: objective === "leads" ? "APPLY_NOW" : "LEARN_MORE",
-    displayLink: "",
-    websiteUrl: "",
+    cta: firstAd.cta,
+    displayLink: firstAd.displayLink,
+    websiteUrl: firstAd.websiteUrl,
     bankImages: [],
     bankVideos: [],
     bankCopy: [],
@@ -150,13 +235,13 @@ export function makeInitialState(
       { id: "q2", type: "EMAIL", label: "Email" },
       { id: "q3", type: "PHONE", label: "Phone number" },
     ]},
-    interests: [],
-    ageMin: 18,
-    ageMax: 65,
-    genders: ["all"],
-    placements: "advantage_plus",
-    budgetType: "daily",
-    budgetAmount: 50,
+    interests: firstSet.interests,
+    ageMin: firstSet.ageMin,
+    ageMax: firstSet.ageMax,
+    genders: firstSet.genders,
+    placements: firstSet.placements,
+    budgetType: firstSet.budgetType,
+    budgetAmount: firstSet.budgetAmount,
     currency: "USD",
     optimizeForMe: true,
     updateProductGroup: true,
@@ -171,5 +256,8 @@ export function makeInitialState(
     igUsername: null,
     adAccountId: null,
     adAccountName: null,
+    adSets: [firstSet],
+    selectedAdSetId: firstSet.id,
+    selectedAdId: firstAd.id,
   };
 }

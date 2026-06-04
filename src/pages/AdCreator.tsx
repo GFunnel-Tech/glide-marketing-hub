@@ -7,9 +7,11 @@ import { PreviewPane } from "@/components/ads/builder/preview/PreviewPane";
 import { ManualMode } from "@/components/ads/builder/ManualMode";
 import { GenerateMode } from "@/components/ads/builder/GenerateMode";
 import { TemplateMode } from "@/components/ads/builder/TemplateMode";
+import { AdSetSidebar } from "@/components/ads/builder/AdSetSidebar";
+import { BuilderHeader } from "@/components/ads/builder/BuilderHeader";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Edit3, Lightbulb, ChevronLeft, Flame, Plug, Rocket, AlertCircle } from "lucide-react";
+import { Edit3, Lightbulb, Flame, Plug, Rocket, AlertCircle } from "lucide-react";
 import { ConnectedAccountsModal } from "@/components/ads/builder/ConnectedAccountsModal";
 import { PublishDialog } from "@/components/ads/builder/PublishDialog";
 import { validateForPublish } from "@/lib/adBuilderValidation";
@@ -29,6 +31,7 @@ export default function AdCreator() {
   const [mode, setMode] = useState<BuilderMode>("manual");
   const [accountsOpen, setAccountsOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [savingNow, setSavingNow] = useState(false);
 
   const saveDraft = useSaveAdDraft();
 
@@ -47,34 +50,57 @@ export default function AdCreator() {
     if (!dirty || !currentWorkspace) return;
     const t = setTimeout(async () => {
       try {
+        setSavingNow(true);
         const res = await saveDraft.mutateAsync({ id: draftId, state });
         if (!draftId) setDraftId(res.id);
         markClean();
       } catch (e: any) {
         console.error("autosave failed", e);
+      } finally {
+        setSavingNow(false);
       }
     }, 2500);
     return () => clearTimeout(t);
   }, [dirty, state, draftId, currentWorkspace]);
 
-  const issueCount = useMemo(() => validateForPublish(state).filter((i) => i.severity === "error").length, [state]);
+  const issueCount = useMemo(
+    () => validateForPublish(state).filter((i) => i.severity === "error").length,
+    [state],
+  );
 
-  const openPublish = () => setPublishOpen(true);
+  const manualSave = async () => {
+    if (!currentWorkspace) return;
+    try {
+      setSavingNow(true);
+      const res = await saveDraft.mutateAsync({ id: draftId, state });
+      if (!draftId) setDraftId(res.id);
+      markClean();
+    } finally {
+      setSavingNow(false);
+    }
+  };
 
   const headerColor = mode === "generate" ? "from-violet-500 to-fuchsia-500"
     : mode === "template" ? "from-blue-500 to-indigo-500"
     : "from-primary to-primary/70";
 
   return (
-    <div className="min-h-screen bg-background -mt-6 -mx-6">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr,1fr] gap-0">
-        {/* Left: builder */}
-        <div className="border-r border-border bg-card/30">
+    <div className="min-h-screen bg-background -mt-6 -mx-6 flex flex-col">
+      <BuilderHeader
+        saving={savingNow}
+        saved={!dirty && !!draftId}
+        onSave={manualSave}
+        onReview={() => setPublishOpen(true)}
+      />
+
+      <div className="flex-1 flex min-h-0">
+        {/* Left: Ad set sidebar */}
+        <AdSetSidebar />
+
+        {/* Middle: builder */}
+        <div className="flex-1 min-w-0 border-r border-border bg-card/30 overflow-y-auto">
           <div className={cn("bg-gradient-to-r p-4 text-white", headerColor)}>
-            <button onClick={() => navigate("/ads")} className="text-xs opacity-80 hover:opacity-100 inline-flex items-center gap-1 mb-3">
-              <ChevronLeft className="h-3 w-3" /> Back to Ads
-            </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <ModeBtn label="Generate" icon={<Lightbulb className="h-3.5 w-3.5" />} active={mode === "generate"} onClick={() => setMode("generate")} />
               <ModeBtn label="Template" icon={<Lightbulb className="h-3.5 w-3.5" />} active={mode === "template"} onClick={() => setMode("template")} />
               <ModeBtn label="Manual" icon={<Edit3 className="h-3.5 w-3.5" />} active={mode === "manual"} onClick={() => setMode("manual")} />
@@ -100,6 +126,7 @@ export default function AdCreator() {
               </div>
             </div>
             <p className="text-xs opacity-80 mt-2">
+              Editing <span className="font-semibold">{currentSelectionLabel(state)}</span> ·{" "}
               {mode === "generate" && "Fill in these steps and we'll create creatives + targeting with AI."}
               {mode === "template" && "Pick a saved template to start from."}
               {mode === "manual" && "Configure creatives, targeting and budget yourself."}
@@ -114,16 +141,16 @@ export default function AdCreator() {
         </div>
 
         {/* Right: preview */}
-        <div className="p-6 bg-muted/20">
+        <div className="w-[420px] flex-shrink-0 p-6 bg-muted/20 overflow-y-auto">
           <PreviewPane />
         </div>
       </div>
 
       {/* Sticky publish bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-3 z-40">
-        <div className="max-w-2xl mx-auto lg:mx-0 lg:ml-6 space-y-1">
+      <div className="sticky bottom-0 left-0 right-0 bg-card border-t border-border p-3 z-40">
+        <div className="max-w-2xl mx-auto lg:mx-0 lg:ml-[276px] space-y-1">
           <Button
-            onClick={openPublish}
+            onClick={() => setPublishOpen(true)}
             className="w-full h-12 bg-gradient-to-r from-primary via-primary to-violet-600 text-white text-sm font-semibold"
           >
             <Rocket className="h-4 w-4 mr-2" />
@@ -151,6 +178,13 @@ export default function AdCreator() {
       />
     </div>
   );
+}
+
+function currentSelectionLabel(state: ReturnType<typeof useAdDraftStore.getState>["state"]): string {
+  const set = state.adSets.find((s) => s.id === state.selectedAdSetId);
+  const ad = set?.ads.find((a) => a.id === state.selectedAdId);
+  if (!set || !ad) return "this ad";
+  return `${set.name} › ${ad.name}`;
 }
 
 function ModeBtn({ label, icon, active, onClick }: { label: string; icon: React.ReactNode; active: boolean; onClick: () => void }) {
