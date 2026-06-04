@@ -141,8 +141,6 @@ export default function ClientProfile() {
   if (!client)
     return <div className="p-10 text-center text-muted-foreground">Client not found</div>;
 
-  const clientCampaigns = allCampaigns.filter((c) => c.clientId === String(client.id));
-  const activeCampaigns = clientCampaigns.filter((c) => c.status === "active");
   const baseCampaigns = allCampaigns.filter((c) => c.clientId === String(client.id));
   // Merge range insights on top of the static campaign rows so spend/leads/CPL react
   // to the date picker. Campaigns with range activity but no static row still show up.
