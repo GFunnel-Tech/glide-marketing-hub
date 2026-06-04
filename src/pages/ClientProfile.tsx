@@ -26,6 +26,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { LeadsByClient } from "@/components/leads/LeadsByClient";
+import { ClientSyncStatus } from "@/components/dashboard/ClientSyncStatus";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { TrackingPanel } from "@/components/tracking/TrackingPanel";
@@ -304,6 +305,11 @@ export default function ClientProfile() {
           {kpis.map((k) => (
             <KpiTile key={k.label} {...k} />
           ))}
+        </div>
+
+        {/* CRM sync health */}
+        <div className="mt-4">
+          <ClientSyncStatus clientId={client.id} />
         </div>
 
         {client.doubleCount && (
