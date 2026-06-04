@@ -44,6 +44,32 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   const [draftDate, setDraftDate] = useState<Date | undefined>(undefined);
   const [draftTime, setDraftTime] = useState<string>("09:00");
   const [calOpen, setCalOpen] = useState(false);
+  const [assigneeId, setAssigneeId] = useState<string | null>(null);
+  const [assigneeOpen, setAssigneeOpen] = useState(false);
+
+  const { data: members = [] } = useQuery<Member[]>({
+    queryKey: ["ws-members-for-notes", wsId],
+    enabled: !!wsId && open,
+    queryFn: async () => {
+      const { data: m, error } = await supabase
+        .from("workspace_members").select("user_id").eq("workspace_id", wsId!);
+      if (error) throw error;
+      const ids = (m ?? []).map((r: any) => r.user_id);
+      if (ids.length === 0) return [];
+      const { data: p } = await supabase
+        .from("profiles").select("id, display_name, email").in("id", ids);
+      return (p ?? []) as Member[];
+    },
+  });
+  const memberMap = useMemo(() => {
+    const map = new Map<string, Member>();
+    for (const m of members) map.set(m.id, m);
+    return map;
+  }, [members]);
+  const memberLabel = (id: string) => {
+    const m = memberMap.get(id);
+    return m?.display_name || m?.email || "Member";
+  };
 
   const queryKey = ["client-notes", wsId, clientId ?? "ws"];
   const { data: notes = [], isLoading } = useQuery<Note[]>({
