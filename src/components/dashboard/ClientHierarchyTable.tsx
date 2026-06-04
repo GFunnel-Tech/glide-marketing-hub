@@ -585,6 +585,22 @@ export function ClientHierarchyTable() {
                                 <span onClick={(e) => e.stopPropagation()}>
                                   <GhlLocationLink clientId={client.id} currentLocationId={client.ghlLocationId} variant="chip" />
                                 </span>
+                                {!clientsWithMetaAcct.has(Number(client.id)) && (
+                                  <span
+                                    title="No Meta ad account mapped to this client"
+                                    className="inline-flex h-5 items-center gap-1 rounded-full bg-warning/10 px-1.5 text-[10px] font-semibold text-warning"
+                                  >
+                                    <AlertTriangle className="h-3 w-3" /> Meta not connected
+                                  </span>
+                                )}
+                                {!client.ghlLocationId && (
+                                  <span
+                                    title="No GHL sub-account linked"
+                                    className="inline-flex h-5 items-center gap-1 rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground"
+                                  >
+                                    <AlertTriangle className="h-3 w-3" /> GHL not linked
+                                  </span>
+                                )}
                               </div>
                               {client.brand && client.name && (
                                 <p className="text-[10px] text-muted-foreground truncate">{client.name}</p>
