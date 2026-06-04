@@ -1,5 +1,5 @@
 import { useAdDraftStore } from "@/stores/adDraftStore";
-import { ChevronDown, ChevronRight, LayoutGrid, Plus, MoreHorizontal, Pencil, Trash2, Copy } from "lucide-react";
+import { ChevronDown, ChevronRight, LayoutGrid, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
