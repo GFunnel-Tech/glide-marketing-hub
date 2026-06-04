@@ -69,7 +69,7 @@ export function ClientHierarchyTable() {
   // hide campaigns with no spend/impressions. The All/Active/Paused/Issues
   // filter is the only view toggle.
   const showArchived = false;
-  const hideZero = true;
+  const [hideZero, setHideZero] = useState(true);
 
   // Archived items
   const archivedSet = useArchivedSet();
