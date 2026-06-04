@@ -477,6 +477,11 @@ export function ClientHierarchyTable() {
                   : clientCampaigns.reduce((s, c) => s + deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0), 0);
                 const avgCtr = totImpr > 0 ? (totClicks / totImpr) * 100 : 0;
                 const avgCpl = totLeads > 0 ? totSpend / totLeads : 0;
+                const rm = (rangeMetrics as any)[client.id];
+                const cAvgCpm = rm?.cpm ?? (totImpr > 0 ? (totSpend / totImpr) * 1000 : 0);
+                const cAvgFreq = rm?.frequency ?? 0;
+                const cAbove640 = rm?.above640Pct ?? null;
+                const cScored = rm?.scoredLeads ?? 0;
 
                 return (
                   <>
