@@ -72,20 +72,23 @@ export function KPIStrip() {
       acc.spend += m.spend;
       acc.reportedLeads += m.reportedLeads;
       acc.trueLeads += m.trueLeads;
+      acc.clicks += m.clicks;
       return acc;
     },
-    { spend: 0, reportedLeads: 0, trueLeads: 0 }
+    { spend: 0, reportedLeads: 0, trueLeads: 0, clicks: 0 }
   );
 
   const totalLeads = Math.max(totals.reportedLeads, totals.trueLeads);
   const blendedCpl = totalLeads > 0 ? totals.spend / totalLeads : 0;
+  const blendedCvr = totals.clicks > 0 ? (totals.reportedLeads / totals.clicks) * 100 : 0;
   const sub = isFetching ? "updating…" : label;
 
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
       <KPITile label="Total Clients" value={String(clients.length)} sublabel={`${activeClientCount} active · ${fullySyncedClients.length} synced`} Icon={Users} iconTone="blue" />
       <KPITile label="Total Leads" kpiKey="leads" value={totalLeads.toLocaleString()} sublabel={sub} Icon={Activity} iconTone="green" />
       <KPITile label="Blended CPL" kpiKey="cpl" value={`$${blendedCpl.toFixed(2)}`} sublabel={sub} Icon={Target} iconTone="amber" />
+      <KPITile label="Form CVR" kpiKey="formcvr" value={`${blendedCvr.toFixed(2)}%`} sublabel={sub} Icon={Percent} iconTone="green" />
       <KPITile label="Total Ad Spend" kpiKey="spend" value={`$${Math.round(totals.spend).toLocaleString()}`} sublabel={sub} Icon={DollarSign} iconTone="pink" />
     </div>
   );
