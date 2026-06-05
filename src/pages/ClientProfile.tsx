@@ -1,6 +1,12 @@
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useClient, useCampaigns, useActivityLog, useLeads, useClientsWithMetaAccount } from "@/hooks/useDatabase";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { useClientCampaignsRange, type RangeCampaignRow } from "@/hooks/useClientCampaignsRange";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { cn } from "@/lib/utils";
@@ -138,6 +144,14 @@ export default function ClientProfile() {
   const [actFilter, setActFilter] = useState("All");
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(searchParams.get("tab") || "overview");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editBrand, setEditBrand] = useState("");
+  const [editBmId, setEditBmId] = useState("");
+  const [editBmAccountName, setEditBmAccountName] = useState("");
+  const [editClickup, setEditClickup] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const qc = useQueryClient();
   useEffect(() => {
     const t = searchParams.get("tab");
     if (t) setTab(t);
@@ -364,7 +378,17 @@ export default function ClientProfile() {
 
           <div className="flex flex-wrap items-center gap-2">
             <DateRangePicker />
-            <button className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent transition-colors">
+            <button
+              onClick={() => {
+                setEditName(client.name || "");
+                setEditBrand(client.brand || "");
+                setEditBmId(client.bmId || "");
+                setEditBmAccountName(client.bmAccountName || "");
+                setEditClickup((client as any).clickupListId || "");
+                setEditOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent transition-colors"
+            >
               <Pencil className="h-3.5 w-3.5" /> Edit
             </button>
             <button
@@ -869,6 +893,70 @@ export default function ClientProfile() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Client</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-brand">Brand</Label>
+              <Input id="edit-brand" value={editBrand} onChange={(e) => setEditBrand(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-bmid">Business Manager ID</Label>
+              <Input id="edit-bmid" value={editBmId} onChange={(e) => setEditBmId(e.target.value)} placeholder="Optional" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-bmname">BM Account Name</Label>
+              <Input id="edit-bmname" value={editBmAccountName} onChange={(e) => setEditBmAccountName(e.target.value)} placeholder="Optional" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-clickup">ClickUp List ID</Label>
+              <Input id="edit-clickup" value={editClickup} onChange={(e) => setEditClickup(e.target.value)} placeholder="Optional" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit}>Cancel</Button>
+            <Button
+              onClick={async () => {
+                if (!editName.trim() || !editBrand.trim()) {
+                  toast.error("Name and brand are required");
+                  return;
+                }
+                setSavingEdit(true);
+                const { error } = await supabase
+                  .from("clients")
+                  .update({
+                    name: editName.trim(),
+                    brand: editBrand.trim(),
+                    bm_id: editBmId.trim() || null,
+                    bm_account_name: editBmAccountName.trim() || null,
+                    clickup_list_id: editClickup.trim() || null,
+                  })
+                  .eq("id", client.id);
+                setSavingEdit(false);
+                if (error) {
+                  toast.error(`Failed to save: ${error.message}`);
+                  return;
+                }
+                toast.success("Client updated");
+                setEditOpen(false);
+                qc.invalidateQueries({ queryKey: ["clients"] });
+                qc.invalidateQueries({ queryKey: ["client"] });
+              }}
+              disabled={savingEdit}
+            >
+              {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
