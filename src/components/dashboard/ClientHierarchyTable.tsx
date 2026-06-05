@@ -586,7 +586,9 @@ export function ClientHierarchyTable() {
                             aria-label="Select client"
                           />
                         </td>
-                        <td className="px-2 py-2.5"><StatusBadge status={client.status as any} /></td>
+                        <td className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
+                          <ClientStatusPicker clientId={client.id} status={client.status as any} />
+                        </td>
                         <td className="px-2 py-2.5">
                           <div className="flex items-center gap-2">
                             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
