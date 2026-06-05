@@ -62,6 +62,12 @@ export function GhlAgencyConnectionPanel() {
   const effectiveCompanyId = companyId || savedCompanyId || meta.companyId || "";
   const isAgencyToken = !!effectiveCompanyId;
 
+  // Opaque `pit-...` tokens carry no decodable companyId, and GHL has no
+  // endpoint to introspect one from a PIT — so the Company ID must be entered
+  // manually before sync can work.
+  const isOpaquePit = (token || savedToken).trim().startsWith("pit-");
+  const needsManualCompanyId = isOpaquePit && !effectiveCompanyId;
+
   const load = async () => {
     if (!wsId) return;
     setLoading(true);
@@ -169,6 +175,17 @@ export function GhlAgencyConnectionPanel() {
 
   const syncAll = async () => {
     if (!wsId) return;
+    if (needsManualCompanyId) {
+      toast.error(
+        "Enter your Agency Company ID before syncing",
+        {
+          duration: 10000,
+          description:
+            "PIT tokens (pit-…) can't auto-resolve the agency. Find it in GHL → Agency View → Settings → Company (it's also in the agency dashboard URL), paste it above, and Save.",
+        },
+      );
+      return;
+    }
     setSyncing(true);
     try {
       const {
@@ -183,7 +200,12 @@ export function GhlAgencyConnectionPanel() {
             Authorization: `Bearer ${session?.access_token ?? ""}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ workspace_id: wsId, autoLink: true, threshold }),
+          body: JSON.stringify({
+            workspace_id: wsId,
+            autoLink: true,
+            threshold,
+            company_id: effectiveCompanyId || undefined,
+          }),
         },
       );
       const data = await resp.json().catch(() => ({}));
@@ -284,18 +306,41 @@ export function GhlAgencyConnectionPanel() {
 
           <div>
             <label className="text-xs text-muted-foreground">
-              Agency Company ID <span className="text-muted-foreground/70">(optional)</span>
+              Agency Company ID{" "}
+              {isOpaquePit ? (
+                <span className="text-warning/90">(required for PIT tokens)</span>
+              ) : (
+                <span className="text-muted-foreground/70">(optional)</span>
+              )}
             </label>
             <Input
               value={companyId}
               onChange={(e) => setCompanyId(e.target.value)}
               onBlur={(e) => setCompanyId(extractCompanyId(e.target.value))}
-              placeholder="Leave blank — we'll auto-discover from the token"
-              className="mt-1 font-mono text-xs"
+              placeholder={
+                isOpaquePit
+                  ? "e.g. GNb7aIv4rQFVb9iwNl5K — paste your agency Company ID"
+                  : "Leave blank — we'll auto-discover from the token"
+              }
+              className={`mt-1 font-mono text-xs ${
+                needsManualCompanyId ? "border-warning/60 focus-visible:ring-warning/40" : ""
+              }`}
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              Auto-discovered from your PIT. Only paste a value if sync fails and you've
-              located your Company ID manually.
+              {isOpaquePit ? (
+                <>
+                  Opaque <code className="font-mono">pit-…</code> tokens can&apos;t be
+                  introspected, so we can&apos;t auto-discover this. Find it in GHL →{" "}
+                  <span className="font-medium text-foreground">Agency View → Settings → Company</span>{" "}
+                  (it&apos;s also in your agency dashboard URL, after{" "}
+                  <code className="font-mono">/agency/</code>).
+                </>
+              ) : (
+                <>
+                  Auto-discovered from your token. Only paste a value if sync fails and
+                  you&apos;ve located your Company ID manually.
+                </>
+              )}
             </p>
           </div>
 
