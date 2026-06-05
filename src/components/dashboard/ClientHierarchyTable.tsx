@@ -240,16 +240,17 @@ export function ClientHierarchyTable() {
 
   const visibleClients = useMemo(() => {
     const base = isAllClients ? clients : (focusedClient ? [focusedClient] : []);
+    const q = search.trim().toLowerCase();
     const filtered = base.filter((c) => {
       const archived = archivedSet.has(`client:${c.id}`);
       if (archived) return false;
-      // Show ALL clients (connected or not). Unconnected clients get an
-      // indicator chip so users can quickly spot what still needs setup.
-      // hideZero only filters fully-synced clients with no activity in range;
-      // unconnected clients are always shown so they don't disappear.
       const synced = isFullySynced(c);
       const hasActivity = clientsWithActivity.has(String(c.id));
       if (synced && hideZero && !hasActivity) return false;
+      if (q) {
+        const hay = `${c.name ?? ""} ${c.brand ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
     // Rank: active (synced + activity) first, then synced-no-activity,
