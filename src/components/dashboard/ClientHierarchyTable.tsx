@@ -540,17 +540,24 @@ export function ClientHierarchyTable() {
                 // Company-level rollup — sum ad-level clicks/impressions so
                 // CTR is a true weighted average (sum clicks / sum impressions)
                 // rather than an average of per-campaign rates.
-                const totSpend = clientCampaigns.reduce((s, c) => s + (c.spend || 0), 0);
-                const totLeads = clientCampaigns.reduce((s, c) => s + (c.leads || 0), 0);
+                const campSpend = clientCampaigns.reduce((s, c) => s + (c.spend || 0), 0);
+                const campLeads = clientCampaigns.reduce((s, c) => s + (c.leads || 0), 0);
                 const allClientAds = clientCampaigns.flatMap((c) => adsByCampaign.get(c.id) ?? []);
-                const totClicks = allClientAds.reduce((s, a) => s + (a.clicks || 0), 0);
-                const totImprFromAds = allClientAds.reduce((s, a) => s + (a.impressions || 0), 0);
-                const totImpr = totImprFromAds > 0
-                  ? totImprFromAds
+                const campClicks = allClientAds.reduce((s, a) => s + (a.clicks || 0), 0);
+                const campImprFromAds = allClientAds.reduce((s, a) => s + (a.impressions || 0), 0);
+                const campImpr = campImprFromAds > 0
+                  ? campImprFromAds
                   : clientCampaigns.reduce((s, c) => s + deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0), 0);
-                const avgCtr = totImpr > 0 ? (totClicks / totImpr) * 100 : 0;
-                const avgCpl = totLeads > 0 ? totSpend / totLeads : 0;
                 const rm = (rangeMetrics as any)[client.id];
+                // Prefer meta_insights_daily (range metrics) over the locally-cached
+                // campaigns/ads rollup so the row reflects Meta data even when the
+                // campaigns table hasn't been re-synced yet.
+                const totSpend = rm?.spend ?? campSpend;
+                const totLeads = rm?.reportedLeads ?? campLeads;
+                const totClicks = rm?.clicks ?? campClicks;
+                const totImpr = rm?.impressions ?? campImpr;
+                const avgCtr = totImpr > 0 ? (totClicks / totImpr) * 100 : 0;
+                const avgCpl = rm?.cpl ?? (totLeads > 0 ? totSpend / totLeads : 0);
                 const cAvgCpm = rm?.cpm ?? (totImpr > 0 ? (totSpend / totImpr) * 1000 : 0);
                 const cAvgFreq = rm?.frequency ?? 0;
                 const cAbove640 = rm?.above640Pct ?? null;
