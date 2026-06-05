@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetaConnectionsPanel } from "@/components/integrations/MetaConnectionsPanel";
-import { MetaOAuthDiagnosticsPanel } from "@/components/integrations/MetaOAuthDiagnosticsPanel";
 import { KpiThresholdsPanel } from "@/components/settings/KpiThresholdsPanel";
 import { CustomKpisPanel } from "@/components/kpi/CustomKpisPanel";
 import { GuaranteeTemplatesPanel } from "@/components/guarantees/GuaranteeTemplatesPanel";
@@ -128,7 +127,6 @@ export default function Settings() {
 
             <TabsContent value="meta" className="space-y-4">
               <MetaConnectionsPanel />
-              <MetaOAuthDiagnosticsPanel />
             </TabsContent>
 
             <TabsContent value="ghl" className="space-y-4">
