@@ -136,7 +136,12 @@ export default function ClientProfile() {
   const [expandedAdset, setExpandedAdset] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [actFilter, setActFilter] = useState("All");
-  const [tab, setTab] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(searchParams.get("tab") || "overview");
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t) setTab(t);
+  }, [searchParams]);
 
   if (isLoading)
     return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
