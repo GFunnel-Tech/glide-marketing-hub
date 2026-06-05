@@ -15,3 +15,13 @@ verify_jwt = false
 # Scheduled alert scanner — invoked by pg_cron
 [functions.client-alerts-scan]
 verify_jwt = false
+
+# Per-client Stripe webhook receiver — Stripe sends no Supabase JWT; the
+# function verifies the per-client Stripe signing secret instead.
+[functions.stripe-client-webhook]
+verify_jwt = false
+
+# Stripe Connect OAuth return URL — hit by Stripe's browser redirect, which
+# carries no Supabase session. Secured by the single-use state nonce.
+[functions.stripe-client-oauth-callback]
+verify_jwt = false
