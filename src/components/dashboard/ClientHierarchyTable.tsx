@@ -37,6 +37,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { StatusBadge } from "./StatusBadge";
+import { ClientStatusPicker } from "./ClientStatusPicker";
 import { NoteBubble } from "@/components/notes/NoteBubble";
 import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
 
