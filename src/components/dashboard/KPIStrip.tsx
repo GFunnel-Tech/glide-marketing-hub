@@ -1,4 +1,4 @@
-import { Users, Activity, DollarSign, Target, Headphones } from "lucide-react";
+import { Users, Activity, DollarSign, Target, Percent } from "lucide-react";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useClients, useCampaigns, useClientsWithMetaAccount } from "@/hooks/useDatabase";
