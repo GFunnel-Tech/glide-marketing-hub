@@ -1322,6 +1322,8 @@ export type Database = {
           frequency: number
           ghl_location_id: string | null
           id: number
+          last_alert_at: string | null
+          last_alert_status: string | null
           last_audit: string | null
           launched_at: string | null
           leads: number
@@ -1351,6 +1353,8 @@ export type Database = {
           frequency?: number
           ghl_location_id?: string | null
           id?: number
+          last_alert_at?: string | null
+          last_alert_status?: string | null
           last_audit?: string | null
           launched_at?: string | null
           leads?: number
@@ -1380,6 +1384,8 @@ export type Database = {
           frequency?: number
           ghl_location_id?: string | null
           id?: number
+          last_alert_at?: string | null
+          last_alert_status?: string | null
           last_audit?: string | null
           launched_at?: string | null
           leads?: number
@@ -3982,6 +3988,7 @@ export type Database = {
       }
       stripe_charges: {
         Row: {
+          alert_sent_at: string | null
           amount: number
           amount_refunded: number
           client_id: number
@@ -4006,6 +4013,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          alert_sent_at?: string | null
           amount: number
           amount_refunded?: number
           client_id: number
@@ -4030,6 +4038,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          alert_sent_at?: string | null
           amount?: number
           amount_refunded?: number
           client_id?: number
@@ -4857,6 +4866,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      client_red_kpis: { Args: { _client_id: number }; Returns: Json }
       compute_client_status: { Args: { _client_id: number }; Returns: string }
       fire_due_client_notes: { Args: never; Returns: number }
       has_role: {
