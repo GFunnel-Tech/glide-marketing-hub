@@ -893,6 +893,70 @@ export default function ClientProfile() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Client</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-brand">Brand</Label>
+              <Input id="edit-brand" value={editBrand} onChange={(e) => setEditBrand(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-bmid">Business Manager ID</Label>
+              <Input id="edit-bmid" value={editBmId} onChange={(e) => setEditBmId(e.target.value)} placeholder="Optional" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-bmname">BM Account Name</Label>
+              <Input id="edit-bmname" value={editBmAccountName} onChange={(e) => setEditBmAccountName(e.target.value)} placeholder="Optional" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-clickup">ClickUp List ID</Label>
+              <Input id="edit-clickup" value={editClickup} onChange={(e) => setEditClickup(e.target.value)} placeholder="Optional" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit}>Cancel</Button>
+            <Button
+              onClick={async () => {
+                if (!editName.trim() || !editBrand.trim()) {
+                  toast.error("Name and brand are required");
+                  return;
+                }
+                setSavingEdit(true);
+                const { error } = await supabase
+                  .from("clients")
+                  .update({
+                    name: editName.trim(),
+                    brand: editBrand.trim(),
+                    bm_id: editBmId.trim() || null,
+                    bm_account_name: editBmAccountName.trim() || null,
+                    clickup_list_id: editClickup.trim() || null,
+                  })
+                  .eq("id", client.id);
+                setSavingEdit(false);
+                if (error) {
+                  toast.error(`Failed to save: ${error.message}`);
+                  return;
+                }
+                toast.success("Client updated");
+                setEditOpen(false);
+                qc.invalidateQueries({ queryKey: ["clients"] });
+                qc.invalidateQueries({ queryKey: ["client"] });
+              }}
+              disabled={savingEdit}
+            >
+              {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
