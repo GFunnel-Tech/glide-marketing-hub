@@ -33,6 +33,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { StatusBadge } from "./StatusBadge";
 import { NoteBubble } from "@/components/notes/NoteBubble";
 import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
@@ -593,25 +596,43 @@ export function ClientHierarchyTable() {
                                 <span onClick={(e) => e.stopPropagation()}>
                                   <NoteBubble clientId={client.id} variant="icon" align="start" />
                                 </span>
-                                <span onClick={(e) => e.stopPropagation()}>
-                                  <GhlLocationLink clientId={client.id} currentLocationId={client.ghlLocationId} variant="chip" />
-                                </span>
-                                {!clientsWithMetaAcct.has(Number(client.id)) && (
-                                  <span
-                                    title="No Meta ad account mapped to this client"
-                                    className="inline-flex h-5 items-center gap-1 rounded-full bg-warning/10 px-1.5 text-[10px] font-semibold text-warning"
-                                  >
-                                    <AlertTriangle className="h-3 w-3" /> Meta not connected
+                                {client.ghlLocationId && (
+                                  <span onClick={(e) => e.stopPropagation()}>
+                                    <GhlLocationLink clientId={client.id} currentLocationId={client.ghlLocationId} variant="chip" />
                                   </span>
                                 )}
-                                {!client.ghlLocationId && (
-                                  <span
-                                    title="No GHL sub-account linked"
-                                    className="inline-flex h-5 items-center gap-1 rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground"
-                                  >
-                                    <AlertTriangle className="h-3 w-3" /> GHL not linked
-                                  </span>
-                                )}
+                                {(() => {
+                                  const missingMeta = !clientsWithMetaAcct.has(Number(client.id));
+                                  const missingGhl = !client.ghlLocationId;
+                                  if (!missingMeta && !missingGhl) return null;
+                                  const missing = [
+                                    missingMeta && "Meta ad account",
+                                    missingGhl && "GHL sub-account",
+                                  ].filter(Boolean) as string[];
+                                  return (
+                                    <TooltipProvider delayDuration={150}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-warning/10 text-warning hover:bg-warning/20 cursor-help"
+                                            aria-label="Not fully synced"
+                                          >
+                                            <AlertTriangle className="h-3 w-3" />
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" className="text-xs">
+                                          <div className="font-semibold mb-0.5">Not synced</div>
+                                          <ul className="space-y-0.5">
+                                            {missing.map((m) => (
+                                              <li key={m}>• {m} not linked</li>
+                                            ))}
+                                          </ul>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })()}
                               </div>
                               {client.brand && client.name && (
                                 <p className="text-[10px] text-muted-foreground truncate">{client.name}</p>
