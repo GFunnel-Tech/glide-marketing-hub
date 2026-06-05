@@ -264,7 +264,7 @@ export function ClientHierarchyTable() {
       return 2;
     };
     return [...filtered].sort((a, b) => rank(a) - rank(b));
-  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero]);
+  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero, search]);
 
   const handleQuickSync = async () => {
     if (!focusedClient) {
