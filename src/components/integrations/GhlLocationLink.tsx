@@ -88,25 +88,23 @@ export function GhlLocationLink({ clientId, currentLocationId, variant = "chip",
   const pending = setLink.isPending;
 
   const trigger = variant === "chip" ? (
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); setOpen(true); }}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-colors",
-        isLinked
-          ? "border-success/30 bg-success/10 text-success hover:bg-success/15"
-          : suggestion
+    isLinked ? null : (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        className={cn(
+          "inline-flex items-center justify-center rounded-md border p-0.5 transition-colors",
+          suggestion
             ? "border-warning/30 bg-warning/10 text-warning hover:bg-warning/15"
-            : "border-border bg-muted/40 text-muted-foreground hover:bg-muted",
-        className,
-      )}
-      title={isLinked ? `GHL: ${current?.name ?? currentLocationId}` : suggestion ? `Suggested: ${suggestion.source_name}` : "Link GHL sub-account"}
-    >
-      {isLinked ? <Link2 className="h-2.5 w-2.5" /> : suggestion ? <Sparkles className="h-2.5 w-2.5" /> : <Link2Off className="h-2.5 w-2.5" />}
-      <span className="max-w-[110px] truncate">
-        {isLinked ? (current?.name ?? "GHL linked") : suggestion ? "Suggested" : "Link GHL"}
-      </span>
-    </button>
+            : "border-muted-foreground/20 bg-muted/40 text-muted-foreground hover:bg-muted",
+          className,
+        )}
+        title={suggestion ? `Suggested GHL match: ${suggestion.source_name}` : "GHL sub-account not linked"}
+        aria-label={suggestion ? "GHL match suggested" : "GHL not linked"}
+      >
+        {suggestion ? <Sparkles className="h-3 w-3" /> : <Link2Off className="h-3 w-3" />}
+      </button>
+    )
   ) : (
     <Button variant="outline" size="sm" onClick={() => setOpen(true)} className={className}>
       {isLinked ? <Link2 className="h-3.5 w-3.5 mr-1.5" /> : <Link2Off className="h-3.5 w-3.5 mr-1.5" />}
