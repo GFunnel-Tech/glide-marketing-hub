@@ -4134,27 +4134,33 @@ export type Database = {
         Row: {
           access_level: string
           created_at: string
+          email: string | null
           id: string
           member_status: string
           name: string
+          phone: string | null
           role: string
           updated_at: string
         }
         Insert: {
           access_level: string
           created_at?: string
+          email?: string | null
           id?: string
           member_status?: string
           name: string
+          phone?: string | null
           role: string
           updated_at?: string
         }
         Update: {
           access_level?: string
           created_at?: string
+          email?: string | null
           id?: string
           member_status?: string
           name?: string
+          phone?: string | null
           role?: string
           updated_at?: string
         }
