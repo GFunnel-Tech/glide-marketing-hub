@@ -378,7 +378,17 @@ export default function ClientProfile() {
 
           <div className="flex flex-wrap items-center gap-2">
             <DateRangePicker />
-            <button className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent transition-colors">
+            <button
+              onClick={() => {
+                setEditName(client.name || "");
+                setEditBrand(client.brand || "");
+                setEditBmId(client.bmId || "");
+                setEditBmAccountName(client.bmAccountName || "");
+                setEditClickup((client as any).clickupListId || "");
+                setEditOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent transition-colors"
+            >
               <Pencil className="h-3.5 w-3.5" /> Edit
             </button>
             <button
