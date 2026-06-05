@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
-import { Lock, Sparkles, Rocket, RefreshCw, Clock, CheckCircle2, GraduationCap, AlertOctagon, Ban } from "lucide-react";
+import { Lock, Sparkles, Rocket, RefreshCw, Clock, CheckCircle2, GraduationCap, AlertOctagon, Ban, Pause } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export type Status =
   | "GREEN" | "YELLOW" | "RED" | "BLOCKED"
   | "NEW" | "PENDING_APPROVAL" | "SETUP_COMPLETE"
-  | "LAUNCHING" | "LEARNING" | "RELAUNCH"
+  | "LAUNCHING" | "LEARNING" | "RELAUNCH" | "PAUSED"
   | "PENDING_CANCELLATION" | "CANCELLED";
 
 const statusConfig: Record<Status, { label: string; className: string; tooltip: string }> = {
@@ -15,6 +15,7 @@ const statusConfig: Record<Status, { label: string; className: string; tooltip: 
   LAUNCHING:            { label: "LAUNCHING",            className: "bg-purple/15 text-purple border-purple/30",                  tooltip: "First campaign being set up" },
   LEARNING:             { label: "LEARNING",             className: "bg-primary/15 text-primary border-primary/30",               tooltip: "In learning phase — first 7 days after launch" },
   RELAUNCH:             { label: "RELAUNCH",             className: "bg-accent text-accent-foreground border-border",             tooltip: "Campaign is being restarted" },
+  PAUSED:               { label: "PAUSED",               className: "bg-muted text-muted-foreground border-border",               tooltip: "Manually paused — campaigns not running" },
   RED:                  { label: "RED",                  className: "bg-destructive/15 text-destructive border-destructive/30",   tooltip: "Critical — major KPIs off target" },
   YELLOW:               { label: "YELLOW",               className: "bg-warning/15 text-warning border-warning/30",               tooltip: "Needs attention — 1-2 KPIs outside target" },
   GREEN:                { label: "GREEN",                className: "bg-success/15 text-success border-success/30",               tooltip: "On track — all KPIs within target" },
@@ -31,6 +32,7 @@ const iconFor: Partial<Record<Status, any>> = {
   LAUNCHING: Rocket,
   LEARNING: GraduationCap,
   RELAUNCH: RefreshCw,
+  PAUSED: Pause,
   PENDING_CANCELLATION: AlertOctagon,
   CANCELLED: Ban,
 };
