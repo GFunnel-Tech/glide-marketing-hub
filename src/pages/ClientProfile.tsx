@@ -1,5 +1,5 @@
-import { useParams, Link } from "react-router-dom";
-import { useState } from "react";
+import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useClient, useCampaigns, useActivityLog, useLeads, useClientsWithMetaAccount } from "@/hooks/useDatabase";
 import { useClientCampaignsRange, type RangeCampaignRow } from "@/hooks/useClientCampaignsRange";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
