@@ -692,8 +692,8 @@ export function ClientHierarchyTable() {
                         <td colSpan={showCompanyCol ? 14 : 13} className="px-12 py-6 text-xs text-muted-foreground">
                           No campaigns for this client.
                           <Button variant="link" size="sm" className="ml-1 h-auto p-0 text-xs"
-                            onClick={() => { setClientId(client.id); setTimeout(handleQuickSync, 0); }}>
-                            Sync from Meta?
+                            onClick={() => navigate(`/client/${client.id}?tab=access`)}>
+                            Open integrations →
                           </Button>
                         </td>
                       </tr>
