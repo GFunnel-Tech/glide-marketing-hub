@@ -49,8 +49,8 @@ Deno.serve(async (req) => {
     );
 
     const body = await req.json().catch(() => ({}));
-    const { workspace_id, autoLink = true, threshold = 0.9 } = body as {
-      workspace_id: string; autoLink?: boolean; threshold?: number;
+    const { workspace_id, autoLink = true, threshold = 0.9, company_id: bodyCompanyId } = body as {
+      workspace_id: string; autoLink?: boolean; threshold?: number; company_id?: string;
     };
     if (!workspace_id) return new Response(JSON.stringify({ error: "workspace_id required" }), { status: 400, headers: corsHeaders });
 
@@ -71,7 +71,10 @@ Deno.serve(async (req) => {
     }
 
     let locations: any[] = [];
-    let companyId: string | null = cfg.ghl_company_id ?? null;
+    // Prefer an explicit Company ID from the request, then the persisted one.
+    // Opaque `pit-...` tokens can't be introspected, so a caller-supplied ID is the
+    // most reliable source for agency sync.
+    let companyId: string | null = (bodyCompanyId?.trim() || cfg.ghl_company_id || null) as string | null;
     const attempts: Array<{ endpoint: string; status: number; body: string }> = [];
 
     // Try to extract companyId from JWT (legacy tokens). Opaque `pit-...` tokens skip this.
@@ -126,15 +129,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Attempt 3: with discovered companyId, paginate through /locations/search
+    // Attempt 3: with discovered companyId, paginate through /locations/search.
+    // GHL accepts companyId as a query param or header — send both for resilience.
     if (companyId) {
+      const searchHeaders = { ...v2Headers, companyId };
       const collected: any[] = locations.slice();
       let skip = collected.length; // honor whatever attempt 2 already returned
       let page = 0;
       while (page < 25) {
         const r = await fetch(
           `https://services.leadconnectorhq.com/locations/search?companyId=${encodeURIComponent(companyId)}&limit=500&skip=${skip}`,
-          { headers: v2Headers },
+          { headers: searchHeaders },
         );
         const txt = await r.text();
         attempts.push({ endpoint: `GET /locations/search?companyId=${companyId}&skip=${skip}`, status: r.status, body: txt.slice(0, 200) });
