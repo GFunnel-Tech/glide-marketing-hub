@@ -7,7 +7,7 @@ import { QuickActionBar } from "@/components/dashboard/QuickActionBar";
 import { ConnectMetaPrompt } from "@/components/dashboard/ConnectMetaPrompt";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
-import { useClients } from "@/hooks/useDatabase";
+import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { ChevronDown, Zap } from "lucide-react";
@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 function PortfolioHealthCard() {
-  const { data: clients = [] } = useClients();
+  const clients = useVisibleClients();
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
     for (const cl of clients) c[cl.status] = (c[cl.status] || 0) + 1;
