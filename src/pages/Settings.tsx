@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useTeamMembers } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
-import { Copy, ExternalLink, Check, Loader2, UserPlus, Bell, Zap } from "lucide-react";
+import { Copy, ExternalLink, Check, Loader2, Bell, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -16,6 +15,7 @@ import { GhlAgencyConnectionPanel } from "@/components/integrations/GhlAgencyCon
 import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
 import { MatchReviewQueue } from "@/components/integrations/MatchReviewQueue";
 import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
+import { TeamMembersPanel } from "@/components/settings/TeamMembersPanel";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -28,7 +28,6 @@ const integrations = [
 ];
 
 export default function Settings() {
-  const { data: teamMembers = [] } = useTeamMembers();
   const [copied, setCopied] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
@@ -174,28 +173,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="team">
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-              <h3 className="text-sm font-semibold text-foreground">Team Members</h3>
-              <button className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-1"><UserPlus className="h-3 w-3" />Invite Member</button>
-            </div>
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-border bg-accent/50">
-                {["Name", "Role", "Access Level", "Status", ""].map(h => <th key={h} className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {teamMembers.map(m => (
-                  <tr key={m.id} className="border-b border-border hover:bg-accent/30">
-                    <td className="px-4 py-3 font-medium text-foreground">{m.name}</td>
-                    <td className="px-4 py-3"><span className="rounded bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">{m.role}</span></td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">{m.access_level}</td>
-                    <td className="px-4 py-3"><span className="rounded-full bg-success/15 text-success px-2 py-0.5 text-xs font-medium">{m.member_status}</span></td>
-                    <td className="px-4 py-3"><button className="text-xs text-primary hover:underline">Edit</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TeamMembersPanel />
         </TabsContent>
 
         <TabsContent value="notifications">

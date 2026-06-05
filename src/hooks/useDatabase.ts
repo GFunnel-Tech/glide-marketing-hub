@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -95,10 +95,21 @@ export interface DbLead {
 export interface DbTeamMember {
   id: string;
   name: string;
+  email: string | null;
+  phone: string | null;
   role: string;
   access_level: string;
   member_status: string;
 }
+
+export type TeamMemberInput = {
+  name: string;
+  email: string | null;
+  phone: string | null;
+  role: string;
+  access_level: string;
+  member_status: string;
+};
 
 export function toClient(c: DbClient) {
   return {
@@ -262,10 +273,48 @@ export function useTeamMembers() {
   return useQuery({
     queryKey: ["team_members"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("team_members").select("*");
+      const { data, error } = await (supabase as any)
+        .from("team_members").select("*").order("created_at");
       if (error) throw error;
       return (data || []) as DbTeamMember[];
     },
+  });
+}
+
+export function useCreateTeamMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: TeamMemberInput) => {
+      const { data, error } = await (supabase as any)
+        .from("team_members").insert(input).select().single();
+      if (error) throw error;
+      return data as DbTeamMember;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
+  });
+}
+
+export function useUpdateTeamMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...patch }: Partial<TeamMemberInput> & { id: string }) => {
+      const { data, error } = await (supabase as any)
+        .from("team_members").update(patch).eq("id", id).select().single();
+      if (error) throw error;
+      return data as DbTeamMember;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
+  });
+}
+
+export function useDeleteTeamMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).from("team_members").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
   });
 }
 
