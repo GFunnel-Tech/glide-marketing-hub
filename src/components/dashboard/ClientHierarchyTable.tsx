@@ -33,6 +33,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { StatusBadge } from "./StatusBadge";
 import { NoteBubble } from "@/components/notes/NoteBubble";
 import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
