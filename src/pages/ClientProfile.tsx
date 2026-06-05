@@ -301,9 +301,18 @@ export default function ClientProfile() {
     setLoading(key);
     try {
       await fn();
-      toast.success(`${key} completed`);
-    } catch {
-      toast.error(`${key} failed`);
+      toast.success(key === "Sync" ? "Sync started" : `${key} completed`);
+      if (key === "Sync") {
+        // Refresh client/campaign data once the background sync has had a moment.
+        setTimeout(() => {
+          qc.invalidateQueries({ queryKey: ["clients"] });
+          qc.invalidateQueries({ queryKey: ["client"] });
+          qc.invalidateQueries({ queryKey: ["campaigns"] });
+          qc.invalidateQueries({ queryKey: ["client-campaigns-range"] });
+        }, 3000);
+      }
+    } catch (e: any) {
+      toast.error(`${key} failed: ${e?.message || "unknown error"}`);
     } finally {
       setLoading(null);
     }
