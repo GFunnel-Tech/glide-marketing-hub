@@ -4683,6 +4683,7 @@ export type Database = {
       workspace_kpi_settings: {
         Row: {
           created_at: string
+          default_window_days: number
           green_score_min: number
           id: string
           overrides: Json
@@ -4693,6 +4694,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_window_days?: number
           green_score_min?: number
           id?: string
           overrides?: Json
@@ -4703,6 +4705,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_window_days?: number
           green_score_min?: number
           id?: string
           overrides?: Json

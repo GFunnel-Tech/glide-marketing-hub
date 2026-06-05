@@ -4,6 +4,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 
 export type KpiDirection = "lower" | "higher" | "band";
+export type KpiWindowDays = 7 | 14 | 30;
 
 export interface KpiSpec {
   weight: number;
@@ -14,6 +15,10 @@ export interface KpiSpec {
   green_max?: number;
   yellow_min?: number;
   yellow_max?: number;
+  /** When true, this KPI uses a min–max range instead of a single ≤/≥ threshold. */
+  use_range?: boolean;
+  /** Override the workspace default window for this KPI. */
+  window_days?: KpiWindowDays;
 }
 
 export type KpiMap = Record<string, KpiSpec>;
@@ -34,6 +39,7 @@ export interface WorkspaceKpiSettings {
   overrides: KpiMap;
   green_score_min: number;
   yellow_score_min: number;
+  default_window_days: KpiWindowDays;
 }
 
 export const KPI_LABELS: Record<string, { label: string; unit: string; direction: KpiDirection }> = {
