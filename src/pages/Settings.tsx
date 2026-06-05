@@ -32,9 +32,11 @@ export default function Settings() {
   const [copied, setCopied] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const validTabs = ["agency", "integrations", "team", "kpis", "custom_kpis", "guarantees", "statuses", "notifications"] as const;
-  const initialTab = (validTabs as readonly string[]).includes(tabParam ?? "")
-    ? (tabParam as typeof validTabs[number])
+  const validTabs = ["agency", "integrations", "team", "kpis", "guarantees", "statuses", "notifications"] as const;
+  // "custom_kpis" was merged into the combined "kpis" tab; keep old deep links working.
+  const normalizedTabParam = tabParam === "custom_kpis" ? "kpis" : tabParam;
+  const initialTab = (validTabs as readonly string[]).includes(normalizedTabParam ?? "")
+    ? (normalizedTabParam as typeof validTabs[number])
     : "agency";
 
   const copyUrl = (url: string) => {
@@ -61,8 +63,7 @@ export default function Settings() {
           <TabsTrigger value="agency">Agency</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="kpis">KPI Thresholds</TabsTrigger>
-          <TabsTrigger value="custom_kpis">Custom KPIs</TabsTrigger>
+          <TabsTrigger value="kpis">KPIs</TabsTrigger>
           <TabsTrigger value="guarantees">Guarantees</TabsTrigger>
           <TabsTrigger value="statuses">Statuses &amp; Webhooks</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -72,13 +73,10 @@ export default function Settings() {
           <StatusPhasesPanel />
         </TabsContent>
 
-        <TabsContent value="kpis">
+        <TabsContent value="kpis" className="space-y-6">
           <div className="rounded-lg border border-border bg-card p-6">
             <KpiThresholdsPanel />
           </div>
-        </TabsContent>
-
-        <TabsContent value="custom_kpis">
           <div className="rounded-lg border border-border bg-card p-6">
             <CustomKpisPanel />
           </div>
@@ -111,7 +109,7 @@ export default function Settings() {
               </div>
             </div>
             <div className="rounded-lg border border-dashed border-border bg-card/50 p-5 text-sm text-muted-foreground">
-              Performance thresholds have moved to the <span className="font-medium text-foreground">KPI Thresholds</span> tab, where you can configure them per workspace, vertical, or individual client.
+              Performance thresholds have moved to the <span className="font-medium text-foreground">KPIs</span> tab, where you can configure them per workspace, vertical, or individual client.
             </div>
           </div>
         </TabsContent>
