@@ -341,7 +341,9 @@ export function MetaConnectionsPanel() {
   };
 
   const [resettingFailed, setResettingFailed] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const failedConnections = connections.filter(c => c.status !== "active");
+  const hasActiveConnection = connections.some(c => c.status === "active");
 
   const handleResetFailedAndReconnect = async () => {
     if (!currentWorkspace) {
@@ -630,6 +632,24 @@ export function MetaConnectionsPanel() {
     else { toast.success("Updated mapping"); refresh(); }
   };
 
+  // Bulk-assign several ad accounts to one client in a single user action.
+  // Reuses the same per-row write path (meta-map-account); refreshes once at the end.
+  const handleBulkMap = async (adAccountIds: string[], clientId: number | null) => {
+    if (!adAccountIds.length) return;
+    const results = await Promise.allSettled(
+      adAccountIds.map(adAccountId =>
+        supabase.functions.invoke("meta-map-account", { body: { adAccountId, clientId } }),
+      ),
+    );
+    const failed = results.filter(
+      r => r.status === "rejected" || (r.status === "fulfilled" && (r.value as { error?: unknown })?.error),
+    ).length;
+    const ok = adAccountIds.length - failed;
+    if (ok > 0) toast.success(`Updated ${ok} mapping${ok === 1 ? "" : "s"}`);
+    if (failed > 0) toast.error(`${failed} mapping${failed === 1 ? "" : "s"} failed`);
+    refresh();
+  };
+
   const [creatingClientFor, setCreatingClientFor] = useState<string | null>(null);
   const [createDialogAccount, setCreateDialogAccount] = useState<MetaAdAccount | null>(null);
   const [newClientName, setNewClientName] = useState("");
@@ -685,8 +705,18 @@ export function MetaConnectionsPanel() {
 
   return (
     <div className="space-y-6">
-      <MetaAppRolePanel />
-      <MetaOAuthDiagnosticsPanel />
+      {/* Onboarding (app-role tiers + reconnect steps) is only relevant before a
+          token is connected. Once a connection is active it collapses away so it
+          doesn't live permanently on the main view. */}
+      {!hasActiveConnection ? (
+        <MetaAppRolePanel />
+      ) : (
+        <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-4 py-2.5 text-xs text-foreground">
+          <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+          <span className="font-medium">Meta app role accepted</span>
+          <span className="text-muted-foreground">— your Meta account is connected below.</span>
+        </div>
+      )}
       <div className="rounded-lg border border-border bg-card p-5">
 
         <div className="flex items-start justify-between mb-4">
@@ -699,10 +729,6 @@ export function MetaConnectionsPanel() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setShowWizard(true)} title="Step-by-step troubleshooter">
-              <LifeBuoy className="h-3 w-3" />
-              <span className="ml-1">Troubleshoot</span>
-            </Button>
             <Button size="sm" variant="outline" onClick={() => setShowWizard(true)} title="Step-by-step troubleshooter">
               <LifeBuoy className="h-3 w-3" />
               <span className="ml-1">Troubleshoot</span>
@@ -757,6 +783,27 @@ export function MetaConnectionsPanel() {
               </Tooltip>
             </TooltipProvider>
           </div>
+        </div>
+
+        {/* Single OAuth diagnostics panel — collapsed by default so it doesn't
+            dominate the Connection section. (The duplicate that used to render
+            above the card and again in Settings has been removed.) */}
+        <div className="mb-4 rounded-lg border border-border/70 bg-background/40">
+          <button
+            type="button"
+            onClick={() => setShowDiagnostics(v => !v)}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-xs font-medium text-foreground hover:bg-accent/40 transition-colors rounded-lg"
+          >
+            {showDiagnostics ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            <Info className="h-3.5 w-3.5 text-muted-foreground" />
+            Connection diagnostics
+            <span className="text-muted-foreground font-normal">· OAuth events &amp; scope checks</span>
+          </button>
+          {showDiagnostics && (
+            <div className="px-4 pb-4">
+              <MetaOAuthDiagnosticsPanel />
+            </div>
+          )}
         </div>
 
         {!workspaceLoading && !currentWorkspace && (
@@ -1293,6 +1340,7 @@ export function MetaConnectionsPanel() {
           accounts={accounts}
           clients={clients}
           onMap={handleMap}
+          onBulkMap={handleBulkMap}
           onCreateClient={openCreateClientDialog}
           creatingClientFor={creatingClientFor}
         />
@@ -1379,24 +1427,40 @@ export function MetaConnectionsPanel() {
   );
 }
 
+type AccountFilter = "unmapped" | "mapped" | "all";
+
 function AdAccountsByBm({
   accounts,
   clients,
   onMap,
+  onBulkMap,
   onCreateClient,
   creatingClientFor,
 }: {
   accounts: MetaAdAccount[];
   clients: { id: number; name: string }[];
   onMap: (id: string, clientId: number | null) => void;
+  onBulkMap: (ids: string[], clientId: number | null) => Promise<void>;
   onCreateClient: (a: MetaAdAccount) => void;
   creatingClientFor: string | null;
 }) {
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // A Business Manager token can expose every account across every client, so we
+  // default to UNMAPPED — the ~handful that actually need a decision — instead of
+  // dumping all of them.
+  const [filterMode, setFilterMode] = useState<AccountFilter>("unmapped");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkClientId, setBulkClientId] = useState("");
+  const [bulkAssigning, setBulkAssigning] = useState(false);
 
+  const total = accounts.length;
+  const unmappedCount = accounts.filter(a => !a.client_id).length;
+
+  const q = search.trim().toLowerCase();
   const filtered = accounts.filter(a => {
-    const q = search.trim().toLowerCase();
+    if (filterMode === "unmapped" && a.client_id) return false;
+    if (filterMode === "mapped" && !a.client_id) return false;
     if (!q) return true;
     return (
       (a.account_name || "").toLowerCase().includes(q) ||
@@ -1405,6 +1469,7 @@ function AdAccountsByBm({
     );
   });
 
+  // Group by owning Business Manager (business_name is populated on the account row).
   const groups = new Map<string, { name: string; key: string; rows: MetaAdAccount[] }>();
   for (const a of filtered) {
     const key = a.business_name || "__no_bm__";
@@ -1413,26 +1478,118 @@ function AdAccountsByBm({
     groups.get(key)!.rows.push(a);
   }
   const groupList = Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name));
-  const unmappedCount = accounts.filter(a => !a.client_id).length;
+
+  const visibleIds = filtered.map(a => a.id);
+  const selectedVisible = visibleIds.filter(id => selected.has(id));
+
+  const setFilter = (m: AccountFilter) => {
+    setFilterMode(m);
+    setSelected(new Set());
+  };
+  const toggleOne = (id: string) =>
+    setSelected(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  const toggleMany = (ids: string[], on: boolean) =>
+    setSelected(prev => {
+      const n = new Set(prev);
+      ids.forEach(id => (on ? n.add(id) : n.delete(id)));
+      return n;
+    });
+
+  const doBulkAssign = async () => {
+    if (!bulkClientId || selectedVisible.length === 0) return;
+    const clientId = bulkClientId === "__unassign__" ? null : Number(bulkClientId);
+    setBulkAssigning(true);
+    try {
+      await onBulkMap(selectedVisible, clientId);
+      setSelected(new Set());
+      setBulkClientId("");
+    } finally {
+      setBulkAssigning(false);
+    }
+  };
+
+  const filterTabs: { mode: AccountFilter; label: string }[] = [
+    { mode: "unmapped", label: "Unmapped" },
+    { mode: "mapped", label: "Mapped" },
+    { mode: "all", label: "All" },
+  ];
 
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
-      <div className="px-5 py-3 border-b border-border flex items-center justify-between gap-3 flex-wrap">
+      <div className="px-5 py-3 border-b border-border flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <Link2 className="h-4 w-4" /> Ad Accounts ({accounts.length})
-            <span className="text-xs font-normal text-muted-foreground">· {groupList.length} Business Manager{groupList.length === 1 ? "" : "s"}</span>
+            <Link2 className="h-4 w-4" /> Ad Accounts
+            <span className="text-xs font-normal text-muted-foreground">
+              · Unassigned {unmappedCount} of {total}
+            </span>
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Grouped by Business Manager. Map each ad account to a client.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Grouped by Business Manager. Map each ad account to a client.
+          </p>
         </div>
-        <Input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search BM, account, or act_id…"
-          className="h-8 text-xs w-64"
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex rounded-md border border-border p-0.5">
+            {filterTabs.map(t => (
+              <button
+                key={t.mode}
+                onClick={() => setFilter(t.mode)}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-medium rounded transition-colors",
+                  filterMode === t.mode
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t.label}
+                {t.mode === "unmapped" && unmappedCount > 0 && (
+                  <span className="ml-1 opacity-80">({unmappedCount})</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search BM, account, or act_id…"
+            className="h-8 text-xs w-56"
+          />
+        </div>
       </div>
-      {unmappedCount > 0 && (
+
+      {/* Bulk-assign bar — appears once accounts are selected. */}
+      {selectedVisible.length > 0 && (
+        <div className="px-5 py-2.5 bg-primary/5 border-b border-primary/20 flex items-center gap-2 flex-wrap text-xs">
+          <span className="font-medium text-foreground">{selectedVisible.length} selected</span>
+          <select
+            value={bulkClientId}
+            onChange={e => setBulkClientId(e.target.value)}
+            className="rounded border border-border bg-background px-2 py-1 text-xs"
+          >
+            <option value="">Assign selected to client…</option>
+            <option value="__unassign__">— Unassign —</option>
+            {clients.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <Button size="sm" className="h-7 text-xs" onClick={doBulkAssign} disabled={!bulkClientId || bulkAssigning}>
+            {bulkAssigning ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+            Apply
+          </Button>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
+      {filterMode !== "mapped" && unmappedCount > 0 && (
         <div className="px-5 py-2.5 bg-warning/10 border-b border-warning/30 flex items-start gap-2 text-xs">
           <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
           <div>
@@ -1442,30 +1599,50 @@ function AdAccountsByBm({
         </div>
       )}
       {groupList.length === 0 ? (
-        <p className="px-5 py-6 text-xs text-muted-foreground text-center">No ad accounts match "{search}".</p>
+        <p className="px-5 py-6 text-xs text-muted-foreground text-center">
+          {q
+            ? `No ad accounts match "${search}".`
+            : filterMode === "unmapped"
+              ? "All ad accounts are assigned to a client. 🎉"
+              : filterMode === "mapped"
+                ? "No ad accounts are mapped to a client yet."
+                : "No ad accounts found."}
+        </p>
       ) : (
         <div className="divide-y divide-border">
           {groupList.map(g => {
             const isCollapsed = !!collapsed[g.key];
             const groupUnmapped = g.rows.filter(a => !a.client_id).length;
+            const groupIds = g.rows.map(a => a.id);
+            const allGroupSelected = groupIds.length > 0 && groupIds.every(id => selected.has(id));
             return (
               <div key={g.key}>
-                <button
-                  onClick={() => setCollapsed(c => ({ ...c, [g.key]: !isCollapsed }))}
-                  className="w-full flex items-center gap-2 px-5 py-2 bg-accent/40 hover:bg-accent/60 transition-colors text-left"
-                >
-                  {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                  <Facebook className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-xs font-semibold text-foreground truncate">{g.name}</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {g.rows.length} account{g.rows.length === 1 ? "" : "s"}
-                    {groupUnmapped > 0 && <> · <span className="text-warning">{groupUnmapped} unmapped</span></>}
-                  </span>
-                </button>
+                <div className="w-full flex items-center gap-2 px-5 py-2 bg-accent/40 hover:bg-accent/60 transition-colors">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select all accounts in ${g.name}`}
+                    checked={allGroupSelected}
+                    onChange={e => toggleMany(groupIds, e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
+                  />
+                  <button
+                    onClick={() => setCollapsed(c => ({ ...c, [g.key]: !isCollapsed }))}
+                    className="flex flex-1 items-center gap-2 text-left"
+                  >
+                    {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    <Facebook className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs font-semibold text-foreground truncate">{g.name}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {g.rows.length} account{g.rows.length === 1 ? "" : "s"}
+                      {groupUnmapped > 0 && <> · <span className="text-warning">{groupUnmapped} unmapped</span></>}
+                    </span>
+                  </button>
+                </div>
                 {!isCollapsed && (
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border/60 bg-background/40">
+                        <th className="w-8 px-4 py-1.5" />
                         {["Account", "Currency", "Client", "Last Sync"].map(h => (
                           <th key={h} className="px-4 py-1.5 text-left text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{h}</th>
                         ))}
@@ -1474,6 +1651,15 @@ function AdAccountsByBm({
                     <tbody>
                       {g.rows.map(a => (
                         <tr key={a.id} className="border-b border-border/40 last:border-0 hover:bg-accent/20">
+                          <td className="px-4 py-2 align-top">
+                            <input
+                              type="checkbox"
+                              aria-label={`Select ${a.account_name || a.act_id}`}
+                              checked={selected.has(a.id)}
+                              onChange={() => toggleOne(a.id)}
+                              className="mt-0.5 h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
+                            />
+                          </td>
                           <td className="px-4 py-2">
                             <div className="font-medium text-foreground text-xs">{a.account_name || a.act_id}</div>
                             <div className="text-[10px] text-muted-foreground font-mono">{a.act_id}</div>
