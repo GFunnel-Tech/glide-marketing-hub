@@ -874,7 +874,7 @@ export default function ClientProfile() {
               </p>
             </div>
             <Link
-              to="/integrations"
+              to="/settings?tab=mapping"
               className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent transition-colors"
             >
               Open Integration Mapper
