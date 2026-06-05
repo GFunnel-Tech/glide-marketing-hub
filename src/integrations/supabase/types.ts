@@ -77,6 +77,119 @@ export type Database = {
           },
         ]
       }
+      agency_profiles: {
+        Row: {
+          branded_domain: string | null
+          business_currency: string
+          business_email: string | null
+          business_industry: string | null
+          business_niche: string | null
+          business_not_registered: boolean
+          business_phone: string | null
+          business_regions: Json
+          business_registration_id_type: string | null
+          business_registration_number: string | null
+          business_type: string | null
+          business_website: string | null
+          city: string | null
+          country: string
+          created_at: string
+          friendly_business_name: string | null
+          id: string
+          legal_business_name: string | null
+          logo_url: string | null
+          outbound_language: string | null
+          platform_language: string
+          postal_code: string | null
+          rep_email: string | null
+          rep_first_name: string | null
+          rep_job_position: string | null
+          rep_last_name: string | null
+          rep_phone: string | null
+          state_region: string | null
+          street_address: string | null
+          time_zone: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          branded_domain?: string | null
+          business_currency?: string
+          business_email?: string | null
+          business_industry?: string | null
+          business_niche?: string | null
+          business_not_registered?: boolean
+          business_phone?: string | null
+          business_regions?: Json
+          business_registration_id_type?: string | null
+          business_registration_number?: string | null
+          business_type?: string | null
+          business_website?: string | null
+          city?: string | null
+          country?: string
+          created_at?: string
+          friendly_business_name?: string | null
+          id?: string
+          legal_business_name?: string | null
+          logo_url?: string | null
+          outbound_language?: string | null
+          platform_language?: string
+          postal_code?: string | null
+          rep_email?: string | null
+          rep_first_name?: string | null
+          rep_job_position?: string | null
+          rep_last_name?: string | null
+          rep_phone?: string | null
+          state_region?: string | null
+          street_address?: string | null
+          time_zone?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          branded_domain?: string | null
+          business_currency?: string
+          business_email?: string | null
+          business_industry?: string | null
+          business_niche?: string | null
+          business_not_registered?: boolean
+          business_phone?: string | null
+          business_regions?: Json
+          business_registration_id_type?: string | null
+          business_registration_number?: string | null
+          business_type?: string | null
+          business_website?: string | null
+          city?: string | null
+          country?: string
+          created_at?: string
+          friendly_business_name?: string | null
+          id?: string
+          legal_business_name?: string | null
+          logo_url?: string | null
+          outbound_language?: string | null
+          platform_language?: string
+          postal_code?: string | null
+          rep_email?: string | null
+          rep_first_name?: string | null
+          rep_job_position?: string | null
+          rep_last_name?: string | null
+          rep_phone?: string | null
+          state_region?: string | null
+          street_address?: string | null
+          time_zone?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_log: {
         Row: {
           action: string

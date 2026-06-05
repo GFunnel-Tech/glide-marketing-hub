@@ -15,6 +15,7 @@ import { GhlAgencyConnectionPanel } from "@/components/integrations/GhlAgencyCon
 import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
 import { MatchReviewQueue } from "@/components/integrations/MatchReviewQueue";
 import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
+import { AgencyProfilePanel } from "@/components/settings/AgencyProfilePanel";
 import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { TeamMembersPanel } from "@/components/settings/TeamMembersPanel";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
@@ -89,29 +90,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="agency" className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
-            <div className="rounded-lg border border-border bg-card p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Agency Info</h3>
-              <div><label className="text-xs text-muted-foreground">Agency Name</label><Input defaultValue="" placeholder="Your agency name" className="mt-1" /></div>
-              <div><label className="text-xs text-muted-foreground">Contact Email</label><Input defaultValue="" placeholder="contact@youragency.com" className="mt-1" /></div>
-              <div><label className="text-xs text-muted-foreground">Timezone</label>
-                <select className="w-full mt-1 rounded-md border border-border bg-accent px-3 py-2 text-sm">
-                  <option>America/New_York (EST)</option>
-                  <option>America/Chicago (CST)</option>
-                  <option>America/Los_Angeles (PST)</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Logo</label>
-                <div className="mt-1 rounded-lg border-2 border-dashed border-border p-6 text-center text-sm text-muted-foreground hover:border-primary/40 transition-colors cursor-pointer">
-                  Drop logo here or click to upload
-                </div>
-              </div>
-            </div>
-            <div className="rounded-lg border border-dashed border-border bg-card/50 p-5 text-sm text-muted-foreground">
-              Performance thresholds have moved to the <span className="font-medium text-foreground">KPIs</span> tab, where you can configure them per workspace, vertical, or individual client.
-            </div>
-          </div>
+          <AgencyProfilePanel />
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-4">
