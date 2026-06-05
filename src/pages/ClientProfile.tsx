@@ -472,6 +472,9 @@ export default function ClientProfile() {
           <TabsTrigger value="tracking" className="gap-1.5">
             <Link2 className="h-3.5 w-3.5" /> Tracking
           </TabsTrigger>
+          <TabsTrigger value="integrations" className="gap-1.5">
+            <Plug className="h-3.5 w-3.5" /> Integrations
+          </TabsTrigger>
           <TabsTrigger value="guarantees" className="gap-1.5">
             <Shield className="h-3.5 w-3.5" /> Guarantees
           </TabsTrigger>
