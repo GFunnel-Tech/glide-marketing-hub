@@ -23,6 +23,7 @@ import {
   Users,
   Target,
   Shield,
+  Plug,
   Link2,
   BarChart3,
   Inbox,
@@ -471,6 +472,9 @@ export default function ClientProfile() {
           <TabsTrigger value="tracking" className="gap-1.5">
             <Link2 className="h-3.5 w-3.5" /> Tracking
           </TabsTrigger>
+          <TabsTrigger value="integrations" className="gap-1.5">
+            <Plug className="h-3.5 w-3.5" /> Integrations
+          </TabsTrigger>
           <TabsTrigger value="guarantees" className="gap-1.5">
             <Shield className="h-3.5 w-3.5" /> Guarantees
           </TabsTrigger>
@@ -806,6 +810,77 @@ export default function ClientProfile() {
         {/* TRACKING */}
         <TabsContent value="tracking" className="mt-5">
           <TrackingPanel clientId={client.id} title={`Tracking · ${client.name}`} />
+        </TabsContent>
+
+        {/* INTEGRATIONS */}
+        <TabsContent value="integrations" className="mt-5 space-y-4">
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <h3 className="text-base font-semibold">Meta Ads</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Sync ad accounts, campaigns, and insights from Meta Business Manager.
+                </p>
+              </div>
+              <button
+                onClick={() => handleAction("Sync", () => api.syncMetaAds(String(client.id)))}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                disabled={loading === "Sync"}
+              >
+                {loading === "Sync" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Sync now
+              </button>
+            </div>
+            <ClientSyncStatus clientId={client.id} />
+            {client.bmId && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Business Manager:{" "}
+                <a
+                  href={`https://business.facebook.com/home/accounts?business_id=${client.bmId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  {client.bmAccountName || client.bmId}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="mb-3">
+              <h3 className="text-base font-semibold">GoHighLevel (CRM)</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Link this client to a GHL sub-account so appointments and pipeline data flow in.
+              </p>
+            </div>
+            <GhlLocationLink
+              clientId={client.id}
+              currentLocationId={client.ghlLocationId}
+              variant="panel"
+            />
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="mb-2">
+              <h3 className="text-base font-semibold">Advanced mapping</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Manage all client ↔ ad account ↔ CRM links across the workspace.
+              </p>
+            </div>
+            <Link
+              to="/settings?tab=mapping"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent transition-colors"
+            >
+              Open Integration Mapper
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </TabsContent>
 
         {/* GUARANTEES */}
