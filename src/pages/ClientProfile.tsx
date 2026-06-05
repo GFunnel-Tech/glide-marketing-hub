@@ -3,6 +3,10 @@ import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useClient, useCampaigns, useActivityLog, useLeads, useClientsWithMetaAccount } from "@/hooks/useDatabase";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { AgentChat } from "@/components/ai/AgentChat";
+import { PendingActionsPanel } from "@/components/ai/PendingActionsPanel";
+import { KnowledgeBasePanel } from "@/components/ai/KnowledgeBasePanel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -137,6 +141,8 @@ export default function ClientProfile() {
   const { data: allActivity = [] } = useActivityLog();
   const { data: allLeads = [] } = useLeads();
   const { data: metaMappedSet } = useClientsWithMetaAccount();
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id ?? null;
   const [loading, setLoading] = useState<string | null>(null);
   const [showPause, setShowPause] = useState(false);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
@@ -483,6 +489,9 @@ export default function ClientProfile() {
           </TabsTrigger>
           <TabsTrigger value="activity" className="gap-1.5">
             <ActivityIcon className="h-3.5 w-3.5" /> Activity
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" /> AI Agent
           </TabsTrigger>
         </TabsList>
 
@@ -946,6 +955,37 @@ export default function ClientProfile() {
               </ul>
             )}
           </SectionCard>
+        </TabsContent>
+
+        {/* AI AGENT */}
+        <TabsContent value="ai" className="mt-5">
+          {workspaceId ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2">
+                <AgentChat
+                  key={`${workspaceId}-${client.id}`}
+                  workspaceId={workspaceId}
+                  clientId={client.id}
+                  contextLabel={client.name}
+                  suggestions={[
+                    `Audit ${client.name}'s ad performance`,
+                    "Pause the worst-performing ads to lower CPM",
+                    "Which ad sets should I scale up?",
+                    "Generate this month's report",
+                    "Compare these creatives against my other clients",
+                    "What's killing the CPL right now?",
+                  ]}
+                  className="h-[calc(100vh-18rem)]"
+                />
+              </div>
+              <div className="space-y-4">
+                <PendingActionsPanel workspaceId={workspaceId} clientId={client.id} />
+                <KnowledgeBasePanel workspaceId={workspaceId} clientId={client.id} clientName={client.name} />
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">Workspace not loaded.</p>
+          )}
         </TabsContent>
       </Tabs>
 

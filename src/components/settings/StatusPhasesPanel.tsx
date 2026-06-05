@@ -110,10 +110,11 @@ export function StatusPhasesPanel() {
       <div className="rounded-lg border border-border bg-card p-5">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Webhook className="h-4 w-4" />Client Status Phases &amp; Webhooks</h3>
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><Webhook className="h-4 w-4" />Client Status Phases</h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
-              Customize the lifecycle phases for clients. Drag to reorder, edit labels, and set a webhook URL per phase that fires when a client enters it.
+              Customize the lifecycle phases for clients. Drag to reorder, edit labels, and optionally set a quick webhook URL per phase that fires when a client enters it.
               Auto-managed phases (Red/Yellow/Green from KPIs, Learning for 7 days post-launch, Setup Complete from onboarding) update on their own — others are set manually.
+              For richer routing across every indicator, signal, and custom KPI, use <span className="font-medium text-foreground">Notifications → Webhooks</span>.
             </p>
           </div>
           <Button size="sm" variant="outline" onClick={addCustom}><Plus className="h-3 w-3 mr-1" />Add status</Button>

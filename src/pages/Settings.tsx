@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useTeamMembers } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
-import { Copy, ExternalLink, Check, Loader2, UserPlus, Bell, Zap } from "lucide-react";
+import { Copy, ExternalLink, Check, Loader2, Bell, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -17,6 +16,8 @@ import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
 import { MatchReviewQueue } from "@/components/integrations/MatchReviewQueue";
 import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
 import { AgencyProfilePanel } from "@/components/settings/AgencyProfilePanel";
+import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
+import { TeamMembersPanel } from "@/components/settings/TeamMembersPanel";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -29,13 +30,14 @@ const integrations = [
 ];
 
 export default function Settings() {
-  const { data: teamMembers = [] } = useTeamMembers();
   const [copied, setCopied] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const validTabs = ["agency", "integrations", "team", "kpis", "custom_kpis", "guarantees", "statuses", "notifications"] as const;
-  const initialTab = (validTabs as readonly string[]).includes(tabParam ?? "")
-    ? (tabParam as typeof validTabs[number])
+  const validTabs = ["agency", "integrations", "team", "kpis", "guarantees", "statuses", "notifications"] as const;
+  // "custom_kpis" was merged into the combined "kpis" tab; keep old deep links working.
+  const normalizedTabParam = tabParam === "custom_kpis" ? "kpis" : tabParam;
+  const initialTab = (validTabs as readonly string[]).includes(normalizedTabParam ?? "")
+    ? (normalizedTabParam as typeof validTabs[number])
     : "agency";
 
   const copyUrl = (url: string) => {
@@ -62,10 +64,9 @@ export default function Settings() {
           <TabsTrigger value="agency">Agency</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="kpis">KPI Thresholds</TabsTrigger>
-          <TabsTrigger value="custom_kpis">Custom KPIs</TabsTrigger>
+          <TabsTrigger value="kpis">KPIs</TabsTrigger>
           <TabsTrigger value="guarantees">Guarantees</TabsTrigger>
-          <TabsTrigger value="statuses">Statuses &amp; Webhooks</TabsTrigger>
+          <TabsTrigger value="statuses">Statuses</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
 
@@ -73,13 +74,10 @@ export default function Settings() {
           <StatusPhasesPanel />
         </TabsContent>
 
-        <TabsContent value="kpis">
+        <TabsContent value="kpis" className="space-y-6">
           <div className="rounded-lg border border-border bg-card p-6">
             <KpiThresholdsPanel />
           </div>
-        </TabsContent>
-
-        <TabsContent value="custom_kpis">
           <div className="rounded-lg border border-border bg-card p-6">
             <CustomKpisPanel />
           </div>
@@ -153,32 +151,31 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="team">
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-              <h3 className="text-sm font-semibold text-foreground">Team Members</h3>
-              <button className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-1"><UserPlus className="h-3 w-3" />Invite Member</button>
-            </div>
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-border bg-accent/50">
-                {["Name", "Role", "Access Level", "Status", ""].map(h => <th key={h} className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {teamMembers.map(m => (
-                  <tr key={m.id} className="border-b border-border hover:bg-accent/30">
-                    <td className="px-4 py-3 font-medium text-foreground">{m.name}</td>
-                    <td className="px-4 py-3"><span className="rounded bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">{m.role}</span></td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">{m.access_level}</td>
-                    <td className="px-4 py-3"><span className="rounded-full bg-success/15 text-success px-2 py-0.5 text-xs font-medium">{m.member_status}</span></td>
-                    <td className="px-4 py-3"><button className="text-xs text-primary hover:underline">Edit</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TeamMembersPanel />
         </TabsContent>
 
         <TabsContent value="notifications">
-          <NotificationPreferencesPanel />
+          <Tabs
+            value={["preferences", "webhooks"].includes(searchParams.get("section") ?? "") ? searchParams.get("section")! : "preferences"}
+            onValueChange={(v) => {
+              const next = new URLSearchParams(searchParams);
+              next.set("tab", "notifications");
+              next.set("section", v);
+              setSearchParams(next, { replace: true });
+            }}
+            className="space-y-4"
+          >
+            <TabsList>
+              <TabsTrigger value="preferences">Preferences</TabsTrigger>
+              <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            </TabsList>
+            <TabsContent value="preferences">
+              <NotificationPreferencesPanel />
+            </TabsContent>
+            <TabsContent value="webhooks">
+              <WebhooksPanel />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
     </div>

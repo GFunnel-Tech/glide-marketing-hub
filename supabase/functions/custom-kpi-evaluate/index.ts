@@ -230,28 +230,38 @@ async function evaluateAlerts(admin: any, kpi: any, alerts: any[], snapshots: Cl
       firedForAny = true;
 
       const { data: client } = await admin.from("clients").select("name").eq("id", snap.client_id).maybeSingle();
-      // Insert notifications for all workspace members who have the pref enabled
+      const meta = {
+        custom_kpi_id: kpi.id,
+        alert_id: alert.id,
+        client_id: snap.client_id,
+        value: row.value,
+        severity: alert.severity,
+      };
+      // Insert notifications for all workspace members who have the pref enabled.
+      // Batch into a single statement so the notifications -> webhook trigger
+      // dedupes and fires the `custom_kpi_alert` webhook once (not once per member).
       const { data: members } = await admin
         .from("workspace_members")
         .select("user_id")
         .eq("workspace_id", kpi.workspace_id);
-      for (const m of members ?? []) {
-        await admin.from("notifications").insert({
-          user_id: m.user_id,
-          workspace_id: kpi.workspace_id,
-          type: "custom_kpi_alert",
-          title: `${kpi.name} alert${client?.name ? ` · ${client.name}` : ""}`,
-          body: `${alert.severity.toUpperCase()}: ${detail}`,
-          link: `/settings/custom-kpis?kpi=${kpi.id}`,
-          meta: {
-            custom_kpi_id: kpi.id,
-            alert_id: alert.id,
-            client_id: snap.client_id,
-            value: row.value,
-            severity: alert.severity,
-          },
-        });
-      }
+      const rows = (members ?? []).map((m: any) => ({
+        user_id: m.user_id,
+        workspace_id: kpi.workspace_id,
+        type: "custom_kpi_alert",
+        title: `${kpi.name} alert${client?.name ? ` · ${client.name}` : ""}`,
+        body: `${alert.severity.toUpperCase()}: ${detail}`,
+        link: `/settings/custom-kpis?kpi=${kpi.id}`,
+        meta,
+      }));
+      if (rows.length > 0) await admin.from("notifications").insert(rows);
+
+      // Also fire the per-KPI event so webhooks can subscribe to a specific
+      // custom-programmed metric rather than the broad custom_kpi_alert signal.
+      await admin.rpc("dispatch_webhook_event", {
+        _workspace_id: kpi.workspace_id,
+        _event: `custom_kpi.${kpi.id}`,
+        _payload: { ...meta, kpi_name: kpi.name, client_name: client?.name ?? null, detail },
+      });
     }
 
     if (firedForAny) {

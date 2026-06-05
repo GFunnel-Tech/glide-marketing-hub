@@ -48,7 +48,7 @@ export const KPI_LABELS: Record<string, { label: string; unit: string; direction
   leads: { label: "# Leads", unit: "", direction: "higher" },
   lead_quality: { label: "Quality (credit ≥640)", unit: "%", direction: "higher" },
   frequency: { label: "Frequency", unit: "x", direction: "lower" },
-  spend_pacing: { label: "Spend Pacing", unit: "%", direction: "band" },
+  
 };
 
 export function useKpiPresets() {
