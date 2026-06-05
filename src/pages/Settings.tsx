@@ -15,6 +15,7 @@ import { GhlAgencyConnectionPanel } from "@/components/integrations/GhlAgencyCon
 import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
 import { MatchReviewQueue } from "@/components/integrations/MatchReviewQueue";
 import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
+import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { TeamMembersPanel } from "@/components/settings/TeamMembersPanel";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -64,7 +65,7 @@ export default function Settings() {
           <TabsTrigger value="team">Team</TabsTrigger>
           <TabsTrigger value="kpis">KPIs</TabsTrigger>
           <TabsTrigger value="guarantees">Guarantees</TabsTrigger>
-          <TabsTrigger value="statuses">Statuses &amp; Webhooks</TabsTrigger>
+          <TabsTrigger value="statuses">Statuses</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
 
@@ -175,7 +176,27 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="notifications">
-          <NotificationPreferencesPanel />
+          <Tabs
+            value={["preferences", "webhooks"].includes(searchParams.get("section") ?? "") ? searchParams.get("section")! : "preferences"}
+            onValueChange={(v) => {
+              const next = new URLSearchParams(searchParams);
+              next.set("tab", "notifications");
+              next.set("section", v);
+              setSearchParams(next, { replace: true });
+            }}
+            className="space-y-4"
+          >
+            <TabsList>
+              <TabsTrigger value="preferences">Preferences</TabsTrigger>
+              <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            </TabsList>
+            <TabsContent value="preferences">
+              <NotificationPreferencesPanel />
+            </TabsContent>
+            <TabsContent value="webhooks">
+              <WebhooksPanel />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
     </div>

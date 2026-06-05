@@ -4739,6 +4739,98 @@ export type Database = {
           },
         ]
       }
+      webhook_deliveries: {
+        Row: {
+          created_at: string
+          endpoint_id: string
+          error: string | null
+          event: string
+          id: string
+          payload: Json | null
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint_id: string
+          error?: string | null
+          event: string
+          id?: string
+          payload?: Json | null
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint_id?: string
+          error?: string | null
+          event?: string
+          id?: string
+          payload?: Json | null
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_endpoints: {
+        Row: {
+          created_at: string
+          description: string | null
+          enabled: boolean
+          events: string[]
+          headers: Json
+          id: string
+          last_error: string | null
+          last_fired_at: string | null
+          last_status: string | null
+          name: string
+          secret: string | null
+          updated_at: string
+          url: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          events?: string[]
+          headers?: Json
+          id?: string
+          last_error?: string | null
+          last_fired_at?: string | null
+          last_status?: string | null
+          name: string
+          secret?: string | null
+          updated_at?: string
+          url: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          events?: string[]
+          headers?: Json
+          id?: string
+          last_error?: string | null
+          last_fired_at?: string | null
+          last_status?: string | null
+          name?: string
+          secret?: string | null
+          updated_at?: string
+          url?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       workspace_members: {
         Row: {
           created_at: string
