@@ -23,6 +23,7 @@ import {
   Users,
   Target,
   Shield,
+  Plug,
   Link2,
   BarChart3,
   Inbox,
