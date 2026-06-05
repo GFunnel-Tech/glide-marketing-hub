@@ -2,7 +2,7 @@ export interface Client {
   id: number;
   name: string;
   brand: string;
-  status: "GREEN" | "YELLOW" | "RED" | "BLOCKED" | "NEW" | "PENDING_APPROVAL" | "SETUP_COMPLETE" | "LAUNCHING" | "LEARNING" | "RELAUNCH" | "PENDING_CANCELLATION" | "CANCELLED";
+  status: "GREEN" | "YELLOW" | "RED" | "BLOCKED" | "NEW" | "PENDING_APPROVAL" | "SETUP_COMPLETE" | "LAUNCHING" | "LEARNING" | "RELAUNCH" | "PAUSED" | "PENDING_CANCELLATION" | "CANCELLED";
   bmType: "Own BM" | "Agency BM";
   cpl: number;
   cpm: number;

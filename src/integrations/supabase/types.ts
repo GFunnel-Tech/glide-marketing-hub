@@ -4958,6 +4958,7 @@ export type Database = {
         | "LEARNING"
         | "PENDING_CANCELLATION"
         | "CANCELLED"
+        | "PAUSED"
       lead_outcome: "unknown" | "closed_won" | "closed_lost" | "disqualified"
       lead_score_grade: "A" | "B" | "C" | "D"
       lead_score_scope: "workspace" | "client" | "campaign"
@@ -5119,6 +5120,7 @@ export const Constants = {
         "LEARNING",
         "PENDING_CANCELLATION",
         "CANCELLED",
+        "PAUSED",
       ],
       lead_outcome: ["unknown", "closed_won", "closed_lost", "disqualified"],
       lead_score_grade: ["A", "B", "C", "D"],
