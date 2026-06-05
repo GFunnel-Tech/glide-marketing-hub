@@ -144,6 +144,14 @@ export default function ClientProfile() {
   const [actFilter, setActFilter] = useState("All");
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(searchParams.get("tab") || "overview");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editBrand, setEditBrand] = useState("");
+  const [editBmId, setEditBmId] = useState("");
+  const [editBmAccountName, setEditBmAccountName] = useState("");
+  const [editClickup, setEditClickup] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const qc = useQueryClient();
   useEffect(() => {
     const t = searchParams.get("tab");
     if (t) setTab(t);
