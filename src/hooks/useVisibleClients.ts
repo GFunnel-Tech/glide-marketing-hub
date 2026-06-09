@@ -35,6 +35,7 @@ export function useVisibleClients() {
   return useMemo(() => {
     return clients.filter((c: any) => {
       if (archivedSet.has(`client:${c.id}`)) return false;
+      if (c.isAgencyAccount) return true; // agency's own account is always shown
       const synced = !!c.ghlLocationId && clientsWithMetaAcct.has(Number(c.id));
       const hasActivity = clientsWithActivity.has(String(c.id));
       if (synced && !hasActivity) return false;
