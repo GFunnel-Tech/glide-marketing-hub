@@ -52,7 +52,7 @@ export function useAgencyProfile() {
     queryKey: ["agency-profile", currentWorkspace?.id],
     enabled: !!currentWorkspace,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("agency_profiles")
         .select("*")
         .eq("workspace_id", currentWorkspace!.id)
