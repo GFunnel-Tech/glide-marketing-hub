@@ -6,7 +6,7 @@ import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { StatusBadge } from "./StatusBadge";
 import { ClientDrawer } from "./ClientDrawer";
 import { cn } from "@/lib/utils";
-import { ArrowUpDown, Building2, User, Search, SlidersHorizontal, Plus, ExternalLink, Download, ChevronDown, Loader2, Check, RefreshCw } from "lucide-react";
+import { ArrowUpDown, Building2, User, Search, SlidersHorizontal, Plus, ExternalLink, Download, ChevronDown, Loader2, Check, RefreshCw, Sparkles, MoveRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,19 +14,37 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
 import { AdAccountSelector } from "./AdAccountSelector";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Client } from "@/data/mockData";
 
-type StatusFilter = "ALL" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
+type StatusFilter = "ALL" | "NEW" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
 type Channel = "all" | "meta" | "google" | "tiktok" | "linkedin";
 type SortDir = "asc" | "desc";
 
-const statusOrder: Record<string, number> = { RED: 0, YELLOW: 1, GREEN: 2, BLOCKED: 3 };
+const statusOrder: Record<string, number> = { NEW: -1, RED: 0, YELLOW: 1, GREEN: 2, BLOCKED: 3 };
+
+const BULK_STATUSES: { key: string; label: string }[] = [
+  { key: "NEW", label: "New" },
+  { key: "GREEN", label: "Green" },
+  { key: "YELLOW", label: "Yellow" },
+  { key: "RED", label: "Red" },
+  { key: "LEARNING", label: "Learning" },
+  { key: "LAUNCHING", label: "Launching" },
+  { key: "RELAUNCH", label: "Re-Launch" },
+  { key: "PAUSED", label: "Paused" },
+  { key: "PENDING_APPROVAL", label: "Pending Approval" },
+  { key: "PENDING_CANCELLATION", label: "Pending Cancellation" },
+  { key: "CANCELLED", label: "Cancelled" },
+  { key: "BLOCKED", label: "Blocked" },
+];
 
 // --- Column registry ---------------------------------------------------------
 type ColRender = (c: any) => React.ReactNode;
@@ -154,6 +172,11 @@ export function ClientTable() {
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
+  const [autoClassifying, setAutoClassifying] = useState(false);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const { currentWorkspace } = useWorkspace();
+  const qc = useQueryClient();
 
   const focusedClient = useMemo(
     () => (selectedClientId === "all" ? null : baseClients.find((c) => c.id === selectedClientId) ?? null),
@@ -173,6 +196,46 @@ export function ClientTable() {
       toast.error(e?.message ?? "Sync failed");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleAutoClassify = async () => {
+    if (!currentWorkspace) return;
+    setAutoClassifying(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("auto_classify_new_clients", {
+        _workspace_id: currentWorkspace.id,
+      });
+      if (error) throw error;
+      const moved = data?.moved ?? 0;
+      const skipped = data?.skipped ?? 0;
+      toast.success(`Auto-classified ${moved} client${moved === 1 ? "" : "s"}${skipped ? ` · ${skipped} kept in New (no data)` : ""}`);
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Auto-classify failed");
+    } finally {
+      setAutoClassifying(false);
+    }
+  };
+
+  const handleBulkMove = async (status: string) => {
+    if (!currentWorkspace || selectedIds.size === 0) return;
+    setBulkUpdating(true);
+    try {
+      const ids = Array.from(selectedIds).map((v) => Number(v));
+      const { data, error } = await (supabase as any).rpc("bulk_update_client_status", {
+        _workspace_id: currentWorkspace.id,
+        _client_ids: ids,
+        _status: status,
+      });
+      if (error) throw error;
+      toast.success(`Moved ${data ?? ids.length} client${ids.length === 1 ? "" : "s"} to ${status}`);
+      setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Bulk update failed");
+    } finally {
+      setBulkUpdating(false);
     }
   };
 
@@ -275,7 +338,28 @@ export function ClientTable() {
     setVisibleIds((cur) => cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]);
   };
 
-  const filters: StatusFilter[] = ["ALL", "GREEN", "YELLOW", "RED", "BLOCKED"];
+  const filters: StatusFilter[] = ["ALL", "NEW", "GREEN", "YELLOW", "RED", "BLOCKED"];
+  const newCount = useMemo(() => clients.filter((c) => c.status === "NEW").length, [clients]);
+  const allRowsSelected = filtered.length > 0 && filtered.every((c) => selectedIds.has(c.id));
+  const toggleAll = () => {
+    setSelectedIds((prev) => {
+      if (allRowsSelected) {
+        const next = new Set(prev);
+        for (const c of filtered) next.delete(c.id);
+        return next;
+      }
+      const next = new Set(prev);
+      for (const c of filtered) next.add(c.id);
+      return next;
+    });
+  };
+  const toggleRow = (id: number | string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   if (isLoading) return <div className="text-center py-10 text-muted-foreground">Loading clients...</div>;
 
@@ -375,6 +459,19 @@ export function ClientTable() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {newCount > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/5"
+              onClick={handleAutoClassify}
+              disabled={autoClassifying}
+              title="Auto-move New clients into Green/Yellow/Red based on their KPI performance"
+            >
+              {autoClassifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              Auto-classify New ({newCount})
+            </Button>
+          )}
 
           {filters.map((f) => (
             <button
@@ -465,11 +562,53 @@ export function ClientTable() {
         </div>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-foreground">
+            <Check className="h-3.5 w-3.5 text-primary" />
+            <span className="font-medium">{selectedIds.size}</span>
+            <span className="text-muted-foreground">selected</span>
+            <button
+              className="ml-2 text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              onClick={() => setSelectedIds(new Set())}
+            >Clear</button>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-8 gap-1.5 text-xs" disabled={bulkUpdating}>
+                {bulkUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MoveRight className="h-3.5 w-3.5" />}
+                Move to…
+                <ChevronDown className="h-3 w-3 opacity-80" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Move selected to
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {BULK_STATUSES.map((s) => (
+                <DropdownMenuItem key={s.key} onClick={() => handleBulkMove(s.key)} className="text-xs">
+                  <StatusBadge status={s.key as any} />
+                  <span className="ml-2">{s.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+
       <div className="rounded-lg border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-accent/50">
+                <th className="w-8 px-3 py-2.5">
+                  <Checkbox
+                    checked={allRowsSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Select all"
+                  />
+                </th>
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
@@ -498,9 +637,17 @@ export function ClientTable() {
                     c.status === "BLOCKED" && "opacity-60",
                     c.status === "GREEN" && "border-l-2 border-l-success",
                     c.status === "RED" && "border-l-2 border-l-destructive",
-                    c.frequency > 3.5 && "animate-pulse-amber"
+                    c.frequency > 3.5 && "animate-pulse-amber",
+                    selectedIds.has(c.id) && "bg-primary/5"
                   )}
                 >
+                  <td className="w-8 px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds.has(c.id)}
+                      onCheckedChange={() => toggleRow(c.id)}
+                      aria-label={`Select ${c.name}`}
+                    />
+                  </td>
                   {visibleColumns.map((col) => (
                     <td key={col.key} className="px-3 py-3">{col.render(c)}</td>
                   ))}
