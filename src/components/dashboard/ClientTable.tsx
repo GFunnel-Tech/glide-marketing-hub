@@ -184,16 +184,36 @@ export function ClientTable() {
   );
 
   const handleQuickSync = async () => {
-    if (selectedClientId === "all" || !focusedClient) {
-      toast.error("Select a specific client to sync");
+    if (!currentWorkspace) {
+      toast.error("No workspace selected");
       return;
     }
     setSyncing(true);
+    const target = focusedClient ? focusedClient.name : "all clients in this workspace";
+    const toastId = toast.loading(`Syncing Meta campaigns for ${target}…`);
     try {
-      await api.syncMetaAds(String(focusedClient.id));
-      toast.success(`Synced Meta campaigns for ${focusedClient.name}`);
+      const { data, error } = await supabase.functions.invoke("meta-sync", {
+        body: { workspaceId: currentWorkspace.id },
+      });
+      if (error) throw error;
+      if (data && (data as any).error) throw new Error((data as any).error);
+      toast.success(
+        `Sync started for ${target}. Refreshing data in ~30s — you can keep working.`,
+        { id: toastId, duration: 6000 },
+      );
+      // Refetch a few times so freshly-imported insights appear without a manual reload.
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["clients"] });
+        qc.invalidateQueries({ queryKey: ["clients-range-metrics"] });
+        qc.invalidateQueries({ queryKey: ["campaigns"] });
+      }, 15000);
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["clients"] });
+        qc.invalidateQueries({ queryKey: ["clients-range-metrics"] });
+        qc.invalidateQueries({ queryKey: ["campaigns"] });
+      }, 45000);
     } catch (e: any) {
-      toast.error(e?.message ?? "Sync failed");
+      toast.error(e?.message ?? "Sync failed", { id: toastId });
     } finally {
       setSyncing(false);
     }
@@ -452,28 +472,30 @@ export function ClientTable() {
           {/* Import split-button */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                disabled={!focusedClient}
-                title={!focusedClient ? "Select a client first" : undefined}
-              >
+              <Button size="sm" className="h-8 gap-1.5 text-xs" disabled={syncing}>
                 {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 Import
                 <ChevronDown className="h-3 w-3 opacity-80" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuItem onClick={handleQuickSync} disabled={syncing}>
                 <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                Sync Meta campaigns now
+                {focusedClient ? `Sync Meta for ${focusedClient.name}` : "Sync Meta for all clients"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setImportOpen(true)}>
+              <DropdownMenuItem
+                onClick={() => setImportOpen(true)}
+                disabled={!focusedClient}
+                title={!focusedClient ? "Pick a client first" : undefined}
+              >
                 <SlidersHorizontal className="mr-2 h-3.5 w-3.5" />
                 Choose campaigns to import…
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => focusedClient && navigate(`/client/${focusedClient.id}?tab=campaigns`)}>
+              <DropdownMenuItem
+                onClick={() => focusedClient && navigate(`/client/${focusedClient.id}?tab=campaigns`)}
+                disabled={!focusedClient}
+              >
                 <ExternalLink className="mr-2 h-3.5 w-3.5" />
                 View imported campaigns
               </DropdownMenuItem>
