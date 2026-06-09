@@ -172,6 +172,11 @@ export function ClientTable() {
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number | string>>(new Set());
+  const [autoClassifying, setAutoClassifying] = useState(false);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const { currentWorkspace } = useWorkspace();
+  const qc = useQueryClient();
 
   const focusedClient = useMemo(
     () => (selectedClientId === "all" ? null : baseClients.find((c) => c.id === selectedClientId) ?? null),
@@ -191,6 +196,46 @@ export function ClientTable() {
       toast.error(e?.message ?? "Sync failed");
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleAutoClassify = async () => {
+    if (!currentWorkspace) return;
+    setAutoClassifying(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("auto_classify_new_clients", {
+        _workspace_id: currentWorkspace.id,
+      });
+      if (error) throw error;
+      const moved = data?.moved ?? 0;
+      const skipped = data?.skipped ?? 0;
+      toast.success(`Auto-classified ${moved} client${moved === 1 ? "" : "s"}${skipped ? ` · ${skipped} kept in New (no data)` : ""}`);
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Auto-classify failed");
+    } finally {
+      setAutoClassifying(false);
+    }
+  };
+
+  const handleBulkMove = async (status: string) => {
+    if (!currentWorkspace || selectedIds.size === 0) return;
+    setBulkUpdating(true);
+    try {
+      const ids = Array.from(selectedIds).map((v) => Number(v));
+      const { data, error } = await (supabase as any).rpc("bulk_update_client_status", {
+        _workspace_id: currentWorkspace.id,
+        _client_ids: ids,
+        _status: status,
+      });
+      if (error) throw error;
+      toast.success(`Moved ${data ?? ids.length} client${ids.length === 1 ? "" : "s"} to ${status}`);
+      setSelectedIds(new Set());
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Bulk update failed");
+    } finally {
+      setBulkUpdating(false);
     }
   };
 
