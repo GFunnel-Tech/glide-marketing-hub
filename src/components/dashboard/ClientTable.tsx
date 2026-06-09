@@ -472,28 +472,30 @@ export function ClientTable() {
           {/* Import split-button */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                disabled={!focusedClient}
-                title={!focusedClient ? "Select a client first" : undefined}
-              >
+              <Button size="sm" className="h-8 gap-1.5 text-xs" disabled={syncing}>
                 {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 Import
                 <ChevronDown className="h-3 w-3 opacity-80" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuItem onClick={handleQuickSync} disabled={syncing}>
                 <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                Sync Meta campaigns now
+                {focusedClient ? `Sync Meta for ${focusedClient.name}` : "Sync Meta for all clients"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setImportOpen(true)}>
+              <DropdownMenuItem
+                onClick={() => setImportOpen(true)}
+                disabled={!focusedClient}
+                title={!focusedClient ? "Pick a client first" : undefined}
+              >
                 <SlidersHorizontal className="mr-2 h-3.5 w-3.5" />
                 Choose campaigns to import…
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => focusedClient && navigate(`/client/${focusedClient.id}?tab=campaigns`)}>
+              <DropdownMenuItem
+                onClick={() => focusedClient && navigate(`/client/${focusedClient.id}?tab=campaigns`)}
+                disabled={!focusedClient}
+              >
                 <ExternalLink className="mr-2 h-3.5 w-3.5" />
                 View imported campaigns
               </DropdownMenuItem>
