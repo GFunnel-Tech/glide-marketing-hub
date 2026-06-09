@@ -459,6 +459,19 @@ export function ClientTable() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {newCount > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/5"
+              onClick={handleAutoClassify}
+              disabled={autoClassifying}
+              title="Auto-move New clients into Green/Yellow/Red based on their KPI performance"
+            >
+              {autoClassifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              Auto-classify New ({newCount})
+            </Button>
+          )}
 
           {filters.map((f) => (
             <button
