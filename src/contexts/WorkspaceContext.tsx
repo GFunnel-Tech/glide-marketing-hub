@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useCallback, useEffect, useMemo, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
 
@@ -32,7 +32,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [currentWorkspace, setCurrentWorkspaceState] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadWorkspaces = async () => {
+  const loadWorkspaces = useCallback(async () => {
     if (!user) {
       setWorkspaces([]);
       setCurrentWorkspaceState(null);
@@ -66,22 +66,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const found = stored ? list.find((w) => w.id === stored) : null;
     setCurrentWorkspaceState(found || list[0] || null);
     setLoading(false);
-  };
+  }, [user]);
 
-  useEffect(() => { loadWorkspaces(); }, [user]);
+  useEffect(() => { loadWorkspaces(); }, [loadWorkspaces]);
 
-  const setCurrentWorkspace = (ws: Workspace) => {
+  const setCurrentWorkspace = useCallback((ws: Workspace) => {
     setCurrentWorkspaceState(ws);
     localStorage.setItem(STORAGE_KEY, ws.id);
-  };
+  }, []);
 
-  return (
-    <WorkspaceContext.Provider value={{
-      workspaces, currentWorkspace, setCurrentWorkspace, loading, refresh: loadWorkspaces,
-    }}>
-      {children}
-    </WorkspaceContext.Provider>
+  const value = useMemo(
+    () => ({ workspaces, currentWorkspace, setCurrentWorkspace, loading, refresh: loadWorkspaces }),
+    [workspaces, currentWorkspace, setCurrentWorkspace, loading, loadWorkspaces],
   );
+
+  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 
 export const useWorkspace = () => useContext(WorkspaceContext);

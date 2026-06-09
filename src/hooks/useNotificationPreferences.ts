@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -120,11 +121,20 @@ export function useRealtimeEnabledEvents(): {
 } {
   const { data, isLoading } = useNotificationPreferences();
   const ready = !isLoading;
-  const realtimeFor = (eventType: NotificationEventType) => {
-    const row = data?.find(p => p.event_type === eventType);
-    return row?.realtime_enabled ?? true;
-  };
-  const anyRealtime = NOTIFICATION_EVENTS.some(e => realtimeFor(e.key));
+  // Memoize on `data` so the returned references are stable across renders.
+  // useNotificationsRealtime lists these in its effect deps; unstable refs made
+  // it tear down and re-subscribe the realtime channel on every render.
+  const realtimeFor = useCallback(
+    (eventType: NotificationEventType) => {
+      const row = data?.find(p => p.event_type === eventType);
+      return row?.realtime_enabled ?? true;
+    },
+    [data],
+  );
+  const anyRealtime = useMemo(
+    () => NOTIFICATION_EVENTS.some(e => realtimeFor(e.key)),
+    [realtimeFor],
+  );
   return { ready, realtimeFor, anyRealtime };
 }
 
