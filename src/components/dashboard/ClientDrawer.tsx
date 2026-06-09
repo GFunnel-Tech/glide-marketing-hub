@@ -5,6 +5,7 @@ import { StatusBadge } from "./StatusBadge";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useClientPath } from "@/lib/clientPath";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -16,6 +17,7 @@ const tabs = ["Overview", "Campaigns", "Leads", "Actions"] as const;
 
 export function ClientDrawer({ client, onClose }: { client: Client; onClose: () => void }) {
   const [activeTab, setActiveTab] = useState<typeof tabs[number]>("Overview");
+  const clientPath = useClientPath();
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [showScaleDialog, setShowScaleDialog] = useState(false);
   const [pauseInput, setPauseInput] = useState("");
@@ -200,14 +202,14 @@ export function ClientDrawer({ client, onClose }: { client: Client; onClose: () 
                 Add Note
               </button>
 
-              <Link to={`/client/${client.id}`} className="w-full rounded-lg border border-primary text-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/10 transition-colors flex items-center justify-center gap-2" onClick={onClose}>
+              <Link to={clientPath(client.id)} className="w-full rounded-lg border border-primary text-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/10 transition-colors flex items-center justify-center gap-2" onClick={onClose}>
                 Open Full Profile <ExternalLink className="h-3.5 w-3.5" />
               </Link>
 
               <div className="mt-6 space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Notes</h4>
-                  <Link to={`/client/${client.id}`} className="text-xs text-primary hover:underline" onClick={onClose}>View Full Activity Log →</Link>
+                  <Link to={clientPath(client.id)} className="text-xs text-primary hover:underline" onClick={onClose}>View Full Activity Log →</Link>
                 </div>
                 <p className="text-xs text-muted-foreground italic">No notes yet. Open the full profile to add one.</p>
               </div>

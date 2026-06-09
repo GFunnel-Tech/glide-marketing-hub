@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Inbox, Mail, Phone, RefreshCw, Loader2, Spar
 import { useMetaLeads, type MetaLead } from "@/hooks/useMetaLeads";
 import { useClients } from "@/hooks/useDatabase";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useClientPath } from "@/lib/clientPath";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
   const { data: leads = [], isLoading } = useMetaLeads(clientId);
   const { data: clients = [] } = useClients();
   const { currentWorkspace } = useWorkspace();
+  const clientPath = useClientPath();
   const qc = useQueryClient();
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -163,7 +165,7 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
                     {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                     {g.clientId ? (
                       <Link
-                        to={`/client/${g.clientId}`}
+                        to={clientPath(g.clientId)}
                         onClick={(e) => e.stopPropagation()}
                         className="text-sm font-medium text-foreground hover:text-primary"
                       >

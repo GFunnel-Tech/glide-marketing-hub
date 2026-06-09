@@ -6,6 +6,7 @@ import { AlertTriangle, Search, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { useClientPath } from "@/lib/clientPath";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -53,6 +54,7 @@ export default function Campaigns() {
   const [loading, setLoading] = useState<string | null>(null);
 
   const getClient = (clientId: string) => clients.find(c => c.id === Number(clientId));
+  const clientPath = useClientPath();
 
   const filtered = useMemo(() => {
     let list = campaignData;
@@ -128,7 +130,7 @@ export default function Campaigns() {
           {filtered.map(c => {
             const cl = getClient(c.clientId);
             return (
-              <Link key={c.id} to={`/client/${c.clientId}`} className="rounded-lg border border-border bg-card p-5 hover:border-primary/40 transition-colors block">
+              <Link key={c.id} to={clientPath(c.clientId)} className="rounded-lg border border-border bg-card p-5 hover:border-primary/40 transition-colors block">
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     {cl && <span className="text-xs font-medium text-primary">{cl.name}</span>}

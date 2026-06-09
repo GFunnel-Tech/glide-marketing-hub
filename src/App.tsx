@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { buildClientPath } from "@/lib/clientPath";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -50,6 +52,7 @@ import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
 import { useConversationsRealtime } from "@/hooks/useMessages";
 import { useGFunnel } from "@/hooks/useGFunnel";
+import { usePointerEventsGuard } from "@/hooks/usePointerEventsGuard";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +63,36 @@ function RealtimeProvider({ children }: { children: React.ReactNode }) {
   useNotificationsRealtime();
   useConversationsRealtime();
   return <>{children}</>;
+}
+
+// Mounted once near the router root so a stuck Radix overlay can never leave the
+// whole page unclickable (see usePointerEventsGuard).
+function PointerEventsGuard() {
+  usePointerEventsGuard();
+  return null;
+}
+
+// Canonicalises the legacy `/client/:id` URL to the workspace-scoped
+// `/{workspaceId}/client/:id` shape. While the workspace is still loading we
+// keep rendering the page (no redirect) so deep links never dead-end.
+function ScopedClientRedirect() {
+  const { id } = useParams();
+  const location = useLocation();
+  const { currentWorkspace, loading } = useWorkspace();
+
+  if (currentWorkspace?.id && id) {
+    return (
+      <Navigate
+        to={buildClientPath(currentWorkspace.id, id, location.search)}
+        replace
+      />
+    );
+  }
+  if (loading) {
+    return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
+  }
+  // No workspace available — fall back to the legacy (unscoped) page.
+  return <ClientProfile />;
 }
 
 function GFunnelGate({ children }: { children: React.ReactNode }) {
@@ -82,6 +115,7 @@ const App = () => (
             <WorkspaceProvider>
               <AdAccountProvider>
               <RealtimeProvider>
+              <PointerEventsGuard />
               <Toaster />
               <Sonner />
               <Routes>
@@ -130,7 +164,8 @@ const App = () => (
                 >
                   <Route index element={<Index />} />
                   <Route path="clients" element={<Index />} />
-                  <Route path="client/:id" element={<ClientProfile />} />
+                  <Route path="client/:id" element={<ScopedClientRedirect />} />
+                  <Route path=":locationId/client/:id" element={<ClientProfile />} />
                   <Route path="campaigns" element={<Campaigns />} />
                   <Route path="creatives" element={<Creatives />} />
                   <Route path="ads" element={<Ads />} />
