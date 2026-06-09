@@ -4862,6 +4862,14 @@ export type Database = {
       }
     }
     Functions: {
+      auto_classify_new_clients: {
+        Args: { _workspace_id: string }
+        Returns: Json
+      }
+      bulk_update_client_status: {
+        Args: { _client_ids: number[]; _status: string; _workspace_id: string }
+        Returns: number
+      }
       can_write_workspace: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
