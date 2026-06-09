@@ -25,11 +25,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Client } from "@/data/mockData";
 
-type StatusFilter = "ALL" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
+type StatusFilter = "ALL" | "NEW" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
 type Channel = "all" | "meta" | "google" | "tiktok" | "linkedin";
 type SortDir = "asc" | "desc";
 
-const statusOrder: Record<string, number> = { RED: 0, YELLOW: 1, GREEN: 2, BLOCKED: 3 };
+const statusOrder: Record<string, number> = { NEW: -1, RED: 0, YELLOW: 1, GREEN: 2, BLOCKED: 3 };
+
+const BULK_STATUSES: { key: string; label: string }[] = [
+  { key: "NEW", label: "New" },
+  { key: "GREEN", label: "Green" },
+  { key: "YELLOW", label: "Yellow" },
+  { key: "RED", label: "Red" },
+  { key: "LEARNING", label: "Learning" },
+  { key: "LAUNCHING", label: "Launching" },
+  { key: "RELAUNCH", label: "Re-Launch" },
+  { key: "PAUSED", label: "Paused" },
+  { key: "PENDING_APPROVAL", label: "Pending Approval" },
+  { key: "PENDING_CANCELLATION", label: "Pending Cancellation" },
+  { key: "CANCELLED", label: "Cancelled" },
+  { key: "BLOCKED", label: "Blocked" },
+];
 
 // --- Column registry ---------------------------------------------------------
 type ColRender = (c: any) => React.ReactNode;
