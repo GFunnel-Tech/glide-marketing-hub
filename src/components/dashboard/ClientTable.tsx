@@ -562,11 +562,53 @@ export function ClientTable() {
         </div>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-foreground">
+            <Check className="h-3.5 w-3.5 text-primary" />
+            <span className="font-medium">{selectedIds.size}</span>
+            <span className="text-muted-foreground">selected</span>
+            <button
+              className="ml-2 text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+              onClick={() => setSelectedIds(new Set())}
+            >Clear</button>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-8 gap-1.5 text-xs" disabled={bulkUpdating}>
+                {bulkUpdating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MoveRight className="h-3.5 w-3.5" />}
+                Move to…
+                <ChevronDown className="h-3 w-3 opacity-80" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Move selected to
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {BULK_STATUSES.map((s) => (
+                <DropdownMenuItem key={s.key} onClick={() => handleBulkMove(s.key)} className="text-xs">
+                  <StatusBadge status={s.key as any} />
+                  <span className="ml-2">{s.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+
       <div className="rounded-lg border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-accent/50">
+                <th className="w-8 px-3 py-2.5">
+                  <Checkbox
+                    checked={allRowsSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Select all"
+                  />
+                </th>
                 {visibleColumns.map((col) => (
                   <th
                     key={col.key}
@@ -595,9 +637,17 @@ export function ClientTable() {
                     c.status === "BLOCKED" && "opacity-60",
                     c.status === "GREEN" && "border-l-2 border-l-success",
                     c.status === "RED" && "border-l-2 border-l-destructive",
-                    c.frequency > 3.5 && "animate-pulse-amber"
+                    c.frequency > 3.5 && "animate-pulse-amber",
+                    selectedIds.has(c.id) && "bg-primary/5"
                   )}
                 >
+                  <td className="w-8 px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds.has(c.id)}
+                      onCheckedChange={() => toggleRow(c.id)}
+                      aria-label={`Select ${c.name}`}
+                    />
+                  </td>
                   {visibleColumns.map((col) => (
                     <td key={col.key} className="px-3 py-3">{col.render(c)}</td>
                   ))}
