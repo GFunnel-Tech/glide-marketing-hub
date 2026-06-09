@@ -295,13 +295,32 @@ export function GhlAgencyConnectionPanel() {
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="pit-... or eyJhbGciOi... (Agency PIT with locations.readonly)"
+              placeholder="pit-... or eyJhbGciOi... (Agency PIT — see required scopes below)"
               className="mt-1 font-mono text-xs"
             />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              GHL → Agency Settings → Private Integrations. Required scope:{" "}
-              <code className="font-mono">locations.readonly</code>.
-            </p>
+            <div className="text-[11px] text-muted-foreground mt-1 space-y-1">
+              <p>
+                GHL → Agency Settings → Private Integrations. The token must grant{" "}
+                <strong className="text-foreground">all</strong> of these scopes:
+              </p>
+              <ul className="ml-1 space-y-0.5">
+                <li>
+                  <code className="font-mono">locations.readonly</code> — discover &amp; sync sub-accounts
+                </li>
+                <li>
+                  <code className="font-mono">contacts.readonly</code> — check whether a lead reached GHL
+                </li>
+                <li>
+                  <code className="font-mono">contacts.write</code> — push/recover missing leads into GHL
+                </li>
+              </ul>
+              <p className="text-warning/90">
+                A <code className="font-mono">401 — token is not authorized for this scope</code> during
+                lead sync means the PIT is missing <code className="font-mono">contacts.write</code>.
+                Edit the Private Integration in GHL to add the scopes above, then paste the new token here
+                and Save.
+              </p>
+            </div>
           </div>
 
           <div>
