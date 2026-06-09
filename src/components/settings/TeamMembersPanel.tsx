@@ -94,6 +94,9 @@ export function TeamMembersPanel() {
 
   const save = async () => {
     if (!form.name.trim()) return toast.error("Name is required");
+    if (!editing && !form.email?.trim()) {
+      return toast.error("An email is required — it's how the new user signs in");
+    }
     const payload: TeamMemberInput = {
       ...form,
       name: form.name.trim(),
@@ -105,8 +108,22 @@ export function TeamMembersPanel() {
         await updateMember.mutateAsync({ id: editing.id, ...payload });
         toast.success("Member updated");
       } else {
-        await createMember.mutateAsync(payload);
-        toast.success("Member added");
+        const res = await createMember.mutateAsync(payload);
+        if (res.invite_link) {
+          toast.success(res.created ? "User created & invited" : "User added to workspace", {
+            description: "Copy their sign-in link",
+            action: {
+              label: "Copy link",
+              onClick: () => {
+                navigator.clipboard.writeText(res.invite_link!);
+                toast.success("Sign-in link copied");
+              },
+            },
+            duration: 10000,
+          });
+        } else {
+          toast.success("User added");
+        }
       }
       setDialogOpen(false);
     } catch (e: any) {
@@ -221,7 +238,7 @@ export function TeamMembersPanel() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Email</Label>
+                <Label>Email {!editing && <span className="text-destructive">*</span>}</Label>
                 <Input type="email" value={form.email ?? ""} onChange={e => set({ email: e.target.value })} placeholder="jane@agency.com" />
               </div>
               <div>

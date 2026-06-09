@@ -8,6 +8,12 @@ verify_jwt = true
 [functions.admin-impersonate]
 verify_jwt = true
 
+# Team member invite/create — requires a valid Supabase JWT at the gateway; the
+# function then enforces workspace owner/admin (or super_admin) before creating
+# a real login user.
+[functions.workspace-invite-user]
+verify_jwt = true
+
 # Public tracking collector + snippet
 [functions.track]
 verify_jwt = false

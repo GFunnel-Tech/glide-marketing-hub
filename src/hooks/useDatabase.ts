@@ -281,14 +281,36 @@ export function useTeamMembers() {
   });
 }
 
+export interface CreateTeamMemberResult {
+  member: DbTeamMember;
+  invite_link: string | null;
+  created: boolean;
+}
+
 export function useCreateTeamMember() {
   const qc = useQueryClient();
+  const { currentWorkspace } = useWorkspace();
   return useMutation({
-    mutationFn: async (input: TeamMemberInput) => {
-      const { data, error } = await (supabase as any)
-        .from("team_members").insert(input).select().single();
-      if (error) throw error;
-      return data as DbTeamMember;
+    mutationFn: async (input: TeamMemberInput): Promise<CreateTeamMemberResult> => {
+      if (!currentWorkspace?.id) throw new Error("Select a workspace first");
+      if (!input.email) throw new Error("An email is required to create a login");
+      // Provision a REAL login user via the service-role edge function. A direct
+      // client-side insert is blocked by the admin-only RLS on team_members and
+      // would never create an actual auth account.
+      const { data, error } = await supabase.functions.invoke("workspace-invite-user", {
+        body: { ...input, workspace_id: currentWorkspace.id },
+      });
+      if (error) {
+        // Surface the function's structured error message when present.
+        const msg = (data as any)?.error || error.message || "Failed to create user";
+        throw new Error(msg);
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return {
+        member: (data as any).member as DbTeamMember,
+        invite_link: (data as any).invite_link ?? null,
+        created: !!(data as any).created,
+      };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
   });
