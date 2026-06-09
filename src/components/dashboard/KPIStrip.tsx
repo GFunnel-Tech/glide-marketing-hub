@@ -1,8 +1,6 @@
 import { Users, Activity, DollarSign, Target, Percent } from "lucide-react";
-import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useClients, useCampaigns, useClientsWithMetaAccount } from "@/hooks/useDatabase";
-import { useArchivedSet } from "@/hooks/useArchivedEntities";
+import { useClientSegments } from "@/hooks/useClientSegments";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
 import { useDateRange } from "@/hooks/useDateRange";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
@@ -50,22 +48,12 @@ function KPITile({ label, kpiKey, value, sublabel, Icon, iconTone }: KPITileProp
 }
 
 export function KPIStrip() {
-  const { data: clients = [] } = useClients();
-  const { data: allCampaigns = [] } = useCampaigns();
-  const { data: clientsWithMetaAcct = new Set<number>() } = useClientsWithMetaAccount();
-  const archivedSet = useArchivedSet();
   const { data: rangeMetrics = {}, isFetching } = useClientsRangeMetrics();
   const { label } = useDateRange();
 
-  // "Fully synced" = GHL sub-account linked + Meta ad account mapped.
-  // Active Clients = fully synced + recent campaign activity + not archived.
-  const fullySyncedClients = useMemo(
-    () => clients.filter((c: any) => !!c.ghlLocationId && clientsWithMetaAcct.has(Number(c.id))),
-    [clients, clientsWithMetaAcct],
-  );
-
-  // Active = every client. Cancelled/blocked clients can be marked later.
-  const activeClientCount = clients.length;
+  // All client counts come from one source of truth so the dashboard can never
+  // show two unexplained totals. Each number is labelled with its denominator.
+  const segments = useClientSegments();
 
   const totals = Object.values(rangeMetrics).reduce(
     (acc, m) => {
@@ -85,7 +73,7 @@ export function KPIStrip() {
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-      <KPITile label="Total Clients" value={String(clients.length)} sublabel={`${activeClientCount} active · ${fullySyncedClients.length} synced`} Icon={Users} iconTone="blue" />
+      <KPITile label="Total Clients" value={String(segments.total)} sublabel={`${segments.inWorkflow} in workflow · ${segments.synced} synced`} Icon={Users} iconTone="blue" />
       <KPITile label="Total Leads" kpiKey="leads" value={totalLeads.toLocaleString()} sublabel={sub} Icon={Activity} iconTone="green" />
       <KPITile label="Blended CPL" kpiKey="cpl" value={`$${blendedCpl.toFixed(2)}`} sublabel={sub} Icon={Target} iconTone="amber" />
       <KPITile label="Form CVR" kpiKey="formcvr" value={`${blendedCvr.toFixed(2)}%`} sublabel={sub} Icon={Percent} iconTone="green" />

@@ -388,8 +388,11 @@ export function ClientHierarchyTable() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-foreground">All Clients</h2>
-          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary tabular-nums">
-            {visibleClients.length}
+          <span
+            className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary tabular-nums"
+            title="Clients in workflow — excludes archived clients and fully-synced clients with no campaign activity in range"
+          >
+            {visibleClients.length} in workflow
           </span>
           <NoteBubble variant="button" label="Notes" align="start" />
         </div>
