@@ -184,16 +184,36 @@ export function ClientTable() {
   );
 
   const handleQuickSync = async () => {
-    if (selectedClientId === "all" || !focusedClient) {
-      toast.error("Select a specific client to sync");
+    if (!currentWorkspace) {
+      toast.error("No workspace selected");
       return;
     }
     setSyncing(true);
+    const target = focusedClient ? focusedClient.name : "all clients in this workspace";
+    const toastId = toast.loading(`Syncing Meta campaigns for ${target}…`);
     try {
-      await api.syncMetaAds(String(focusedClient.id));
-      toast.success(`Synced Meta campaigns for ${focusedClient.name}`);
+      const { data, error } = await supabase.functions.invoke("meta-sync", {
+        body: { workspaceId: currentWorkspace.id },
+      });
+      if (error) throw error;
+      if (data && (data as any).error) throw new Error((data as any).error);
+      toast.success(
+        `Sync started for ${target}. Refreshing data in ~30s — you can keep working.`,
+        { id: toastId, duration: 6000 },
+      );
+      // Refetch a few times so freshly-imported insights appear without a manual reload.
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["clients"] });
+        qc.invalidateQueries({ queryKey: ["clients-range-metrics"] });
+        qc.invalidateQueries({ queryKey: ["campaigns"] });
+      }, 15000);
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["clients"] });
+        qc.invalidateQueries({ queryKey: ["clients-range-metrics"] });
+        qc.invalidateQueries({ queryKey: ["campaigns"] });
+      }, 45000);
     } catch (e: any) {
-      toast.error(e?.message ?? "Sync failed");
+      toast.error(e?.message ?? "Sync failed", { id: toastId });
     } finally {
       setSyncing(false);
     }
