@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useClients } from "@/hooks/useDatabase";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useClientPath } from "@/lib/clientPath";
 import { supabase } from "@/integrations/supabase/client";
 import { Bot, ExternalLink, Zap } from "lucide-react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
@@ -28,6 +29,7 @@ const suggestions = [
 
 export default function AiAssistant() {
   const { currentWorkspace } = useWorkspace();
+  const clientPath = useClientPath();
   const workspaceId = currentWorkspace?.id;
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const qc = useQueryClient();
@@ -145,7 +147,7 @@ export default function AiAssistant() {
             </div>
 
             <Link
-              to={`/client/${selectedClient.id}`}
+              to={clientPath(selectedClient.id)}
               className="text-xs text-primary hover:underline inline-flex items-center gap-1"
             >
               Open Client Profile <ExternalLink className="h-3 w-3" />

@@ -8,6 +8,7 @@ import {
 } from "@/hooks/useArchivedEntities";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useClientPath } from "@/lib/clientPath";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,6 +113,7 @@ type StatusFilter = "All" | "Active" | "Paused" | "Issues";
 
 export function ClientHierarchyTable() {
   const navigate = useNavigate();
+  const clientPath = useClientPath();
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const { data: allCampaigns = [], isLoading: campLoading } = useCampaigns();
   const { data: allAds = [] } = useMetaAds();
@@ -429,7 +431,7 @@ export function ClientHierarchyTable() {
           </Popover>
 
           {focusedClient && (
-            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => navigate(`/client/${focusedClient.id}`)}>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => navigate(clientPath(focusedClient.id))}>
               <ExternalLink className="h-3.5 w-3.5" /> Open Profile
             </Button>
           )}
@@ -502,10 +504,10 @@ export function ClientHierarchyTable() {
 
       {/* Table */}
       <div className="rounded-xl border border-border overflow-hidden bg-card">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[calc(100vh-10rem)]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-accent/40">
+              <tr className="[&>th]:sticky [&>th]:top-0 [&>th]:z-20 [&>th]:bg-muted [&>th]:border-b [&>th]:border-border">
                 <th className="w-8 px-2 py-2.5"></th>
                 <th className="w-8 px-2 py-2.5"></th>
                 <th className="w-16 px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
@@ -599,7 +601,7 @@ export function ClientHierarchyTable() {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); navigate(`/client/${client.id}`); }}
+                                  onClick={(e) => { e.stopPropagation(); navigate(clientPath(client.id)); }}
                                   className="font-semibold text-foreground hover:text-primary truncate"
                                 >
                                   {client.brand || client.name}
@@ -696,7 +698,7 @@ export function ClientHierarchyTable() {
                         <td colSpan={showCompanyCol ? 14 : 13} className="px-12 py-6 text-xs text-muted-foreground">
                           No campaigns for this client.
                           <Button variant="link" size="sm" className="ml-1 h-auto p-0 text-xs"
-                            onClick={() => navigate(`/client/${client.id}?tab=access`)}>
+                            onClick={() => navigate(clientPath(client.id, "?tab=access"))}>
                             Open integrations →
                           </Button>
                         </td>

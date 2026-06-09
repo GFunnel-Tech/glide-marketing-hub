@@ -637,19 +637,48 @@ export default function ClientProfile() {
               <SectionCard title="External Links" icon={Link2}>
                 <div className="space-y-1">
                   {[
-                    { label: "Open in Meta Ads", url: "#" },
-                    { label: "View in GHL", url: "#" },
-                    { label: "View in Plai", url: "#" },
-                  ].map((l) => (
-                    <a
-                      key={l.label}
-                      href={l.url}
-                      className="flex items-center justify-between text-sm text-muted-foreground hover:text-foreground py-1.5"
-                    >
-                      <span>{l.label}</span>
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  ))}
+                    {
+                      label: "Open in Meta Ads",
+                      url: client.bmId
+                        ? `https://business.facebook.com/adsmanager/manage/campaigns?business_id=${client.bmId}`
+                        : null,
+                      hint: "Link a Business Manager first",
+                    },
+                    {
+                      label: "View in GHL",
+                      url: client.ghlLocationId
+                        ? `https://app.gohighlevel.com/v2/location/${client.ghlLocationId}/dashboard`
+                        : null,
+                      hint: "Link a GHL sub-account first",
+                    },
+                    {
+                      label: "View in Plai",
+                      url: client.plaiConnected ? "https://app.plai.io" : null,
+                      hint: "Not connected to Plai",
+                    },
+                  ].map((l) =>
+                    l.url ? (
+                      <a
+                        key={l.label}
+                        href={l.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between text-sm text-muted-foreground hover:text-foreground py-1.5"
+                      >
+                        <span>{l.label}</span>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    ) : (
+                      <div
+                        key={l.label}
+                        title={l.hint}
+                        className="flex items-center justify-between text-sm text-muted-foreground/50 py-1.5 cursor-not-allowed"
+                      >
+                        <span>{l.label}</span>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </div>
+                    ),
+                  )}
                 </div>
               </SectionCard>
             </aside>
@@ -741,15 +770,46 @@ export default function ClientProfile() {
                           </p>
                         )}
                         <div className="flex gap-2 flex-wrap">
-                          <button className="rounded bg-destructive/10 text-destructive px-2.5 py-1 text-xs font-medium hover:bg-destructive/20">
-                            Pause
+                          <button
+                            onClick={() =>
+                              handleAction("Pause", () =>
+                                api.pauseCampaigns(String(client.id), [c.id]),
+                              )
+                            }
+                            disabled={loading === "Pause"}
+                            className="rounded bg-destructive/10 text-destructive px-2.5 py-1 text-xs font-medium hover:bg-destructive/20 disabled:opacity-50"
+                          >
+                            {loading === "Pause" ? "Pausing…" : "Pause"}
                           </button>
-                          <button className="rounded bg-success/10 text-success px-2.5 py-1 text-xs font-medium hover:bg-success/20">
-                            Scale 20%
+                          <button
+                            onClick={() =>
+                              handleAction("Scale", () =>
+                                api.scaleBudget(String(client.id), [c.id]),
+                              )
+                            }
+                            disabled={loading === "Scale"}
+                            className="rounded bg-success/10 text-success px-2.5 py-1 text-xs font-medium hover:bg-success/20 disabled:opacity-50"
+                          >
+                            {loading === "Scale" ? "Scaling…" : "Scale 20%"}
                           </button>
-                          <button className="rounded bg-accent text-muted-foreground px-2.5 py-1 text-xs font-medium hover:text-foreground inline-flex items-center gap-1">
-                            View in Meta <ExternalLink className="h-3 w-3" />
-                          </button>
+                          {client.bmId ? (
+                            <a
+                              href={`https://business.facebook.com/adsmanager/manage/campaigns?business_id=${client.bmId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded bg-accent text-muted-foreground px-2.5 py-1 text-xs font-medium hover:text-foreground inline-flex items-center gap-1"
+                            >
+                              View in Meta <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            <button
+                              disabled
+                              title="Link a Business Manager to open this in Meta"
+                              className="rounded bg-accent text-muted-foreground px-2.5 py-1 text-xs font-medium inline-flex items-center gap-1 opacity-50 cursor-not-allowed"
+                            >
+                              View in Meta <ExternalLink className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
 
                         {/* Ad sets + ads breakdown (range-aware) */}

@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
 import { AdAccountSelector } from "./AdAccountSelector";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useClientPath } from "@/lib/clientPath";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Client } from "@/data/mockData";
@@ -176,6 +177,7 @@ export function ClientTable() {
   const [autoClassifying, setAutoClassifying] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const { currentWorkspace } = useWorkspace();
+  const clientPath = useClientPath();
   const qc = useQueryClient();
 
   const focusedClient = useMemo(
@@ -462,7 +464,7 @@ export function ClientTable() {
               variant="outline"
               size="sm"
               className="h-8 gap-1.5 text-xs"
-              onClick={() => navigate(`/client/${focusedClient.id}`)}
+              onClick={() => navigate(clientPath(focusedClient.id))}
             >
               <ExternalLink className="h-3.5 w-3.5" />
               Open Profile
@@ -493,7 +495,7 @@ export function ClientTable() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => focusedClient && navigate(`/client/${focusedClient.id}?tab=campaigns`)}
+                onClick={() => focusedClient && navigate(clientPath(focusedClient.id, "?tab=campaigns"))}
                 disabled={!focusedClient}
               >
                 <ExternalLink className="mr-2 h-3.5 w-3.5" />
