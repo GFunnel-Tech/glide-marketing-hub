@@ -253,7 +253,22 @@ export function ClientTable() {
   const clients = useMemo(() => {
     return baseClients.map((c) => {
       const m = rangeMetrics[c.id];
-      const base = !m ? { ...c, cpl: 0, cpm: 0, leads: 0, spend: 0, formCvr: 0, frequency: 0, doubleCount: false, trueCpl: 0, reportedLeads: 0, trueLeads: 0 }
+      // Fall back to the client snapshot fields when no per-range aggregate exists
+      // so the table still shows known leads/spend/CPL instead of all zeros.
+      const base = !m
+        ? {
+            ...c,
+            cpl: Number(c.cpl ?? 0),
+            cpm: Number((c as any).cpm ?? 0),
+            leads: Number(c.leads ?? 0),
+            spend: Number(c.spend ?? 0),
+            formCvr: Number((c as any).formCvr ?? 0),
+            frequency: Number((c as any).frequency ?? 0),
+            doubleCount: false,
+            trueCpl: Number(c.cpl ?? 0),
+            reportedLeads: Number(c.leads ?? 0),
+            trueLeads: Number(c.leads ?? 0),
+          }
         : { ...c, cpl: m.cpl, cpm: m.cpm, leads: m.reportedLeads, spend: m.spend, formCvr: m.formCvr, frequency: m.frequency, doubleCount: m.doubleCount, trueCpl: m.trueCpl, reportedLeads: m.reportedLeads, trueLeads: m.trueLeads };
       // Attach custom KPI values
       const custom: Record<string, number | null> = {};
@@ -330,8 +345,14 @@ export function ClientTable() {
 
   const toggleSort = (key?: string) => {
     if (!key) return;
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("asc"); }
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      // Numeric columns feel more natural sorted high → low on first click
+      const numericKeys = new Set(["cpl", "cpm", "leads", "spend", "formCvr", "frequency"]);
+      setSortDir(numericKeys.has(key) || key.startsWith("_custom.") ? "desc" : "asc");
+    }
   };
 
   const toggleColumn = (key: string) => {
