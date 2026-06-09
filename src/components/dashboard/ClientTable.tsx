@@ -345,8 +345,14 @@ export function ClientTable() {
 
   const toggleSort = (key?: string) => {
     if (!key) return;
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("asc"); }
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      // Numeric columns feel more natural sorted high → low on first click
+      const numericKeys = new Set(["cpl", "cpm", "leads", "spend", "formCvr", "frequency"]);
+      setSortDir(numericKeys.has(key) || key.startsWith("_custom.") ? "desc" : "asc");
+    }
   };
 
   const toggleColumn = (key: string) => {
