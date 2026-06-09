@@ -338,7 +338,28 @@ export function ClientTable() {
     setVisibleIds((cur) => cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]);
   };
 
-  const filters: StatusFilter[] = ["ALL", "GREEN", "YELLOW", "RED", "BLOCKED"];
+  const filters: StatusFilter[] = ["ALL", "NEW", "GREEN", "YELLOW", "RED", "BLOCKED"];
+  const newCount = useMemo(() => clients.filter((c) => c.status === "NEW").length, [clients]);
+  const allRowsSelected = filtered.length > 0 && filtered.every((c) => selectedIds.has(c.id));
+  const toggleAll = () => {
+    setSelectedIds((prev) => {
+      if (allRowsSelected) {
+        const next = new Set(prev);
+        for (const c of filtered) next.delete(c.id);
+        return next;
+      }
+      const next = new Set(prev);
+      for (const c of filtered) next.add(c.id);
+      return next;
+    });
+  };
+  const toggleRow = (id: number | string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   if (isLoading) return <div className="text-center py-10 text-muted-foreground">Loading clients...</div>;
 
