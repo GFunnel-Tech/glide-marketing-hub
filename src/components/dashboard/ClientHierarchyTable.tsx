@@ -504,10 +504,10 @@ export function ClientHierarchyTable() {
 
       {/* Table */}
       <div className="rounded-xl border border-border overflow-hidden bg-card">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[calc(100vh-10rem)]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-accent/40">
+              <tr className="[&>th]:sticky [&>th]:top-0 [&>th]:z-20 [&>th]:bg-muted [&>th]:border-b [&>th]:border-border">
                 <th className="w-8 px-2 py-2.5"></th>
                 <th className="w-8 px-2 py-2.5"></th>
                 <th className="w-16 px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
