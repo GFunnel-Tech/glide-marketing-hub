@@ -70,9 +70,9 @@ export function useUpsertAgencyProfile() {
     mutationFn: async (input: AgencyProfileInput) => {
       if (!currentWorkspace) throw new Error("No workspace selected");
       const payload = { workspace_id: currentWorkspace.id, ...input };
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("agency_profiles")
-        .upsert(payload as never, { onConflict: "workspace_id" });
+        .upsert(payload, { onConflict: "workspace_id" });
       if (error) throw error;
     },
     onSuccess: () => {
