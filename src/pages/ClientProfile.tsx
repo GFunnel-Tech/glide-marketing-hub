@@ -1,8 +1,10 @@
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useClient, useCampaigns, useActivityLog, useLeads, useClientsWithMetaAccount, useSetAgencyAccount } from "@/hooks/useDatabase";
+import { useClient, useClients, useCampaigns, useActivityLog, useLeads, useClientsWithMetaAccount, useSetAgencyAccount } from "@/hooks/useDatabase";
+import { useClientPath } from "@/lib/clientPath";
+
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AgentChat } from "@/components/ai/AgentChat";
 import { PendingActionsPanel } from "@/components/ai/PendingActionsPanel";
@@ -141,8 +143,12 @@ export default function ClientProfile() {
   const { data: allActivity = [] } = useActivityLog();
   const { data: allLeads = [] } = useLeads();
   const { data: metaMappedSet } = useClientsWithMetaAccount();
+  const { data: allClients = [] } = useClients();
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id ?? null;
+  const navigate = useNavigate();
+  const clientPath = useClientPath();
+
   const [loading, setLoading] = useState<string | null>(null);
   const [showPause, setShowPause] = useState(false);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
@@ -886,6 +892,55 @@ export default function ClientProfile() {
 
         {/* INTEGRATIONS */}
         <TabsContent value="integrations" className="mt-5 space-y-4">
+          {(() => {
+            const sorted = [...allClients].sort((a, b) =>
+              (a.brand || a.name).localeCompare(b.brand || b.name)
+            );
+            const idx = sorted.findIndex((c) => String(c.id) === String(client.id));
+            const prev = idx > 0 ? sorted[idx - 1] : null;
+            const next = idx >= 0 && idx < sorted.length - 1 ? sorted[idx + 1] : null;
+            return (
+              <div className="rounded-xl border border-border bg-card p-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Plug className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-xs text-muted-foreground shrink-0">Integrations for</span>
+                  <select
+                    value={String(client.id)}
+                    onChange={(e) => navigate(clientPath(e.target.value, "?tab=integrations"))}
+                    className="text-sm font-semibold bg-background border border-border rounded-md px-2 py-1 max-w-[260px] truncate"
+                    aria-label="Switch client"
+                  >
+                    {sorted.map((c) => (
+                      <option key={c.id} value={String(c.id)}>
+                        {c.brand || c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!prev}
+                    onClick={() => prev && navigate(clientPath(prev.id, "?tab=integrations"))}
+                    className="h-8 text-xs"
+                  >
+                    ← Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!next}
+                    onClick={() => next && navigate(clientPath(next.id, "?tab=integrations"))}
+                    className="h-8 text-xs"
+                  >
+                    Next →
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="rounded-xl border border-border bg-card p-5">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
