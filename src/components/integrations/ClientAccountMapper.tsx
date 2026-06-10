@@ -371,8 +371,29 @@ export function ClientAccountMapper() {
           {ghlFiltered.map((g) => {
             const linkedClient = clientByGhlLoc.get(g.location_id);
             const isActive = selectedGhlId === g.id;
+            const handleClick = async () => {
+              if (selectedClient) {
+                if (selectedClient.ghl_location_id === g.location_id) {
+                  if (!window.confirm(`Unlink GHL sub-account "${g.name || g.location_id}" from ${selectedClient.name}?`)) return;
+                  await linkGhlToClient(selectedClient.id, null);
+                  return;
+                }
+                if (linkedClient && linkedClient.id !== selectedClient.id) {
+                  if (!window.confirm(`"${g.name || g.location_id}" is already linked to "${linkedClient.name}". Unlink it and link to "${selectedClient.name}" instead?`)) return;
+                  await linkGhlToClient(linkedClient.id, null);
+                }
+                if (selectedClient.ghl_location_id && selectedClient.ghl_location_id !== g.location_id) {
+                  const prev = ghlByLocId.get(selectedClient.ghl_location_id);
+                  if (!window.confirm(`${selectedClient.name} is already linked to GHL "${prev?.name || selectedClient.ghl_location_id}". Replace with "${g.name || g.location_id}"?`)) return;
+                }
+                await linkGhlToClient(selectedClient.id, g.location_id);
+                setSelectedGhlId(g.id);
+                return;
+              }
+              setSelectedGhlId(isActive ? null : g.id);
+            };
             return (
-              <RowButton key={g.id} active={isActive} onClick={() => setSelectedGhlId(isActive ? null : g.id)}>
+              <RowButton key={g.id} active={isActive} onClick={handleClick}>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-foreground truncate">{g.name || "Unnamed"}</div>
                   <div className="text-[10px] text-muted-foreground truncate">
@@ -404,8 +425,24 @@ export function ClientAccountMapper() {
           {metaFiltered.map((a) => {
             const linkedClient = a.client_id != null ? clients.find((c) => c.id === a.client_id) : null;
             const isActive = selectedMetaId === a.id;
+            const handleClick = async () => {
+              if (selectedClient) {
+                if (a.client_id === selectedClient.id) {
+                  if (!window.confirm(`Unlink Meta ad account "${a.account_name || a.act_id}" from ${selectedClient.name}?`)) return;
+                  await linkMetaToClient(a.id, null);
+                  return;
+                }
+                if (linkedClient && linkedClient.id !== selectedClient.id) {
+                  if (!window.confirm(`"${a.account_name || a.act_id}" is already linked to "${linkedClient.name}". Unlink it and link to "${selectedClient.name}" instead?`)) return;
+                }
+                await linkMetaToClient(a.id, selectedClient.id);
+                setSelectedMetaId(a.id);
+                return;
+              }
+              setSelectedMetaId(isActive ? null : a.id);
+            };
             return (
-              <RowButton key={a.id} active={isActive} onClick={() => setSelectedMetaId(isActive ? null : a.id)}>
+              <RowButton key={a.id} active={isActive} onClick={handleClick}>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-foreground truncate">
                     {a.account_name || a.act_id}
