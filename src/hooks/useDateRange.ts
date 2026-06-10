@@ -150,14 +150,17 @@ export function useDateRange() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlPreset, params.get("from"), params.get("to")]);
 
-  // persist whenever it changes
+  // persist whenever the range KEY changes (not on every render — Date instances
+  // from resolvePreset() differ each render and would thrash localStorage).
+  const rangeFromKey = fmt(range.from);
+  const rangeToKey = fmt(range.to);
   useEffect(() => {
     writeStorage({
       preset: range.preset,
-      from: range.preset === "custom" ? fmt(range.from) : undefined,
-      to: range.preset === "custom" ? fmt(range.to) : undefined,
+      from: range.preset === "custom" ? rangeFromKey : undefined,
+      to: range.preset === "custom" ? rangeToKey : undefined,
     });
-  }, [range.preset, range.from, range.to]);
+  }, [range.preset, rangeFromKey, rangeToKey]);
 
   const setPreset = useCallback(
     (preset: DateRangePreset) => {
