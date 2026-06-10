@@ -89,6 +89,20 @@ export function ClientAccountMapper() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [wsId]);
 
+  // Auto-select the linked client when a GHL or Meta row is picked
+  useEffect(() => {
+    if (selectedGhlId) {
+      const g = ghlLocs.find((x) => x.id === selectedGhlId);
+      const linked = g ? clients.find((c) => c.ghl_location_id === g.location_id) : null;
+      if (linked) { setSelectedClientId(linked.id); return; }
+    }
+    if (selectedMetaId) {
+      const m = metaAccs.find((x) => x.id === selectedMetaId);
+      if (m?.client_id) { setSelectedClientId(m.client_id); return; }
+    }
+    // eslint-disable-next-line
+  }, [selectedGhlId, selectedMetaId, ghlLocs, metaAccs, clients]);
+
   const selectedClient = useMemo(
     () => clients.find((c) => c.id === selectedClientId) ?? null,
     [clients, selectedClientId],
