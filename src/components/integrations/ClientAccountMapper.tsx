@@ -386,6 +386,7 @@ export function ClientAccountMapper() {
                 ) : (
                   <Badge variant="outline" className="text-[9px] text-muted-foreground shrink-0">Unmapped</Badge>
                 )}
+                {isActive && <DeselectDot label="Deselect GHL sub-account" />}
               </RowButton>
             );
           })}
