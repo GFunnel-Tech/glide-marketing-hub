@@ -248,7 +248,9 @@ async function rollupClients(admin: any, workspaceFilter: string | null) {
     const formCvr = sum.clicks > 0 ? (reportedLeads / sum.clicks) * 100 : 0;
 
     // ---- 3) True (deduplicated) leads from meta_leads ----
-    // Dedup key: lowercased email OR digits-only phone OR lead_id fallback.
+    // Canonical lead-dedup key — MUST stay identical to the copy in
+    // src/hooks/useClientsRangeMetrics.ts: lowercased email, else digits-only
+    // phone, else the Meta lead_id prefixed with "lid:". One person = one lead.
     const { data: leadRows } = await admin
       .from("meta_leads")
       .select("lead_id,email,phone")
@@ -260,7 +262,7 @@ async function rollupClients(admin: any, workspaceFilter: string | null) {
     for (const l of leadRows ?? []) {
       const email = (l.email ?? "").trim().toLowerCase();
       const phone = (l.phone ?? "").replace(/\D+/g, "");
-      const key = email || phone || `lid:${l.lead_id}`;
+      const key = email || phone || `lid:${l.lead_id ?? ""}`;
       if (key) seen.add(key);
     }
     const trueLeadsCount = seen.size;

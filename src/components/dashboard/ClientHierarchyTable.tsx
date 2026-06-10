@@ -43,7 +43,21 @@ import { NoteBubble } from "@/components/notes/NoteBubble";
 import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
 
 // ---------- helpers ----------
-function fmtMoney(n: number) { return `$${(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`; }
+// Money formatter. When the row's account currency is known (and not MIXED),
+// render the correct symbol (e.g. CA$ for CAD) so a Canadian client never shows
+// a misleading "$". Falls back to plain "$" when currency is unknown/mixed.
+function fmtMoney(n: number, currency?: string | null, minDecimals?: number) {
+  const code = currency && currency !== "MIXED" ? currency : null;
+  if (code) {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: code,
+      minimumFractionDigits: minDecimals,
+      maximumFractionDigits: 2,
+    }).format(n || 0);
+  }
+  return `$${(n || 0).toLocaleString(undefined, { minimumFractionDigits: minDecimals, maximumFractionDigits: 2 })}`;
+}
 function fmtInt(n: number) { return Number.isFinite(n) ? Math.round(n).toLocaleString() : "—"; }
 function cplColor(v: number) {
   if (!v) return "text-muted-foreground";
@@ -556,6 +570,9 @@ export function ClientHierarchyTable() {
                   ? campImprFromAds
                   : clientCampaigns.reduce((s, c) => s + deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0), 0);
                 const rm = (rangeMetrics as any)[client.id];
+                // Account currency for this client; sub-rows (campaigns/ads)
+                // inherit it since they belong to the same account.
+                const cur: string | undefined = rm?.currency;
                 // Prefer meta_insights_daily (range metrics) over the locally-cached
                 // campaigns/ads rollup so the row reflects Meta data even when the
                 // campaigns table hasn't been re-synced yet.
@@ -664,13 +681,25 @@ export function ClientHierarchyTable() {
                         <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtInt(totImpr)}</td>
                         <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totClicks > 0 ? fmtInt(totClicks) : "—"}</td>
                         <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{avgCtr > 0 ? `${avgCtr.toFixed(2)}%` : "—"}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtMoney(totSpend)}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totLeads}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtMoney(totSpend, cur)}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
+                          {rm?.doubleCount ? (
+                            <span
+                              className="inline-flex items-center justify-end gap-1 cursor-help"
+                              title={`Deduped count. Meta reported ${fmtInt(rm.reportedLeads)} (−${fmtInt(rm.reportedLeads - totLeads)} duplicate/over-reported). True CPL ${fmtMoney(rm.trueCpl, cur, 2)}.`}
+                            >
+                              {totLeads}
+                              <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
+                            </span>
+                          ) : (
+                            totLeads
+                          )}
+                        </td>
                         <td className={cn("px-2 py-2.5 text-right tabular-nums font-semibold", cplColor(avgCpl))}>
-                          {avgCpl > 0 ? `$${avgCpl.toFixed(2)}` : "—"}
+                          {avgCpl > 0 ? fmtMoney(avgCpl, cur, 2) : "—"}
                         </td>
                         <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
-                          {cAvgCpm > 0 ? `$${cAvgCpm.toFixed(2)}` : "—"}
+                          {cAvgCpm > 0 ? fmtMoney(cAvgCpm, cur, 2) : "—"}
                         </td>
                         <td className={cn(
                           "px-2 py-2.5 text-right tabular-nums",
@@ -777,12 +806,12 @@ export function ClientHierarchyTable() {
                             <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(campImpr)}</td>
                             <td className="px-2 py-2 text-right tabular-nums text-foreground">{campClicks || "—"}</td>
                             <td className="px-2 py-2 text-right tabular-nums text-foreground">{campCtr > 0 ? `${campCtr.toFixed(2)}%` : "—"}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(camp.spend || 0)}</td>
+                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(camp.spend || 0, cur)}</td>
                             <td className="px-2 py-2 text-right tabular-nums text-foreground">{camp.leads ?? 0}</td>
                             <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(camp.cpl || 0))}>
-                              {camp.cpl > 0 ? `$${camp.cpl.toFixed(2)}` : "—"}
+                              {camp.cpl > 0 ? fmtMoney(camp.cpl, cur, 2) : "—"}
                             </td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{(camp.cpm || 0) > 0 ? `$${Number(camp.cpm).toFixed(2)}` : "—"}</td>
+                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{(camp.cpm || 0) > 0 ? fmtMoney(Number(camp.cpm), cur, 2) : "—"}</td>
                             <td className={cn("px-2 py-2 text-right tabular-nums", (camp.frequency || 0) >= 3.5 ? "text-destructive font-semibold" : "text-foreground")}>{(camp.frequency || 0) > 0 ? Number(camp.frequency).toFixed(2) : "—"}</td>
                             <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                           </tr>
@@ -836,10 +865,10 @@ export function ClientHierarchyTable() {
                                   <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(impr)}</td>
                                   <td className="px-2 py-2 text-right tabular-nums text-foreground">{clicks || "—"}</td>
                                   <td className="px-2 py-2 text-right tabular-nums text-foreground">{ctr > 0 ? `${ctr.toFixed(2)}%` : "—"}</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(spend)}</td>
+                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(spend, cur)}</td>
                                   <td className="px-2 py-2 text-right tabular-nums text-foreground">{leads}</td>
                                   <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cpl))}>
-                                    {cpl > 0 ? `$${cpl.toFixed(2)}` : "—"}
+                                    {cpl > 0 ? fmtMoney(cpl, cur, 2) : "—"}
                                   </td>
                                   <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                                   <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
@@ -880,10 +909,10 @@ export function ClientHierarchyTable() {
                                       <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(ad.impressions)}</td>
                                       <td className="px-2 py-2 text-right tabular-nums text-foreground">{ad.clicks || "—"}</td>
                                       <td className="px-2 py-2 text-right tabular-nums text-foreground">{adCtr > 0 ? `${adCtr.toFixed(2)}%` : "—"}</td>
-                                      <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(ad.spend)}</td>
+                                      <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(ad.spend, cur)}</td>
                                       <td className="px-2 py-2 text-right tabular-nums text-foreground">{ad.leads}</td>
                                       <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(ad.cpl))}>
-                                        {ad.cpl > 0 ? `$${ad.cpl.toFixed(2)}` : "—"}
+                                        {ad.cpl > 0 ? fmtMoney(ad.cpl, cur, 2) : "—"}
                                       </td>
                                       <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
                                       <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
