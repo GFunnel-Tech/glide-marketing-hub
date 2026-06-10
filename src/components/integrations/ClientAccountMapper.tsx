@@ -229,17 +229,15 @@ export function ClientAccountMapper() {
     await linkMetaToClient(selectedMeta.id, selectedClient.id);
   };
 
-  const createClientFromGhl = async () => {
-    if (!selectedGhl) return;
-    const name = (selectedGhl.name || selectedGhl.business_name || "").trim();
-    if (!name) { toast.error("Sub-account has no name"); return; }
+  const createClientFromSelection = async () => {
+    const ghlName = selectedGhl ? (selectedGhl.name || selectedGhl.business_name || "").trim() : "";
+    const metaName = selectedMeta ? (selectedMeta.account_name || selectedMeta.business_name || "").trim() : "";
+    const name = ghlName || metaName;
+    if (!name) { toast.error("Pick a sub-account or ad account first"); return; }
     const newId = await createClient(name);
-    if (newId) {
-      await linkGhlToClient(newId, selectedGhl.location_id);
-      if (selectedMeta && selectedMeta.client_id == null) {
-        await linkMetaToClient(selectedMeta.id, newId);
-      }
-    }
+    if (!newId) return;
+    if (selectedGhl) await linkGhlToClient(newId, selectedGhl.location_id);
+    if (selectedMeta && selectedMeta.client_id == null) await linkMetaToClient(selectedMeta.id, newId);
   };
 
   const toggleAgency = async (value: boolean) => {
