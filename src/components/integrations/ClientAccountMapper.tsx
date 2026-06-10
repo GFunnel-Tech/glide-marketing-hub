@@ -155,10 +155,10 @@ export function ClientAccountMapper() {
   }, [clients, clientSearch]);
 
   // --- actions ---
-  const createClient = async (name: string, asAgency = false) => {
-    if (!wsId) return;
+  const createClient = async (name: string, asAgency = false): Promise<number | null> => {
+    if (!wsId) return null;
     const clean = name.trim();
-    if (!clean) { toast.error("Enter a name"); return; }
+    if (!clean) { toast.error("Enter a name"); return null; }
     setCreating(true);
     try {
       if (asAgency) {
@@ -175,8 +175,10 @@ export function ClientAccountMapper() {
       await load();
       setSelectedClientId(data.id as number);
       invalidateDashboard();
+      return data.id as number;
     } catch (e: any) {
       toast.error(e.message ?? "Failed to create account");
+      return null;
     } finally {
       setCreating(false);
     }
@@ -211,6 +213,19 @@ export function ClientAccountMapper() {
   const linkSelectedMeta = async () => {
     if (!selectedClient || !selectedMeta) return;
     await linkMetaToClient(selectedMeta.id, selectedClient.id);
+  };
+
+  const createClientFromGhl = async () => {
+    if (!selectedGhl) return;
+    const name = (selectedGhl.name || selectedGhl.business_name || "").trim();
+    if (!name) { toast.error("Sub-account has no name"); return; }
+    const newId = await createClient(name);
+    if (newId) {
+      await linkGhlToClient(newId, selectedGhl.location_id);
+      if (selectedMeta && selectedMeta.client_id == null) {
+        await linkMetaToClient(selectedMeta.id, newId);
+      }
+    }
   };
 
   const toggleAgency = async (value: boolean) => {
@@ -413,6 +428,18 @@ export function ClientAccountMapper() {
             <Link2 className="h-3 w-3 mr-1" />
             Link Meta → Client
           </Button>
+          {selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id) && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-8 text-xs"
+              disabled={busy || creating}
+              onClick={createClientFromGhl}
+            >
+              {creating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+              Create client "{(selectedGhl.name || selectedGhl.business_name || "").trim() || "Unnamed"}"
+            </Button>
+          )}
           {selectedClient?.ghl_location_id && (
             <Button
               size="sm"
