@@ -609,6 +609,18 @@ function RowButton({
   );
 }
 
+/** Visual affordance on active rows showing the click will deselect. */
+function DeselectDot({ label }: { label: string }) {
+  return (
+    <span
+      aria-label={label}
+      title={label}
+      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-primary shrink-0"
+    >
+      <X className="h-3 w-3" />
+    </span>
+  );
+
 function Slot({ label, value, onClear }: { label: string; value?: string | null; onClear: () => void }) {
   if (!value) return null;
 
