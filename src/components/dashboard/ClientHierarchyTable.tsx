@@ -749,7 +749,7 @@ export function ClientHierarchyTable() {
                         <td colSpan={showCompanyCol ? 14 : 13} className="px-12 py-6 text-xs text-muted-foreground">
                           No campaigns for this client.
                           <Button variant="link" size="sm" className="ml-1 h-auto p-0 text-xs"
-                            onClick={() => navigate(clientPath(client.id, "?tab=access"))}>
+                            onClick={() => navigate(clientPath(client.id, "?tab=integrations"))}>
                             Open integrations →
                           </Button>
                         </td>
