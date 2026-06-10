@@ -10,6 +10,12 @@ export interface ClientRangeMetrics {
   clicks: number;
   reportedLeads: number;
   trueLeads: number;
+  /**
+   * The honest lead count to display: deduped trueLeads when we have lead-level
+   * data, else Meta-reported (mirrors the meta-sync rollup fallback). Use this
+   * for headline counts and CPL so leads and CPL always reconcile with spend.
+   */
+  effectiveLeads: number;
   cpl: number;
   trueCpl: number;
   cpm: number;
@@ -190,6 +196,7 @@ export function useClientsRangeMetrics() {
           clicks: b.clicks,
           reportedLeads: b.reportedLeads,
           trueLeads,
+          effectiveLeads,
           cpl,
           trueCpl,
           cpm,
