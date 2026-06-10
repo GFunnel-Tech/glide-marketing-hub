@@ -163,9 +163,13 @@ export function useClientsRangeMetrics() {
       for (const row of leads || []) {
         if (!row.client_id) continue;
         const b = bucket(row.client_id);
+        // Canonical lead-dedup key — MUST stay identical to the copy in
+        // supabase/functions/meta-sync/index.ts: lowercased email, else
+        // digits-only phone, else the Meta lead_id prefixed with "lid:".
+        // One person = one lead.
         const email = (row.email || "").toString().trim().toLowerCase();
         const phone = (row.phone || "").toString().replace(/\D+/g, "");
-        const key = email || phone || row.lead_id || crypto.randomUUID();
+        const key = email || phone || `lid:${row.lead_id ?? ""}`;
         b.leadKeys.add(key);
       }
 
