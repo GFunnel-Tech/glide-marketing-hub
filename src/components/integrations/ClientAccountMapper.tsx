@@ -440,18 +440,27 @@ export function ClientAccountMapper() {
             <Link2 className="h-3 w-3 mr-1" />
             Link Meta → Client
           </Button>
-          {selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id) && (
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-8 text-xs"
-              disabled={busy || creating}
-              onClick={createClientFromGhl}
-            >
-              {creating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
-              Create client "{(selectedGhl.name || selectedGhl.business_name || "").trim() || "Unnamed"}"
-            </Button>
-          )}
+          {(() => {
+            const ghlName = selectedGhl ? (selectedGhl.name || selectedGhl.business_name || "").trim() : "";
+            const metaName = selectedMeta ? (selectedMeta.account_name || selectedMeta.business_name || "").trim() : "";
+            const seedName = ghlName || metaName;
+            const ghlNeedsClient = selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id);
+            const metaNeedsClient = selectedMeta && selectedMeta.client_id == null;
+            const show = !selectedClient && (ghlNeedsClient || metaNeedsClient) && !!seedName;
+            if (!show) return null;
+            return (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 text-xs"
+                disabled={busy || creating}
+                onClick={createClientFromSelection}
+              >
+                {creating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+                Create client "{seedName}"
+              </Button>
+            );
+          })()}
           {selectedClient?.ghl_location_id && (
             <Button
               size="sm"
