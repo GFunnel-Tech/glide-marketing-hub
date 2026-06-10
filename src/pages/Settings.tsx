@@ -13,6 +13,7 @@ import { GuaranteeTemplatesPanel } from "@/components/guarantees/GuaranteeTempla
 import { GhlClickupPanel } from "@/components/integrations/GhlClickupPanel";
 import { GhlAgencyConnectionPanel } from "@/components/integrations/GhlAgencyConnectionPanel";
 import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
+import { ClientAccountMapper } from "@/components/integrations/ClientAccountMapper";
 import { MatchReviewQueue } from "@/components/integrations/MatchReviewQueue";
 import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
 import { AgencyProfilePanel } from "@/components/settings/AgencyProfilePanel";
@@ -112,8 +113,19 @@ export default function Settings() {
             </TabsContent>
 
             <TabsContent value="mapping" className="space-y-4">
+              {/* Primary: map everything onto one client account */}
+              <ClientAccountMapper />
+              {/* Suggested auto-matches to review */}
               <MatchReviewQueue />
-              <IntegrationMapper />
+              {/* Advanced: bulk view by integration type */}
+              <details className="rounded-lg border border-border bg-card">
+                <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-foreground">
+                  Advanced · bulk mapping by integration type
+                </summary>
+                <div className="px-1 pb-1">
+                  <IntegrationMapper />
+                </div>
+              </details>
             </TabsContent>
 
             <TabsContent value="other" className="space-y-4">

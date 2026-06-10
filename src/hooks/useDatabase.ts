@@ -23,6 +23,7 @@ export interface DbClient {
   bm_id?: string | null;
   bm_account_name?: string | null;
   ghl_location_id?: string | null;
+  is_agency_account?: boolean | null;
 }
 
 export interface DbCampaign {
@@ -134,6 +135,7 @@ export function toClient(c: DbClient) {
     bmAccountName: c.bm_account_name || "",
     ghlLocationId: c.ghl_location_id || null,
     autonomousOptimization: !!(c as any).autonomous_optimization,
+    isAgencyAccount: !!c.is_agency_account,
   };
 }
 
@@ -337,6 +339,66 @@ export function useDeleteTeamMember() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
+  });
+}
+
+// Flag (or clear) a client as the workspace's agency account. At most one is
+// allowed per workspace, so we clear any existing flag before setting the new
+// one (avoids tripping the partial unique index).
+export function useSetAgencyAccount() {
+  const qc = useQueryClient();
+  const { currentWorkspace } = useWorkspace();
+  return useMutation({
+    mutationFn: async ({ clientId, value }: { clientId: number; value: boolean }) => {
+      const wsId = currentWorkspace?.id ?? null;
+      if (value && wsId) {
+        const { error: clearErr } = await (supabase as any)
+          .from("clients")
+          .update({ is_agency_account: false })
+          .eq("workspace_id", wsId)
+          .eq("is_agency_account", true)
+          .neq("id", clientId);
+        if (clearErr) throw clearErr;
+      }
+      const { error } = await (supabase as any)
+        .from("clients")
+        .update({ is_agency_account: value })
+        .eq("id", clientId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    },
+  });
+}
+
+// Create a new client pre-flagged as the agency account, seeded from the
+// agency profile name when available. Clears any prior agency flag first.
+export function useCreateAgencyAccount() {
+  const qc = useQueryClient();
+  const { currentWorkspace } = useWorkspace();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const wsId = currentWorkspace?.id ?? null;
+      if (!wsId) throw new Error("No workspace selected");
+      const clean = name.trim() || "Agency Account";
+      const { error: clearErr } = await (supabase as any)
+        .from("clients")
+        .update({ is_agency_account: false })
+        .eq("workspace_id", wsId)
+        .eq("is_agency_account", true);
+      if (clearErr) throw clearErr;
+      const { data, error } = await (supabase as any)
+        .from("clients")
+        .insert({ workspace_id: wsId, name: clean, brand: clean, is_agency_account: true })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data.id as number;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    },
   });
 }
 

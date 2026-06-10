@@ -260,19 +260,21 @@ export function ClientHierarchyTable() {
     const filtered = base.filter((c) => {
       const archived = archivedSet.has(`client:${c.id}`);
       if (archived) return false;
-      const synced = isFullySynced(c);
-      const hasActivity = clientsWithActivity.has(String(c.id));
-      if (synced && hideZero && !hasActivity) return false;
       if (q) {
         const hay = `${c.name ?? ""} ${c.brand ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
+      if (c.isAgencyAccount) return true; // never hide the agency's own account
+      const synced = isFullySynced(c);
+      const hasActivity = clientsWithActivity.has(String(c.id));
+      if (synced && hideZero && !hasActivity) return false;
       return true;
     });
-    // Rank: active (synced + activity) first, then synced-no-activity,
-    // then unconnected. Keeps the KPI "Active Clients" rows above the
-    // long tail of clients still waiting on setup.
+    // Rank: the agency's own account is always pinned first, then active
+    // (synced + activity), then synced-no-activity, then unconnected. Keeps the
+    // KPI "Active Clients" rows above the long tail of clients awaiting setup.
     const rank = (c: any) => {
+      if (c.isAgencyAccount) return -1;
       const synced = isFullySynced(c);
       const hasActivity = clientsWithActivity.has(String(c.id));
       if (synced && hasActivity) return 0;
@@ -628,6 +630,11 @@ export function ClientHierarchyTable() {
                                 >
                                   {client.brand || client.name}
                                 </button>
+                                {(client as any).isAgencyAccount && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide shrink-0">
+                                    <Building2 className="h-2.5 w-2.5" /> Agency
+                                  </span>
+                                )}
                                 <span onClick={(e) => e.stopPropagation()}>
                                   <NoteBubble clientId={client.id} variant="icon" align="start" />
                                 </span>

@@ -2,7 +2,7 @@ import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useClient, useCampaigns, useActivityLog, useLeads, useClientsWithMetaAccount } from "@/hooks/useDatabase";
+import { useClient, useCampaigns, useActivityLog, useLeads, useClientsWithMetaAccount, useSetAgencyAccount } from "@/hooks/useDatabase";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AgentChat } from "@/components/ai/AgentChat";
 import { PendingActionsPanel } from "@/components/ai/PendingActionsPanel";
@@ -157,7 +157,9 @@ export default function ClientProfile() {
   const [editBmId, setEditBmId] = useState("");
   const [editBmAccountName, setEditBmAccountName] = useState("");
   const [editClickup, setEditClickup] = useState("");
+  const [editIsAgency, setEditIsAgency] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
+  const setAgencyAccount = useSetAgencyAccount();
   const qc = useQueryClient();
   useEffect(() => {
     const t = searchParams.get("tab");
@@ -401,6 +403,7 @@ export default function ClientProfile() {
                 setEditBmId(client.bmId || "");
                 setEditBmAccountName(client.bmAccountName || "");
                 setEditClickup((client as any).clickupListId || "");
+                setEditIsAgency(!!(client as any).isAgencyAccount);
                 setEditOpen(true);
               }}
               className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent transition-colors"
@@ -1104,6 +1107,20 @@ export default function ClientProfile() {
               <Label htmlFor="edit-clickup">ClickUp List ID</Label>
               <Input id="edit-clickup" value={editClickup} onChange={(e) => setEditClickup(e.target.value)} placeholder="Optional" />
             </div>
+            <label className="flex items-start gap-2 rounded-lg border border-border p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editIsAgency}
+                onChange={(e) => setEditIsAgency(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-primary"
+              />
+              <span className="text-sm">
+                This is our agency's own account
+                <span className="block text-xs text-muted-foreground mt-0.5">
+                  Pins it to the top of the dashboard and keeps it visible even with no campaign activity. Only one client per workspace can be the agency account.
+                </span>
+              </span>
+            </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit}>Cancel</Button>
@@ -1124,6 +1141,15 @@ export default function ClientProfile() {
                     clickup_list_id: editClickup.trim() || null,
                   })
                   .eq("id", client.id);
+                if (!error && editIsAgency !== !!(client as any).isAgencyAccount) {
+                  try {
+                    await setAgencyAccount.mutateAsync({ clientId: client.id, value: editIsAgency });
+                  } catch (e: any) {
+                    setSavingEdit(false);
+                    toast.error(`Failed to update agency account: ${e?.message || "unknown error"}`);
+                    return;
+                  }
+                }
                 setSavingEdit(false);
                 if (error) {
                   toast.error(`Failed to save: ${error.message}`);
