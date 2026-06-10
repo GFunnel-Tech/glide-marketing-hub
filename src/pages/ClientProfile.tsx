@@ -143,8 +143,12 @@ export default function ClientProfile() {
   const { data: allActivity = [] } = useActivityLog();
   const { data: allLeads = [] } = useLeads();
   const { data: metaMappedSet } = useClientsWithMetaAccount();
+  const { data: allClients = [] } = useClients();
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id ?? null;
+  const navigate = useNavigate();
+  const clientPath = useClientPath();
+
   const [loading, setLoading] = useState<string | null>(null);
   const [showPause, setShowPause] = useState(false);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
