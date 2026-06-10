@@ -89,17 +89,27 @@ export function ClientAccountMapper() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [wsId]);
 
-  // Auto-select the linked client when a GHL or Meta row is picked
+  // Auto-select the existing synced client when a GHL or Meta row is picked.
+  // Direct ids win; normalized names catch records that already exist but have
+  // not had both integration ids backfilled yet.
   useEffect(() => {
+    const selectedGhl = selectedGhlId ? ghlLocs.find((x) => x.id === selectedGhlId) : null;
+    const selectedMeta = selectedMetaId ? metaAccs.find((x) => x.id === selectedMetaId) : null;
+
     if (selectedGhlId) {
-      const g = ghlLocs.find((x) => x.id === selectedGhlId);
-      const linked = g ? clients.find((c) => c.ghl_location_id === g.location_id) : null;
+      const linked = selectedGhl ? clients.find((c) => c.ghl_location_id === selectedGhl.location_id) : null;
       if (linked) { setSelectedClientId(linked.id); return; }
     }
     if (selectedMetaId) {
-      const m = metaAccs.find((x) => x.id === selectedMetaId);
-      if (m?.client_id) { setSelectedClientId(m.client_id); return; }
+      if (selectedMeta?.client_id) { setSelectedClientId(selectedMeta.client_id); return; }
     }
+    const matchedByName = clients.find((client) => accountNamesMatch(client, [
+      selectedGhl?.name,
+      selectedGhl?.business_name,
+      selectedMeta?.account_name,
+      selectedMeta?.business_name,
+    ]));
+    if (matchedByName) setSelectedClientId(matchedByName.id);
     // eslint-disable-next-line
   }, [selectedGhlId, selectedMetaId, ghlLocs, metaAccs, clients]);
 
@@ -220,13 +230,30 @@ export function ClientAccountMapper() {
     invalidateDashboard();
   };
 
-  const linkSelectedGhl = async () => {
-    if (!selectedClient || !selectedGhl) return;
-    await linkGhlToClient(selectedClient.id, selectedGhl.location_id);
-  };
-  const linkSelectedMeta = async () => {
-    if (!selectedClient || !selectedMeta) return;
-    await linkMetaToClient(selectedMeta.id, selectedClient.id);
+  const finishSelectedMapping = async () => {
+    if (!selectedClient) return;
+    setBusy(true);
+    try {
+      const updates = [];
+      if (selectedGhl && selectedClient.ghl_location_id !== selectedGhl.location_id) {
+        updates.push((supabase as any).from("clients")
+          .update({ ghl_location_id: selectedGhl.location_id }).eq("id", selectedClient.id));
+      }
+      if (selectedMeta && selectedMeta.client_id !== selectedClient.id) {
+        updates.push((supabase as any).from("meta_ad_accounts")
+          .update({ client_id: selectedClient.id }).eq("id", selectedMeta.id));
+      }
+      const results = await Promise.all(updates);
+      const error = results.find((r: any) => r.error)?.error;
+      if (error) throw error;
+      toast.success(updates.length ? "Selected accounts linked" : "Selected accounts are already synced");
+      await load();
+      invalidateDashboard();
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to link selected accounts");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const createClientFromSelection = async () => {
