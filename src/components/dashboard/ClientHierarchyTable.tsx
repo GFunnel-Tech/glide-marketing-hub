@@ -682,7 +682,19 @@ export function ClientHierarchyTable() {
                         <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totClicks > 0 ? fmtInt(totClicks) : "—"}</td>
                         <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{avgCtr > 0 ? `${avgCtr.toFixed(2)}%` : "—"}</td>
                         <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtMoney(totSpend, cur)}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totLeads}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
+                          {rm?.doubleCount ? (
+                            <span
+                              className="inline-flex items-center justify-end gap-1 cursor-help"
+                              title={`Deduped count. Meta reported ${fmtInt(rm.reportedLeads)} (−${fmtInt(rm.reportedLeads - totLeads)} duplicate/over-reported). True CPL ${fmtMoney(rm.trueCpl, cur, 2)}.`}
+                            >
+                              {totLeads}
+                              <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
+                            </span>
+                          ) : (
+                            totLeads
+                          )}
+                        </td>
                         <td className={cn("px-2 py-2.5 text-right tabular-nums font-semibold", cplColor(avgCpl))}>
                           {avgCpl > 0 ? fmtMoney(avgCpl, cur, 2) : "—"}
                         </td>
