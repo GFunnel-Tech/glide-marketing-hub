@@ -660,16 +660,20 @@ export function ClientHierarchyTable() {
                                     <TooltipProvider delayDuration={150}>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <span
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-warning/10 text-warning hover:bg-warning/20 cursor-help"
-                                            aria-label="Not fully synced"
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(clientPath(client.id, "?tab=integrations"));
+                                            }}
+                                            className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-warning/10 text-warning hover:bg-warning/20 cursor-pointer"
+                                            aria-label="Open integrations — not fully synced"
                                           >
                                             <AlertTriangle className="h-3 w-3" />
-                                          </span>
+                                          </button>
                                         </TooltipTrigger>
                                         <TooltipContent side="top" className="text-xs">
-                                          <div className="font-semibold mb-0.5">Not synced</div>
+                                          <div className="font-semibold mb-0.5">Not synced — click to fix</div>
                                           <ul className="space-y-0.5">
                                             {missing.map((m) => (
                                               <li key={m}>• {m} not linked</li>
@@ -678,6 +682,7 @@ export function ClientHierarchyTable() {
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
+
                                   );
                                 })()}
                               </div>
