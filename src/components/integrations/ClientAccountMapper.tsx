@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  Building2, Facebook, Link2, Loader2, Plug, Plus, Sparkles, Unlink, Check,
+  Building2, Facebook, Link2, Loader2, Plug, Plus, Sparkles, Unlink, Check, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -386,6 +386,7 @@ export function ClientAccountMapper() {
                 ) : (
                   <Badge variant="outline" className="text-[9px] text-muted-foreground shrink-0">Unmapped</Badge>
                 )}
+                {isActive && <DeselectDot label="Deselect GHL sub-account" />}
               </RowButton>
             );
           })}
@@ -420,6 +421,7 @@ export function ClientAccountMapper() {
                 ) : (
                   <Badge variant="outline" className="text-[9px] text-muted-foreground shrink-0">Unmapped</Badge>
                 )}
+                {isActive && <DeselectDot label="Deselect Meta ad account" />}
               </RowButton>
             );
           })}
@@ -485,7 +487,7 @@ export function ClientAccountMapper() {
                     {metas.length ? `${metas.length} Meta` : "Meta not synced"}
                   </div>
                 </div>
-                {isActive && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                {isActive && <DeselectDot label="Deselect client" />}
               </RowButton>
             );
           })}
@@ -606,6 +608,20 @@ function RowButton({
     </li>
   );
 }
+
+/** Visual affordance on active rows showing the click will deselect. */
+function DeselectDot({ label }: { label: string }) {
+  return (
+    <span
+      aria-label={label}
+      title={label}
+      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-primary shrink-0"
+    >
+      <X className="h-3 w-3" />
+    </span>
+  );
+}
+
 
 function Slot({ label, value, onClear }: { label: string; value?: string | null; onClear: () => void }) {
   if (!value) return null;
