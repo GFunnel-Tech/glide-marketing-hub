@@ -53,7 +53,7 @@ export function MatchReviewQueue() {
   const load = async () => {
     if (!wsId) return;
     setLoading(true);
-    const [{ data: sData, error: sErr }, { data: cData, error: cErr }, { data: gData }] = await Promise.all([
+    const [{ data: sData, error: sErr }, { data: cData, error: cErr }, { data: gData }, { data: mData }] = await Promise.all([
       (supabase as any)
         .from("account_match_suggestions")
         .select("id, source, source_ref, source_name, source_business_name, client_id, score, status, resolved_at, clients(name)")
@@ -69,10 +69,27 @@ export function MatchReviewQueue() {
         .select("location_id, name, business_name")
         .eq("workspace_id", wsId)
         .order("name", { ascending: true }),
+      (supabase as any)
+        .from("meta_ad_accounts")
+        .select("id")
+        .eq("workspace_id", wsId),
     ]);
     if (sErr) toast.error(sErr.message);
     if (cErr) toast.error(cErr.message);
-    setItems(sData || []);
+    const ghlIds = new Set((gData || []).map((g: any) => g.location_id));
+    const metaIds = new Set((mData || []).map((m: any) => m.id));
+    // Drop suggestions whose source account no longer exists (stale rows from re-syncs)
+    const filtered = (sData || []).filter((s: Suggestion) =>
+      s.source === "meta" ? metaIds.has(s.source_ref) : ghlIds.has(s.source_ref)
+    );
+    // Deduplicate by (source, source_ref) — keep the highest-scoring row
+    const dedup = new Map<string, Suggestion>();
+    for (const s of filtered) {
+      const key = `${s.source}:${s.source_ref}`;
+      const prev = dedup.get(key);
+      if (!prev || (s.score ?? 0) > (prev.score ?? 0)) dedup.set(key, s);
+    }
+    setItems(Array.from(dedup.values()));
     setClients(cData || []);
     setGhlLocations(gData || []);
     setLoading(false);
