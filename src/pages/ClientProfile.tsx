@@ -1,8 +1,10 @@
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useClient, useCampaigns, useActivityLog, useLeads, useClientsWithMetaAccount, useSetAgencyAccount } from "@/hooks/useDatabase";
+import { useClient, useClients, useCampaigns, useActivityLog, useLeads, useClientsWithMetaAccount, useSetAgencyAccount } from "@/hooks/useDatabase";
+import { useClientPath } from "@/lib/clientPath";
+
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AgentChat } from "@/components/ai/AgentChat";
 import { PendingActionsPanel } from "@/components/ai/PendingActionsPanel";
