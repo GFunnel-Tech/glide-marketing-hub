@@ -89,6 +89,20 @@ export function ClientAccountMapper() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [wsId]);
 
+  // Auto-select the linked client when a GHL or Meta row is picked
+  useEffect(() => {
+    if (selectedGhlId) {
+      const g = ghlLocs.find((x) => x.id === selectedGhlId);
+      const linked = g ? clients.find((c) => c.ghl_location_id === g.location_id) : null;
+      if (linked) { setSelectedClientId(linked.id); return; }
+    }
+    if (selectedMetaId) {
+      const m = metaAccs.find((x) => x.id === selectedMetaId);
+      if (m?.client_id) { setSelectedClientId(m.client_id); return; }
+    }
+    // eslint-disable-next-line
+  }, [selectedGhlId, selectedMetaId, ghlLocs, metaAccs, clients]);
+
   const selectedClient = useMemo(
     () => clients.find((c) => c.id === selectedClientId) ?? null,
     [clients, selectedClientId],
@@ -215,17 +229,15 @@ export function ClientAccountMapper() {
     await linkMetaToClient(selectedMeta.id, selectedClient.id);
   };
 
-  const createClientFromGhl = async () => {
-    if (!selectedGhl) return;
-    const name = (selectedGhl.name || selectedGhl.business_name || "").trim();
-    if (!name) { toast.error("Sub-account has no name"); return; }
+  const createClientFromSelection = async () => {
+    const ghlName = selectedGhl ? (selectedGhl.name || selectedGhl.business_name || "").trim() : "";
+    const metaName = selectedMeta ? (selectedMeta.account_name || selectedMeta.business_name || "").trim() : "";
+    const name = ghlName || metaName;
+    if (!name) { toast.error("Pick a sub-account or ad account first"); return; }
     const newId = await createClient(name);
-    if (newId) {
-      await linkGhlToClient(newId, selectedGhl.location_id);
-      if (selectedMeta && selectedMeta.client_id == null) {
-        await linkMetaToClient(selectedMeta.id, newId);
-      }
-    }
+    if (!newId) return;
+    if (selectedGhl) await linkGhlToClient(newId, selectedGhl.location_id);
+    if (selectedMeta && selectedMeta.client_id == null) await linkMetaToClient(selectedMeta.id, newId);
   };
 
   const toggleAgency = async (value: boolean) => {
@@ -378,6 +390,39 @@ export function ClientAccountMapper() {
           onSearch={setClientSearch}
           empty={loading ? "Loading…" : "No clients yet — create one above."}
         >
+          {(() => {
+            const ghlName = selectedGhl ? (selectedGhl.name || selectedGhl.business_name || "").trim() : "";
+            const metaName = selectedMeta ? (selectedMeta.account_name || selectedMeta.business_name || "").trim() : "";
+            const seedName = ghlName || metaName;
+            const ghlNeedsClient = selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id);
+            const metaNeedsClient = selectedMeta && selectedMeta.client_id == null;
+            const show = !selectedClient && (ghlNeedsClient || metaNeedsClient) && !!seedName;
+            if (!show) return null;
+            return (
+              <li className="mb-1">
+                <button
+                  type="button"
+                  disabled={busy || creating}
+                  onClick={createClientFromSelection}
+                  className="w-full flex items-center gap-2 rounded-md border border-dashed border-primary/50 bg-primary/5 hover:bg-primary/10 px-2 py-2 text-left transition-colors"
+                >
+                  {creating ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
+                  ) : (
+                    <Plus className="h-3.5 w-3.5 text-primary shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-medium text-primary truncate">
+                      Create client "{seedName}"
+                    </div>
+                    <div className="text-[10px] text-muted-foreground truncate">
+                      Autofilled from {ghlName ? "GHL sub-account" : "Meta ad account"} · auto-links selection
+                    </div>
+                  </div>
+                </button>
+              </li>
+            );
+          })()}
           {clientFiltered.map((c) => {
             const isActive = selectedClientId === c.id;
             const ghl = c.ghl_location_id ? ghlByLocId.get(c.ghl_location_id) : null;
@@ -428,18 +473,27 @@ export function ClientAccountMapper() {
             <Link2 className="h-3 w-3 mr-1" />
             Link Meta → Client
           </Button>
-          {selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id) && (
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-8 text-xs"
-              disabled={busy || creating}
-              onClick={createClientFromGhl}
-            >
-              {creating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
-              Create client "{(selectedGhl.name || selectedGhl.business_name || "").trim() || "Unnamed"}"
-            </Button>
-          )}
+          {(() => {
+            const ghlName = selectedGhl ? (selectedGhl.name || selectedGhl.business_name || "").trim() : "";
+            const metaName = selectedMeta ? (selectedMeta.account_name || selectedMeta.business_name || "").trim() : "";
+            const seedName = ghlName || metaName;
+            const ghlNeedsClient = selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id);
+            const metaNeedsClient = selectedMeta && selectedMeta.client_id == null;
+            const show = !selectedClient && (ghlNeedsClient || metaNeedsClient) && !!seedName;
+            if (!show) return null;
+            return (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-8 text-xs"
+                disabled={busy || creating}
+                onClick={createClientFromSelection}
+              >
+                {creating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+                Create client "{seedName}"
+              </Button>
+            );
+          })()}
           {selectedClient?.ghl_location_id && (
             <Button
               size="sm"
