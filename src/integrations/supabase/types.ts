@@ -1322,6 +1322,7 @@ export type Database = {
           frequency: number
           ghl_location_id: string | null
           id: number
+          is_agency_account: boolean
           last_alert_at: string | null
           last_alert_status: string | null
           last_audit: string | null
@@ -1353,6 +1354,7 @@ export type Database = {
           frequency?: number
           ghl_location_id?: string | null
           id?: number
+          is_agency_account?: boolean
           last_alert_at?: string | null
           last_alert_status?: string | null
           last_audit?: string | null
@@ -1384,6 +1386,7 @@ export type Database = {
           frequency?: number
           ghl_location_id?: string | null
           id?: number
+          is_agency_account?: boolean
           last_alert_at?: string | null
           last_alert_status?: string | null
           last_audit?: string | null

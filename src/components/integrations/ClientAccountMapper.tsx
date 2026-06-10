@@ -34,6 +34,23 @@ type MetaAcc = {
   business_name: string | null;
 };
 
+const normalizeAccountName = (value?: string | null) =>
+  (value || "")
+    .toLowerCase()
+    .replace(/\b(investor marketing|mortgage|llc|inc|ltd|co|company|the)\b/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const accountNamesMatch = (client: Client, candidates: Array<string | null | undefined>) => {
+  const clientNames = [client.name, client.brand].map(normalizeAccountName).filter(Boolean);
+  const candidateNames = candidates.map(normalizeAccountName).filter(Boolean);
+  return clientNames.some((clientName) =>
+    candidateNames.some((candidateName) =>
+      clientName === candidateName || clientName.includes(candidateName) || candidateName.includes(clientName),
+    ),
+  );
+};
+
 /**
  * Three-column mapper: pick a GHL sub-account, a Meta ad account, and a client
  * side-by-side, then cross-link them with one click.
@@ -89,17 +106,27 @@ export function ClientAccountMapper() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [wsId]);
 
-  // Auto-select the linked client when a GHL or Meta row is picked
+  // Auto-select the existing synced client when a GHL or Meta row is picked.
+  // Direct ids win; normalized names catch records that already exist but have
+  // not had both integration ids backfilled yet.
   useEffect(() => {
+    const selectedGhl = selectedGhlId ? ghlLocs.find((x) => x.id === selectedGhlId) : null;
+    const selectedMeta = selectedMetaId ? metaAccs.find((x) => x.id === selectedMetaId) : null;
+
     if (selectedGhlId) {
-      const g = ghlLocs.find((x) => x.id === selectedGhlId);
-      const linked = g ? clients.find((c) => c.ghl_location_id === g.location_id) : null;
+      const linked = selectedGhl ? clients.find((c) => c.ghl_location_id === selectedGhl.location_id) : null;
       if (linked) { setSelectedClientId(linked.id); return; }
     }
     if (selectedMetaId) {
-      const m = metaAccs.find((x) => x.id === selectedMetaId);
-      if (m?.client_id) { setSelectedClientId(m.client_id); return; }
+      if (selectedMeta?.client_id) { setSelectedClientId(selectedMeta.client_id); return; }
     }
+    const matchedByName = clients.find((client) => accountNamesMatch(client, [
+      selectedGhl?.name,
+      selectedGhl?.business_name,
+      selectedMeta?.account_name,
+      selectedMeta?.business_name,
+    ]));
+    if (matchedByName) setSelectedClientId(matchedByName.id);
     // eslint-disable-next-line
   }, [selectedGhlId, selectedMetaId, ghlLocs, metaAccs, clients]);
 
@@ -220,13 +247,30 @@ export function ClientAccountMapper() {
     invalidateDashboard();
   };
 
-  const linkSelectedGhl = async () => {
-    if (!selectedClient || !selectedGhl) return;
-    await linkGhlToClient(selectedClient.id, selectedGhl.location_id);
-  };
-  const linkSelectedMeta = async () => {
-    if (!selectedClient || !selectedMeta) return;
-    await linkMetaToClient(selectedMeta.id, selectedClient.id);
+  const finishSelectedMapping = async () => {
+    if (!selectedClient) return;
+    setBusy(true);
+    try {
+      const updates = [];
+      if (selectedGhl && selectedClient.ghl_location_id !== selectedGhl.location_id) {
+        updates.push((supabase as any).from("clients")
+          .update({ ghl_location_id: selectedGhl.location_id }).eq("id", selectedClient.id));
+      }
+      if (selectedMeta && selectedMeta.client_id !== selectedClient.id) {
+        updates.push((supabase as any).from("meta_ad_accounts")
+          .update({ client_id: selectedClient.id }).eq("id", selectedMeta.id));
+      }
+      const results = await Promise.all(updates);
+      const error = results.find((r: any) => r.error)?.error;
+      if (error) throw error;
+      toast.success(updates.length ? "Selected accounts linked" : "Selected accounts are already synced");
+      await load();
+      invalidateDashboard();
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to link selected accounts");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const createClientFromSelection = async () => {
@@ -396,7 +440,8 @@ export function ClientAccountMapper() {
             const seedName = ghlName || metaName;
             const ghlNeedsClient = selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id);
             const metaNeedsClient = selectedMeta && selectedMeta.client_id == null;
-            const show = !selectedClient && (ghlNeedsClient || metaNeedsClient) && !!seedName;
+            const existingClient = clients.find((client) => accountNamesMatch(client, [ghlName, metaName]));
+            const show = !selectedClient && !existingClient && (ghlNeedsClient || metaNeedsClient) && !!seedName;
             if (!show) return null;
             return (
               <li className="mb-1">
@@ -435,9 +480,9 @@ export function ClientAccountMapper() {
                     {c.name}
                   </div>
                   <div className="text-[10px] text-muted-foreground truncate">
-                    {ghl ? `GHL: ${ghl.name || ghl.location_id}` : "No GHL"}
+                    {ghl ? `GHL: ${ghl.name || ghl.location_id}` : "GHL not synced"}
                     {" · "}
-                    {metas.length ? `${metas.length} Meta` : "No Meta"}
+                    {metas.length ? `${metas.length} Meta` : "Meta not synced"}
                   </div>
                 </div>
                 {isActive && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
@@ -458,42 +503,12 @@ export function ClientAccountMapper() {
           <Button
             size="sm"
             className="h-8 text-xs"
-            disabled={busy || !selectedClient || !selectedGhl}
-            onClick={linkSelectedGhl}
+            disabled={busy || !selectedClient || (!selectedGhl && !selectedMeta)}
+            onClick={finishSelectedMapping}
           >
             <Link2 className="h-3 w-3 mr-1" />
-            Link GHL → Client
+            Finish mapping
           </Button>
-          <Button
-            size="sm"
-            className="h-8 text-xs"
-            disabled={busy || !selectedClient || !selectedMeta}
-            onClick={linkSelectedMeta}
-          >
-            <Link2 className="h-3 w-3 mr-1" />
-            Link Meta → Client
-          </Button>
-          {(() => {
-            const ghlName = selectedGhl ? (selectedGhl.name || selectedGhl.business_name || "").trim() : "";
-            const metaName = selectedMeta ? (selectedMeta.account_name || selectedMeta.business_name || "").trim() : "";
-            const seedName = ghlName || metaName;
-            const ghlNeedsClient = selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id);
-            const metaNeedsClient = selectedMeta && selectedMeta.client_id == null;
-            const show = !selectedClient && (ghlNeedsClient || metaNeedsClient) && !!seedName;
-            if (!show) return null;
-            return (
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-8 text-xs"
-                disabled={busy || creating}
-                onClick={createClientFromSelection}
-              >
-                {creating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
-                Create client "{seedName}"
-              </Button>
-            );
-          })()}
           {selectedClient?.ghl_location_id && (
             <Button
               size="sm"
@@ -593,19 +608,17 @@ function RowButton({
 }
 
 function Slot({ label, value, onClear }: { label: string; value?: string | null; onClear: () => void }) {
+  if (!value) return null;
+
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}:</span>
-      {value ? (
-        <Badge variant="outline" className="text-xs gap-1 pr-1">
-          <span className="truncate max-w-[180px]">{value}</span>
-          <button onClick={onClear} className="opacity-60 hover:opacity-100" aria-label={`Clear ${label}`}>
-            <Unlink className="h-2.5 w-2.5" />
-          </button>
-        </Badge>
-      ) : (
-        <span className="text-xs text-muted-foreground italic">none selected</span>
-      )}
+      <Badge variant="outline" className="text-xs gap-1 pr-1">
+        <span className="truncate max-w-[180px]">{value}</span>
+        <button onClick={onClear} className="opacity-60 hover:opacity-100" aria-label={`Clear ${label}`}>
+          <Unlink className="h-2.5 w-2.5" />
+        </button>
+      </Badge>
     </div>
   );
 }
