@@ -83,6 +83,13 @@ const fmt = (d: Date) => {
 };
 const parse = (s: string | null): Date | null => {
   if (!s) return null;
+  // YYYY-MM-DD must be parsed as LOCAL time (new Date("2026-06-10") is UTC midnight,
+  // which shifts to the previous day in negative-UTC zones).
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (m) {
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return isNaN(d.getTime()) ? null : d;
+  }
   const d = new Date(s);
   return isNaN(d.getTime()) ? null : d;
 };
