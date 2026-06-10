@@ -203,10 +203,15 @@ export function ClientHierarchyTable() {
     });
     if (search) {
       const s = search.toLowerCase();
-      list = list.filter((c) =>
-        c.name.toLowerCase().includes(s) ||
-        clients.find((cl) => String(cl.id) === String(c.clientId))?.name.toLowerCase().includes(s)
-      );
+      list = list.filter((c) => {
+        const cl = clients.find((cl) => String(cl.id) === String(c.clientId));
+        return (
+          c.name.toLowerCase().includes(s) ||
+          (c.brand || "").toLowerCase().includes(s) ||
+          (cl?.name || "").toLowerCase().includes(s) ||
+          (cl?.brand || "").toLowerCase().includes(s)
+        );
+      });
     }
     return list;
   }, [allCampaigns, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet, hideZero]);
