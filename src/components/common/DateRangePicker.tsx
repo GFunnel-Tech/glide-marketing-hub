@@ -83,9 +83,9 @@ export function DateRangePicker({ className, align = "end" }: Props) {
           <Calendar
             mode="range"
             numberOfMonths={2}
-            defaultMonth={from}
+            defaultMonth={draft?.from ?? from}
             selected={draft}
-            onSelect={setDraft}
+            onSelect={(r) => setDraft(r ?? undefined)}
             className={cn("p-3 pointer-events-auto")}
           />
           <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2">
