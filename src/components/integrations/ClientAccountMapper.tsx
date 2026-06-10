@@ -428,6 +428,18 @@ export function ClientAccountMapper() {
             <Link2 className="h-3 w-3 mr-1" />
             Link Meta → Client
           </Button>
+          {selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id) && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-8 text-xs"
+              disabled={busy || creating}
+              onClick={createClientFromGhl}
+            >
+              {creating ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+              Create client "{(selectedGhl.name || selectedGhl.business_name || "").trim() || "Unnamed"}"
+            </Button>
+          )}
           {selectedClient?.ghl_location_id && (
             <Button
               size="sm"
