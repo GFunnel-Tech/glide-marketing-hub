@@ -487,7 +487,7 @@ export function ClientAccountMapper() {
                     {metas.length ? `${metas.length} Meta` : "Meta not synced"}
                   </div>
                 </div>
-                {isActive && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
+                {isActive && <DeselectDot label="Deselect client" />}
               </RowButton>
             );
           })}
