@@ -494,59 +494,6 @@ export function ClientAccountMapper() {
         </Column>
       </div>
 
-      {/* Action bar */}
-      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
-        <div className="flex flex-wrap items-center gap-3 text-xs">
-          <Slot label="Client" value={selectedClient?.name} onClear={() => setSelectedClientId(null)} />
-          <Slot label="GHL" value={selectedGhl ? (selectedGhl.name || selectedGhl.location_id) : null} onClear={() => setSelectedGhlId(null)} />
-          <Slot label="Meta" value={selectedMeta ? (selectedMeta.account_name || selectedMeta.act_id) : null} onClear={() => setSelectedMetaId(null)} />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            className="h-8 text-xs"
-            disabled={busy || !selectedClient || (!selectedGhl && !selectedMeta)}
-            onClick={finishSelectedMapping}
-          >
-            <Link2 className="h-3 w-3 mr-1" />
-            Finish mapping
-          </Button>
-          {selectedClient?.ghl_location_id && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              disabled={busy}
-              onClick={() => linkGhlToClient(selectedClient.id, null)}
-            >
-              <Unlink className="h-3 w-3 mr-1" /> Unlink GHL from {selectedClient.name}
-            </Button>
-          )}
-          {selectedMeta?.client_id != null && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              disabled={busy}
-              onClick={() => linkMetaToClient(selectedMeta.id, null)}
-            >
-              <Unlink className="h-3 w-3 mr-1" /> Unlink this ad account
-            </Button>
-          )}
-          {selectedClient && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 text-xs ml-auto"
-              disabled={busy}
-              onClick={() => toggleAgency(!selectedClient.is_agency_account)}
-            >
-              <Building2 className="h-3 w-3 mr-1" />
-              {selectedClient.is_agency_account ? "Unset agency" : "Mark as agency"}
-            </Button>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
