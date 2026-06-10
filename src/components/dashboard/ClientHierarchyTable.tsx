@@ -560,7 +560,9 @@ export function ClientHierarchyTable() {
                 // campaigns/ads rollup so the row reflects Meta data even when the
                 // campaigns table hasn't been re-synced yet.
                 const totSpend = rm?.spend ?? campSpend;
-                const totLeads = rm?.reportedLeads ?? campLeads;
+                // Show the deduped/honest lead count so leads × CPL reconciles
+                // with spend (rm.cpl is computed on the same effective leads).
+                const totLeads = rm?.effectiveLeads ?? campLeads;
                 const totClicks = rm?.clicks ?? campClicks;
                 const totImpr = rm?.impressions ?? campImpr;
                 const avgCtr = totImpr > 0 ? (totClicks / totImpr) * 100 : 0;
