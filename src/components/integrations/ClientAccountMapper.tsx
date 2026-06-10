@@ -390,6 +390,39 @@ export function ClientAccountMapper() {
           onSearch={setClientSearch}
           empty={loading ? "Loading…" : "No clients yet — create one above."}
         >
+          {(() => {
+            const ghlName = selectedGhl ? (selectedGhl.name || selectedGhl.business_name || "").trim() : "";
+            const metaName = selectedMeta ? (selectedMeta.account_name || selectedMeta.business_name || "").trim() : "";
+            const seedName = ghlName || metaName;
+            const ghlNeedsClient = selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id);
+            const metaNeedsClient = selectedMeta && selectedMeta.client_id == null;
+            const show = !selectedClient && (ghlNeedsClient || metaNeedsClient) && !!seedName;
+            if (!show) return null;
+            return (
+              <li className="mb-1">
+                <button
+                  type="button"
+                  disabled={busy || creating}
+                  onClick={createClientFromSelection}
+                  className="w-full flex items-center gap-2 rounded-md border border-dashed border-primary/50 bg-primary/5 hover:bg-primary/10 px-2 py-2 text-left transition-colors"
+                >
+                  {creating ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
+                  ) : (
+                    <Plus className="h-3.5 w-3.5 text-primary shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-medium text-primary truncate">
+                      Create client "{seedName}"
+                    </div>
+                    <div className="text-[10px] text-muted-foreground truncate">
+                      Autofilled from {ghlName ? "GHL sub-account" : "Meta ad account"} · auto-links selection
+                    </div>
+                  </div>
+                </button>
+              </li>
+            );
+          })()}
           {clientFiltered.map((c) => {
             const isActive = selectedClientId === c.id;
             const ghl = c.ghl_location_id ? ghlByLocId.get(c.ghl_location_id) : null;
