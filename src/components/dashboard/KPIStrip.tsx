@@ -70,20 +70,47 @@ export function KPIStrip() {
   );
 
   const totalLeads = totals.effectiveLeads;
-  const blendedCpl = totalLeads > 0 ? totals.spend / totalLeads : 0;
   const blendedCvr = totals.clicks > 0 ? (totals.reportedLeads / totals.clicks) * 100 : 0;
   // Surface when Meta over-reports vs the deduped count so the honest headline
   // is explainable rather than just looking "low".
   const dedupRemoved = Math.max(0, totals.reportedLeads - totals.effectiveLeads);
   const sub = isFetching ? "updating…" : label;
 
+  // Spend and CPL are grouped by currency — CAD and USD are never summed into
+  // one blended number. Highest-spend currency leads each tile; the rest go in
+  // the sublabel.
+  const currencyGroups = (() => {
+    const map = new Map<string, { spend: number; leads: number }>();
+    for (const m of Object.values(rangeMetrics)) {
+      const cur = m.currency || "USD";
+      const g = map.get(cur) ?? { spend: 0, leads: 0 };
+      g.spend += m.spend;
+      g.leads += m.effectiveLeads;
+      map.set(cur, g);
+    }
+    return [...map.entries()]
+      .map(([currency, g]) => ({ currency, spend: g.spend, leads: g.leads, cpl: g.leads > 0 ? g.spend / g.leads : 0 }))
+      .sort((a, b) => b.spend - a.spend);
+  })();
+  const money = (v: number, currency: string, decimals = 0) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency === "MIXED" ? "USD" : currency,
+      maximumFractionDigits: decimals,
+      minimumFractionDigits: decimals,
+    }).format(v) + (currency === "MIXED" ? " (mixed)" : "");
+  const primary = currencyGroups[0] ?? { currency: "USD", spend: 0, leads: 0, cpl: 0 };
+  const others = currencyGroups.slice(1);
+  const spendSub = others.length ? others.map(g => money(g.spend, g.currency)).join(" · ") : sub;
+  const cplSub = others.length ? others.map(g => money(g.cpl, g.currency, 2)).join(" · ") : sub;
+
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
       <KPITile label="Total Clients" value={String(segments.total)} sublabel={`${segments.inWorkflow} in workflow · ${segments.synced} synced`} Icon={Users} iconTone="blue" />
       <KPITile label="Total Leads" kpiKey="leads" value={totalLeads.toLocaleString()} sublabel={dedupRemoved > 0 ? `${sub} · deduped (−${dedupRemoved.toLocaleString()} vs Meta)` : sub} Icon={Activity} iconTone="green" />
-      <KPITile label="Blended CPL" kpiKey="cpl" value={`$${blendedCpl.toFixed(2)}`} sublabel={sub} Icon={Target} iconTone="amber" />
+      <KPITile label={others.length ? `CPL (${primary.currency})` : "Blended CPL"} kpiKey="cpl" value={money(primary.cpl, primary.currency, 2)} sublabel={cplSub} Icon={Target} iconTone="amber" />
       <KPITile label="Form CVR" kpiKey="formcvr" value={`${blendedCvr.toFixed(2)}%`} sublabel={sub} Icon={Percent} iconTone="green" />
-      <KPITile label="Total Ad Spend" kpiKey="spend" value={`$${Math.round(totals.spend).toLocaleString()}`} sublabel={sub} Icon={DollarSign} iconTone="pink" />
+      <KPITile label={others.length ? `Ad Spend (${primary.currency})` : "Total Ad Spend"} kpiKey="spend" value={money(primary.spend, primary.currency)} sublabel={spendSub} Icon={DollarSign} iconTone="pink" />
     </div>
   );
 }

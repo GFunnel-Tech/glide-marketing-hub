@@ -22,6 +22,8 @@ export interface ClientRangeMetrics {
   formCvr: number;
   frequency: number;
   doubleCount: boolean;
+  /** ISO currency code of the client's ad account(s); "MIXED" if they differ. */
+  currency: string;
   /** % of leads in window whose credit-score answer starts with "above" (typically above_640). null if no scored leads. */
   above640Pct: number | null;
   /** Count of leads with a credit-score answer (denominator for above640Pct). */
@@ -64,15 +66,17 @@ export function useClientsRangeMetrics() {
       const toISO = `${toStr}T23:59:59.999Z`;
 
 
-      // 1. Ad account -> client_id map
+      // 1. Ad account -> client_id + currency map
       const { data: accts, error: aErr } = await (supabase as any)
         .from("meta_ad_accounts")
-        .select("id, client_id")
+        .select("id, client_id, currency")
         .eq("workspace_id", wsId);
       if (aErr) throw aErr;
       const acctToClient = new Map<string, number>();
+      const acctCurrency = new Map<string, string>();
       (accts || []).forEach((a: any) => {
         if (a.client_id) acctToClient.set(a.id, a.client_id);
+        acctCurrency.set(a.id, (a.currency || "USD").toUpperCase());
       });
 
       // 2. Insights in window
@@ -103,6 +107,7 @@ export function useClientsRangeMetrics() {
         leadKeys: Set<string>;
         scoredLeads: number;
         above640: number;
+        currency: string | null;
       }> = {};
 
       const bucket = (cid: number) => {
@@ -117,15 +122,24 @@ export function useClientsRangeMetrics() {
             leadKeys: new Set(),
             scoredLeads: 0,
             above640: 0,
+            currency: null,
           };
         }
         return agg[cid];
+      };
+
+      // Record the currency of every account feeding a client; flag MIXED if a
+      // client somehow spans currencies so it never silently blends.
+      const noteCurrency = (b: { currency: string | null }, cur: string) => {
+        if (b.currency == null) b.currency = cur;
+        else if (b.currency !== cur && b.currency !== "MIXED") b.currency = "MIXED";
       };
 
       for (const row of insights || []) {
         const cid = acctToClient.get(row.ad_account_id);
         if (!cid) continue;
         const b = bucket(cid);
+        noteCurrency(b, acctCurrency.get(row.ad_account_id) || "USD");
         const imp = Number(row.impressions || 0);
         b.spend += Number(row.spend || 0);
         b.impressions += imp;
@@ -202,6 +216,7 @@ export function useClientsRangeMetrics() {
           cpm,
           formCvr,
           frequency,
+          currency: b.currency || "USD",
           doubleCount: reliableTrueCpl && b.reportedLeads > trueLeads * 1.15,
           above640Pct,
           scoredLeads: b.scoredLeads,
