@@ -440,7 +440,8 @@ export function ClientAccountMapper() {
             const seedName = ghlName || metaName;
             const ghlNeedsClient = selectedGhl && !clientByGhlLoc.get(selectedGhl.location_id);
             const metaNeedsClient = selectedMeta && selectedMeta.client_id == null;
-            const show = !selectedClient && (ghlNeedsClient || metaNeedsClient) && !!seedName;
+            const existingClient = clients.find((client) => accountNamesMatch(client, [ghlName, metaName]));
+            const show = !selectedClient && !existingClient && (ghlNeedsClient || metaNeedsClient) && !!seedName;
             if (!show) return null;
             return (
               <li className="mb-1">
@@ -479,9 +480,9 @@ export function ClientAccountMapper() {
                     {c.name}
                   </div>
                   <div className="text-[10px] text-muted-foreground truncate">
-                    {ghl ? `GHL: ${ghl.name || ghl.location_id}` : "No GHL"}
+                    {ghl ? `GHL: ${ghl.name || ghl.location_id}` : "GHL not synced"}
                     {" · "}
-                    {metas.length ? `${metas.length} Meta` : "No Meta"}
+                    {metas.length ? `${metas.length} Meta` : "Meta not synced"}
                   </div>
                 </div>
                 {isActive && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
@@ -607,19 +608,17 @@ function RowButton({
 }
 
 function Slot({ label, value, onClear }: { label: string; value?: string | null; onClear: () => void }) {
+  if (!value) return null;
+
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}:</span>
-      {value ? (
-        <Badge variant="outline" className="text-xs gap-1 pr-1">
-          <span className="truncate max-w-[180px]">{value}</span>
-          <button onClick={onClear} className="opacity-60 hover:opacity-100" aria-label={`Clear ${label}`}>
-            <Unlink className="h-2.5 w-2.5" />
-          </button>
-        </Badge>
-      ) : (
-        <span className="text-xs text-muted-foreground italic">none selected</span>
-      )}
+      <Badge variant="outline" className="text-xs gap-1 pr-1">
+        <span className="truncate max-w-[180px]">{value}</span>
+        <button onClick={onClear} className="opacity-60 hover:opacity-100" aria-label={`Clear ${label}`}>
+          <Unlink className="h-2.5 w-2.5" />
+        </button>
+      </Badge>
     </div>
   );
 }
