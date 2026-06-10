@@ -620,6 +620,8 @@ function DeselectDot({ label }: { label: string }) {
       <X className="h-3 w-3" />
     </span>
   );
+}
+
 
 function Slot({ label, value, onClear }: { label: string; value?: string | null; onClear: () => void }) {
   if (!value) return null;
