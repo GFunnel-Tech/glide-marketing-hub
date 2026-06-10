@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  Building2, Facebook, Link2, Loader2, Plug, Plus, Sparkles, Unlink, Check,
+  Building2, Facebook, Link2, Loader2, Plug, Plus, Sparkles, Unlink, Check, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
