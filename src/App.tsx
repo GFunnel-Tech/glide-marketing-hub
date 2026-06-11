@@ -186,7 +186,7 @@ const App = () => (
                   <Route index element={<Index />} />
                   <Route path="clients" element={<Index />} />
                   <Route path="client/:id" element={<ScopedClientRedirect />} />
-                  <Route path=":locationId/client/:id" element={<ClientProfile />} />
+                  <Route path=":locationId/client/:id" element={<ScopedClientRoute />} />
                   <Route path="campaigns" element={<Campaigns />} />
                   <Route path="creatives" element={<Creatives />} />
                   <Route path="ads" element={<Ads />} />
