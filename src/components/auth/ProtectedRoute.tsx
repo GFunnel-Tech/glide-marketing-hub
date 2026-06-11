@@ -2,6 +2,8 @@ import { Navigate, useLocation } from "react-router-dom";
 import { ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
+const AUTH_REDIRECT_KEY = "metahub-auth-redirect";
+
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -15,6 +17,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
+    const intendedPath = `${location.pathname}${location.search}${location.hash}`;
+    if (intendedPath !== "/auth") {
+      sessionStorage.setItem(AUTH_REDIRECT_KEY, intendedPath);
+    }
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
