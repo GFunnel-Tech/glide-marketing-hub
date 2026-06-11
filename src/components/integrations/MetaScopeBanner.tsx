@@ -43,7 +43,7 @@ export function MetaScopeBanner() {
         <span className="ml-2 text-muted-foreground hidden sm:inline">{meta.body}</span>
       </div>
       <Button asChild size="sm" variant="outline" className="h-7">
-        <Link to="/settings/integrations">{meta.cta}</Link>
+        <Link to="/settings?tab=integrations">{meta.cta}</Link>
       </Button>
       <button
         type="button"
