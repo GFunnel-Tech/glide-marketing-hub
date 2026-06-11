@@ -10,6 +10,18 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+const AUTH_REDIRECT_KEY = "metahub-auth-redirect";
+
+function getStoredRedirect() {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(AUTH_REDIRECT_KEY);
+}
+
+function clearStoredRedirect() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(AUTH_REDIRECT_KEY);
+}
+
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -23,18 +35,20 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
 
   // Where to send the user after a successful sign-in. Prefer the deep link
-  // they originally tried to visit (set by ProtectedRoute via location state),
-  // falling back to "/" so existing flows keep working.
+  // they originally tried to visit, including across OAuth/full-page reloads.
   const redirectTo =
     (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)
       ?.from
       ? `${(location.state as any).from.pathname || "/"}${
           (location.state as any).from.search || ""
         }${(location.state as any).from.hash || ""}`
-      : "/";
+      : getStoredRedirect() || "/";
 
   useEffect(() => {
-    if (!authLoading && user) navigate(redirectTo, { replace: true });
+    if (!authLoading && user) {
+      clearStoredRedirect();
+      navigate(redirectTo, { replace: true });
+    }
   }, [user, authLoading, navigate, redirectTo]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -71,7 +85,7 @@ export default function Auth() {
     setLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/auth`,
       });
       if (result.error) throw result.error;
       if (result.redirected) return;
