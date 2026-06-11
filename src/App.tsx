@@ -198,6 +198,7 @@ const App = () => (
                   <Route path="forecast" element={<ForecastPage />} />
                   <Route path="tracking" element={<Tracking />} />
                   <Route path="settings" element={<Settings />} />
+                  <Route path="settings/integrations" element={<Navigate to="/settings?tab=integrations" replace />} />
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="rebilling" element={<Rebilling />} />
                   <Route path="ai" element={<AiAssistant />} />
