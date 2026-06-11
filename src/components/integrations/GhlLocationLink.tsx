@@ -88,23 +88,29 @@ export function GhlLocationLink({ clientId, currentLocationId, variant = "chip",
   const pending = setLink.isPending;
 
   const trigger = variant === "chip" ? (
-    isLinked ? null : (
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
-        className={cn(
-          "inline-flex items-center justify-center rounded-md border p-0.5 transition-colors",
-          suggestion
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+      className={cn(
+        "inline-flex items-center justify-center rounded-md border p-0.5 transition-colors",
+        isLinked
+          ? "border-success/30 bg-success/10 text-success hover:bg-success/15"
+          : suggestion
             ? "border-warning/30 bg-warning/10 text-warning hover:bg-warning/15"
             : "border-muted-foreground/20 bg-muted/40 text-muted-foreground hover:bg-muted",
-          className,
-        )}
-        title={suggestion ? `Suggested GHL match: ${suggestion.source_name}` : "GHL sub-account not linked"}
-        aria-label={suggestion ? "GHL match suggested" : "GHL not linked"}
-      >
-        {suggestion ? <Sparkles className="h-3 w-3" /> : <Link2Off className="h-3 w-3" />}
-      </button>
-    )
+        className,
+      )}
+      title={
+        isLinked
+          ? `GHL linked: ${current?.name ?? currentLocationId}`
+          : suggestion
+            ? `Suggested GHL match: ${suggestion.source_name}`
+            : "GHL sub-account not linked"
+      }
+      aria-label={isLinked ? "GHL linked" : suggestion ? "GHL match suggested" : "GHL not linked"}
+    >
+      {isLinked ? <Link2 className="h-3 w-3" /> : suggestion ? <Sparkles className="h-3 w-3" /> : <Link2Off className="h-3 w-3" />}
+    </button>
   ) : (
     <Button variant="outline" size="sm" onClick={() => setOpen(true)} className={className}>
       {isLinked ? <Link2 className="h-3.5 w-3.5 mr-1.5" /> : <Link2Off className="h-3.5 w-3.5 mr-1.5" />}
