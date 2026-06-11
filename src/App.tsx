@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
+import { useEffect } from "react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { buildClientPath } from "@/lib/clientPath";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -92,6 +93,26 @@ function ScopedClientRedirect() {
     return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
   }
   // No workspace available — fall back to the legacy (unscoped) page.
+  return <ClientProfile />;
+}
+
+function ScopedClientRoute() {
+  const { locationId } = useParams();
+  const { workspaces, currentWorkspace, setCurrentWorkspace, loading } = useWorkspace();
+  const matchedWorkspace = locationId
+    ? workspaces.find((workspace) => workspace.id === locationId)
+    : null;
+
+  useEffect(() => {
+    if (matchedWorkspace && currentWorkspace?.id !== matchedWorkspace.id) {
+      setCurrentWorkspace(matchedWorkspace);
+    }
+  }, [matchedWorkspace, currentWorkspace?.id, setCurrentWorkspace]);
+
+  if (loading || (matchedWorkspace && currentWorkspace?.id !== matchedWorkspace.id)) {
+    return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
+  }
+
   return <ClientProfile />;
 }
 
