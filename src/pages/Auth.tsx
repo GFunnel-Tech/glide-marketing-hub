@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading: authLoading } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -21,9 +22,20 @@ export default function Auth() {
   const [workspaceName, setWorkspaceName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Where to send the user after a successful sign-in. Prefer the deep link
+  // they originally tried to visit (set by ProtectedRoute via location state),
+  // falling back to "/" so existing flows keep working.
+  const redirectTo =
+    (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)
+      ?.from
+      ? `${(location.state as any).from.pathname || "/"}${
+          (location.state as any).from.search || ""
+        }${(location.state as any).from.hash || ""}`
+      : "/";
+
   useEffect(() => {
-    if (!authLoading && user) navigate("/", { replace: true });
-  }, [user, authLoading, navigate]);
+    if (!authLoading && user) navigate(redirectTo, { replace: true });
+  }, [user, authLoading, navigate, redirectTo]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
