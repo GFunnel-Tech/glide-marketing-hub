@@ -17,7 +17,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 interface ClientRow {
-  id: number;
+  client_id: number;
   workspace_id: string;
   name: string;
   status: string;
