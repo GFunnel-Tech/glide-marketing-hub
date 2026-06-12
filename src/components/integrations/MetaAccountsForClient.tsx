@@ -23,14 +23,40 @@ export function MetaAccountsForClient({ clientId }: { clientId: number }) {
     queryKey: ["client-meta-accounts", wsId, clientId],
     enabled: !!wsId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1. Accounts where this client is the single owner
+      const ownedP = supabase
         .from("meta_ad_accounts")
         .select("id, act_id, account_name, business_name, currency, account_status, is_active, last_synced_at")
         .eq("workspace_id", wsId!)
-        .eq("client_id", clientId)
-        .order("account_name", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Row[];
+        .eq("client_id", clientId);
+      // 2. Accounts shared with this client via membership table
+      const sharedIdsP = (supabase as any)
+        .from("meta_ad_account_clients")
+        .select("ad_account_id")
+        .eq("workspace_id", wsId!)
+        .eq("client_id", clientId);
+
+      const [{ data: owned, error: e1 }, { data: sharedRows, error: e2 }] = await Promise.all([ownedP, sharedIdsP]);
+      if (e1) throw e1;
+      if (e2) throw e2;
+
+      let shared: Row[] = [];
+      const sharedIds = (sharedRows ?? []).map((r: any) => r.ad_account_id);
+      if (sharedIds.length) {
+        const { data, error } = await supabase
+          .from("meta_ad_accounts")
+          .select("id, act_id, account_name, business_name, currency, account_status, is_active, last_synced_at")
+          .eq("workspace_id", wsId!)
+          .in("id", sharedIds);
+        if (error) throw error;
+        shared = (data ?? []) as Row[];
+      }
+
+      const all = new Map<string, Row>();
+      [...(owned ?? []), ...shared].forEach((r: any) => all.set(r.id, r));
+      return Array.from(all.values()).sort((a, b) =>
+        (a.account_name || a.act_id).localeCompare(b.account_name || b.act_id),
+      );
     },
   });
 
