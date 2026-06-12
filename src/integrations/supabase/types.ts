@@ -926,12 +926,18 @@ export type Database = {
         Row: {
           assigned_to: string | null
           client_id: number | null
+          completed_at: string | null
           content: string
           created_at: string
           done: boolean
           due_at: string | null
           id: string
+          kind: string
+          next_due_at: string | null
+          priority: string
+          recurrence: Json | null
           reminded_at: string | null
+          title: string | null
           updated_at: string
           user_id: string
           workspace_id: string
@@ -939,12 +945,18 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           client_id?: number | null
+          completed_at?: string | null
           content: string
           created_at?: string
           done?: boolean
           due_at?: string | null
           id?: string
+          kind?: string
+          next_due_at?: string | null
+          priority?: string
+          recurrence?: Json | null
           reminded_at?: string | null
+          title?: string | null
           updated_at?: string
           user_id: string
           workspace_id: string
@@ -952,12 +964,18 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           client_id?: number | null
+          completed_at?: string | null
           content?: string
           created_at?: string
           done?: boolean
           due_at?: string | null
           id?: string
+          kind?: string
+          next_due_at?: string | null
+          priority?: string
+          recurrence?: Json | null
           reminded_at?: string | null
+          title?: string | null
           updated_at?: string
           user_id?: string
           workspace_id?: string
