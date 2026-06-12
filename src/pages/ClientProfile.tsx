@@ -35,6 +35,7 @@ import {
   BarChart3,
   Inbox,
   Sparkles,
+  CheckSquare,
 } from "lucide-react";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
