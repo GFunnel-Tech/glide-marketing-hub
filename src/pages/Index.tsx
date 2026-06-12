@@ -51,17 +51,8 @@ function PortfolioHealthCard() {
           </div>
         ))}
       </dl>
-      <div className="mt-5 border-t border-border pt-4 space-y-1.5 text-xs text-muted-foreground">
-        <div className="flex items-center justify-between">
-          <span>In workflow</span>
-          <span className="font-semibold text-foreground tabular-nums">{segments.inWorkflow}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Total records · synced</span>
-          <span className="tabular-nums">{segments.total} · {segments.synced}</span>
-        </div>
-      </div>
     </div>
+
   );
 }
 
