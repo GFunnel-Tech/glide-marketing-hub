@@ -173,11 +173,17 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
     await Promise.all(list.slice(i, i + CHUNK).map(processClient));
   }
 
+  console.log(`[ai-ops-scan] built ${insightsBatch.length} insights from ${list.length} clients; errors=${summary.errors.length}`);
+
   // Bulk insert all insights
   if (insightsBatch.length > 0) {
     const { error: insErr } = await admin.from("ai_insights").insert(insightsBatch);
-    if (insErr) summary.errors.push(`insights insert: ${insErr.message}`);
-    else summary.insights_created = insightsBatch.length;
+    if (insErr) {
+      console.error("[ai-ops-scan] insert failed:", insErr.message);
+      summary.errors.push(`insights insert: ${insErr.message}`);
+    } else {
+      summary.insights_created = insightsBatch.length;
+    }
   }
 
   return summary;
