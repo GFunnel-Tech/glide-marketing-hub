@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
   return json({ ok: true, leadsSynced: totalLeads, errors });
 });
 
-function buildLeadRows(leads: any[], acc: any, adRefOrResolver: any, formName: string | null, fallbackFormId?: string) {
+function buildLeadRows(leads: any[], acc: any, adRefOrResolver: any, formName: string | null, fallbackFormId?: string, resolveClient?: (campaignId: string | null | undefined) => number | null) {
   return leads.map((l: any) => {
     const fd = (l.field_data ?? []) as { name: string; values: string[] }[];
     const find = (keys: string[]) => {
@@ -198,14 +198,16 @@ function buildLeadRows(leads: any[], acc: any, adRefOrResolver: any, formName: s
       return item?.values?.[0] ?? null;
     };
     const adRef = typeof adRefOrResolver === "function" ? adRefOrResolver(l) : adRefOrResolver;
+    const campaignId = l.campaign_id ?? adRef?.campaign_id ?? null;
+    const resolvedClient = resolveClient ? resolveClient(campaignId) : (acc.client_id ?? null);
     return {
       workspace_id: acc.workspace_id,
       ad_account_id: acc.id,
-      client_id: acc.client_id,
+      client_id: resolvedClient,
       lead_id: l.id,
       form_id: l.form_id ?? fallbackFormId ?? null,
       form_name: formName,
-      campaign_id: l.campaign_id ?? adRef?.campaign_id ?? null,
+      campaign_id: campaignId,
       campaign_name: l.campaign_name ?? adRef?.campaign_name ?? null,
       adset_id: l.adset_id ?? adRef?.adset_id ?? null,
       adset_name: l.adset_name ?? adRef?.adset_name ?? null,
