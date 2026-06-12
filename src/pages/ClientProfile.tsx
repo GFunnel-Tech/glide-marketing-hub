@@ -1050,6 +1050,10 @@ function ClientProfileInner() {
         </TabsContent>
 
         {/* ACTIVITY */}
+        <TabsContent value="tasks" className="mt-5">
+          <ClientTasksTab clientId={client.id} />
+        </TabsContent>
+
         <TabsContent value="activity" className="mt-5">
           <SectionCard
             title="Activity Log"
