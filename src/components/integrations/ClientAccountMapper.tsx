@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  Building2, Facebook, Link2, Loader2, Plug, Plus, Sparkles, Unlink, Check, X,
+  Building2, Facebook, Link2, Loader2, Plug, Plus, Sparkles, Unlink, X, ArrowRight, AlertTriangle, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,10 +51,6 @@ const accountNamesMatch = (client: Client, candidates: Array<string | null | und
   );
 };
 
-/**
- * Three-column mapper: pick a GHL sub-account, a Meta ad account, and a client
- * side-by-side, then cross-link them with one click.
- */
 export function ClientAccountMapper() {
   const { currentWorkspace } = useWorkspace();
   const wsId = currentWorkspace?.id;
@@ -106,25 +102,20 @@ export function ClientAccountMapper() {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [wsId]);
 
-  // Auto-select the existing synced client when a GHL or Meta row is picked.
-  // Direct ids win; normalized names catch records that already exist but have
-  // not had both integration ids backfilled yet.
+  // Auto-suggest a client when picking a GHL/Meta row — but only if user hasn't
+  // already picked a client, so manual override always wins.
   useEffect(() => {
+    if (selectedClientId) return;
     const selectedGhl = selectedGhlId ? ghlLocs.find((x) => x.id === selectedGhlId) : null;
     const selectedMeta = selectedMetaId ? metaAccs.find((x) => x.id === selectedMetaId) : null;
-
-    if (selectedGhlId) {
-      const linked = selectedGhl ? clients.find((c) => c.ghl_location_id === selectedGhl.location_id) : null;
+    if (selectedGhl) {
+      const linked = clients.find((c) => c.ghl_location_id === selectedGhl.location_id);
       if (linked) { setSelectedClientId(linked.id); return; }
     }
-    if (selectedMetaId) {
-      if (selectedMeta?.client_id) { setSelectedClientId(selectedMeta.client_id); return; }
-    }
+    if (selectedMeta?.client_id) { setSelectedClientId(selectedMeta.client_id); return; }
     const matchedByName = clients.find((client) => accountNamesMatch(client, [
-      selectedGhl?.name,
-      selectedGhl?.business_name,
-      selectedMeta?.account_name,
-      selectedMeta?.business_name,
+      selectedGhl?.name, selectedGhl?.business_name,
+      selectedMeta?.account_name, selectedMeta?.business_name,
     ]));
     if (matchedByName) setSelectedClientId(matchedByName.id);
     // eslint-disable-next-line
@@ -195,7 +186,7 @@ export function ClientAccountMapper() {
     );
   }, [clients, clientSearch]);
 
-  // --- actions ---
+  // --- mutations ---
   const createClient = async (name: string, asAgency = false): Promise<number | null> => {
     if (!wsId) return null;
     const clean = name.trim();
@@ -247,32 +238,6 @@ export function ClientAccountMapper() {
     invalidateDashboard();
   };
 
-  const finishSelectedMapping = async () => {
-    if (!selectedClient) return;
-    setBusy(true);
-    try {
-      const updates = [];
-      if (selectedGhl && selectedClient.ghl_location_id !== selectedGhl.location_id) {
-        updates.push((supabase as any).from("clients")
-          .update({ ghl_location_id: selectedGhl.location_id }).eq("id", selectedClient.id));
-      }
-      if (selectedMeta && selectedMeta.client_id !== selectedClient.id) {
-        updates.push((supabase as any).from("meta_ad_accounts")
-          .update({ client_id: selectedClient.id }).eq("id", selectedMeta.id));
-      }
-      const results = await Promise.all(updates);
-      const error = results.find((r: any) => r.error)?.error;
-      if (error) throw error;
-      toast.success(updates.length ? "Selected accounts linked" : "Selected accounts are already synced");
-      await load();
-      invalidateDashboard();
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed to link selected accounts");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const createClientFromSelection = async () => {
     const ghlName = selectedGhl ? (selectedGhl.name || selectedGhl.business_name || "").trim() : "";
     const metaName = selectedMeta ? (selectedMeta.account_name || selectedMeta.business_name || "").trim() : "";
@@ -306,25 +271,96 @@ export function ClientAccountMapper() {
     }
   };
 
+  // --- action-bar logic ---
+  // What changes would happen if user clicks "Link selected"?
+  const planned = useMemo(() => {
+    if (!selectedClient) return { steps: [] as Array<{ kind: "ghl_link" | "ghl_move" | "ghl_replace" | "meta_link" | "meta_move"; text: string }>, hasReplace: false };
+    const steps: Array<{ kind: "ghl_link" | "ghl_move" | "ghl_replace" | "meta_link" | "meta_move"; text: string }> = [];
+    let hasReplace = false;
+    if (selectedGhl) {
+      const currentClientForGhl = clientByGhlLoc.get(selectedGhl.location_id);
+      const currentGhlForClient = selectedClient.ghl_location_id
+        ? ghlByLocId.get(selectedClient.ghl_location_id) ?? { name: selectedClient.ghl_location_id } as any
+        : null;
+      if (currentClientForGhl?.id === selectedClient.id) {
+        // already linked - skip
+      } else if (currentClientForGhl && currentGhlForClient) {
+        steps.push({ kind: "ghl_replace", text: `Replace ${selectedClient.name}'s GHL "${currentGhlForClient.name || selectedClient.ghl_location_id}" with "${selectedGhl.name || selectedGhl.location_id}" (moves it from ${currentClientForGhl.name})` });
+        hasReplace = true;
+      } else if (currentClientForGhl) {
+        steps.push({ kind: "ghl_move", text: `Move GHL "${selectedGhl.name || selectedGhl.location_id}" from ${currentClientForGhl.name} → ${selectedClient.name}` });
+        hasReplace = true;
+      } else if (currentGhlForClient) {
+        steps.push({ kind: "ghl_replace", text: `Replace ${selectedClient.name}'s GHL "${currentGhlForClient.name || selectedClient.ghl_location_id}" with "${selectedGhl.name || selectedGhl.location_id}"` });
+        hasReplace = true;
+      } else {
+        steps.push({ kind: "ghl_link", text: `Link GHL "${selectedGhl.name || selectedGhl.location_id}" → ${selectedClient.name}` });
+      }
+    }
+    if (selectedMeta) {
+      if (selectedMeta.client_id === selectedClient.id) {
+        // already linked
+      } else if (selectedMeta.client_id != null) {
+        const prev = clients.find((c) => c.id === selectedMeta.client_id);
+        steps.push({ kind: "meta_move", text: `Move Meta "${selectedMeta.account_name || selectedMeta.act_id}" from ${prev?.name ?? "another client"} → ${selectedClient.name}` });
+        hasReplace = true;
+      } else {
+        steps.push({ kind: "meta_link", text: `Link Meta "${selectedMeta.account_name || selectedMeta.act_id}" → ${selectedClient.name}` });
+      }
+    }
+    return { steps, hasReplace };
+  }, [selectedClient, selectedGhl, selectedMeta, clientByGhlLoc, ghlByLocId, clients]);
+
+  const applySelection = async () => {
+    if (!selectedClient) return;
+    setBusy(true);
+    try {
+      // Handle GHL: if the target GHL is currently linked to a different client,
+      // unlink that other client first to avoid a unique-conflict.
+      if (selectedGhl) {
+        const otherClient = clientByGhlLoc.get(selectedGhl.location_id);
+        if (otherClient && otherClient.id !== selectedClient.id) {
+          await (supabase as any).from("clients")
+            .update({ ghl_location_id: null }).eq("id", otherClient.id);
+        }
+        if (selectedClient.ghl_location_id !== selectedGhl.location_id) {
+          const { error } = await (supabase as any).from("clients")
+            .update({ ghl_location_id: selectedGhl.location_id }).eq("id", selectedClient.id);
+          if (error) throw error;
+        }
+      }
+      if (selectedMeta && selectedMeta.client_id !== selectedClient.id) {
+        const { error } = await (supabase as any).from("meta_ad_accounts")
+          .update({ client_id: selectedClient.id }).eq("id", selectedMeta.id);
+        if (error) throw error;
+      }
+      toast.success("Mapping saved");
+      await load();
+      invalidateDashboard();
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to save mapping");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!wsId) return null;
 
   const agencySeed =
     agencyProfile?.friendly_business_name || agencyProfile?.legal_business_name || "";
   const hasAgencyAccount = clients.some((c) => c.is_agency_account);
-
-  // Counts
   const ghlLinkedCount = clients.filter((c) => c.ghl_location_id).length;
   const metaLinkedCount = metaAccs.filter((a) => a.client_id).length;
 
   return (
-    <div className="rounded-lg border border-border bg-card p-5 space-y-5">
+    <div className="rounded-lg border border-border bg-card p-5 space-y-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Plug className="h-4 w-4 text-primary" /> Account Mapping
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Pick a GHL sub-account, a Meta ad account, and a client — then link them with one click.
+            Click rows to select. Use the bar below to link selections, or the unlink button on any mapped row.
           </p>
         </div>
         <div className="flex items-end gap-2">
@@ -357,9 +393,26 @@ export function ClientAccountMapper() {
         </div>
       </div>
 
+      {/* Selection / action bar */}
+      <SelectionBar
+        ghl={selectedGhl}
+        meta={selectedMeta}
+        client={selectedClient}
+        onClearGhl={() => setSelectedGhlId(null)}
+        onClearMeta={() => setSelectedMetaId(null)}
+        onClearClient={() => setSelectedClientId(null)}
+        steps={planned.steps}
+        hasReplace={planned.hasReplace}
+        busy={busy}
+        onApply={applySelection}
+        canCreate={!selectedClient && (!!selectedGhl || !!selectedMeta)}
+        onCreate={createClientFromSelection}
+        creating={creating}
+      />
+
       {/* Three columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {/* GHL sub-accounts */}
+        {/* GHL */}
         <Column
           title="GHL sub-accounts"
           icon={<Sparkles className="h-3.5 w-3.5 text-primary" />}
@@ -371,29 +424,14 @@ export function ClientAccountMapper() {
           {ghlFiltered.map((g) => {
             const linkedClient = clientByGhlLoc.get(g.location_id);
             const isActive = selectedGhlId === g.id;
-            const handleClick = async () => {
-              if (selectedClient) {
-                if (selectedClient.ghl_location_id === g.location_id) {
-                  if (!window.confirm(`Unlink GHL sub-account "${g.name || g.location_id}" from ${selectedClient.name}?`)) return;
-                  await linkGhlToClient(selectedClient.id, null);
-                  return;
-                }
-                if (linkedClient && linkedClient.id !== selectedClient.id) {
-                  if (!window.confirm(`"${g.name || g.location_id}" is already linked to "${linkedClient.name}". Unlink it and link to "${selectedClient.name}" instead?`)) return;
-                  await linkGhlToClient(linkedClient.id, null);
-                }
-                if (selectedClient.ghl_location_id && selectedClient.ghl_location_id !== g.location_id) {
-                  const prev = ghlByLocId.get(selectedClient.ghl_location_id);
-                  if (!window.confirm(`${selectedClient.name} is already linked to GHL "${prev?.name || selectedClient.ghl_location_id}". Replace with "${g.name || g.location_id}"?`)) return;
-                }
-                await linkGhlToClient(selectedClient.id, g.location_id);
-                setSelectedGhlId(g.id);
-                return;
-              }
-              setSelectedGhlId(isActive ? null : g.id);
-            };
+            const conflict = !!(selectedClient && linkedClient && linkedClient.id !== selectedClient.id);
             return (
-              <RowButton key={g.id} active={isActive} onClick={handleClick}>
+              <RowButton
+                key={g.id}
+                active={isActive}
+                conflict={conflict && isActive}
+                onClick={() => setSelectedGhlId(isActive ? null : g.id)}
+              >
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-foreground truncate">{g.name || "Unnamed"}</div>
                   <div className="text-[10px] text-muted-foreground truncate">
@@ -407,13 +445,22 @@ export function ClientAccountMapper() {
                 ) : (
                   <Badge variant="outline" className="text-[9px] text-muted-foreground shrink-0">Unmapped</Badge>
                 )}
-                {isActive && <DeselectDot label="Deselect GHL sub-account" />}
+                {linkedClient && (
+                  <UnlinkBtn
+                    disabled={busy}
+                    label={`Unlink GHL from ${linkedClient.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      linkGhlToClient(linkedClient.id, null);
+                    }}
+                  />
+                )}
               </RowButton>
             );
           })}
         </Column>
 
-        {/* Meta ad accounts */}
+        {/* Meta */}
         <Column
           title="Meta ad accounts"
           icon={<Facebook className="h-3.5 w-3.5 text-primary" />}
@@ -425,24 +472,14 @@ export function ClientAccountMapper() {
           {metaFiltered.map((a) => {
             const linkedClient = a.client_id != null ? clients.find((c) => c.id === a.client_id) : null;
             const isActive = selectedMetaId === a.id;
-            const handleClick = async () => {
-              if (selectedClient) {
-                if (a.client_id === selectedClient.id) {
-                  if (!window.confirm(`Unlink Meta ad account "${a.account_name || a.act_id}" from ${selectedClient.name}?`)) return;
-                  await linkMetaToClient(a.id, null);
-                  return;
-                }
-                if (linkedClient && linkedClient.id !== selectedClient.id) {
-                  if (!window.confirm(`"${a.account_name || a.act_id}" is already linked to "${linkedClient.name}". Unlink it and link to "${selectedClient.name}" instead?`)) return;
-                }
-                await linkMetaToClient(a.id, selectedClient.id);
-                setSelectedMetaId(a.id);
-                return;
-              }
-              setSelectedMetaId(isActive ? null : a.id);
-            };
+            const conflict = !!(selectedClient && linkedClient && linkedClient.id !== selectedClient.id);
             return (
-              <RowButton key={a.id} active={isActive} onClick={handleClick}>
+              <RowButton
+                key={a.id}
+                active={isActive}
+                conflict={conflict && isActive}
+                onClick={() => setSelectedMetaId(isActive ? null : a.id)}
+              >
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-foreground truncate">
                     {a.account_name || a.act_id}
@@ -458,7 +495,16 @@ export function ClientAccountMapper() {
                 ) : (
                   <Badge variant="outline" className="text-[9px] text-muted-foreground shrink-0">Unmapped</Badge>
                 )}
-                {isActive && <DeselectDot label="Deselect Meta ad account" />}
+                {linkedClient && (
+                  <UnlinkBtn
+                    disabled={busy}
+                    label={`Unlink Meta from ${linkedClient.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      linkMetaToClient(a.id, null);
+                    }}
+                  />
+                )}
               </RowButton>
             );
           })}
@@ -524,13 +570,158 @@ export function ClientAccountMapper() {
                     {metas.length ? `${metas.length} Meta` : "Meta not synced"}
                   </div>
                 </div>
-                {isActive && <DeselectDot label="Deselect client" />}
+                {isActive && selectedClient?.id === c.id && (
+                  <label
+                    className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-3 w-3 accent-primary"
+                      checked={!!c.is_agency_account}
+                      onChange={(e) => toggleAgency(e.target.checked)}
+                      disabled={busy}
+                    />
+                    Agency
+                  </label>
+                )}
               </RowButton>
             );
           })}
         </Column>
       </div>
+    </div>
+  );
+}
 
+function SelectionBar({
+  ghl, meta, client,
+  onClearGhl, onClearMeta, onClearClient,
+  steps, hasReplace, busy, onApply,
+  canCreate, onCreate, creating,
+}: {
+  ghl: GhlLoc | null;
+  meta: MetaAcc | null;
+  client: Client | null;
+  onClearGhl: () => void;
+  onClearMeta: () => void;
+  onClearClient: () => void;
+  steps: Array<{ kind: string; text: string }>;
+  hasReplace: boolean;
+  busy: boolean;
+  onApply: () => void;
+  canCreate: boolean;
+  onCreate: () => void;
+  creating: boolean;
+}) {
+  const hasAny = ghl || meta || client;
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <SelectionChip
+          icon={<Sparkles className="h-3 w-3" />}
+          label="GHL"
+          value={ghl ? (ghl.name || ghl.location_id) : null}
+          onClear={onClearGhl}
+        />
+        <ArrowRight className="h-3 w-3 text-muted-foreground hidden sm:block" />
+        <SelectionChip
+          icon={<Facebook className="h-3 w-3" />}
+          label="Meta"
+          value={meta ? (meta.account_name || meta.act_id) : null}
+          onClear={onClearMeta}
+        />
+        <ArrowRight className="h-3 w-3 text-muted-foreground hidden sm:block" />
+        <SelectionChip
+          icon={<Building2 className="h-3 w-3" />}
+          label="Client"
+          value={client?.name ?? null}
+          onClear={onClearClient}
+        />
+
+        <div className="ml-auto flex items-center gap-2">
+          {canCreate && (
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5" disabled={creating} onClick={onCreate}>
+              {creating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+              Create + link
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="h-8 text-xs gap-1.5"
+            disabled={busy || !client || steps.length === 0}
+            variant={hasReplace ? "destructive" : "default"}
+            onClick={onApply}
+          >
+            {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Link2 className="h-3 w-3" />}
+            {!client ? "Pick a client" :
+              steps.length === 0 ? (ghl || meta ? "Already linked" : "Select to link") :
+              hasReplace ? "Replace mapping" : "Link selected"}
+          </Button>
+        </div>
+      </div>
+
+      {!hasAny && (
+        <p className="text-[11px] text-muted-foreground">
+          Tip: click a row in any column to select it. Click the unlink icon on a mapped row to remove its mapping in one click.
+        </p>
+      )}
+
+      {steps.length > 0 && (
+        <ul className="space-y-1">
+          {steps.map((s, i) => (
+            <li
+              key={i}
+              className={cn(
+                "flex items-start gap-1.5 text-[11px] rounded px-2 py-1",
+                s.kind.includes("replace") || s.kind.includes("move")
+                  ? "bg-warning/10 text-warning-foreground border border-warning/30"
+                  : "bg-success/5 text-foreground border border-success/20",
+              )}
+            >
+              {s.kind.includes("replace") || s.kind.includes("move")
+                ? <AlertTriangle className="h-3 w-3 mt-0.5 text-warning shrink-0" />
+                : <CheckCircle2 className="h-3 w-3 mt-0.5 text-success shrink-0" />}
+              <span>{s.text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {hasAny && client && steps.length === 0 && (ghl || meta) && (
+        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+          <CheckCircle2 className="h-3 w-3 text-success" /> These selections are already linked.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SelectionChip({
+  icon, label, value, onClear,
+}: { icon: React.ReactNode; label: string; value: string | null; onClear: () => void }) {
+  if (!value) {
+    return (
+      <div className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border bg-background px-2 py-1 text-[11px] text-muted-foreground">
+        {icon}
+        <span className="font-medium">{label}</span>
+        <span className="opacity-70">— none</span>
+      </div>
+    );
+  }
+  return (
+    <div className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-[11px] text-foreground max-w-[260px]">
+      <span className="text-primary">{icon}</span>
+      <span className="font-medium text-primary">{label}:</span>
+      <span className="truncate">{value}</span>
+      <button
+        type="button"
+        onClick={onClear}
+        className="ml-0.5 rounded p-0.5 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+        aria-label={`Clear ${label}`}
+      >
+        <X className="h-3 w-3" />
+      </button>
     </div>
   );
 }
@@ -573,17 +764,19 @@ function Column({
 }
 
 function RowButton({
-  active, onClick, children,
-}: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  active, conflict, onClick, children,
+}: { active: boolean; conflict?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <li>
       <button
         type="button"
         onClick={onClick}
         className={cn(
-          "w-full flex items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors",
+          "group w-full flex items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors",
           active
-            ? "border-primary bg-primary/10"
+            ? conflict
+              ? "border-warning bg-warning/10"
+              : "border-primary bg-primary/10"
             : "border-transparent hover:border-border hover:bg-muted/60",
         )}
       >
@@ -593,32 +786,19 @@ function RowButton({
   );
 }
 
-/** Visual affordance on active rows showing the click will deselect. */
-function DeselectDot({ label }: { label: string }) {
+function UnlinkBtn({
+  label, onClick, disabled,
+}: { label: string; onClick: (e: React.MouseEvent) => void; disabled?: boolean }) {
   return (
-    <span
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
       aria-label={label}
       title={label}
-      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-primary shrink-0"
+      className="shrink-0 rounded p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity disabled:opacity-50"
     >
-      <X className="h-3 w-3" />
-    </span>
-  );
-}
-
-
-function Slot({ label, value, onClear }: { label: string; value?: string | null; onClear: () => void }) {
-  if (!value) return null;
-
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}:</span>
-      <Badge variant="outline" className="text-xs gap-1 pr-1">
-        <span className="truncate max-w-[180px]">{value}</span>
-        <button onClick={onClear} className="opacity-60 hover:opacity-100" aria-label={`Clear ${label}`}>
-          <Unlink className="h-2.5 w-2.5" />
-        </button>
-      </Badge>
-    </div>
+      <Unlink className="h-3 w-3" />
+    </button>
   );
 }
