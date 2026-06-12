@@ -34,6 +34,7 @@ import BillingPage from "./pages/BillingPage";
 import AffiliatePage from "./pages/AffiliatePage";
 import ForecastPage from "./pages/ForecastPage";
 import Tracking from "./pages/Tracking";
+import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
 import PortalLayout from "./pages/portal/PortalLayout";
 import PortalAuth from "./pages/portal/PortalAuth";
