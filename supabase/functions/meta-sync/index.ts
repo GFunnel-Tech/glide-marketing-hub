@@ -313,15 +313,31 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
     }
   }
 
+  // Shared accounts: preserve user-set campaigns.client_id rather than overwriting
+  // with acc.client_id (which is null when the account is shared between clients).
+  const { data: members } = await admin
+    .from("meta_ad_account_clients")
+    .select("client_id")
+    .eq("ad_account_id", acc.id);
+  const memberClientIds: number[] = (members ?? []).map((r: any) => r.client_id);
+  const isShared = memberClientIds.length > 0;
+  const { data: existing } = await admin
+    .from("campaigns")
+    .select("id, client_id")
+    .in("id", campaigns.map((c: any) => c.id));
+  const existingClientById = new Map<string, number | null>(
+    (existing ?? []).map((r: any) => [r.id, r.client_id ?? null]),
+  );
+  // First member is the default target for newly-discovered campaigns on a shared
+  // account, so they show up in the mapping UI ready to be reassigned.
+  const defaultSharedClientId = memberClientIds[0] ?? null;
+
   // 3. Upsert into the existing public.campaigns table
   const rows = campaigns.map((c: any) => {
     const ins = insightsByCampaign.get(c.id) ?? {};
     const leads = extractLeads(ins.actions);
     const spend = Number(ins.spend ?? 0);
     const status = (c.effective_status === "ACTIVE" || c.status === "ACTIVE") ? "active" : "paused";
-    // Surface ad-delivery problems Meta flags at campaign level.
-    // Common values: DISAPPROVED, WITH_ISSUES, PENDING_REVIEW, PENDING_BILLING_INFO,
-    // CAMPAIGN_PAUSED (when an ad inside is rejected and Meta paused delivery).
     const ISSUE_STATUSES = new Set([
       "DISAPPROVED",
       "WITH_ISSUES",
@@ -330,10 +346,24 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
       "IN_PROCESS",
     ]);
     const issues_status = ISSUE_STATUSES.has(c.effective_status) ? c.effective_status : null;
+    // Attribution:
+    //  - shared accounts → keep existing mapping; for brand-new campaigns, fall
+    //    back to the first member client so the row is insertable and visible
+    //    in the campaign mapping UI for reassignment.
+    //  - single-owner accounts → inherit owner client_id.
+    let client_id: number | null;
+    if (isShared) {
+      client_id = existingClientById.has(c.id)
+        ? existingClientById.get(c.id)!
+        : defaultSharedClientId;
+    } else {
+      client_id = acc.client_id;
+    }
     return {
-      id: c.id, // Meta's campaign id (text PK)
-      client_id: acc.client_id,
+      id: c.id,
+      client_id,
       workspace_id: acc.workspace_id,
+      ad_account_id: acc.id,
       name: c.name,
       status,
       spend,
@@ -351,9 +381,12 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
     };
   });
 
-  const { error } = await admin.from("campaigns").upsert(rows, { onConflict: "id" });
-  if (error) throw new Error("campaigns upsert: " + error.message);
-  return rows.length;
+  const insertable = rows.filter((r) => r.client_id != null);
+  if (insertable.length) {
+    const { error } = await admin.from("campaigns").upsert(insertable, { onConflict: "id" });
+    if (error) throw new Error("campaigns upsert: " + error.message);
+  }
+  return insertable.length;
 }
 
 // Pick the most accurate "lead" count from Meta's actions array.

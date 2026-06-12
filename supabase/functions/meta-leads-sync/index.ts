@@ -51,6 +51,27 @@ Deno.serve(async (req) => {
       .eq("is_active", true);
 
     for (const acc of accounts ?? []) {
+      // Detect shared accounts: if any membership rows exist, attribute leads
+      // by campaign->client mapping rather than the account's single client_id.
+      const { data: members } = await admin
+        .from("meta_ad_account_clients")
+        .select("client_id")
+        .eq("ad_account_id", acc.id);
+      const isShared = (members ?? []).length > 0;
+      let campaignClientMap: Map<string, number | null> | null = null;
+      if (isShared) {
+        const { data: camps } = await admin
+          .from("campaigns")
+          .select("id, client_id")
+          .eq("ad_account_id", acc.id);
+        campaignClientMap = new Map((camps ?? []).map((c: any) => [c.id, c.client_id ?? null]));
+      }
+      const resolveClient = (campaignId: string | null | undefined): number | null => {
+        if (isShared && campaignClientMap && campaignId) {
+          return campaignClientMap.get(campaignId) ?? null;
+        }
+        return acc.client_id ?? null;
+      };
       try {
         // Lead-gen forms live on Pages, not ad accounts. We discover the
         // forms used by this ad account by listing its lead-gen ads, then
@@ -81,7 +102,7 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            const rows = buildLeadRows(leadsJson.data ?? [], acc, ad, null);
+            const rows = buildLeadRows(leadsJson.data ?? [], acc, ad, null, undefined, resolveClient);
             const inserted = await upsertLeadRows(admin, rows, errors, { ad_id: ad.id });
             totalLeads += inserted;
           }
@@ -157,7 +178,7 @@ Deno.serve(async (req) => {
             continue;
           }
           const adById = new Map(info.ads.map((a) => [a.id, a]));
-          const rows = buildLeadRows(leadsJson.data ?? [], acc, (lead: any) => lead.ad_id ? adById.get(lead.ad_id) : undefined, info.name, formId);
+          const rows = buildLeadRows(leadsJson.data ?? [], acc, (lead: any) => lead.ad_id ? adById.get(lead.ad_id) : undefined, info.name, formId, resolveClient);
           totalLeads += await upsertLeadRows(admin, rows, errors, { form: formId });
         }
       } catch (e) {
@@ -169,7 +190,7 @@ Deno.serve(async (req) => {
   return json({ ok: true, leadsSynced: totalLeads, errors });
 });
 
-function buildLeadRows(leads: any[], acc: any, adRefOrResolver: any, formName: string | null, fallbackFormId?: string) {
+function buildLeadRows(leads: any[], acc: any, adRefOrResolver: any, formName: string | null, fallbackFormId?: string, resolveClient?: (campaignId: string | null | undefined) => number | null) {
   return leads.map((l: any) => {
     const fd = (l.field_data ?? []) as { name: string; values: string[] }[];
     const find = (keys: string[]) => {
@@ -177,14 +198,16 @@ function buildLeadRows(leads: any[], acc: any, adRefOrResolver: any, formName: s
       return item?.values?.[0] ?? null;
     };
     const adRef = typeof adRefOrResolver === "function" ? adRefOrResolver(l) : adRefOrResolver;
+    const campaignId = l.campaign_id ?? adRef?.campaign_id ?? null;
+    const resolvedClient = resolveClient ? resolveClient(campaignId) : (acc.client_id ?? null);
     return {
       workspace_id: acc.workspace_id,
       ad_account_id: acc.id,
-      client_id: acc.client_id,
+      client_id: resolvedClient,
       lead_id: l.id,
       form_id: l.form_id ?? fallbackFormId ?? null,
       form_name: formName,
-      campaign_id: l.campaign_id ?? adRef?.campaign_id ?? null,
+      campaign_id: campaignId,
       campaign_name: l.campaign_name ?? adRef?.campaign_name ?? null,
       adset_id: l.adset_id ?? adRef?.adset_id ?? null,
       adset_name: l.adset_name ?? adRef?.adset_name ?? null,

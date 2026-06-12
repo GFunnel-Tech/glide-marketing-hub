@@ -680,6 +680,7 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          ad_account_id: string | null
           ad_sets: number
           ads: number
           client_id: number
@@ -700,6 +701,7 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          ad_account_id?: string | null
           ad_sets?: number
           ads?: number
           client_id: number
@@ -720,6 +722,7 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          ad_account_id?: string | null
           ad_sets?: number
           ads?: number
           client_id?: number
@@ -740,6 +743,13 @@ export type Database = {
           workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaigns_ad_account_id_fkey"
+            columns: ["ad_account_id"]
+            isOneToOne: false
+            referencedRelation: "meta_ad_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaigns_client_id_fkey"
             columns: ["client_id"]
@@ -2888,6 +2898,62 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_ad_account_clients: {
+        Row: {
+          ad_account_id: string
+          client_id: number
+          created_at: string
+          created_by: string | null
+          id: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_account_id: string
+          client_id: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_account_id?: string
+          client_id?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_ad_account_clients_ad_account_id_fkey"
+            columns: ["ad_account_id"]
+            isOneToOne: false
+            referencedRelation: "meta_ad_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_ad_account_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_ad_account_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "meta_ad_account_clients_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -5182,6 +5248,10 @@ export type Database = {
       }
       is_portal_user_for_client: {
         Args: { _client_id: number; _user_id: string }
+        Returns: boolean
+      }
+      is_shared_ad_account: {
+        Args: { _ad_account_id: string }
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }

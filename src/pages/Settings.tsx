@@ -14,6 +14,7 @@ import { GhlClickupPanel } from "@/components/integrations/GhlClickupPanel";
 import { GhlAgencyConnectionPanel } from "@/components/integrations/GhlAgencyConnectionPanel";
 import { IntegrationMapper } from "@/components/integrations/IntegrationMapper";
 import { ClientAccountMapper } from "@/components/integrations/ClientAccountMapper";
+import { SharedAdAccountsPanel } from "@/components/integrations/SharedAdAccountsPanel";
 import { MatchReviewQueue } from "@/components/integrations/MatchReviewQueue";
 import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
 import { AgencyProfilePanel } from "@/components/settings/AgencyProfilePanel";
@@ -115,6 +116,8 @@ export default function Settings() {
             <TabsContent value="mapping" className="space-y-4">
               {/* Primary: map everything onto one client account */}
               <ClientAccountMapper />
+              {/* Multi-client (shared) ad accounts + per-campaign attribution */}
+              <SharedAdAccountsPanel />
               {/* Suggested auto-matches to review */}
               <MatchReviewQueue />
               {/* Advanced: bulk view by integration type */}
