@@ -1,4 +1,6 @@
 import { KPIStrip } from "@/components/dashboard/KPIStrip";
+import { AiInsightsWidget } from "@/components/dashboard/AiInsightsWidget";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { ClientHierarchyTable } from "@/components/dashboard/ClientHierarchyTable";
 import { DailyFocus } from "@/components/dashboard/DailyFocus";
 
