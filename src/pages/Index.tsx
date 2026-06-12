@@ -113,7 +113,10 @@ const Index = () => {
         </button>
         {focusOpen && (
           <div className="border-t border-border p-5 space-y-6">
-            <DailyFocus />
+            <div className="grid gap-5 grid-cols-1 lg:grid-cols-2">
+              <DailyFocus />
+              <TodaysTasksPanel />
+            </div>
             <QuickActionBar />
           </div>
         )}
