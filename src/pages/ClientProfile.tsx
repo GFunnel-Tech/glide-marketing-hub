@@ -1003,6 +1003,9 @@ function ClientProfileInner() {
               currentLocationId={client.ghlLocationId}
               variant="panel"
             />
+            <div className="mt-4">
+              <ClientSyncStatus clientId={client.id} />
+            </div>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5">
