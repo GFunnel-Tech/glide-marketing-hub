@@ -69,6 +69,7 @@ function PortfolioHealthCard() {
 
 const Index = () => {
   const { hasConnection, isLoading } = useHasActiveMetaConnection();
+  const { currentWorkspace } = useWorkspace();
   const [focusOpen, setFocusOpen] = useState(false);
 
   const { data: focusItems = [] } = useQuery({
