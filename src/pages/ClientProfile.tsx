@@ -43,6 +43,7 @@ import { api } from "@/lib/api";
 import { LeadsByClient } from "@/components/leads/LeadsByClient";
 import { ClientSyncStatus } from "@/components/dashboard/ClientSyncStatus";
 import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
+import { MetaAccountsForClient } from "@/components/integrations/MetaAccountsForClient";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
@@ -973,7 +974,7 @@ function ClientProfileInner() {
                 Sync now
               </button>
             </div>
-            <ClientSyncStatus clientId={client.id} />
+            <MetaAccountsForClient clientId={client.id} />
             {client.bmId && (
               <p className="text-xs text-muted-foreground mt-3">
                 Business Manager:{" "}
@@ -1002,6 +1003,9 @@ function ClientProfileInner() {
               currentLocationId={client.ghlLocationId}
               variant="panel"
             />
+            <div className="mt-4">
+              <ClientSyncStatus clientId={client.id} />
+            </div>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5">
