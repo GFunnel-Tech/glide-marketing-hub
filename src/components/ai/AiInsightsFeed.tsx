@@ -77,7 +77,7 @@ export function AiInsightsFeed({ workspaceId, clientId, showScan = true, emptyHi
                         <>
                           <span>·</span>
                           <Link
-                            to={clientPath(it.client_id, { tab: "ai" })}
+                            to={clientPath(it.client_id, "?tab=ai")}
                             className="inline-flex items-center gap-0.5 text-primary hover:underline"
                           >
                             Open client <ChevronRight className="h-3 w-3" />
