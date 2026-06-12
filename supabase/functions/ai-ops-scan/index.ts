@@ -68,15 +68,23 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
       const guarantee = guaranteeRes.data as any;
       const rules = rulesRes.data as any;
 
-      for (const r of redArr) {
+      if (redArr.length > 0) {
+        const keys = redArr.map((r: any) => String(r.key).toUpperCase());
+        const title =
+          redArr.length === 1
+            ? `${c.name} · ${keys[0]} out of threshold (${redArr[0].value})`
+            : `${c.name} · ${redArr.length} KPIs out of threshold`;
+        const body = redArr
+          .map((r: any) => `${String(r.key).toUpperCase()}=${r.value} (${r.direction === "lower" ? "max" : r.direction === "higher" ? "min" : "band"} breached)`)
+          .join(" · ");
         insightsBatch.push({
           workspace_id: c.workspace_id,
           client_id: c.client_id,
           kind: "recommendation",
           severity: "warn",
-          title: `${c.name} · ${String(r.key).toUpperCase()} out of threshold (${r.value})`,
-          body: `${r.key} is ${r.value}; configured ${r.direction === "lower" ? "max" : r.direction === "higher" ? "min" : "band"} threshold breached.`,
-          metrics: r,
+          title,
+          body,
+          metrics: { red_kpis: redArr },
           source: "ai-ops-scan",
         });
       }
