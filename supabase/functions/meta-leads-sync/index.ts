@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
             continue;
           }
           const adById = new Map(info.ads.map((a) => [a.id, a]));
-          const rows = buildLeadRows(leadsJson.data ?? [], acc, (lead: any) => lead.ad_id ? adById.get(lead.ad_id) : undefined, info.name, formId);
+          const rows = buildLeadRows(leadsJson.data ?? [], acc, (lead: any) => lead.ad_id ? adById.get(lead.ad_id) : undefined, info.name, formId, resolveClient);
           totalLeads += await upsertLeadRows(admin, rows, errors, { form: formId });
         }
       } catch (e) {
