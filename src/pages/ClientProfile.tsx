@@ -974,7 +974,7 @@ function ClientProfileInner() {
                 Sync now
               </button>
             </div>
-            <ClientSyncStatus clientId={client.id} />
+            <MetaAccountsForClient clientId={client.id} />
             {client.bmId && (
               <p className="text-xs text-muted-foreground mt-3">
                 Business Manager:{" "}
