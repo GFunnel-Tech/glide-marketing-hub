@@ -580,15 +580,17 @@ export function ClientHierarchyTable() {
                 // Account currency for this client; sub-rows (campaigns/ads)
                 // inherit it since they belong to the same account.
                 const cur: string | undefined = rm?.currency;
-                // Prefer meta_insights_daily (range metrics) over the locally-cached
-                // campaigns/ads rollup so the row reflects Meta data even when the
-                // campaigns table hasn't been re-synced yet.
-                const totSpend = rm?.spend ?? campSpend;
-                // Show the deduped/honest lead count so leads × CPL reconciles
-                // with spend (rm.cpl is computed on the same effective leads).
-                const totLeads = rm?.effectiveLeads ?? campLeads;
-                const totClicks = rm?.clicks ?? campClicks;
-                const totImpr = rm?.impressions ?? campImpr;
+                // Prefer meta_insights_daily (range metrics) when it actually
+                // has data; otherwise fall back to the campaign rollup so
+                // mapped campaigns are never hidden behind an empty insights
+                // row (which would show 0 spend / 0 impressions even when
+                // child campaigns clearly have spend).
+                const pick = (rmVal: number | undefined, campVal: number) =>
+                  (rmVal ?? 0) > 0 ? (rmVal as number) : campVal;
+                const totSpend = pick(rm?.spend, campSpend);
+                const totLeads = pick(rm?.effectiveLeads, campLeads);
+                const totClicks = pick(rm?.clicks, campClicks);
+                const totImpr = pick(rm?.impressions, campImpr);
                 const avgCtr = totImpr > 0 ? (totClicks / totImpr) * 100 : 0;
                 const avgCpl = rm?.cpl ?? (totLeads > 0 ? totSpend / totLeads : 0);
                 const cAvgCpm = rm?.cpm ?? (totImpr > 0 ? (totSpend / totImpr) * 1000 : 0);
