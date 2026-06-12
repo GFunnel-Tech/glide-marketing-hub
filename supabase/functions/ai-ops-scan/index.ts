@@ -52,6 +52,10 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
 
   async function processClient(c: ClientRow) {
     summary.clients_scanned++;
+    // Skip clients with no meaningful 7-day activity — flagging "LEADS out of
+    // threshold (0)" for a client that isn't actively spending is noise.
+    const spend7 = Number(c.spend_7d ?? 0);
+    if (spend7 < 25) return;
     try {
       // Run all reads for this client in parallel
       const [forecastRes, anomaliesRes, redKpisRes, guaranteeRes, rulesRes] = await Promise.all([
