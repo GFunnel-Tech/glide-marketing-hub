@@ -83,7 +83,7 @@ export function AgentChat({
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke("ai-agent", {
+      const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
           workspaceId,
           clientId: effectiveClientId,
