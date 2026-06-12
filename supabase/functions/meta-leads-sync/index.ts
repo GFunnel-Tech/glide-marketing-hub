@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            const rows = buildLeadRows(leadsJson.data ?? [], acc, ad, null);
+            const rows = buildLeadRows(leadsJson.data ?? [], acc, ad, null, undefined, resolveClient);
             const inserted = await upsertLeadRows(admin, rows, errors, { ad_id: ad.id });
             totalLeads += inserted;
           }
