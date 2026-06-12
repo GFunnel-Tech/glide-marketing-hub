@@ -54,6 +54,7 @@ export function AgentChat({
   suggestions = DEFAULT_SUGGESTIONS,
   onClientDetected,
   detectClient,
+  endpoint = "ai-agent",
   className,
 }: AgentChatProps) {
   const qc = useQueryClient();
