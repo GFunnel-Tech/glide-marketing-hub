@@ -7,6 +7,7 @@ import { useClientPath } from "@/lib/clientPath";
 
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AgentChat } from "@/components/ai/AgentChat";
+import { AiInsightsFeed } from "@/components/ai/AiInsightsFeed";
 import { PendingActionsPanel } from "@/components/ai/PendingActionsPanel";
 import { KnowledgeBasePanel } from "@/components/ai/KnowledgeBasePanel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
