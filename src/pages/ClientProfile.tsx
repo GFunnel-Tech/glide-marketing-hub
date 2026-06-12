@@ -1109,6 +1109,7 @@ function ClientProfileInner() {
                 />
               </div>
               <div className="space-y-4">
+                <AiInsightsFeed workspaceId={workspaceId} clientId={client.id} showScan={false} limit={20} />
                 <PendingActionsPanel workspaceId={workspaceId} clientId={client.id} />
                 <KnowledgeBasePanel workspaceId={workspaceId} clientId={client.id} clientName={client.name} />
               </div>
