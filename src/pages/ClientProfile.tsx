@@ -43,6 +43,7 @@ import { api } from "@/lib/api";
 import { LeadsByClient } from "@/components/leads/LeadsByClient";
 import { ClientSyncStatus } from "@/components/dashboard/ClientSyncStatus";
 import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
+import { MetaAccountsForClient } from "@/components/integrations/MetaAccountsForClient";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
