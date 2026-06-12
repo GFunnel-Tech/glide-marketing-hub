@@ -42,6 +42,7 @@ import { api } from "@/lib/api";
 import { LeadsByClient } from "@/components/leads/LeadsByClient";
 import { ClientSyncStatus } from "@/components/dashboard/ClientSyncStatus";
 import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { TrackingPanel } from "@/components/tracking/TrackingPanel";
@@ -136,6 +137,14 @@ function SectionCard({
 }
 
 export default function ClientProfile() {
+  return (
+    <ErrorBoundary label="ClientProfile">
+      <ClientProfileInner />
+    </ErrorBoundary>
+  );
+}
+
+function ClientProfileInner() {
   const { id } = useParams();
   const { data: client, isLoading } = useClient(Number(id));
   const { data: allCampaigns = [] } = useCampaigns();
@@ -892,6 +901,7 @@ export default function ClientProfile() {
 
         {/* INTEGRATIONS */}
         <TabsContent value="integrations" className="mt-5 space-y-4">
+          <ErrorBoundary label="Integrations tab">
           {(() => {
             const sorted = [...allClients].sort((a, b) =>
               (a.brand || a.name).localeCompare(b.brand || b.name)
@@ -1008,7 +1018,9 @@ export default function ClientProfile() {
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           </div>
+          </ErrorBoundary>
         </TabsContent>
+
 
         {/* GUARANTEES */}
         <TabsContent value="guarantees" className="mt-5">
