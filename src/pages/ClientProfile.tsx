@@ -1018,7 +1018,9 @@ function ClientProfileInner() {
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           </div>
+          </ErrorBoundary>
         </TabsContent>
+
 
         {/* GUARANTEES */}
         <TabsContent value="guarantees" className="mt-5">
