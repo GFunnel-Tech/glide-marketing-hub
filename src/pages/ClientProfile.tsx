@@ -35,6 +35,7 @@ import {
   BarChart3,
   Inbox,
   Sparkles,
+  CheckSquare,
 } from "lucide-react";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -46,6 +47,7 @@ import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
 import { MetaAccountsForClient } from "@/components/integrations/MetaAccountsForClient";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
+import { ClientTasksTab } from "@/components/clients/ClientTasksTab";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { TrackingPanel } from "@/components/tracking/TrackingPanel";
 import { Textarea } from "@/components/ui/textarea";
@@ -506,6 +508,9 @@ function ClientProfileInner() {
           </TabsTrigger>
           <TabsTrigger value="access" className="gap-1.5">
             <Users className="h-3.5 w-3.5" /> Access
+          </TabsTrigger>
+          <TabsTrigger value="tasks" className="gap-1.5">
+            <CheckSquare className="h-3.5 w-3.5" /> Tasks & Notes
           </TabsTrigger>
           <TabsTrigger value="activity" className="gap-1.5">
             <ActivityIcon className="h-3.5 w-3.5" /> Activity
@@ -1045,6 +1050,10 @@ function ClientProfileInner() {
         </TabsContent>
 
         {/* ACTIVITY */}
+        <TabsContent value="tasks" className="mt-5">
+          <ClientTasksTab clientId={client.id} />
+        </TabsContent>
+
         <TabsContent value="activity" className="mt-5">
           <SectionCard
             title="Activity Log"

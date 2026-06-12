@@ -1,48 +1,80 @@
-# Shared Ad Accounts — Multi-Client Mapping
+## Goal
 
-Today `meta_ad_accounts.client_id` is a single FK, so one ad account can only belong to one client. You need to map several clients to a shared ad account and split performance **by campaign**, with all mapped clients treated equally and each client's spend = sum of their mapped campaigns.
+A dedicated Tasks & Notes section where users can bookmark future actions. On the due date, items automatically appear in Today's task surfaces (Daily Focus widget on the dashboard + a new "Today" tasks panel). Available globally and per-client.
 
-## What changes
+## Data model
 
-### 1. New table: `meta_ad_account_clients` (shared-account membership)
-Many-to-many link between an ad account and the clients that share it. Treated equally — no primary.
+Extend the existing `client_notes` table (already has `due_at`, `assigned_to`, `done`, `reminded_at`, `client_id`, `workspace_id`, `user_id`). Add:
 
-Columns: `ad_account_id`, `client_id`, `workspace_id`, `created_at`, `created_by`. Unique on (`ad_account_id`, `client_id`).
+- `title TEXT` — short headline (existing `content` becomes the body/notes)
+- `kind TEXT NOT NULL DEFAULT 'note'` — `'note' | 'task'` (tasks have scheduling/assignee; notes are free-form)
+- `recurrence JSONB` — `{ freq: 'daily'|'weekly'|'monthly', interval: int, byweekday?: int[], end_at?: timestamptz }`, NULL = one-off
+- `next_due_at TIMESTAMPTZ` — for recurring tasks, the next scheduled occurrence (drives Today queries)
+- `completed_at TIMESTAMPTZ`
+- `priority TEXT` — `'low'|'normal'|'high'`
 
-Rules: workspace members can read; admins/owners can add/remove. When this table has any rows for an account, the account is considered "shared" and `meta_ad_accounts.client_id` is treated as optional/ignored for attribution — campaign-level mapping wins.
+Server trigger on UPDATE: when a recurring task is marked `done`, compute the next occurrence into `next_due_at` and reset `done=false`, `reminded_at=NULL`. One-off tasks just stay `done`.
 
-### 2. Campaign → client mapping (already exists)
-`campaigns.client_id` already drives per-client KPIs. We'll expose a UI to reassign each campaign on a shared account to one of the mapped clients. The Meta sync will:
-- For accounts with no shared mapping → keep current behavior (use `meta_ad_accounts.client_id`).
-- For shared accounts → assign each campaign to its currently mapped client (default: unmapped until a user picks one).
+Reuse `fire_due_client_notes()` (already wired to in-app notifications) for the "Reminder/notification" requirement — it already notifies creator + assignee when `due_at <= now()`.
 
-### 3. Spend / lead allocation
-No allocation math needed — per your choice, each client gets the sum of their mapped campaigns. Account-level rows (`meta_insights_daily`) stay tied to the account; client-level KPIs already roll up from `campaigns` + `meta_leads.client_id`, which both carry `client_id` per row. We'll update the Meta lead router so leads on a shared account route to the client of the form's parent campaign.
+## UI
 
-### 4. UI
+### 1. Global Tasks page (`/tasks`)
+- New top-nav entry "Tasks".
+- Tabs: **Today**, **Upcoming**, **Overdue**, **Notes**, **Completed**.
+- Each row: checkbox, title, client chip (linked), assignee avatar, due date/time, recurrence badge, priority dot.
+- Inline quick-add: title + due date + optional client + assignee.
+- Filters: assignee (me/all), client, priority.
 
-**a. `ClientAccountMapper` (Integrations tab)**
-Add a "Shared with" multi-select on each Meta row. Picking 2+ clients converts the account to shared mode (clears the single `client_id`, inserts membership rows). Picking 1 reverts to single-owner.
+### 2. Per-client Tasks/Notes tab (Client Profile)
+- New "Tasks & Notes" tab inside `ClientProfile`.
+- Same row component, scoped to that client; quick-add pre-fills `client_id`.
 
-**b. New "Campaign mapping" drawer**
-On any shared account row, a "Map campaigns" button opens a drawer listing every campaign on that account with a client dropdown (limited to the mapped clients) + an "Unmapped" option. Saves write to `campaigns.client_id`.
+### 3. Dashboard "Today" surfaces
+- **Daily Focus widget** (existing): inject due tasks (where `(next_due_at ?? due_at)::date <= today AND done=false`) alongside current focus items, sorted by overdue → today → priority.
+- **New "Today's Tasks" panel** on the dashboard: dedicated card listing today's + overdue tasks with quick complete/snooze actions. Sits beside Daily Focus.
 
-**c. Client Profile → Meta Accounts section**
-Show shared accounts with a "Shared with N clients" badge and a link into the campaign mapping drawer scoped to this client.
+### 4. Components
+- `src/pages/Tasks.tsx` — global page
+- `src/components/tasks/TaskList.tsx` — shared list (used by global page, client tab, dashboard panel)
+- `src/components/tasks/TaskRow.tsx` — row with checkbox, recurrence/priority badges, snooze menu
+- `src/components/tasks/TaskQuickAdd.tsx` — title + due + assignee + client + recurrence popover
+- `src/components/tasks/TaskEditDialog.tsx` — full edit (title, notes/markdown, due date+time, assignee, client/campaign link, priority, recurrence)
+- `src/components/dashboard/TodaysTasksPanel.tsx` — dashboard card
+- `src/components/clients/ClientTasksTab.tsx` — per-client tab
+- Hooks in `src/hooks/useTasks.ts` with snake_case→camelCase adapter and TanStack Query + Supabase Realtime subscription on `client_notes`.
 
-### 5. Edge function updates
-- `meta-sync` / `meta-accounts-refresh`: when ingesting campaigns on a shared account, preserve existing `campaigns.client_id` mapping; for new campaigns leave `client_id` NULL until mapped.
-- `meta-leads-sync`: for shared accounts, resolve `client_id` via the lead's `campaign_id → campaigns.client_id` instead of the account's `client_id`.
+### 5. Daily Focus integration
+- Update the daily focus data source to UNION due tasks from `client_notes` so they show in the existing widget without duplicating UI.
 
-## Technical details
+## Migration outline
 
-- Migration creates `meta_ad_account_clients` with the standard 4-step GRANT + RLS pattern (authenticated SELECT, members INSERT/DELETE via `can_write_workspace`).
-- A SQL helper `is_shared_account(ad_account_id uuid) returns boolean` for use in the edge functions and UI queries.
-- `ClientAccountMapper.tsx`: replace the single-client `Select` for Meta rows with a multi-select popover; add the "Map campaigns" affordance.
-- New component `CampaignClientMapper.tsx` (drawer) reading `campaigns` filtered by `workspace_id` + the account's campaign ids (we'll add `campaigns.ad_account_id text` if not present — checking confirms it's not currently on `campaigns`, so we either add it via migration or join through `meta_ads.ad_account_id → campaign_id`). Simplest: add `ad_account_id uuid` to `campaigns` (nullable, indexed) and backfill from `meta_ads`.
-- No frontend allocation math; all per-client metrics continue to come from existing `campaigns` / `meta_leads` queries.
+```sql
+ALTER TABLE public.client_notes
+  ADD COLUMN title TEXT,
+  ADD COLUMN kind TEXT NOT NULL DEFAULT 'note',
+  ADD COLUMN recurrence JSONB,
+  ADD COLUMN next_due_at TIMESTAMPTZ,
+  ADD COLUMN completed_at TIMESTAMPTZ,
+  ADD COLUMN priority TEXT NOT NULL DEFAULT 'normal';
+
+CREATE INDEX client_notes_due_idx
+  ON public.client_notes (workspace_id, COALESCE(next_due_at, due_at))
+  WHERE done = false;
+
+-- Trigger: on complete, advance recurrence
+CREATE OR REPLACE FUNCTION public.advance_recurring_task() ...;
+CREATE TRIGGER trg_advance_recurring_task
+  BEFORE UPDATE ON public.client_notes
+  FOR EACH ROW WHEN (NEW.done = true AND OLD.done = false)
+  EXECUTE FUNCTION public.advance_recurring_task();
+```
+
+Existing RLS on `client_notes` already scopes by workspace/user — no policy changes needed. `fire_due_client_notes()` already covers reminders; update it to also use `COALESCE(next_due_at, due_at)`.
 
 ## Out of scope
-- Proportional/manual spend splits (you chose sum-of-mapped only).
-- Primary-client concept (all equal).
-- Splitting at ad set / ad level (campaign-level only).
+
+- Calendar grid view (list views only for v1)
+- Sub-tasks / checklists
+- Email/SMS reminders (in-app notifications only — already wired)
+- Drag-to-reschedule (use edit dialog)
