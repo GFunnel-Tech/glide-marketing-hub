@@ -35,6 +35,11 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
   const { data: clients, error } = await q;
   if (error) throw new Error(error.message);
 
+  // Clear previous open insights so we don't pile up duplicates each scan
+  let delQ = admin.from("ai_insights").delete().eq("source", "ai-ops-scan").eq("status", "open");
+  if (workspaceId) delQ = delQ.eq("workspace_id", workspaceId);
+  await delQ;
+
   const summary = {
     clients_scanned: 0,
     insights_created: 0,
@@ -51,6 +56,28 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
       const { data: anomalies } = await admin.rpc("detect_client_anomalies", { _client_id: c.id });
       const anomalyArr = Array.isArray(anomalies) ? (anomalies as any[]) : [];
 
+      // --- Red-KPI insights from the existing rollup (works without daily insights data) ---
+      const { data: clientRow } = await admin
+        .from("clients")
+        .select("status,cpl,leads,spend,frequency,form_cvr,true_cpl")
+        .eq("id", c.id)
+        .maybeSingle();
+      const { data: redKpis } = await admin.rpc("client_red_kpis", { _client_id: c.id });
+      const redArr = Array.isArray(redKpis) ? (redKpis as any[]) : [];
+      for (const r of redArr) {
+        const spec = r.spec ?? {};
+        await admin.from("ai_insights").insert({
+          workspace_id: c.workspace_id,
+          client_id: c.id,
+          kind: "recommendation",
+          severity: "warn",
+          title: `${c.name} · ${String(r.key).toUpperCase()} out of threshold (${r.value})`,
+          body: `${r.key} is ${r.value}; configured ${r.direction === "lower" ? "max" : r.direction === "higher" ? "min" : "band"} threshold breached.`,
+          metrics: r,
+          source: "ai-ops-scan",
+        });
+        summary.insights_created++;
+      }
       // --- Anomaly insights ---
       for (const a of anomalyArr) {
         const sev = a.severity ?? "info";
