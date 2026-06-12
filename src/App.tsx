@@ -198,6 +198,7 @@ const App = () => (
                   <Route path="affiliate" element={<AffiliatePage />} />
                   <Route path="forecast" element={<ForecastPage />} />
                   <Route path="tracking" element={<Tracking />} />
+                  <Route path="tasks" element={<Tasks />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="settings/integrations" element={<Navigate to="/settings?tab=integrations" replace />} />
                   <Route path="onboarding" element={<Onboarding />} />
