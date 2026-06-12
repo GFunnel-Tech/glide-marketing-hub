@@ -136,8 +136,9 @@ const Index = () => {
         <div className="lg:col-span-2">
           <PortfolioChart />
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-4">
           <PortfolioHealthCard />
+          {currentWorkspace?.id && <AiInsightsWidget workspaceId={currentWorkspace.id} />}
         </div>
       </div>
 
