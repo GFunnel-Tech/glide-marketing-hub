@@ -51,6 +51,27 @@ Deno.serve(async (req) => {
       .eq("is_active", true);
 
     for (const acc of accounts ?? []) {
+      // Detect shared accounts: if any membership rows exist, attribute leads
+      // by campaign->client mapping rather than the account's single client_id.
+      const { data: members } = await admin
+        .from("meta_ad_account_clients")
+        .select("client_id")
+        .eq("ad_account_id", acc.id);
+      const isShared = (members ?? []).length > 0;
+      let campaignClientMap: Map<string, number | null> | null = null;
+      if (isShared) {
+        const { data: camps } = await admin
+          .from("campaigns")
+          .select("id, client_id")
+          .eq("ad_account_id", acc.id);
+        campaignClientMap = new Map((camps ?? []).map((c: any) => [c.id, c.client_id ?? null]));
+      }
+      const resolveClient = (campaignId: string | null | undefined): number | null => {
+        if (isShared && campaignClientMap && campaignId) {
+          return campaignClientMap.get(campaignId) ?? null;
+        }
+        return acc.client_id ?? null;
+      };
       try {
         // Lead-gen forms live on Pages, not ad accounts. We discover the
         // forms used by this ad account by listing its lead-gen ads, then
