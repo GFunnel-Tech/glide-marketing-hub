@@ -116,6 +116,8 @@ export default function Settings() {
             <TabsContent value="mapping" className="space-y-4">
               {/* Primary: map everything onto one client account */}
               <ClientAccountMapper />
+              {/* Multi-client (shared) ad accounts + per-campaign attribution */}
+              <SharedAdAccountsPanel />
               {/* Suggested auto-matches to review */}
               <MatchReviewQueue />
               {/* Advanced: bulk view by integration type */}
