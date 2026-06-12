@@ -1,6 +1,4 @@
 import { KPIStrip } from "@/components/dashboard/KPIStrip";
-import { AiInsightsWidget } from "@/components/dashboard/AiInsightsWidget";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { ClientHierarchyTable } from "@/components/dashboard/ClientHierarchyTable";
 import { DailyFocus } from "@/components/dashboard/DailyFocus";
 
@@ -37,7 +35,7 @@ function PortfolioHealthCard() {
   ];
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 h-full">
+    <div className="rounded-xl border border-border bg-card p-5">
       <h3 className="text-sm font-semibold text-foreground">Portfolio Health</h3>
       <p className="mt-1 text-xs text-muted-foreground">
         Status breakdown across clients in your workflow.
@@ -69,7 +67,6 @@ function PortfolioHealthCard() {
 
 const Index = () => {
   const { hasConnection, isLoading } = useHasActiveMetaConnection();
-  const { currentWorkspace } = useWorkspace();
   const [focusOpen, setFocusOpen] = useState(false);
 
   const { data: focusItems = [] } = useQuery({
@@ -136,9 +133,8 @@ const Index = () => {
         <div className="lg:col-span-2">
           <PortfolioChart />
         </div>
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1">
           <PortfolioHealthCard />
-          {currentWorkspace?.id && <AiInsightsWidget workspaceId={currentWorkspace.id} />}
         </div>
       </div>
 
