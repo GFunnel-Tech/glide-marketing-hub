@@ -299,19 +299,37 @@ export function useCreateTeamMember() {
       // Provision a REAL login user via the service-role edge function. A direct
       // client-side insert is blocked by the admin-only RLS on team_members and
       // would never create an actual auth account.
-      const { data, error } = await supabase.functions.invoke("workspace-invite-user", {
-        body: { ...input, workspace_id: currentWorkspace.id },
-      });
-      if (error) {
-        // Surface the function's structured error message when present.
-        const msg = (data as any)?.error || error.message || "Failed to create user";
-        throw new Error(msg);
+      // We call the function via raw fetch instead of supabase.functions.invoke
+      // because the Lovable preview iframe's fetch proxy can drop the invoke POST,
+      // surfacing as a generic "Failed to send a request to the Edge Function".
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/workspace-invite-user`;
+      const anon = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: anon,
+            Authorization: `Bearer ${token ?? anon}`,
+          },
+          body: JSON.stringify({ ...input, workspace_id: currentWorkspace.id }),
+        });
+      } catch (e: any) {
+        throw new Error(e?.message || "Network error reaching invite function");
       }
-      if ((data as any)?.error) throw new Error((data as any).error);
+      let data: any = null;
+      try { data = await res.json(); } catch { /* non-JSON */ }
+      if (!res.ok) {
+        throw new Error(data?.error || `Failed to create user (HTTP ${res.status})`);
+      }
+      if (data?.error) throw new Error(data.error);
       return {
-        member: (data as any).member as DbTeamMember,
-        invite_link: (data as any).invite_link ?? null,
-        created: !!(data as any).created,
+        member: data.member as DbTeamMember,
+        invite_link: data.invite_link ?? null,
+        created: !!data.created,
       };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
