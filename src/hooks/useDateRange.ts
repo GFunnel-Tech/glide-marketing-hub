@@ -128,8 +128,14 @@ export function useDateRange() {
   const urlTo = parse(params.get("to"));
 
   const range = useMemo<DateRange>(() => {
+    const today = startOfDay(new Date());
+    // Discard a custom range whose start is in the future — that means stale
+    // state from clock skew or a previously-selected forward range, and would
+    // render an entirely empty dashboard.
+    const isFutureRange = (from: Date) => startOfDay(from).getTime() > today.getTime();
+
     // URL has priority
-    if (urlPreset === "custom" && urlFrom && urlTo) {
+    if (urlPreset === "custom" && urlFrom && urlTo && !isFutureRange(urlFrom)) {
       return { preset: "custom", from: startOfDay(urlFrom), to: endOfDay(urlTo) };
     }
     if (urlPreset && urlPreset !== "custom") {
@@ -140,9 +146,11 @@ export function useDateRange() {
     if (stored?.preset === "custom" && stored.from && stored.to) {
       const f = parse(stored.from)!;
       const t = parse(stored.to)!;
-      return { preset: "custom", from: startOfDay(f), to: endOfDay(t) };
+      if (!isFutureRange(f)) {
+        return { preset: "custom", from: startOfDay(f), to: endOfDay(t) };
+      }
     }
-    if (stored?.preset) {
+    if (stored?.preset && stored.preset !== "custom") {
       const r = resolvePreset(stored.preset);
       return { preset: stored.preset, ...r };
     }
