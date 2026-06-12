@@ -71,17 +71,28 @@ export function MatchReviewQueue() {
         .order("name", { ascending: true }),
       (supabase as any)
         .from("meta_ad_accounts")
-        .select("id")
+        .select("id, client_id")
         .eq("workspace_id", wsId),
     ]);
     if (sErr) toast.error(sErr.message);
     if (cErr) toast.error(cErr.message);
     const ghlIds = new Set((gData || []).map((g: any) => g.location_id));
     const metaIds = new Set((mData || []).map((m: any) => m.id));
+    const linkedMetaIds = new Set((mData || []).filter((m: any) => m.client_id != null).map((m: any) => m.id));
+    const linkedGhlIds = new Set((cData || []).filter((c: any) => c.ghl_location_id).map((c: any) => c.ghl_location_id));
     // Drop suggestions whose source account no longer exists (stale rows from re-syncs)
-    const filtered = (sData || []).filter((s: Suggestion) =>
-      s.source === "meta" ? metaIds.has(s.source_ref) : ghlIds.has(s.source_ref)
-    );
+    // AND drop pending suggestions whose source is already connected to a client.
+    const filtered = (sData || []).filter((s: Suggestion) => {
+      const exists = s.source === "meta" ? metaIds.has(s.source_ref) : ghlIds.has(s.source_ref);
+      if (!exists) return false;
+      if (s.status === "pending") {
+        const alreadyLinked = s.source === "meta"
+          ? linkedMetaIds.has(s.source_ref)
+          : linkedGhlIds.has(s.source_ref);
+        if (alreadyLinked) return false;
+      }
+      return true;
+    });
     // Deduplicate by (source, source_ref) — keep the highest-scoring row
     const dedup = new Map<string, Suggestion>();
     for (const s of filtered) {
