@@ -33,6 +33,8 @@ interface AgentChatProps {
   onClientDetected?: (clientId: number) => void;
   /** Optional resolver used to detect a client name inside the user's message. */
   detectClient?: (text: string) => number | undefined;
+  /** Edge function to invoke. Defaults to "ai-agent" (per-client). Use "ai-ops-chat" for portfolio. */
+  endpoint?: string;
   className?: string;
 }
 
