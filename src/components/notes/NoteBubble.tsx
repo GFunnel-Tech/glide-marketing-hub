@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, StickyNote, Trash2, Plus, Loader2, User, Check } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -74,7 +74,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   const queryKey = ["client-notes", wsId, clientId ?? "ws"];
   const { data: notes = [], isLoading } = useQuery<Note[]>({
     queryKey,
-    enabled: !!wsId && open,
+    enabled: !!wsId,
     queryFn: async () => {
       let q = supabase
         .from("client_notes")
@@ -90,6 +90,29 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
       return (data ?? []) as Note[];
     },
   });
+
+  // Live updates: refetch on any change to client_notes in this workspace/scope.
+  useEffect(() => {
+    if (!wsId) return;
+    const filter =
+      clientId == null
+        ? `workspace_id=eq.${wsId}`
+        : `client_id=eq.${clientId}`;
+    const channel = supabase
+      .channel(`client_notes-${wsId}-${clientId ?? "ws"}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "client_notes", filter },
+        () => {
+          qc.invalidateQueries({ queryKey });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wsId, clientId]);
 
   const dueCount = notes.filter((n) => !n.done).length;
 
