@@ -87,7 +87,7 @@ export function ClientSyncStatus({ clientId }: Props) {
   useEffect(() => {
     if (!wsId) return;
     const ch = supabase
-      .channel(`client_sync_${wsId}_${clientId}`)
+      .channel(`client_sync_${wsId}_${clientId}_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
