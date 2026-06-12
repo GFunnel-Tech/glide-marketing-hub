@@ -55,11 +55,11 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
     try {
       // Run all reads for this client in parallel
       const [forecastRes, anomaliesRes, redKpisRes, guaranteeRes, rulesRes] = await Promise.all([
-        admin.rpc("forecast_client_eom", { _client_id: c.id }),
-        admin.rpc("detect_client_anomalies", { _client_id: c.id }),
-        admin.rpc("client_red_kpis", { _client_id: c.id }),
-        admin.from("client_guarantees").select("id,name,criteria,deadline,status").eq("workspace_id", c.workspace_id).eq("client_id", c.id).eq("status", "active").maybeSingle(),
-        admin.from("client_optimization_rules").select("enabled,max_cpl_multiplier,min_spend_before_pause").eq("client_id", c.id).maybeSingle(),
+        admin.rpc("forecast_client_eom", { _client_id: c.client_id }),
+        admin.rpc("detect_client_anomalies", { _client_id: c.client_id }),
+        admin.rpc("client_red_kpis", { _client_id: c.client_id }),
+        admin.from("client_guarantees").select("id,name,criteria,deadline,status").eq("workspace_id", c.workspace_id).eq("client_id", c.client_id).eq("status", "active").maybeSingle(),
+        admin.from("client_optimization_rules").select("enabled,max_cpl_multiplier,min_spend_before_pause").eq("client_id", c.client_id).maybeSingle(),
       ]);
 
       const forecast = forecastRes.data as any;
@@ -71,7 +71,7 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
       for (const r of redArr) {
         insightsBatch.push({
           workspace_id: c.workspace_id,
-          client_id: c.id,
+          client_id: c.client_id,
           kind: "recommendation",
           severity: "warn",
           title: `${c.name} · ${String(r.key).toUpperCase()} out of threshold (${r.value})`,
@@ -85,7 +85,7 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
         const arrow = a.direction === "up" ? "↑" : "↓";
         insightsBatch.push({
           workspace_id: c.workspace_id,
-          client_id: c.id,
+          client_id: c.client_id,
           kind: "anomaly",
           severity: a.severity ?? "info",
           title: `${c.name} · ${a.metric.toUpperCase()} ${arrow} (${a.recent} vs ${a.baseline} baseline)`,
@@ -108,7 +108,7 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
         }
         insightsBatch.push({
           workspace_id: c.workspace_id,
-          client_id: c.id,
+          client_id: c.client_id,
           kind: "forecast",
           severity: sev,
           title: `${c.name} · EOM forecast`,
@@ -124,7 +124,7 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
         const { data: ads } = await admin
           .from("meta_ads")
           .select("id,ad_id,name,spend,leads,cpl,effective_status")
-          .eq("client_id", c.id)
+          .eq("client_id", c.client_id)
           .eq("effective_status", "ACTIVE")
           .gte("spend", rules.min_spend_before_pause ?? 50)
           .order("cpl", { ascending: false })
@@ -135,7 +135,7 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
             .from("ai_pending_actions")
             .insert({
               workspace_id: c.workspace_id,
-              client_id: c.id,
+              client_id: c.client_id,
               proposed_by: null,
               action_type: "pause_ads",
               payload: { ad_ids: [worst.ad_id], reason: `Auto-paused: CPL $${worst.cpl} (z=${cplAnom.z_score}) on $${worst.spend} spend.` },
@@ -149,7 +149,7 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
             summary.actions_auto_queued++;
             insightsBatch.push({
               workspace_id: c.workspace_id,
-              client_id: c.id,
+              client_id: c.client_id,
               kind: "recommendation",
               severity: "warn",
               title: `${c.name} · Auto-paused worst ad`,
@@ -163,7 +163,7 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
         }
       }
     } catch (e) {
-      summary.errors.push(`client ${c.id}: ${(e as Error).message}`);
+      summary.errors.push(`client ${c.client_id}: ${(e as Error).message}`);
     }
   }
 
