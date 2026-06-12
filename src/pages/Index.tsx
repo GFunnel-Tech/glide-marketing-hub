@@ -1,6 +1,7 @@
 import { KPIStrip } from "@/components/dashboard/KPIStrip";
 import { ClientHierarchyTable } from "@/components/dashboard/ClientHierarchyTable";
 import { DailyFocus } from "@/components/dashboard/DailyFocus";
+import { TodaysTasksPanel } from "@/components/dashboard/TodaysTasksPanel";
 
 import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
 import { QuickActionBar } from "@/components/dashboard/QuickActionBar";
