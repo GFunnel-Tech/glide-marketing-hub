@@ -47,26 +47,29 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
     errors: [] as string[],
   };
 
-  for (const c of (clients ?? []) as ClientRow[]) {
+  const insightsBatch: any[] = [];
+  const list = (clients ?? []) as ClientRow[];
+
+  async function processClient(c: ClientRow) {
     summary.clients_scanned++;
     try {
-      // forecast
-      const { data: forecast } = await admin.rpc("forecast_client_eom", { _client_id: c.id });
-      // anomalies
-      const { data: anomalies } = await admin.rpc("detect_client_anomalies", { _client_id: c.id });
-      const anomalyArr = Array.isArray(anomalies) ? (anomalies as any[]) : [];
+      // Run all reads for this client in parallel
+      const [forecastRes, anomaliesRes, redKpisRes, guaranteeRes, rulesRes] = await Promise.all([
+        admin.rpc("forecast_client_eom", { _client_id: c.id }),
+        admin.rpc("detect_client_anomalies", { _client_id: c.id }),
+        admin.rpc("client_red_kpis", { _client_id: c.id }),
+        admin.from("client_guarantees").select("id,name,criteria,deadline,status").eq("workspace_id", c.workspace_id).eq("client_id", c.id).eq("status", "active").maybeSingle(),
+        admin.from("client_optimization_rules").select("enabled,max_cpl_multiplier,min_spend_before_pause").eq("client_id", c.id).maybeSingle(),
+      ]);
 
-      // --- Red-KPI insights from the existing rollup (works without daily insights data) ---
-      const { data: clientRow } = await admin
-        .from("clients")
-        .select("status,cpl,leads,spend,frequency,form_cvr,true_cpl")
-        .eq("id", c.id)
-        .maybeSingle();
-      const { data: redKpis } = await admin.rpc("client_red_kpis", { _client_id: c.id });
-      const redArr = Array.isArray(redKpis) ? (redKpis as any[]) : [];
+      const forecast = forecastRes.data as any;
+      const anomalyArr = Array.isArray(anomaliesRes.data) ? (anomaliesRes.data as any[]) : [];
+      const redArr = Array.isArray(redKpisRes.data) ? (redKpisRes.data as any[]) : [];
+      const guarantee = guaranteeRes.data as any;
+      const rules = rulesRes.data as any;
+
       for (const r of redArr) {
-        const spec = r.spec ?? {};
-        await admin.from("ai_insights").insert({
+        insightsBatch.push({
           workspace_id: c.workspace_id,
           client_id: c.id,
           kind: "recommendation",
@@ -76,113 +79,86 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
           metrics: r,
           source: "ai-ops-scan",
         });
-        summary.insights_created++;
       }
-      // --- Anomaly insights ---
+
       for (const a of anomalyArr) {
-        const sev = a.severity ?? "info";
         const arrow = a.direction === "up" ? "↑" : "↓";
-        const title = `${c.name} · ${a.metric.toUpperCase()} ${arrow} (${a.recent} vs ${a.baseline} baseline)`;
-        const body =
-          `${a.metric.toUpperCase()} moved ${a.direction} to ${a.recent} ` +
-          `from a 14-day baseline of ${a.baseline} (σ=${a.stddev}, z=${a.z_score}).`;
-        await admin.from("ai_insights").insert({
+        insightsBatch.push({
           workspace_id: c.workspace_id,
           client_id: c.id,
           kind: "anomaly",
-          severity: sev,
-          title,
-          body,
+          severity: a.severity ?? "info",
+          title: `${c.name} · ${a.metric.toUpperCase()} ${arrow} (${a.recent} vs ${a.baseline} baseline)`,
+          body: `${a.metric.toUpperCase()} moved ${a.direction} to ${a.recent} from a 14-day baseline of ${a.baseline} (σ=${a.stddev}, z=${a.z_score}).`,
           metrics: a,
           source: "ai-ops-scan",
         });
-        summary.insights_created++;
       }
 
-      // --- Forecast insight (only if we have leads_30d > 0) ---
-      const f = forecast as any;
-      if (f && f.projected_leads != null) {
-        // compare projected vs guarantee if any
-        const { data: guarantee } = await admin
-          .from("client_guarantees")
-          .select("id,name,criteria,deadline,status")
-          .eq("workspace_id", c.workspace_id)
-          .eq("client_id", c.id)
-          .eq("status", "active")
-          .maybeSingle();
+      if (forecast && forecast.projected_leads != null && Number(forecast.projected_leads) > 0) {
         let sev: "info" | "warn" | "critical" = "info";
-        let body = `Projected end-of-month: $${f.projected_spend} spend, ${f.projected_leads} leads, CPL $${f.projected_cpl ?? "—"}.`;
+        let body = `Projected end-of-month: $${forecast.projected_spend} spend, ${forecast.projected_leads} leads, CPL $${forecast.projected_cpl ?? "—"}.`;
         if (guarantee?.criteria) {
           const crit = guarantee.criteria as any;
-          if (crit?.target_leads && f.projected_leads < crit.target_leads * 0.85) {
+          if (crit?.target_leads && forecast.projected_leads < crit.target_leads * 0.85) {
             sev = "warn";
-            body += ` ⚠️ Pace is ~${Math.round((f.projected_leads / crit.target_leads) * 100)}% of the ${crit.target_leads}-lead guarantee.`;
+            body += ` ⚠️ Pace is ~${Math.round((forecast.projected_leads / crit.target_leads) * 100)}% of the ${crit.target_leads}-lead guarantee.`;
           }
-          if (crit?.target_leads && f.projected_leads < crit.target_leads * 0.6) sev = "critical";
+          if (crit?.target_leads && forecast.projected_leads < crit.target_leads * 0.6) sev = "critical";
         }
-        await admin.from("ai_insights").insert({
+        insightsBatch.push({
           workspace_id: c.workspace_id,
           client_id: c.id,
           kind: "forecast",
           severity: sev,
           title: `${c.name} · EOM forecast`,
           body,
-          metrics: f,
+          metrics: forecast,
           source: "ai-ops-scan",
         });
-        summary.insights_created++;
       }
 
-      // --- Safe auto-action: pause worst ad when CPL > 3x baseline AND spend last 3d ≥ $50 ---
+      // Safe auto-action
       const cplAnom = anomalyArr.find((a) => a.metric === "cpl" && a.direction === "up" && a.severity === "critical");
-      if (cplAnom && (c.spend_7d ?? 0) >= 50) {
-        const { data: rules } = await admin
-          .from("client_optimization_rules")
-          .select("enabled,max_cpl_multiplier,min_spend_before_pause")
+      if (cplAnom && (c.spend_7d ?? 0) >= 50 && rules?.enabled) {
+        const { data: ads } = await admin
+          .from("meta_ads")
+          .select("id,ad_id,name,spend,leads,cpl,effective_status")
           .eq("client_id", c.id)
-          .maybeSingle();
-
-        if (rules?.enabled) {
-          // find the worst ad
-          const { data: ads } = await admin
-            .from("meta_ads")
-            .select("id,ad_id,name,spend,leads,cpl,effective_status")
-            .eq("client_id", c.id)
-            .eq("effective_status", "ACTIVE")
-            .gte("spend", rules.min_spend_before_pause ?? 50)
-            .order("cpl", { ascending: false })
-            .limit(1);
-          const worst = (ads ?? [])[0];
-          if (worst) {
-            const { data: action } = await admin
-              .from("ai_pending_actions")
-              .insert({
-                workspace_id: c.workspace_id,
-                client_id: c.id,
-                proposed_by: null,
-                action_type: "pause_ads",
-                payload: { ad_ids: [worst.ad_id], reason: `Auto-paused: CPL $${worst.cpl} (z=${cplAnom.z_score}) on $${worst.spend} spend.` },
-                reasoning: `AI Operations auto-pause: client-level CPL spiked to ${cplAnom.recent} (z=${cplAnom.z_score}); worst ad "${worst.name}" was running CPL $${worst.cpl}.`,
-                status: "approved",
-                approved_at: new Date().toISOString(),
-              })
-              .select("id")
-              .single();
-            if (action) {
-              summary.actions_auto_queued++;
-              await admin.from("ai_insights").insert({
-                workspace_id: c.workspace_id,
-                client_id: c.id,
-                kind: "recommendation",
-                severity: "warn",
-                title: `${c.name} · Auto-paused worst ad`,
-                body: `Paused "${worst.name}" (CPL $${worst.cpl}). Account CPL z-score ${cplAnom.z_score}.`,
-                metrics: { ad: worst, anomaly: cplAnom },
-                source: "ai-ops-scan",
-                related_action_id: action.id,
-                status: "acted_on",
-              });
-            }
+          .eq("effective_status", "ACTIVE")
+          .gte("spend", rules.min_spend_before_pause ?? 50)
+          .order("cpl", { ascending: false })
+          .limit(1);
+        const worst = (ads ?? [])[0];
+        if (worst) {
+          const { data: action } = await admin
+            .from("ai_pending_actions")
+            .insert({
+              workspace_id: c.workspace_id,
+              client_id: c.id,
+              proposed_by: null,
+              action_type: "pause_ads",
+              payload: { ad_ids: [worst.ad_id], reason: `Auto-paused: CPL $${worst.cpl} (z=${cplAnom.z_score}) on $${worst.spend} spend.` },
+              reasoning: `AI Operations auto-pause: client-level CPL z=${cplAnom.z_score}; worst ad "${worst.name}" CPL $${worst.cpl}.`,
+              status: "approved",
+              approved_at: new Date().toISOString(),
+            })
+            .select("id")
+            .single();
+          if (action) {
+            summary.actions_auto_queued++;
+            insightsBatch.push({
+              workspace_id: c.workspace_id,
+              client_id: c.id,
+              kind: "recommendation",
+              severity: "warn",
+              title: `${c.name} · Auto-paused worst ad`,
+              body: `Paused "${worst.name}" (CPL $${worst.cpl}). Account CPL z=${cplAnom.z_score}.`,
+              metrics: { ad: worst, anomaly: cplAnom },
+              source: "ai-ops-scan",
+              related_action_id: action.id,
+              status: "acted_on",
+            });
           }
         }
       }
@@ -190,6 +166,20 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
       summary.errors.push(`client ${c.id}: ${(e as Error).message}`);
     }
   }
+
+  // Process clients in parallel chunks of 10
+  const CHUNK = 10;
+  for (let i = 0; i < list.length; i += CHUNK) {
+    await Promise.all(list.slice(i, i + CHUNK).map(processClient));
+  }
+
+  // Bulk insert all insights
+  if (insightsBatch.length > 0) {
+    const { error: insErr } = await admin.from("ai_insights").insert(insightsBatch);
+    if (insErr) summary.errors.push(`insights insert: ${insErr.message}`);
+    else summary.insights_created = insightsBatch.length;
+  }
+
   return summary;
 }
 
