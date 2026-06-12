@@ -319,7 +319,8 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
     .from("meta_ad_account_clients")
     .select("client_id")
     .eq("ad_account_id", acc.id);
-  const isShared = (members ?? []).length > 0;
+  const memberClientIds: number[] = (members ?? []).map((r: any) => r.client_id);
+  const isShared = memberClientIds.length > 0;
   const { data: existing } = await admin
     .from("campaigns")
     .select("id, client_id")
@@ -327,6 +328,9 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
   const existingClientById = new Map<string, number | null>(
     (existing ?? []).map((r: any) => [r.id, r.client_id ?? null]),
   );
+  // First member is the default target for newly-discovered campaigns on a shared
+  // account, so they show up in the mapping UI ready to be reassigned.
+  const defaultSharedClientId = memberClientIds[0] ?? null;
 
   // 3. Upsert into the existing public.campaigns table
   const rows = campaigns.map((c: any) => {
@@ -342,11 +346,19 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
       "IN_PROCESS",
     ]);
     const issues_status = ISSUE_STATUSES.has(c.effective_status) ? c.effective_status : null;
-    // Attribution: shared accounts keep prior mapping (or null if unmapped);
-    // single-owner accounts inherit the owner client_id.
-    const client_id = isShared
-      ? (existingClientById.has(c.id) ? existingClientById.get(c.id)! : null)
-      : acc.client_id;
+    // Attribution:
+    //  - shared accounts → keep existing mapping; for brand-new campaigns, fall
+    //    back to the first member client so the row is insertable and visible
+    //    in the campaign mapping UI for reassignment.
+    //  - single-owner accounts → inherit owner client_id.
+    let client_id: number | null;
+    if (isShared) {
+      client_id = existingClientById.has(c.id)
+        ? existingClientById.get(c.id)!
+        : defaultSharedClientId;
+    } else {
+      client_id = acc.client_id;
+    }
     return {
       id: c.id,
       client_id,
@@ -369,12 +381,7 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
     };
   });
 
-  // Filter out shared+unmapped campaigns where client_id is required NOT NULL on the table.
-  // campaigns.client_id is NOT NULL — we cannot insert a row without a client.
-  // For shared accounts with no existing mapping, skip the upsert and let the user
-  // map the campaign in the UI; once mapped, the next sync will update its metrics.
   const insertable = rows.filter((r) => r.client_id != null);
-
   if (insertable.length) {
     const { error } = await admin.from("campaigns").upsert(insertable, { onConflict: "id" });
     if (error) throw new Error("campaigns upsert: " + error.message);
