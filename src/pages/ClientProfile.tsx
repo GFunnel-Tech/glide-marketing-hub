@@ -509,6 +509,9 @@ function ClientProfileInner() {
           <TabsTrigger value="access" className="gap-1.5">
             <Users className="h-3.5 w-3.5" /> Access
           </TabsTrigger>
+          <TabsTrigger value="tasks" className="gap-1.5">
+            <CheckSquare className="h-3.5 w-3.5" /> Tasks & Notes
+          </TabsTrigger>
           <TabsTrigger value="activity" className="gap-1.5">
             <ActivityIcon className="h-3.5 w-3.5" /> Activity
           </TabsTrigger>
