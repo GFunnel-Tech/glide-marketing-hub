@@ -173,7 +173,7 @@ export function useTasks(opts: UseTasksOptions = {}) {
 
   const update = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<TaskRow> }) => {
-      const dbPatch: Record<string, any> = {};
+      const dbPatch: any = {};
       if ("title" in patch) dbPatch.title = patch.title;
       if ("content" in patch) dbPatch.content = patch.content;
       if ("kind" in patch) dbPatch.kind = patch.kind;
