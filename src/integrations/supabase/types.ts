@@ -69,6 +69,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "account_match_suggestions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "account_match_suggestions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -118,6 +125,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "activity_log_workspace_id_fkey"
@@ -178,6 +192,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "ad_accounts_workspace_id_fkey"
@@ -300,6 +321,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ad_drafts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "ad_drafts_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -355,6 +383,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "ad_templates_workspace_id_fkey"
@@ -420,6 +455,89 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "ai_action_audit_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_insights: {
+        Row: {
+          body: string | null
+          client_id: number | null
+          created_at: string
+          dismissed_at: string | null
+          dismissed_by: string | null
+          id: string
+          kind: string
+          metrics: Json
+          reasoning: string | null
+          related_action_id: string | null
+          severity: string
+          source: string
+          status: string
+          title: string
+          workspace_id: string
+        }
+        Insert: {
+          body?: string | null
+          client_id?: number | null
+          created_at?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          id?: string
+          kind: string
+          metrics?: Json
+          reasoning?: string | null
+          related_action_id?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          title: string
+          workspace_id: string
+        }
+        Update: {
+          body?: string | null
+          client_id?: number | null
+          created_at?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          id?: string
+          kind?: string
+          metrics?: Json
+          reasoning?: string | null
+          related_action_id?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          title?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_insights_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ai_insights_related_action_id_fkey"
+            columns: ["related_action_id"]
+            isOneToOne: false
+            referencedRelation: "ai_pending_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_insights_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -630,6 +748,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "campaigns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "campaigns_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -836,6 +961,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_notes_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -894,6 +1026,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_optimization_rules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_optimization_rules_workspace_id_fkey"
@@ -966,6 +1105,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_optimization_schedules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_optimization_schedules_workspace_id_fkey"
@@ -1247,6 +1393,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_stripe_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "client_stripe_accounts_workspace_id_fkey"
@@ -2542,6 +2695,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "leads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "leads_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -2793,6 +2953,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "meta_ad_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "meta_ad_accounts_connection_id_fkey"
             columns: ["connection_id"]
             isOneToOne: false
@@ -3019,6 +3186,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_form_pipeline_map_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "meta_form_pipeline_map_workspace_id_fkey"
@@ -3523,6 +3697,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "onboarding_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "onboarding_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -3981,6 +4162,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "reports_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "reports_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -4074,6 +4262,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stripe_charges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "stripe_charges_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -4123,6 +4318,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stripe_connect_oauth_states_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "stripe_connect_oauth_states_workspace_id_fkey"
@@ -4287,6 +4489,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tracking_containers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "tracking_containers_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -4353,6 +4562,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tracking_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "tracking_events_container_id_fkey"
             columns: ["container_id"]
             isOneToOne: false
@@ -4415,6 +4631,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_pixels_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
           },
           {
             foreignKeyName: "tracking_pixels_container_id_fkey"
@@ -4855,7 +5078,71 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_stripe_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
             foreignKeyName: "client_stripe_accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_client_kpi_snapshot: {
+        Row: {
+          brand: string | null
+          client_id: number | null
+          cpl_30d: number | null
+          cpl_7d: number | null
+          cpl_wow_pct: number | null
+          cpm_7d: number | null
+          ctr_7d: number | null
+          current_cpl: number | null
+          current_leads: number | null
+          current_spend: number | null
+          frequency_7d: number | null
+          leads_30d: number | null
+          leads_7d: number | null
+          leads_prev7: number | null
+          name: string | null
+          red_kpis: Json | null
+          spend_30d: number | null
+          spend_7d: number | null
+          spend_prev7: number | null
+          status: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_portfolio_snapshot: {
+        Row: {
+          green_clients: number | null
+          leads_30d: number | null
+          median_cpl_30d: number | null
+          p90_cpl_30d: number | null
+          portfolio_cpl_30d: number | null
+          red_clients: number | null
+          spend_30d: number | null
+          total_clients: number | null
+          workspace_id: string | null
+          yellow_clients: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -4879,7 +5166,9 @@ export type Database = {
       }
       client_red_kpis: { Args: { _client_id: number }; Returns: Json }
       compute_client_status: { Args: { _client_id: number }; Returns: string }
+      detect_client_anomalies: { Args: { _client_id: number }; Returns: Json }
       fire_due_client_notes: { Args: never; Returns: number }
+      forecast_client_eom: { Args: { _client_id: number }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

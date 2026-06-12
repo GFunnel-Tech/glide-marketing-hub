@@ -33,6 +33,8 @@ interface AgentChatProps {
   onClientDetected?: (clientId: number) => void;
   /** Optional resolver used to detect a client name inside the user's message. */
   detectClient?: (text: string) => number | undefined;
+  /** Edge function to invoke. Defaults to "ai-agent" (per-client). Use "ai-ops-chat" for portfolio. */
+  endpoint?: string;
   className?: string;
 }
 
@@ -52,6 +54,7 @@ export function AgentChat({
   suggestions = DEFAULT_SUGGESTIONS,
   onClientDetected,
   detectClient,
+  endpoint = "ai-agent",
   className,
 }: AgentChatProps) {
   const qc = useQueryClient();
@@ -80,7 +83,7 @@ export function AgentChat({
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke("ai-agent", {
+      const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
           workspaceId,
           clientId: effectiveClientId,
