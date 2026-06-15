@@ -638,7 +638,7 @@ export function ClientHierarchyTable() {
               )}
 
               {!isLoading && visibleClients.length === 0 && (
-                <tr><td colSpan={showCompanyCol ? 14 : 13} className="py-10 text-center text-muted-foreground text-sm">No clients match your filters.</td></tr>
+                <tr><td colSpan={99} className="py-10 text-center text-muted-foreground text-sm">No clients match your filters.</td></tr>
               )}
 
               {!isLoading && visibleClients.map((client) => {
@@ -852,7 +852,7 @@ export function ClientHierarchyTable() {
                     {/* Campaign rows */}
                     {isOpen && clientCampaigns.length === 0 && (
                       <tr className="border-b border-border">
-                        <td colSpan={showCompanyCol ? 14 : 13} className="px-12 py-6 text-xs text-muted-foreground">
+                        <td colSpan={99} className="px-12 py-6 text-xs text-muted-foreground">
                           No campaigns for this client.
                           <Button variant="link" size="sm" className="ml-1 h-auto p-0 text-xs"
                             onClick={() => navigate(clientPath(client.id, "?tab=integrations"))}>
