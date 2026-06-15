@@ -4908,6 +4908,47 @@ export type Database = {
         }
         Relationships: []
       }
+      user_table_views: {
+        Row: {
+          columns: Json
+          created_at: string
+          density: string
+          id: string
+          table_key: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          columns?: Json
+          created_at?: string
+          density?: string
+          id?: string
+          table_key: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          columns?: Json
+          created_at?: string
+          density?: string
+          id?: string
+          table_key?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_table_views_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_transactions: {
         Row: {
           amount: number

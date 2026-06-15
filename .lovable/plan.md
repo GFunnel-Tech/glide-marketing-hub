@@ -1,38 +1,76 @@
-## Problems
+# Plan — Fix empty rollups + Customizable columns
 
-1. **Campaign rows don't react to the date picker.** In `src/pages/ClientProfile.tsx`, the merge of snapshot campaigns + range insights keeps the snapshot's lifetime `spend`/`leads`/`cpl`/`cpm` when a campaign has no rows in the selected range. That's why Sean Riley / Capital Concepts shows the same numbers regardless of the chosen range.
+## Problem 1 — Client rows show "—" while campaigns have data
 
-2. **Averages include past (paused/ended) campaigns.** The KPI aggregation iterates every campaign for the client, so paused campaigns dilute the live CPL / CPM / Frequency tiles.
+Client rows on the Dashboard read from the snapshot fields on `clients` (`cpl`, `cpm`, `leads`, `spend`, `frequency`, `form_cvr`). For some clients the snapshot was never recomputed after the recent sync, so campaign‑level insights exist in `meta_insights_granular_daily` but the parent row still shows "—".
 
-## Fix
+**Fix (two layers, applied together)**
 
-### 1. Make every campaign row range-driven (`src/pages/ClientProfile.tsx`, ~lines 202–253)
+1. **Live rollup in the UI (instant)** — `ClientTable` (Dashboard) and `ClientHierarchyTable` will compute CPL/CPM/Spend/Leads/Freq/Above‑640 the same way `ClientProfile` already does: aggregate **active** campaigns from `useClientsRangeMetrics` for the selected date range, fall back to snapshot only when no range data exists. This removes the "—" without waiting for any backend job.
+2. **Snapshot refresh button (durable)** — Add a small "Refresh snapshot" item inside the existing "Sync All Accounts" action in Quick Actions, and a per‑row "Recompute" option in the row menu. Both call a new edge function `client-snapshot-recompute` that:
+   - Sums last‑30‑day insights from `meta_insights_granular_daily` per client (active campaigns only).
+   - Updates `clients.cpl/cpm/spend/leads/frequency`.
+   - Returns a summary toast.
 
-For each snapshot campaign, if there is no matching `meta_insights_granular_daily` row in the selected range, render the row as zeroed for the date-range metrics (spend, leads, trueLeads, cpl, trueCpl, cpm, impressions, clicks, ctr, frequency, adSets count, ads count, adSetsDetail). Keep snapshot-only fields that aren't time-bound (name, status, doubleCount flag, issuesStatus).
+## Problem 2 — Customizable columns (Both tables, per user, built‑in + custom KPIs + ad‑hoc formula)
 
-Result: switching the date picker recomputes spend/leads/CPL per campaign from `meta_insights_granular_daily` only. Campaigns with no activity in the range show $0 / 0 leads instead of lifetime totals.
+### New DB
 
-### 2. Restrict KPI averages to active campaigns (same file, ~lines 254–281)
+```sql
+create table public.user_table_views (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  table_key text not null,            -- 'clients' | 'client_campaigns'
+  columns jsonb not null default '[]',-- ordered array of column configs
+  updated_at timestamptz default now(),
+  unique (user_id, workspace_id, table_key)
+);
+-- + GRANTs, RLS (own row only), updated_at trigger
+```
 
-Change the `agg` reducer to iterate `activeCampaigns` instead of `clientCampaigns`. This affects:
-- `liveSpend`, `liveLeads`, `liveCpl`
-- `liveCpm` (spend-weighted across active)
-- `liveFreq` (spend-weighted across active)
-- `hasLiveData` gate
+Column config shape:
+```json
+{ "id": "cpl", "kind": "builtin" }
+{ "id": "kpi_abc", "kind": "custom_kpi", "kpi_id": "uuid" }
+{ "id": "f_1", "kind": "formula", "label": "Adj CPL", "expr": "spend/leads*1.2", "format": "currency" }
+```
 
-Header / KPI tiles (CPL, Leads MTD, CPM, Frequency) then reflect active campaigns only. Paused/ended campaigns still appear in the Campaigns tab list with their own (now range-correct) numbers, but no longer dilute the client-level averages.
+### New components
 
-### 3. Same active-only treatment for the Campaigns tab header counter
+- `src/components/common/ColumnPicker.tsx` — popover with three tabs:
+  - **Built‑in**: checkbox list of available KPIs for this table.
+  - **Custom KPIs**: pulled from existing `custom_kpis` table.
+  - **Formula**: label + expression input, format dropdown (number/currency/percent). Reuses `src/lib/kpiFormula.ts` to validate.
+- `src/hooks/useTableColumns.ts` — load/save/reorder columns in `user_table_views`, optimistic cache.
+- `src/lib/columnRenderers.ts` — given a row + column config, return formatted value; resolves built‑ins from row fields, custom KPIs from `custom_kpi_evaluations`, formulas via `evaluateKpiFormula(expr, row)`.
 
-The "X active · Y total" line stays informational; no change needed.
+### Wiring
+
+- `ClientTable` (Dashboard): render fixed columns (Status, Company) + dynamic columns from hook. "+ Columns" button opens picker.
+- Campaigns table inside `ClientProfile` (rows for Campaign/Ad set/Ad): same picker, separate `table_key='client_campaigns'`. Built‑ins offered: Impressions, Clicks, CTR, Spend, Leads, CPL, True CPL, CPM, Freq, Above 640, Below 640, Quality %, Reach.
+
+### Sheet polish
+
+- Sticky first two columns (Status, Company / Status, Name).
+- Right‑align numeric columns, monospace tabular numbers.
+- Compact density toggle (rows of 32px) — saved alongside column prefs.
+- Drag‑to‑reorder column chips in the picker.
+- Empty‑cell shows "—" only when **both** range data AND snapshot are zero; otherwise show the value (kills most of the false "—").
+
+## Out of scope (not changing)
+
+- Date range picker behavior, KPI threshold colors, Custom KPI definitions UI (already exists at `/settings`).
+
+## Technical details
+
+- New edge function: `supabase/functions/client-snapshot-recompute/index.ts` — accepts `{ workspaceId, clientId? }`, runs the rollup SQL with the service role, updates `clients`.
+- New migration: `user_table_views` + GRANTs + RLS policies (`auth.uid() = user_id`).
+- Reuse: `src/lib/kpiFormula.ts` (formula eval), `useCustomKpis`, `useClientsRangeMetrics`, `useClientCampaignsRange`.
+- TanStack Query keys: `["user-table-view", table_key]`, invalidated on save.
+- No changes to Supabase auto‑gen files.
 
 ## Files touched
 
-- `src/pages/ClientProfile.tsx` — merge logic + KPI aggregation.
-
-No schema, hook, or other component changes required. `useClientCampaignsRange` already returns range-correct data; we just stop falling back to snapshot lifetime numbers.
-
-## Verification
-
-- Open Capital Connecpts / Sean Riley, switch date range between `Today`, `Last 7 days`, `Last 30 days`, and a custom historical range — per-campaign spend/leads/CPL change.
-- Pause a campaign (or pick a client with paused campaigns) and confirm CPL/CPM/Frequency tiles match the active-campaign math.
+- New: `supabase/migrations/<ts>_user_table_views.sql`, `supabase/functions/client-snapshot-recompute/index.ts`, `src/components/common/ColumnPicker.tsx`, `src/hooks/useTableColumns.ts`, `src/lib/columnRenderers.ts`.
+- Edit: `src/components/dashboard/ClientTable.tsx`, `src/components/dashboard/ClientHierarchyTable.tsx`, `src/components/dashboard/QuickActionBar.tsx`, `src/pages/ClientProfile.tsx` (campaigns table section).
