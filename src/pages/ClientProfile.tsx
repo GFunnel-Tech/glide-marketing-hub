@@ -200,15 +200,34 @@ function ClientProfileInner() {
     return <div className="p-10 text-center text-muted-foreground">Client not found</div>;
 
   const baseCampaigns = allCampaigns.filter((c) => c.clientId === String(client.id));
-  // Merge range insights on top of the static campaign rows so spend/leads/CPL react
-  // to the date picker. Campaigns with range activity but no static row still show up.
+  // Range-driven: per-campaign metrics come ONLY from meta_insights_granular_daily for
+  // the selected date range. Snapshot rows with no range activity render as zeroed for
+  // time-bound metrics but remain visible so the user can still see them in the list.
   const rangeMap = new Map<string, RangeCampaignRow>();
   rangeCampaignsData.forEach((rc) => rangeMap.set(rc.id, rc));
   const baseIds = new Set(baseCampaigns.map((b) => b.id));
   const clientCampaigns = [
     ...baseCampaigns.map((b) => {
       const r = rangeMap.get(b.id);
-      if (!r) return { ...b, impressions: 0, clicks: 0, ctr: 0, adSetsDetail: [] as RangeCampaignRow["adSets"] };
+      if (!r) {
+        // No activity in selected range → zero out time-bound metrics, keep identity/status.
+        return {
+          ...b,
+          spend: 0,
+          leads: 0,
+          trueLeads: 0,
+          cpl: 0,
+          trueCpl: 0,
+          cpm: 0,
+          impressions: 0,
+          clicks: 0,
+          ctr: 0,
+          frequency: 0,
+          adSets: 0,
+          ads: 0,
+          adSetsDetail: [] as RangeCampaignRow["adSets"],
+        };
+      }
       return {
         ...b,
         spend: r.spend,
@@ -220,9 +239,9 @@ function ClientProfileInner() {
         impressions: r.impressions,
         clicks: r.clicks,
         ctr: r.impressions > 0 ? (r.clicks / r.impressions) * 100 : 0,
-        frequency: r.frequency || b.frequency,
-        adSets: r.adSets.length || b.adSets,
-        ads: r.adSets.reduce((n, s) => n + s.ads.length, 0) || b.ads,
+        frequency: r.frequency || 0,
+        adSets: r.adSets.length,
+        ads: r.adSets.reduce((n, s) => n + s.ads.length, 0),
         adSetsDetail: r.adSets,
       };
     }),
@@ -259,8 +278,9 @@ function ClientProfileInner() {
       ? clientActivity
       : clientActivity.filter((a) => a.type === actFilter.toLowerCase());
 
-  // Live aggregates from range data (Meta insights). Fall back to client snapshot.
-  const agg = clientCampaigns.reduce(
+  // Live aggregates from range data (Meta insights), ACTIVE campaigns only.
+  // Paused/ended campaigns still appear in the list below but don't dilute averages.
+  const agg = activeCampaigns.reduce(
     (a, c: any) => {
       a.spend += Number(c.spend) || 0;
       a.leads += Number(c.trueLeads ?? c.leads) || 0;
@@ -279,6 +299,7 @@ function ClientProfileInner() {
   const liveCpm = hasLiveData && agg.spend > 0 ? agg.cpmSum / agg.spend : client.cpm;
   const liveFreq = hasLiveData && agg.spend > 0 ? agg.freqSum / agg.spend : client.frequency;
   const liveCvr = client.formCvr; // form CVR still snapshot-sourced
+
 
   const isMetaMapped = !!(metaMappedSet?.has(client.id) || client.bmId);
   const isGhlMapped = !!client.ghlLocationId;

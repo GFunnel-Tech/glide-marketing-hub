@@ -1,80 +1,38 @@
-## Goal
+## Problems
 
-A dedicated Tasks & Notes section where users can bookmark future actions. On the due date, items automatically appear in Today's task surfaces (Daily Focus widget on the dashboard + a new "Today" tasks panel). Available globally and per-client.
+1. **Campaign rows don't react to the date picker.** In `src/pages/ClientProfile.tsx`, the merge of snapshot campaigns + range insights keeps the snapshot's lifetime `spend`/`leads`/`cpl`/`cpm` when a campaign has no rows in the selected range. That's why Sean Riley / Capital Concepts shows the same numbers regardless of the chosen range.
 
-## Data model
+2. **Averages include past (paused/ended) campaigns.** The KPI aggregation iterates every campaign for the client, so paused campaigns dilute the live CPL / CPM / Frequency tiles.
 
-Extend the existing `client_notes` table (already has `due_at`, `assigned_to`, `done`, `reminded_at`, `client_id`, `workspace_id`, `user_id`). Add:
+## Fix
 
-- `title TEXT` — short headline (existing `content` becomes the body/notes)
-- `kind TEXT NOT NULL DEFAULT 'note'` — `'note' | 'task'` (tasks have scheduling/assignee; notes are free-form)
-- `recurrence JSONB` — `{ freq: 'daily'|'weekly'|'monthly', interval: int, byweekday?: int[], end_at?: timestamptz }`, NULL = one-off
-- `next_due_at TIMESTAMPTZ` — for recurring tasks, the next scheduled occurrence (drives Today queries)
-- `completed_at TIMESTAMPTZ`
-- `priority TEXT` — `'low'|'normal'|'high'`
+### 1. Make every campaign row range-driven (`src/pages/ClientProfile.tsx`, ~lines 202–253)
 
-Server trigger on UPDATE: when a recurring task is marked `done`, compute the next occurrence into `next_due_at` and reset `done=false`, `reminded_at=NULL`. One-off tasks just stay `done`.
+For each snapshot campaign, if there is no matching `meta_insights_granular_daily` row in the selected range, render the row as zeroed for the date-range metrics (spend, leads, trueLeads, cpl, trueCpl, cpm, impressions, clicks, ctr, frequency, adSets count, ads count, adSetsDetail). Keep snapshot-only fields that aren't time-bound (name, status, doubleCount flag, issuesStatus).
 
-Reuse `fire_due_client_notes()` (already wired to in-app notifications) for the "Reminder/notification" requirement — it already notifies creator + assignee when `due_at <= now()`.
+Result: switching the date picker recomputes spend/leads/CPL per campaign from `meta_insights_granular_daily` only. Campaigns with no activity in the range show $0 / 0 leads instead of lifetime totals.
 
-## UI
+### 2. Restrict KPI averages to active campaigns (same file, ~lines 254–281)
 
-### 1. Global Tasks page (`/tasks`)
-- New top-nav entry "Tasks".
-- Tabs: **Today**, **Upcoming**, **Overdue**, **Notes**, **Completed**.
-- Each row: checkbox, title, client chip (linked), assignee avatar, due date/time, recurrence badge, priority dot.
-- Inline quick-add: title + due date + optional client + assignee.
-- Filters: assignee (me/all), client, priority.
+Change the `agg` reducer to iterate `activeCampaigns` instead of `clientCampaigns`. This affects:
+- `liveSpend`, `liveLeads`, `liveCpl`
+- `liveCpm` (spend-weighted across active)
+- `liveFreq` (spend-weighted across active)
+- `hasLiveData` gate
 
-### 2. Per-client Tasks/Notes tab (Client Profile)
-- New "Tasks & Notes" tab inside `ClientProfile`.
-- Same row component, scoped to that client; quick-add pre-fills `client_id`.
+Header / KPI tiles (CPL, Leads MTD, CPM, Frequency) then reflect active campaigns only. Paused/ended campaigns still appear in the Campaigns tab list with their own (now range-correct) numbers, but no longer dilute the client-level averages.
 
-### 3. Dashboard "Today" surfaces
-- **Daily Focus widget** (existing): inject due tasks (where `(next_due_at ?? due_at)::date <= today AND done=false`) alongside current focus items, sorted by overdue → today → priority.
-- **New "Today's Tasks" panel** on the dashboard: dedicated card listing today's + overdue tasks with quick complete/snooze actions. Sits beside Daily Focus.
+### 3. Same active-only treatment for the Campaigns tab header counter
 
-### 4. Components
-- `src/pages/Tasks.tsx` — global page
-- `src/components/tasks/TaskList.tsx` — shared list (used by global page, client tab, dashboard panel)
-- `src/components/tasks/TaskRow.tsx` — row with checkbox, recurrence/priority badges, snooze menu
-- `src/components/tasks/TaskQuickAdd.tsx` — title + due + assignee + client + recurrence popover
-- `src/components/tasks/TaskEditDialog.tsx` — full edit (title, notes/markdown, due date+time, assignee, client/campaign link, priority, recurrence)
-- `src/components/dashboard/TodaysTasksPanel.tsx` — dashboard card
-- `src/components/clients/ClientTasksTab.tsx` — per-client tab
-- Hooks in `src/hooks/useTasks.ts` with snake_case→camelCase adapter and TanStack Query + Supabase Realtime subscription on `client_notes`.
+The "X active · Y total" line stays informational; no change needed.
 
-### 5. Daily Focus integration
-- Update the daily focus data source to UNION due tasks from `client_notes` so they show in the existing widget without duplicating UI.
+## Files touched
 
-## Migration outline
+- `src/pages/ClientProfile.tsx` — merge logic + KPI aggregation.
 
-```sql
-ALTER TABLE public.client_notes
-  ADD COLUMN title TEXT,
-  ADD COLUMN kind TEXT NOT NULL DEFAULT 'note',
-  ADD COLUMN recurrence JSONB,
-  ADD COLUMN next_due_at TIMESTAMPTZ,
-  ADD COLUMN completed_at TIMESTAMPTZ,
-  ADD COLUMN priority TEXT NOT NULL DEFAULT 'normal';
+No schema, hook, or other component changes required. `useClientCampaignsRange` already returns range-correct data; we just stop falling back to snapshot lifetime numbers.
 
-CREATE INDEX client_notes_due_idx
-  ON public.client_notes (workspace_id, COALESCE(next_due_at, due_at))
-  WHERE done = false;
+## Verification
 
--- Trigger: on complete, advance recurrence
-CREATE OR REPLACE FUNCTION public.advance_recurring_task() ...;
-CREATE TRIGGER trg_advance_recurring_task
-  BEFORE UPDATE ON public.client_notes
-  FOR EACH ROW WHEN (NEW.done = true AND OLD.done = false)
-  EXECUTE FUNCTION public.advance_recurring_task();
-```
-
-Existing RLS on `client_notes` already scopes by workspace/user — no policy changes needed. `fire_due_client_notes()` already covers reminders; update it to also use `COALESCE(next_due_at, due_at)`.
-
-## Out of scope
-
-- Calendar grid view (list views only for v1)
-- Sub-tasks / checklists
-- Email/SMS reminders (in-app notifications only — already wired)
-- Drag-to-reschedule (use edit dialog)
+- Open Capital Connecpts / Sean Riley, switch date range between `Today`, `Last 7 days`, `Last 30 days`, and a custom historical range — per-campaign spend/leads/CPL change.
+- Pause a campaign (or pick a client with paused campaigns) and confirm CPL/CPM/Frequency tiles match the active-campaign math.
