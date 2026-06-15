@@ -1022,17 +1022,45 @@ export function ClientHierarchyTable() {
                                       <span className="text-[10px] text-muted-foreground">· {ads.length} ad{ads.length === 1 ? "" : "s"}</span>
                                     </button>
                                   </td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(impr)}</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{clicks || "—"}</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{ctr > 0 ? `${ctr.toFixed(2)}%` : "—"}</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(spend, cur)}</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{leads}</td>
-                                  <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cpl))}>
-                                    {cpl > 0 ? fmtMoney(cpl, cur, 2) : "—"}
-                                  </td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                                  {(() => {
+                                    const asCpm = impr > 0 ? (spend / impr) * 1000 : 0;
+                                    const asAbove = leadBreakdown.byAdset[adsetId] ?? null;
+                                    return (
+                                      <>
+                                        {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(impr)}</td>}
+                                        {isVisible("clicks") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{clicks || "—"}</td>}
+                                        {isVisible("ctr") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{ctr > 0 ? `${ctr.toFixed(2)}%` : "—"}</td>}
+                                        {isVisible("spend") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(spend, cur)}</td>}
+                                        {isVisible("leads") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{leads}</td>}
+                                        {isVisible("cpl") && (
+                                          <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cpl))}>
+                                            {cpl > 0 ? fmtMoney(cpl, cur, 2) : "—"}
+                                          </td>
+                                        )}
+                                        {isVisible("cpm") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{asCpm > 0 ? fmtMoney(asCpm, cur, 2) : "—"}</td>}
+                                        {isVisible("freq") && <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>}
+                                        {isVisible("above640") && (
+                                          <td
+                                            className={cn("px-2 py-2 text-right tabular-nums", above640Color(asAbove?.pct ?? null))}
+                                            title={asAbove?.pct != null ? `${asAbove.scored} scored lead${asAbove.scored === 1 ? "" : "s"}` : "No credit-score answers"}
+                                          >
+                                            {asAbove?.pct == null ? "—" : `${asAbove.pct.toFixed(0)}%`}
+                                          </td>
+                                        )}
+                                        {extraCols.map((col) => {
+                                          const scope: Record<string, number> = {
+                                            impressions: impr, clicks, ctr, spend, leads, cpl,
+                                            cpm: asCpm, frequency: 0, above640: asAbove?.pct ?? 0,
+                                          };
+                                          if (col.kind === "formula") {
+                                            const v = evalFormula(col.expr, scope);
+                                            return <td key={col.id} className="px-2 py-2 text-right tabular-nums text-foreground">{formatColumnValue(v, col.format, col.decimals)}</td>;
+                                          }
+                                          return <td key={col.id} className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>;
+                                        })}
+                                      </>
+                                    );
+                                  })()}
                                 </tr>
 
                                 {/* Ads */}
