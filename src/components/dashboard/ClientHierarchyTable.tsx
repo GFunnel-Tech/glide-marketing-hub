@@ -41,6 +41,33 @@ import { StatusBadge } from "./StatusBadge";
 import { ClientStatusPicker } from "./ClientStatusPicker";
 import { NoteBubble } from "@/components/notes/NoteBubble";
 import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
+import { ColumnPicker, BuiltinColumnOption } from "@/components/common/ColumnPicker";
+import { useTableView, evalFormula, formatColumnValue } from "@/hooks/useTableColumns";
+import { useCampaignLeadBreakdown } from "@/hooks/useCampaignLeadBreakdown";
+import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
+
+const TABLE_KEY = "client_hierarchy";
+
+const HIERARCHY_BUILTINS: BuiltinColumnOption[] = [
+  { id: "impressions", label: "Impressions", token: "impressions" },
+  { id: "clicks", label: "Clicks", token: "clicks" },
+  { id: "ctr", label: "CTR", token: "ctr" },
+  { id: "spend", label: "Spend", token: "spend" },
+  { id: "leads", label: "Leads", token: "leads" },
+  { id: "cpl", label: "CPL", token: "cpl" },
+  { id: "cpm", label: "CPM", token: "cpm" },
+  { id: "freq", label: "Frequency", token: "frequency" },
+  { id: "above640", label: "Above 640 %", token: "above640" },
+];
+const HIERARCHY_ALWAYS = ["status", "name"];
+const FORMULA_TOKENS = HIERARCHY_BUILTINS.map((b) => b.token!).filter(Boolean);
+
+function above640Color(pct: number | null) {
+  if (pct === null) return "text-muted-foreground";
+  if (pct >= 60) return "text-success font-semibold";
+  if (pct >= 30) return "text-warning font-semibold";
+  return "text-destructive font-semibold";
+}
 
 // ---------- helpers ----------
 // Money formatter. When the row's account currency is known (and not MIXED),
@@ -133,6 +160,48 @@ export function ClientHierarchyTable() {
   const { data: allAds = [] } = useMetaAds();
   const { data: clientsWithMetaAcct = new Set<number>() } = useClientsWithMetaAccount();
   const { data: rangeMetrics = {} } = useClientsRangeMetrics();
+  const { data: leadBreakdown = { byCampaign: {}, byAdset: {}, byAd: {} } } = useCampaignLeadBreakdown();
+  const { view } = useTableView(TABLE_KEY);
+  const { data: customKpis = [] } = useCustomKpis();
+  const enabledKpiIds = useMemo(
+    () => view.columns.filter((c: any) => c.kind === "custom_kpi").map((c: any) => c.kpi_id),
+    [view]
+  );
+  const { data: kpiEvals = [] } = useLatestKpiEvaluations(enabledKpiIds);
+  const kpiEvalMap = useMemo(() => {
+    const m = new Map<string, Map<string, number | null>>();
+    for (const ev of kpiEvals) {
+      if (!m.has(ev.custom_kpi_id)) m.set(ev.custom_kpi_id, new Map());
+      m.get(ev.custom_kpi_id)!.set(String(ev.client_id ?? "_global"), ev.value);
+    }
+    return m;
+  }, [kpiEvals]);
+
+  const hidden = useMemo(
+    () => new Set(view.columns.filter((c: any) => c.kind === "builtin" && c.hidden).map((c: any) => c.id)),
+    [view]
+  );
+  const isVisible = (id: string) => !hidden.has(id);
+
+  // Extra columns appended after built-ins
+  const extraCols = useMemo(() => {
+    const out: Array<
+      | { kind: "kpi"; id: string; label: string; kpiId: string; unit: string; format?: any }
+      | { kind: "formula"; id: string; label: string; expr: string; format: "number" | "currency" | "percent"; decimals?: number }
+    > = [];
+    for (const c of view.columns) {
+      if (c.kind === "custom_kpi") {
+        const kpi = customKpis.find((k) => k.id === (c as any).kpi_id);
+        if (kpi) out.push({ kind: "kpi", id: c.id, label: kpi.name, kpiId: kpi.id, unit: kpi.unit, format: kpi.format });
+      } else if (c.kind === "formula") {
+        out.push({ kind: "formula", id: c.id, label: c.label, expr: c.expr, format: c.format, decimals: c.decimals });
+      }
+    }
+    return out;
+  }, [view, customKpis]);
+
+  const density = view.density;
+  const rowPad = density === "compact" ? "py-1" : "py-2";
 
   const [clientId, setClientId] = useState<number | "all">("all");
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
@@ -504,6 +573,14 @@ export function ClientHierarchyTable() {
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search..." className="h-8 w-48 pl-8 text-xs" />
           </div>
+          {/* Column picker */}
+          <ColumnPicker
+            tableKey={TABLE_KEY}
+            builtins={HIERARCHY_BUILTINS}
+            alwaysIds={HIERARCHY_ALWAYS}
+            formulaTokens={FORMULA_TOKENS}
+          />
+
 
           {/* Sync */}
           <DropdownMenu>
@@ -539,26 +616,29 @@ export function ClientHierarchyTable() {
                   <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Company</th>
                 )}
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {showCompanyCol ? "Campaign / Ad set / Ad" : "Campaign / Ad set / Ad"}
+                  Campaign / Ad set / Ad
                 </th>
-                <th className="w-28 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Impressions</th>
-                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Clicks</th>
-                <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CTR</th>
-                <th className="w-24 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Spend</th>
-                <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Leads</th>
-                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPL</th>
-                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPM</th>
-                <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Freq</th>
-                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" title="Percentage of leads in window self-reporting a credit score above 640">Above 640</th>
+                {isVisible("impressions") && <th className="w-28 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Impressions</th>}
+                {isVisible("clicks") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Clicks</th>}
+                {isVisible("ctr") && <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CTR</th>}
+                {isVisible("spend") && <th className="w-24 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Spend</th>}
+                {isVisible("leads") && <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Leads</th>}
+                {isVisible("cpl") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPL</th>}
+                {isVisible("cpm") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPM</th>}
+                {isVisible("freq") && <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Freq</th>}
+                {isVisible("above640") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" title="Percentage of leads in window self-reporting a credit score above 640">Above 640</th>}
+                {extraCols.map((col) => (
+                  <th key={col.id} className="w-24 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{col.label}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={showCompanyCol ? 14 : 13} className="py-10 text-center text-muted-foreground text-sm">Loading…</td></tr>
+                <tr><td colSpan={99} className="py-10 text-center text-muted-foreground text-sm">Loading…</td></tr>
               )}
 
               {!isLoading && visibleClients.length === 0 && (
-                <tr><td colSpan={showCompanyCol ? 14 : 13} className="py-10 text-center text-muted-foreground text-sm">No clients match your filters.</td></tr>
+                <tr><td colSpan={99} className="py-10 text-center text-muted-foreground text-sm">No clients match your filters.</td></tr>
               )}
 
               {!isLoading && visibleClients.map((client) => {
@@ -697,50 +777,74 @@ export function ClientHierarchyTable() {
                         <td className="px-2 py-2.5 text-xs text-muted-foreground">
                           {clientCampaigns.length} campaign{clientCampaigns.length === 1 ? "" : "s"}
                         </td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtInt(totImpr)}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totClicks > 0 ? fmtInt(totClicks) : "—"}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{avgCtr > 0 ? `${avgCtr.toFixed(2)}%` : "—"}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtMoney(totSpend, cur)}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
-                          {rm?.doubleCount ? (
-                            <span
-                              className="inline-flex items-center justify-end gap-1 cursor-help"
-                              title={`Deduped count. Meta reported ${fmtInt(rm.reportedLeads)} (−${fmtInt(rm.reportedLeads - totLeads)} duplicate/over-reported). True CPL ${fmtMoney(rm.trueCpl, cur, 2)}.`}
-                            >
-                              {totLeads}
-                              <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
-                            </span>
-                          ) : (
-                            totLeads
-                          )}
-                        </td>
-                        <td className={cn("px-2 py-2.5 text-right tabular-nums font-semibold", cplColor(avgCpl))}>
-                          {avgCpl > 0 ? fmtMoney(avgCpl, cur, 2) : "—"}
-                        </td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
-                          {cAvgCpm > 0 ? fmtMoney(cAvgCpm, cur, 2) : "—"}
-                        </td>
-                        <td className={cn(
-                          "px-2 py-2.5 text-right tabular-nums",
-                          cAvgFreq >= 3.5 ? "text-destructive font-semibold" : "text-foreground"
-                        )}>
-                          {cAvgFreq > 0 ? cAvgFreq.toFixed(2) : "—"}
-                        </td>
-                        <td
-                          className={cn(
+                        {isVisible("impressions") && <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtInt(totImpr)}</td>}
+                        {isVisible("clicks") && <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totClicks > 0 ? fmtInt(totClicks) : "—"}</td>}
+                        {isVisible("ctr") && <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{avgCtr > 0 ? `${avgCtr.toFixed(2)}%` : "—"}</td>}
+                        {isVisible("spend") && <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtMoney(totSpend, cur)}</td>}
+                        {isVisible("leads") && (
+                          <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
+                            {rm?.doubleCount ? (
+                              <span
+                                className="inline-flex items-center justify-end gap-1 cursor-help"
+                                title={`Deduped count. Meta reported ${fmtInt(rm.reportedLeads)} (−${fmtInt(rm.reportedLeads - totLeads)} duplicate/over-reported). True CPL ${fmtMoney(rm.trueCpl, cur, 2)}.`}
+                              >
+                                {totLeads}
+                                <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
+                              </span>
+                            ) : (
+                              totLeads
+                            )}
+                          </td>
+                        )}
+                        {isVisible("cpl") && (
+                          <td className={cn("px-2 py-2.5 text-right tabular-nums font-semibold", cplColor(avgCpl))}>
+                            {avgCpl > 0 ? fmtMoney(avgCpl, cur, 2) : "—"}
+                          </td>
+                        )}
+                        {isVisible("cpm") && (
+                          <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
+                            {cAvgCpm > 0 ? fmtMoney(cAvgCpm, cur, 2) : "—"}
+                          </td>
+                        )}
+                        {isVisible("freq") && (
+                          <td className={cn(
                             "px-2 py-2.5 text-right tabular-nums",
-                            cAbove640 === null
-                              ? "text-muted-foreground"
-                              : cAbove640 >= 60
-                                ? "text-success font-semibold"
-                                : cAbove640 >= 30
-                                  ? "text-warning font-semibold"
-                                  : "text-destructive font-semibold"
-                          )}
-                          title={cAbove640 !== null ? `${cScored} scored lead${cScored === 1 ? "" : "s"} in range` : "No credit-score answers in range"}
-                        >
-                          {cAbove640 === null ? "—" : `${cAbove640.toFixed(0)}%`}
-                        </td>
+                            cAvgFreq >= 3.5 ? "text-destructive font-semibold" : "text-foreground"
+                          )}>
+                            {cAvgFreq > 0 ? cAvgFreq.toFixed(2) : "—"}
+                          </td>
+                        )}
+                        {isVisible("above640") && (
+                          <td
+                            className={cn("px-2 py-2.5 text-right tabular-nums", above640Color(cAbove640))}
+                            title={cAbove640 !== null ? `${cScored} scored lead${cScored === 1 ? "" : "s"} in range` : "No credit-score answers in range"}
+                          >
+                            {cAbove640 === null ? "—" : `${cAbove640.toFixed(0)}%`}
+                          </td>
+                        )}
+                        {extraCols.map((col) => {
+                          const scope: Record<string, number> = {
+                            impressions: totImpr,
+                            clicks: totClicks,
+                            ctr: avgCtr,
+                            spend: totSpend,
+                            leads: totLeads,
+                            cpl: avgCpl,
+                            cpm: cAvgCpm,
+                            frequency: cAvgFreq,
+                            above640: cAbove640 ?? 0,
+                          };
+                          if (col.kind === "formula") {
+                            const v = evalFormula(col.expr, scope);
+                            return <td key={col.id} className="px-2 py-2.5 text-right tabular-nums text-foreground">{formatColumnValue(v, col.format, col.decimals)}</td>;
+                          }
+                          // custom KPI: client-level value
+                          const perClient = kpiEvalMap.get(col.kpiId);
+                          const v = perClient?.get(String(client.id)) ?? perClient?.get("_global") ?? null;
+                          const decimals = col.format?.decimals ?? 2;
+                          const fmt = col.unit === "currency" ? "currency" : col.unit === "percent" ? "percent" : "number";
+                          return <td key={col.id} className="px-2 py-2.5 text-right tabular-nums text-foreground">{formatColumnValue(v == null ? null : Number(v), fmt as any, decimals)}</td>;
+                        })}
                       </tr>
 
                     )}
@@ -748,7 +852,7 @@ export function ClientHierarchyTable() {
                     {/* Campaign rows */}
                     {isOpen && clientCampaigns.length === 0 && (
                       <tr className="border-b border-border">
-                        <td colSpan={showCompanyCol ? 14 : 13} className="px-12 py-6 text-xs text-muted-foreground">
+                        <td colSpan={99} className="px-12 py-6 text-xs text-muted-foreground">
                           No campaigns for this client.
                           <Button variant="link" size="sm" className="ml-1 h-auto p-0 text-xs"
                             onClick={() => navigate(clientPath(client.id, "?tab=integrations"))}>
@@ -822,17 +926,54 @@ export function ClientHierarchyTable() {
                                 </div>
                               </button>
                             </td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(campImpr)}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{campClicks || "—"}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{campCtr > 0 ? `${campCtr.toFixed(2)}%` : "—"}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(camp.spend || 0, cur)}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{camp.leads ?? 0}</td>
-                            <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(camp.cpl || 0))}>
-                              {camp.cpl > 0 ? fmtMoney(camp.cpl, cur, 2) : "—"}
-                            </td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{(camp.cpm || 0) > 0 ? fmtMoney(Number(camp.cpm), cur, 2) : "—"}</td>
-                            <td className={cn("px-2 py-2 text-right tabular-nums", (camp.frequency || 0) >= 3.5 ? "text-destructive font-semibold" : "text-foreground")}>{(camp.frequency || 0) > 0 ? Number(camp.frequency).toFixed(2) : "—"}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                            {(() => {
+                              const campCpm = (camp.cpm || 0) > 0
+                                ? Number(camp.cpm)
+                                : (campImpr > 0 ? ((camp.spend || 0) / campImpr) * 1000 : 0);
+                              const campFreq = Number(camp.frequency || 0);
+                              const campAbove = leadBreakdown.byCampaign[camp.id] ?? null;
+                              const cplVal = camp.cpl > 0 ? camp.cpl : ((camp.leads || 0) > 0 ? (camp.spend || 0) / camp.leads : 0);
+                              return (
+                                <>
+                                  {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(campImpr)}</td>}
+                                  {isVisible("clicks") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{campClicks || "—"}</td>}
+                                  {isVisible("ctr") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{campCtr > 0 ? `${campCtr.toFixed(2)}%` : "—"}</td>}
+                                  {isVisible("spend") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(camp.spend || 0, cur)}</td>}
+                                  {isVisible("leads") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{camp.leads ?? 0}</td>}
+                                  {isVisible("cpl") && (
+                                    <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cplVal))}>
+                                      {cplVal > 0 ? fmtMoney(cplVal, cur, 2) : "—"}
+                                    </td>
+                                  )}
+                                  {isVisible("cpm") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{campCpm > 0 ? fmtMoney(campCpm, cur, 2) : "—"}</td>}
+                                  {isVisible("freq") && (
+                                    <td className={cn("px-2 py-2 text-right tabular-nums", campFreq >= 3.5 ? "text-destructive font-semibold" : "text-foreground")}>
+                                      {campFreq > 0 ? campFreq.toFixed(2) : "—"}
+                                    </td>
+                                  )}
+                                  {isVisible("above640") && (
+                                    <td
+                                      className={cn("px-2 py-2 text-right tabular-nums", above640Color(campAbove?.pct ?? null))}
+                                      title={campAbove?.pct != null ? `${campAbove.scored} scored lead${campAbove.scored === 1 ? "" : "s"}` : "No credit-score answers"}
+                                    >
+                                      {campAbove?.pct == null ? "—" : `${campAbove.pct.toFixed(0)}%`}
+                                    </td>
+                                  )}
+                                  {extraCols.map((col) => {
+                                    const scope: Record<string, number> = {
+                                      impressions: campImpr, clicks: campClicks, ctr: campCtr,
+                                      spend: camp.spend || 0, leads: camp.leads || 0, cpl: cplVal,
+                                      cpm: campCpm, frequency: campFreq, above640: campAbove?.pct ?? 0,
+                                    };
+                                    if (col.kind === "formula") {
+                                      const v = evalFormula(col.expr, scope);
+                                      return <td key={col.id} className="px-2 py-2 text-right tabular-nums text-foreground">{formatColumnValue(v, col.format, col.decimals)}</td>;
+                                    }
+                                    return <td key={col.id} className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>;
+                                  })}
+                                </>
+                              );
+                            })()}
                           </tr>
 
                           {/* Ad sets */}
@@ -881,17 +1022,45 @@ export function ClientHierarchyTable() {
                                       <span className="text-[10px] text-muted-foreground">· {ads.length} ad{ads.length === 1 ? "" : "s"}</span>
                                     </button>
                                   </td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(impr)}</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{clicks || "—"}</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{ctr > 0 ? `${ctr.toFixed(2)}%` : "—"}</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(spend, cur)}</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{leads}</td>
-                                  <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cpl))}>
-                                    {cpl > 0 ? fmtMoney(cpl, cur, 2) : "—"}
-                                  </td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
-                                  <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                                  {(() => {
+                                    const asCpm = impr > 0 ? (spend / impr) * 1000 : 0;
+                                    const asAbove = leadBreakdown.byAdset[adsetId] ?? null;
+                                    return (
+                                      <>
+                                        {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(impr)}</td>}
+                                        {isVisible("clicks") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{clicks || "—"}</td>}
+                                        {isVisible("ctr") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{ctr > 0 ? `${ctr.toFixed(2)}%` : "—"}</td>}
+                                        {isVisible("spend") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(spend, cur)}</td>}
+                                        {isVisible("leads") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{leads}</td>}
+                                        {isVisible("cpl") && (
+                                          <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cpl))}>
+                                            {cpl > 0 ? fmtMoney(cpl, cur, 2) : "—"}
+                                          </td>
+                                        )}
+                                        {isVisible("cpm") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{asCpm > 0 ? fmtMoney(asCpm, cur, 2) : "—"}</td>}
+                                        {isVisible("freq") && <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>}
+                                        {isVisible("above640") && (
+                                          <td
+                                            className={cn("px-2 py-2 text-right tabular-nums", above640Color(asAbove?.pct ?? null))}
+                                            title={asAbove?.pct != null ? `${asAbove.scored} scored lead${asAbove.scored === 1 ? "" : "s"}` : "No credit-score answers"}
+                                          >
+                                            {asAbove?.pct == null ? "—" : `${asAbove.pct.toFixed(0)}%`}
+                                          </td>
+                                        )}
+                                        {extraCols.map((col) => {
+                                          const scope: Record<string, number> = {
+                                            impressions: impr, clicks, ctr, spend, leads, cpl,
+                                            cpm: asCpm, frequency: 0, above640: asAbove?.pct ?? 0,
+                                          };
+                                          if (col.kind === "formula") {
+                                            const v = evalFormula(col.expr, scope);
+                                            return <td key={col.id} className="px-2 py-2 text-right tabular-nums text-foreground">{formatColumnValue(v, col.format, col.decimals)}</td>;
+                                          }
+                                          return <td key={col.id} className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>;
+                                        })}
+                                      </>
+                                    );
+                                  })()}
                                 </tr>
 
                                 {/* Ads */}
@@ -925,17 +1094,46 @@ export function ClientHierarchyTable() {
                                             <AdRatingBadge rating={rating} />
                                           </div>
                                         </td>
-                                      <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(ad.impressions)}</td>
-                                      <td className="px-2 py-2 text-right tabular-nums text-foreground">{ad.clicks || "—"}</td>
-                                      <td className="px-2 py-2 text-right tabular-nums text-foreground">{adCtr > 0 ? `${adCtr.toFixed(2)}%` : "—"}</td>
-                                      <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(ad.spend, cur)}</td>
-                                      <td className="px-2 py-2 text-right tabular-nums text-foreground">{ad.leads}</td>
-                                      <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(ad.cpl))}>
-                                        {ad.cpl > 0 ? fmtMoney(ad.cpl, cur, 2) : "—"}
-                                      </td>
-                                      <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
-                                      <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
-                                      <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                                      {(() => {
+                                        const adCpm = ad.impressions > 0 ? (ad.spend / ad.impressions) * 1000 : 0;
+                                        const adAbove = leadBreakdown.byAd[ad.id] ?? null;
+                                        return (
+                                          <>
+                                            {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(ad.impressions)}</td>}
+                                            {isVisible("clicks") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{ad.clicks || "—"}</td>}
+                                            {isVisible("ctr") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{adCtr > 0 ? `${adCtr.toFixed(2)}%` : "—"}</td>}
+                                            {isVisible("spend") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(ad.spend, cur)}</td>}
+                                            {isVisible("leads") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{ad.leads}</td>}
+                                            {isVisible("cpl") && (
+                                              <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(ad.cpl))}>
+                                                {ad.cpl > 0 ? fmtMoney(ad.cpl, cur, 2) : "—"}
+                                              </td>
+                                            )}
+                                            {isVisible("cpm") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{adCpm > 0 ? fmtMoney(adCpm, cur, 2) : "—"}</td>}
+                                            {isVisible("freq") && <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>}
+                                            {isVisible("above640") && (
+                                              <td
+                                                className={cn("px-2 py-2 text-right tabular-nums", above640Color(adAbove?.pct ?? null))}
+                                                title={adAbove?.pct != null ? `${adAbove.scored} scored lead${adAbove.scored === 1 ? "" : "s"}` : "No credit-score answers"}
+                                              >
+                                                {adAbove?.pct == null ? "—" : `${adAbove.pct.toFixed(0)}%`}
+                                              </td>
+                                            )}
+                                            {extraCols.map((col) => {
+                                              const scope: Record<string, number> = {
+                                                impressions: ad.impressions, clicks: ad.clicks, ctr: adCtr,
+                                                spend: ad.spend, leads: ad.leads, cpl: ad.cpl,
+                                                cpm: adCpm, frequency: 0, above640: adAbove?.pct ?? 0,
+                                              };
+                                              if (col.kind === "formula") {
+                                                const v = evalFormula(col.expr, scope);
+                                                return <td key={col.id} className="px-2 py-2 text-right tabular-nums text-foreground">{formatColumnValue(v, col.format, col.decimals)}</td>;
+                                              }
+                                              return <td key={col.id} className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>;
+                                            })}
+                                          </>
+                                        );
+                                      })()}
                                     </tr>
                                     );
                                   });
