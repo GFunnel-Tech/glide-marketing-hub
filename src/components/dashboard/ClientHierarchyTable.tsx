@@ -616,22 +616,25 @@ export function ClientHierarchyTable() {
                   <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Company</th>
                 )}
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {showCompanyCol ? "Campaign / Ad set / Ad" : "Campaign / Ad set / Ad"}
+                  Campaign / Ad set / Ad
                 </th>
-                <th className="w-28 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Impressions</th>
-                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Clicks</th>
-                <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CTR</th>
-                <th className="w-24 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Spend</th>
-                <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Leads</th>
-                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPL</th>
-                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPM</th>
-                <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Freq</th>
-                <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" title="Percentage of leads in window self-reporting a credit score above 640">Above 640</th>
+                {isVisible("impressions") && <th className="w-28 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Impressions</th>}
+                {isVisible("clicks") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Clicks</th>}
+                {isVisible("ctr") && <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CTR</th>}
+                {isVisible("spend") && <th className="w-24 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Spend</th>}
+                {isVisible("leads") && <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Leads</th>}
+                {isVisible("cpl") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPL</th>}
+                {isVisible("cpm") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">CPM</th>}
+                {isVisible("freq") && <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Freq</th>}
+                {isVisible("above640") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" title="Percentage of leads in window self-reporting a credit score above 640">Above 640</th>}
+                {extraCols.map((col) => (
+                  <th key={col.id} className="w-24 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{col.label}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={showCompanyCol ? 14 : 13} className="py-10 text-center text-muted-foreground text-sm">Loading…</td></tr>
+                <tr><td colSpan={99} className="py-10 text-center text-muted-foreground text-sm">Loading…</td></tr>
               )}
 
               {!isLoading && visibleClients.length === 0 && (
