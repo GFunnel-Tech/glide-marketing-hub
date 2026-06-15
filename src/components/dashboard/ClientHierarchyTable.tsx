@@ -41,6 +41,33 @@ import { StatusBadge } from "./StatusBadge";
 import { ClientStatusPicker } from "./ClientStatusPicker";
 import { NoteBubble } from "@/components/notes/NoteBubble";
 import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
+import { ColumnPicker, BuiltinColumnOption } from "@/components/common/ColumnPicker";
+import { useTableView, evalFormula, formatColumnValue } from "@/hooks/useTableColumns";
+import { useCampaignLeadBreakdown } from "@/hooks/useCampaignLeadBreakdown";
+import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
+
+const TABLE_KEY = "client_hierarchy";
+
+const HIERARCHY_BUILTINS: BuiltinColumnOption[] = [
+  { id: "impressions", label: "Impressions", token: "impressions" },
+  { id: "clicks", label: "Clicks", token: "clicks" },
+  { id: "ctr", label: "CTR", token: "ctr" },
+  { id: "spend", label: "Spend", token: "spend" },
+  { id: "leads", label: "Leads", token: "leads" },
+  { id: "cpl", label: "CPL", token: "cpl" },
+  { id: "cpm", label: "CPM", token: "cpm" },
+  { id: "freq", label: "Frequency", token: "frequency" },
+  { id: "above640", label: "Above 640 %", token: "above640" },
+];
+const HIERARCHY_ALWAYS = ["status", "name"];
+const FORMULA_TOKENS = HIERARCHY_BUILTINS.map((b) => b.token!).filter(Boolean);
+
+function above640Color(pct: number | null) {
+  if (pct === null) return "text-muted-foreground";
+  if (pct >= 60) return "text-success font-semibold";
+  if (pct >= 30) return "text-warning font-semibold";
+  return "text-destructive font-semibold";
+}
 
 // ---------- helpers ----------
 // Money formatter. When the row's account currency is known (and not MIXED),
