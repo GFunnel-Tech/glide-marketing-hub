@@ -926,17 +926,54 @@ export function ClientHierarchyTable() {
                                 </div>
                               </button>
                             </td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(campImpr)}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{campClicks || "—"}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{campCtr > 0 ? `${campCtr.toFixed(2)}%` : "—"}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(camp.spend || 0, cur)}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{camp.leads ?? 0}</td>
-                            <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(camp.cpl || 0))}>
-                              {camp.cpl > 0 ? fmtMoney(camp.cpl, cur, 2) : "—"}
-                            </td>
-                            <td className="px-2 py-2 text-right tabular-nums text-foreground">{(camp.cpm || 0) > 0 ? fmtMoney(Number(camp.cpm), cur, 2) : "—"}</td>
-                            <td className={cn("px-2 py-2 text-right tabular-nums", (camp.frequency || 0) >= 3.5 ? "text-destructive font-semibold" : "text-foreground")}>{(camp.frequency || 0) > 0 ? Number(camp.frequency).toFixed(2) : "—"}</td>
-                            <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                            {(() => {
+                              const campCpm = (camp.cpm || 0) > 0
+                                ? Number(camp.cpm)
+                                : (campImpr > 0 ? ((camp.spend || 0) / campImpr) * 1000 : 0);
+                              const campFreq = Number(camp.frequency || 0);
+                              const campAbove = leadBreakdown.byCampaign[camp.id] ?? null;
+                              const cplVal = camp.cpl > 0 ? camp.cpl : ((camp.leads || 0) > 0 ? (camp.spend || 0) / camp.leads : 0);
+                              return (
+                                <>
+                                  {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(campImpr)}</td>}
+                                  {isVisible("clicks") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{campClicks || "—"}</td>}
+                                  {isVisible("ctr") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{campCtr > 0 ? `${campCtr.toFixed(2)}%` : "—"}</td>}
+                                  {isVisible("spend") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(camp.spend || 0, cur)}</td>}
+                                  {isVisible("leads") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{camp.leads ?? 0}</td>}
+                                  {isVisible("cpl") && (
+                                    <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cplVal))}>
+                                      {cplVal > 0 ? fmtMoney(cplVal, cur, 2) : "—"}
+                                    </td>
+                                  )}
+                                  {isVisible("cpm") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{campCpm > 0 ? fmtMoney(campCpm, cur, 2) : "—"}</td>}
+                                  {isVisible("freq") && (
+                                    <td className={cn("px-2 py-2 text-right tabular-nums", campFreq >= 3.5 ? "text-destructive font-semibold" : "text-foreground")}>
+                                      {campFreq > 0 ? campFreq.toFixed(2) : "—"}
+                                    </td>
+                                  )}
+                                  {isVisible("above640") && (
+                                    <td
+                                      className={cn("px-2 py-2 text-right tabular-nums", above640Color(campAbove?.pct ?? null))}
+                                      title={campAbove?.pct != null ? `${campAbove.scored} scored lead${campAbove.scored === 1 ? "" : "s"}` : "No credit-score answers"}
+                                    >
+                                      {campAbove?.pct == null ? "—" : `${campAbove.pct.toFixed(0)}%`}
+                                    </td>
+                                  )}
+                                  {extraCols.map((col) => {
+                                    const scope: Record<string, number> = {
+                                      impressions: campImpr, clicks: campClicks, ctr: campCtr,
+                                      spend: camp.spend || 0, leads: camp.leads || 0, cpl: cplVal,
+                                      cpm: campCpm, frequency: campFreq, above640: campAbove?.pct ?? 0,
+                                    };
+                                    if (col.kind === "formula") {
+                                      const v = evalFormula(col.expr, scope);
+                                      return <td key={col.id} className="px-2 py-2 text-right tabular-nums text-foreground">{formatColumnValue(v, col.format, col.decimals)}</td>;
+                                    }
+                                    return <td key={col.id} className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>;
+                                  })}
+                                </>
+                              );
+                            })()}
                           </tr>
 
                           {/* Ad sets */}
