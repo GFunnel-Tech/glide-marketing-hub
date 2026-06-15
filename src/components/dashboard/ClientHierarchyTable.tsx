@@ -777,50 +777,74 @@ export function ClientHierarchyTable() {
                         <td className="px-2 py-2.5 text-xs text-muted-foreground">
                           {clientCampaigns.length} campaign{clientCampaigns.length === 1 ? "" : "s"}
                         </td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtInt(totImpr)}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totClicks > 0 ? fmtInt(totClicks) : "—"}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{avgCtr > 0 ? `${avgCtr.toFixed(2)}%` : "—"}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtMoney(totSpend, cur)}</td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
-                          {rm?.doubleCount ? (
-                            <span
-                              className="inline-flex items-center justify-end gap-1 cursor-help"
-                              title={`Deduped count. Meta reported ${fmtInt(rm.reportedLeads)} (−${fmtInt(rm.reportedLeads - totLeads)} duplicate/over-reported). True CPL ${fmtMoney(rm.trueCpl, cur, 2)}.`}
-                            >
-                              {totLeads}
-                              <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
-                            </span>
-                          ) : (
-                            totLeads
-                          )}
-                        </td>
-                        <td className={cn("px-2 py-2.5 text-right tabular-nums font-semibold", cplColor(avgCpl))}>
-                          {avgCpl > 0 ? fmtMoney(avgCpl, cur, 2) : "—"}
-                        </td>
-                        <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
-                          {cAvgCpm > 0 ? fmtMoney(cAvgCpm, cur, 2) : "—"}
-                        </td>
-                        <td className={cn(
-                          "px-2 py-2.5 text-right tabular-nums",
-                          cAvgFreq >= 3.5 ? "text-destructive font-semibold" : "text-foreground"
-                        )}>
-                          {cAvgFreq > 0 ? cAvgFreq.toFixed(2) : "—"}
-                        </td>
-                        <td
-                          className={cn(
+                        {isVisible("impressions") && <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtInt(totImpr)}</td>}
+                        {isVisible("clicks") && <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totClicks > 0 ? fmtInt(totClicks) : "—"}</td>}
+                        {isVisible("ctr") && <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{avgCtr > 0 ? `${avgCtr.toFixed(2)}%` : "—"}</td>}
+                        {isVisible("spend") && <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtMoney(totSpend, cur)}</td>}
+                        {isVisible("leads") && (
+                          <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
+                            {rm?.doubleCount ? (
+                              <span
+                                className="inline-flex items-center justify-end gap-1 cursor-help"
+                                title={`Deduped count. Meta reported ${fmtInt(rm.reportedLeads)} (−${fmtInt(rm.reportedLeads - totLeads)} duplicate/over-reported). True CPL ${fmtMoney(rm.trueCpl, cur, 2)}.`}
+                              >
+                                {totLeads}
+                                <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
+                              </span>
+                            ) : (
+                              totLeads
+                            )}
+                          </td>
+                        )}
+                        {isVisible("cpl") && (
+                          <td className={cn("px-2 py-2.5 text-right tabular-nums font-semibold", cplColor(avgCpl))}>
+                            {avgCpl > 0 ? fmtMoney(avgCpl, cur, 2) : "—"}
+                          </td>
+                        )}
+                        {isVisible("cpm") && (
+                          <td className="px-2 py-2.5 text-right tabular-nums text-foreground">
+                            {cAvgCpm > 0 ? fmtMoney(cAvgCpm, cur, 2) : "—"}
+                          </td>
+                        )}
+                        {isVisible("freq") && (
+                          <td className={cn(
                             "px-2 py-2.5 text-right tabular-nums",
-                            cAbove640 === null
-                              ? "text-muted-foreground"
-                              : cAbove640 >= 60
-                                ? "text-success font-semibold"
-                                : cAbove640 >= 30
-                                  ? "text-warning font-semibold"
-                                  : "text-destructive font-semibold"
-                          )}
-                          title={cAbove640 !== null ? `${cScored} scored lead${cScored === 1 ? "" : "s"} in range` : "No credit-score answers in range"}
-                        >
-                          {cAbove640 === null ? "—" : `${cAbove640.toFixed(0)}%`}
-                        </td>
+                            cAvgFreq >= 3.5 ? "text-destructive font-semibold" : "text-foreground"
+                          )}>
+                            {cAvgFreq > 0 ? cAvgFreq.toFixed(2) : "—"}
+                          </td>
+                        )}
+                        {isVisible("above640") && (
+                          <td
+                            className={cn("px-2 py-2.5 text-right tabular-nums", above640Color(cAbove640))}
+                            title={cAbove640 !== null ? `${cScored} scored lead${cScored === 1 ? "" : "s"} in range` : "No credit-score answers in range"}
+                          >
+                            {cAbove640 === null ? "—" : `${cAbove640.toFixed(0)}%`}
+                          </td>
+                        )}
+                        {extraCols.map((col) => {
+                          const scope: Record<string, number> = {
+                            impressions: totImpr,
+                            clicks: totClicks,
+                            ctr: avgCtr,
+                            spend: totSpend,
+                            leads: totLeads,
+                            cpl: avgCpl,
+                            cpm: cAvgCpm,
+                            frequency: cAvgFreq,
+                            above640: cAbove640 ?? 0,
+                          };
+                          if (col.kind === "formula") {
+                            const v = evalFormula(col.expr, scope);
+                            return <td key={col.id} className="px-2 py-2.5 text-right tabular-nums text-foreground">{formatColumnValue(v, col.format, col.decimals)}</td>;
+                          }
+                          // custom KPI: client-level value
+                          const perClient = kpiEvalMap.get(col.kpiId);
+                          const v = perClient?.get(String(client.id)) ?? perClient?.get("_global") ?? null;
+                          const decimals = col.format?.decimals ?? 2;
+                          const fmt = col.unit === "currency" ? "currency" : col.unit === "percent" ? "percent" : "number";
+                          return <td key={col.id} className="px-2 py-2.5 text-right tabular-nums text-foreground">{formatColumnValue(v == null ? null : Number(v), fmt as any, decimals)}</td>;
+                        })}
                       </tr>
 
                     )}
