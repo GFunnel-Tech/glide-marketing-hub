@@ -160,6 +160,48 @@ export function ClientHierarchyTable() {
   const { data: allAds = [] } = useMetaAds();
   const { data: clientsWithMetaAcct = new Set<number>() } = useClientsWithMetaAccount();
   const { data: rangeMetrics = {} } = useClientsRangeMetrics();
+  const { data: leadBreakdown = { byCampaign: {}, byAdset: {}, byAd: {} } } = useCampaignLeadBreakdown();
+  const { view } = useTableView(TABLE_KEY);
+  const { data: customKpis = [] } = useCustomKpis();
+  const enabledKpiIds = useMemo(
+    () => view.columns.filter((c: any) => c.kind === "custom_kpi").map((c: any) => c.kpi_id),
+    [view]
+  );
+  const { data: kpiEvals = [] } = useLatestKpiEvaluations(enabledKpiIds);
+  const kpiEvalMap = useMemo(() => {
+    const m = new Map<string, Map<string, number | null>>();
+    for (const ev of kpiEvals) {
+      if (!m.has(ev.custom_kpi_id)) m.set(ev.custom_kpi_id, new Map());
+      m.get(ev.custom_kpi_id)!.set(String(ev.client_id ?? "_global"), ev.value);
+    }
+    return m;
+  }, [kpiEvals]);
+
+  const hidden = useMemo(
+    () => new Set(view.columns.filter((c: any) => c.kind === "builtin" && c.hidden).map((c: any) => c.id)),
+    [view]
+  );
+  const isVisible = (id: string) => !hidden.has(id);
+
+  // Extra columns appended after built-ins
+  const extraCols = useMemo(() => {
+    const out: Array<
+      | { kind: "kpi"; id: string; label: string; kpiId: string; unit: string; format?: any }
+      | { kind: "formula"; id: string; label: string; expr: string; format: "number" | "currency" | "percent"; decimals?: number }
+    > = [];
+    for (const c of view.columns) {
+      if (c.kind === "custom_kpi") {
+        const kpi = customKpis.find((k) => k.id === (c as any).kpi_id);
+        if (kpi) out.push({ kind: "kpi", id: c.id, label: kpi.name, kpiId: kpi.id, unit: kpi.unit, format: kpi.format });
+      } else if (c.kind === "formula") {
+        out.push({ kind: "formula", id: c.id, label: c.label, expr: c.expr, format: c.format, decimals: c.decimals });
+      }
+    }
+    return out;
+  }, [view, customKpis]);
+
+  const density = view.density;
+  const rowPad = density === "compact" ? "py-1" : "py-2";
 
   const [clientId, setClientId] = useState<number | "all">("all");
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
