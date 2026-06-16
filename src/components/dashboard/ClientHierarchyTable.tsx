@@ -318,9 +318,12 @@ export function ClientHierarchyTable() {
     if (statusFilter === "Issues") list = list.filter((c) => c.doubleCount || c.issuesStatus);
     if (!showArchived) list = list.filter((c) => !archivedSet.has(`campaign:${c.id}`));
     if (hideZero) list = list.filter((c) => {
+      // Always keep agency-owned campaigns so the agency row stays expandable.
+      if (agencyClientIds.has(String(c.clientId))) return true;
       const impr = (c.impressions || 0) > 0 ? (c.impressions || 0) : deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0);
       return (c.spend || 0) > 0 && impr > 0;
     });
+
     if (search) {
       const s = search.toLowerCase();
       list = list.filter((c) => {
