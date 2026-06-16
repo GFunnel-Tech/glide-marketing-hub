@@ -136,6 +136,8 @@ Deno.serve(async (req) => {
             link: lead.client_id ? `/client/${lead.client_id}` : "/leads",
             meta: { lead_id: lead.id, ghl_contact_id: pushResult.contactId, stage: "recovered" },
           });
+          // Clear the earlier "missing"/"failed" alerts so the bell doesn't keep showing a stale problem.
+          await resolveLeadAlerts(admin, lead.id);
           stats.recovered++;
           continue;
         }
