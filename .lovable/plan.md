@@ -1,50 +1,80 @@
-## Goal
-When a client's Stripe charge fails (or a subscription invoice fails), surface it as a real notification to the agency team and record it in a dedicated, queryable log — so issues like a declined card on Cameron Race's account are never silently missed.
+# AI Account Optimization — build plan
 
-## What we'll build
+Your project already has the bones for this (pending-actions queue, optimization rules table, custom KPIs, ops scan, audit log). I'll extend those instead of duplicating, then add the missing pieces: manual / external data points, client context for the AI, plain-English rules, creative-swap and flag-only actions, and a unified "AI Decisions" approval inbox.
 
-### 1. New `payment_events` log table
-A dedicated audit log for billing problems (separate from generic `notifications` so we can filter, export, and resolve them).
+## What you'll see in the app
 
-Fields:
-- workspace_id, client_id, stripe_user_id, stripe_charge_id
-- event_type: `charge_failed` | `charge_refunded` | `invoice_payment_failed` | `charge_disputed`
-- amount, currency, failure_code, failure_message, customer_email
-- severity: `warn` | `critical` (critical = failed, disputed; warn = refund)
-- status: `open` | `acknowledged` | `resolved`
-- acknowledged_by / resolved_by / resolved_at
-- raw (jsonb), created_at
+**Per-client (Client Profile → AI tab):**
+- **Optimization Rules** (existing visual builder, untouched)
+- **NEW · AI Rules (plain English)** — type `"If CPL > $80 for 3 days, pause the worst ad and notify me"`. AI parses it into a structured spec you can review before saving.
+- **NEW · Client Context for AI** — free-text box: `"Only takes leads M–F · avg deal $5k · don't pause weekend campaigns"`. Sent with every AI scan for this client.
+- **NEW · Manual data points** — e.g. `target_cac = 80`, `min_daily_leads = 5`. AI treats these as goals.
+- **NEW · External data points** — paste a URL the AI can GET (e.g. CRM close-rate webhook). Refreshed before each scan.
+- **Custom KPIs** (existing formula builder, untouched)
 
-RLS: workspace members read; only admins/owners can resolve. Service role writes from the webhook.
+**Workspace-level (AI Assistant page):**
+- **NEW · AI Decisions inbox** — every proposed action with a one-line "why", the data the AI saw, and Approve / Reject / Snooze. Bulk approve. Auto-refresh.
+- **Audit log** (already exists) — every decision approved, rejected, executed, or failed.
 
-### 2. Wire the existing per-client Stripe webhook to emit events
-`supabase/functions/stripe-client-webhook/index.ts` already mirrors charge events into `stripe_charges`. We'll add: on `charge.failed`, `charge.refunded`, `charge.dispute.created`, and `invoice.payment_failed`, also insert a row into `payment_events` and a corresponding `notifications` row (type `payment_failed`) for every workspace member with the pref enabled. The `payment_failed` notification type is already in the preference seeder.
+## What the AI will do each run (every 30 min + on demand)
 
-### 3. Backfill from existing failed charges
-One-time pass over `stripe_charges` where `status='failed'` in the last 90 days → seed `payment_events` so the new log isn't empty on day one.
+For each active client, the AI:
+1. Pulls the last 7/14/30 days of Meta + GHL metrics.
+2. Reads the client's visual rules, plain-English rules, manual targets, external data, custom KPIs, and context notes.
+3. Calls Lovable AI (`google/gemini-3-flash-preview`) with all of the above as structured input.
+4. Returns a list of proposed actions, each with a reason, severity, and confidence.
+5. Inserts them into `ai_pending_actions` with `status='proposed'` — **nothing executes until you click Approve** (per your choice).
 
-### 4. UI: Payment Issues panel on the Billing dashboard
-A new section above the client table in `BillingDashboard.tsx`:
-- Counts: Open, This week, Resolved (30d)
-- List of open events with client name, amount, failure reason, time, and Acknowledge / Resolve buttons
-- Filter by severity, click-through to the client
+Action types the AI can propose:
+- `pause_ads` / `unpause_ads` — already wired
+- `adjust_budget` — already wired
+- `swap_creative` — **NEW**: rotate to a better-performing creative from `ad_templates`
+- `flag_only` — **NEW**: just create a notification + task, no Meta change
 
-The existing red "X payments need attention" banner stays but starts pulling from `payment_events` (live source of truth) instead of being derived only from the latest charge per client.
+## Technical details
 
-### 5. Notifications bell integration
-`payment_failed` notifications already flow through the existing bell + realtime channel — no new plumbing, just confirm the pref defaults to on (it already does per the recent seeder change).
+### Database (one migration)
 
-## Out of scope (ask if you want them)
-- Email/SMS delivery of payment failure alerts (currently in-app only)
-- Auto-retry / dunning logic
-- Slack / webhook fan-out
+1. `custom_kpis`: add `kind` (`'formula' | 'manual' | 'external'`), `manual_value numeric`, `external_url text`, `external_headers jsonb`, `last_external_value numeric`, `last_external_fetched_at`.
+2. `clients`: add `ai_context text` (free-text context for AI).
+3. New table `client_ai_rules`:
+   - `client_id`, `workspace_id`, `prompt text` (plain English), `parsed_spec jsonb` (AI-parsed structured rule), `enabled bool`, `last_parsed_at`, `parse_error text`.
+   - RLS: workspace members read/write.
+4. Extend `ai_pending_actions.action_type` to include `'swap_creative'` and `'flag_only'` (it's a text column already — just code-level enum).
 
-## Technical notes
-- New table: `public.payment_events` with GRANTs to authenticated + service_role, RLS scoped via `is_workspace_member` / `workspace_role_of`.
-- Webhook handler stays signature-verified per client (already implemented).
-- For the Stripe sync backfill function (`stripe-sync-all-charges`), also emit `payment_events` for any newly-discovered failed charges so manual syncs surface issues too.
-- Index on `(workspace_id, status, created_at desc)` for the dashboard query.
+### Edge functions
 
-## Open questions
-1. Should "refunds" count as a payment event (warn) or be excluded?
-2. Want a severity threshold (e.g. only alert on charges ≥ $X) to avoid noise from $1 card-validation failures?
+- **NEW `ai-rule-parse`** — accepts `{ prompt, client_id }`, calls Lovable AI to convert plain English into the same shape as `client_optimization_rules`, returns `{ spec, explanation, warnings }`. Saved to `client_ai_rules.parsed_spec`.
+- **NEW `ai-external-fetch`** — fetches all external data points for a workspace before each scan, with a 10s timeout each.
+- **Extend `ai-ops-scan`** — gather rules + context + KPIs + external + manual values, batch into an AI call per client, parse proposed actions, write to `ai_pending_actions` (status `proposed`, never auto-approved).
+- **Extend `ai-pending-execute`** — handle `swap_creative` (calls `meta-ad-update` with new creative_id) and `flag_only` (insert notification + task).
+
+### Frontend
+
+- New components:
+  - `src/components/ai/AiRulesPanel.tsx` (plain-English rule editor + parse preview)
+  - `src/components/ai/ClientContextPanel.tsx` (textarea + manual data points editor)
+  - `src/components/ai/ExternalDataPanel.tsx` (URL list with test-fetch button)
+  - `src/components/ai/AiDecisionsInbox.tsx` (workspace-level approval queue)
+- Extend `CustomKpisPanel` to switch between Formula / Manual / External in the editor sheet.
+- Mount the per-client panels in `ClientProfile.tsx` under the existing AI tab.
+- Mount the inbox at the top of `AiAssistant.tsx`.
+
+### Safety
+
+- Approval is **always required** (matches your choice). No auto-execute path.
+- Each proposed action stores the full snapshot the AI saw (`payload.context`), so you can audit why later.
+- Plain-English rules show the parsed structured version before save — you can edit it directly.
+- External URLs are workspace-scoped and require workspace admin to add.
+
+## What I'll need from you
+
+Nothing — `LOVABLE_API_KEY` is already configured, and all action plumbing (Meta ads, notifications, tasks) is already in place.
+
+## Out of scope (for this round)
+
+- Auto-execute mode (you chose approval-only)
+- Slack / email digest of pending decisions (can add later)
+- AI learning from rejections (can add a "why rejected" prompt later)
+
+Ready to build?

@@ -11,6 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { OptimizationRulesPanel } from "@/components/ai/OptimizationRulesPanel";
+import { AiRulesPanel } from "@/components/ai/AiRulesPanel";
+import { ClientContextPanel } from "@/components/ai/ClientContextPanel";
 import { OptimizationSchedulePanel } from "@/components/ai/OptimizationSchedulePanel";
 import { NotificationSettingsPanel } from "@/components/ai/NotificationSettingsPanel";
 import { AiAuditLogPanel } from "@/components/ai/AiAuditLogPanel";
@@ -218,6 +220,8 @@ export default function AiAssistant() {
             <div className="space-y-4">
               {selectedClient ? (
                 <>
+                  <ClientContextPanel clientId={selectedClient.id} />
+                  <AiRulesPanel clientId={selectedClient.id} workspaceId={workspaceId} />
                   <OptimizationRulesPanel clientId={selectedClient.id} workspaceId={workspaceId} />
                   <OptimizationSchedulePanel clientId={selectedClient.id} workspaceId={workspaceId} />
                 </>

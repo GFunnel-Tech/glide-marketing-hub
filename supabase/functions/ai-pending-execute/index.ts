@@ -50,15 +50,41 @@ Deno.serve(async (req) => {
     const base = `${SUPABASE_URL}/functions/v1`;
     let url = "";
     let body: any = {};
-    if (tool === "pause_ads" || tool === "resume_ads") {
+    if (tool === "pause_ads" || tool === "resume_ads" || tool === "unpause_ads") {
       url = `${base}/meta-ad-status`;
       body = { workspaceId, adIds: args.ad_ids, status: tool === "pause_ads" ? "PAUSED" : "ACTIVE" };
-    } else if (tool === "update_adset_budget") {
+    } else if (tool === "update_adset_budget" || tool === "adjust_budget") {
       url = `${base}/meta-ad-budget`;
-      body = { workspaceId, adsetId: args.adset_id, percent: args.percent, dailyBudget: args.daily_budget };
+      body = { workspaceId, adsetId: args.adset_id, percent: args.percent ?? args.budget_percent, dailyBudget: args.daily_budget };
     } else if (tool === "duplicate_ad") {
       url = `${base}/meta-ad-duplicate`;
       body = { workspaceId, adId: args.ad_id, newName: args.new_name_suffix, targetAdsetId: args.target_adset_id };
+    } else if (tool === "swap_creative") {
+      url = `${base}/meta-ad-duplicate`;
+      body = { workspaceId, adId: args.ad_id, newName: args.new_name_suffix ?? " (AI swap)", targetAdsetId: args.target_adset_id, creativeId: args.new_creative_id };
+    } else if (tool === "flag_only") {
+      await admin.from("ai_pending_actions")
+        .update({ status: "approved", approved_by: userData.user.id, approved_at: new Date().toISOString() })
+        .eq("id", actionId);
+      const sev = args.notify_severity || "warn";
+      const { data: members } = await admin.from("workspace_members").select("user_id").eq("workspace_id", workspaceId);
+      if (members?.length) {
+        await admin.from("notifications").insert(
+          members.map((m: any) => ({
+            user_id: m.user_id,
+            workspace_id: workspaceId,
+            type: "info",
+            title: args.title || "AI flag",
+            body: args.body || action.reasoning || "AI flagged this account.",
+            link: action.client_id ? `/client/${action.client_id}` : "/ai",
+            meta: { severity: sev, action_id: action.id, ai_proposed: true },
+          })),
+        );
+      }
+      await admin.from("ai_pending_actions")
+        .update({ status: "executed", executed_at: new Date().toISOString(), result: { flagged: true } })
+        .eq("id", actionId);
+      return json({ ok: true, status: "executed" });
     } else {
       return json({ error: `Unknown action type ${tool}` }, 400);
     }

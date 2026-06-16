@@ -773,6 +773,70 @@ export type Database = {
           },
         ]
       }
+      client_ai_rules: {
+        Row: {
+          client_id: number
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          id: string
+          last_parsed_at: string | null
+          parse_error: string | null
+          parsed_spec: Json | null
+          prompt: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          last_parsed_at?: string | null
+          parse_error?: string | null
+          parsed_spec?: Json | null
+          prompt: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          last_parsed_at?: string | null
+          parse_error?: string | null
+          parsed_spec?: Json | null
+          prompt?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_ai_rules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_ai_rules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_ai_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_guarantees: {
         Row: {
           client_id: number
@@ -1488,6 +1552,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          ai_context: string | null
           archived_at: string | null
           autonomous_optimization: boolean
           bm_account_name: string | null
@@ -1520,6 +1585,7 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          ai_context?: string | null
           archived_at?: string | null
           autonomous_optimization?: boolean
           bm_account_name?: string | null
@@ -1552,6 +1618,7 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          ai_context?: string | null
           archived_at?: string | null
           autonomous_optimization?: boolean
           bm_account_name?: string | null
@@ -1769,9 +1836,15 @@ export type Database = {
           description: string | null
           direction: string
           enabled: boolean
+          external_headers: Json | null
+          external_url: string | null
           format: Json
           formula: Json
           id: string
+          kind: string
+          last_external_fetched_at: string | null
+          last_external_value: number | null
+          manual_value: number | null
           name: string
           sort_order: number
           unit: string
@@ -1785,9 +1858,15 @@ export type Database = {
           description?: string | null
           direction?: string
           enabled?: boolean
+          external_headers?: Json | null
+          external_url?: string | null
           format?: Json
           formula: Json
           id?: string
+          kind?: string
+          last_external_fetched_at?: string | null
+          last_external_value?: number | null
+          manual_value?: number | null
           name: string
           sort_order?: number
           unit?: string
@@ -1801,9 +1880,15 @@ export type Database = {
           description?: string | null
           direction?: string
           enabled?: boolean
+          external_headers?: Json | null
+          external_url?: string | null
           format?: Json
           formula?: Json
           id?: string
+          kind?: string
+          last_external_fetched_at?: string | null
+          last_external_value?: number | null
+          manual_value?: number | null
           name?: string
           sort_order?: number
           unit?: string

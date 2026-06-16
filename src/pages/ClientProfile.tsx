@@ -9,6 +9,8 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AgentChat } from "@/components/ai/AgentChat";
 import { AiInsightsFeed } from "@/components/ai/AiInsightsFeed";
 import { PendingActionsPanel } from "@/components/ai/PendingActionsPanel";
+import { AiRulesPanel } from "@/components/ai/AiRulesPanel";
+import { ClientContextPanel } from "@/components/ai/ClientContextPanel";
 import { KnowledgeBasePanel } from "@/components/ai/KnowledgeBasePanel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -1155,6 +1157,8 @@ function ClientProfileInner() {
               <div className="space-y-4">
                 <AiInsightsFeed workspaceId={workspaceId} clientId={client.id} showScan={false} limit={20} />
                 <PendingActionsPanel workspaceId={workspaceId} clientId={client.id} />
+                <ClientContextPanel clientId={client.id} />
+                <AiRulesPanel clientId={client.id} workspaceId={workspaceId} />
                 <KnowledgeBasePanel workspaceId={workspaceId} clientId={client.id} clientName={client.name} />
               </div>
             </div>
