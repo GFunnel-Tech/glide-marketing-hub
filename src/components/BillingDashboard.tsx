@@ -76,75 +76,52 @@ export default function BillingDashboard() {
   const [filter, setFilter] = useState<"all" | PaymentStatus>("all");
   const [search, setSearch] = useState("");
   const [notes, setNotes] = useState<Record<number, string>>({});
-  const [connectDialog, setConnectDialog] = useState<{ clientId: number; name: string } | null>(null);
-  const [syncing, setSyncing] = useState(false);
+  const [agencyModalOpen, setAgencyModalOpen] = useState(false);
 
   const { data: clients = [], isLoading: clientsLoading } = useClients();
-  const { data: connections = {} } = useClientStripeConnections();
   const { data: chargeSummaries = {} } = useWorkspaceChargeSummaries();
-  const disconnect = useDisconnectClientStripe();
+  const { data: agencyStatus, isLoading: statusLoading } = useAgencyStripeStatus();
+  const syncAgency = useSyncAgencyStripe();
 
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const connectedCount = useMemo(
-    () => Object.values(connections).filter((c: any) => c?.is_connected).length,
-    [connections],
-  );
+  // Auto-prompt to connect the agency Stripe if not connected
+  useEffect(() => {
+    if (statusLoading) return;
+    if (agencyStatus && !agencyStatus.connected) {
+      setAgencyModalOpen(true);
+    }
+  }, [statusLoading, agencyStatus]);
 
-  const handleSyncAll = async () => {
-    if (syncing) return;
-    setSyncing(true);
-    const t = toast.loading(`Syncing ${connectedCount} Stripe account${connectedCount === 1 ? "" : "s"}…`);
+  const handleSyncAgency = async () => {
+    if (syncAgency.isPending) return;
+    const t = toast.loading("Syncing your agency Stripe account…");
     try {
-      const { data, error } = await supabase.functions.invoke("stripe-sync-all-charges", {
-        body: { days: 90 },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
+      const res = await syncAgency.mutateAsync(90);
       toast.success(
-        `Synced ${data?.synced ?? 0} charges from ${data?.accounts ?? 0} account${data?.accounts === 1 ? "" : "s"}${data?.failed ? ` · ${data.failed} failed` : ""}`,
+        `Synced ${res.fetched} charge${res.fetched === 1 ? "" : "s"} · ${res.matched} matched · ${res.unmatched} unmatched`,
         { id: t },
       );
-      qc.invalidateQueries({ queryKey: ["workspace-charge-summaries"] });
-      qc.invalidateQueries({ queryKey: ["client-stripe-connections"] });
     } catch (e: any) {
       toast.error(e?.message ?? "Sync failed", { id: t });
-    } finally {
-      setSyncing(false);
     }
   };
 
-  // Surface the result of the Stripe Connect OAuth round-trip.
+  // Surface legacy OAuth round-trip params (kept for backward compatibility)
   useEffect(() => {
     const stripeParam = searchParams.get("stripe");
     if (!stripeParam) return;
     if (stripeParam === "connected") {
       toast.success("Stripe account connected.");
-      qc.invalidateQueries({ queryKey: ["client-stripe-connections"] });
     } else if (stripeParam === "error") {
-      const reason = searchParams.get("reason") ?? "";
-      toast.error(OAUTH_ERRORS[reason] ?? "Stripe connection failed — please try again.");
+      toast.error("Stripe connection failed — please try again.");
     }
     searchParams.delete("stripe");
     searchParams.delete("reason");
     searchParams.delete("client");
     setSearchParams(searchParams, { replace: true });
   }, [searchParams, setSearchParams, qc]);
-
-  const handleConnectStripe = (row: BillingRow) => {
-    setConnectDialog({ clientId: row.id, name: row.name });
-  };
-
-  const handleDisconnectStripe = async (row: BillingRow) => {
-    if (!confirm(`Disconnect ${row.name}'s Stripe account? Their stored credentials will be deleted from our backend.`)) return;
-    try {
-      await disconnect.mutateAsync(row.id);
-      toast.success(`Disconnected ${row.name}'s Stripe account`);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to disconnect");
-    }
-  };
 
   // Build billing rows from real clients + their latest mirrored charge.
   const rows = useMemo<BillingRow[]>(() =>
