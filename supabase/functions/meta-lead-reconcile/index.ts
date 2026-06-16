@@ -96,6 +96,8 @@ Deno.serve(async (req) => {
             next_check_at: null,
             last_sync_error: null,
           }).eq("id", lead.id);
+          // Auto-resolve any earlier "missing"/"failed" alerts for this lead — it arrived after all.
+          await resolveLeadAlerts(admin, lead.id);
           stats.synced++;
           continue;
         }
@@ -106,7 +108,7 @@ Deno.serve(async (req) => {
           await notify(admin, memberIds, wsId, {
             type: "lead_sync_missing",
             title: `Lead missing from CRM${client ? ` — ${client.name}` : ""}`,
-            body: `${describeLead(lead)} did not appear in GoHighLevel after 5 minutes. Attempting automatic push…`,
+            body: `${describeLead(lead)} did not appear in GoHighLevel after 15 minutes. Attempting automatic push…`,
             link: lead.client_id ? `/client/${lead.client_id}` : "/leads",
             meta: { lead_id: lead.id, stage: "missing" },
           });
@@ -134,6 +136,8 @@ Deno.serve(async (req) => {
             link: lead.client_id ? `/client/${lead.client_id}` : "/leads",
             meta: { lead_id: lead.id, ghl_contact_id: pushResult.contactId, stage: "recovered" },
           });
+          // Clear the earlier "missing"/"failed" alerts so the bell doesn't keep showing a stale problem.
+          await resolveLeadAlerts(admin, lead.id);
           stats.recovered++;
           continue;
         }
@@ -212,6 +216,16 @@ async function notify(
       meta: payload.meta,
     })),
   );
+}
+
+// Mark prior "missing"/"failed" alerts for this lead as read once it eventually shows up in GHL.
+async function resolveLeadAlerts(admin: any, leadId: string) {
+  await admin
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .in("type", ["lead_sync_missing", "lead_sync_failed"])
+    .is("read_at", null)
+    .contains("meta", { lead_id: leadId });
 }
 
 
