@@ -25,9 +25,11 @@ interface Props {
   alwaysIds?: string[];
   /** Formula scope tokens (for help text). */
   formulaTokens?: string[];
+  /** Render style for the popover trigger. */
+  triggerMode?: "button" | "icon";
 }
 
-export function ColumnPicker({ tableKey, builtins, alwaysIds = [], formulaTokens }: Props) {
+export function ColumnPicker({ tableKey, builtins, alwaysIds = [], formulaTokens, triggerMode = "button" }: Props) {
   const { view, save } = useTableView(tableKey);
   const { data: customKpis = [] } = useCustomKpis();
   const [open, setOpen] = useState(false);
