@@ -57,7 +57,11 @@ export function useSyncAgencyStripe() {
   const qc = useQueryClient();
   const { currentWorkspace } = useWorkspace();
 
-  return useMutation({
+  return useMutation<
+    { fetched: number; upserts: number; matched: number; unmatched: number; payment_events: number },
+    Error,
+    number | undefined
+  >({
     mutationFn: async (days = 90) => {
       if (!currentWorkspace?.id) throw new Error("No workspace selected");
       const { data, error } = await supabase.functions.invoke("agency-stripe-sync", {
