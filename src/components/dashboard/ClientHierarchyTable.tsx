@@ -337,7 +337,7 @@ export function ClientHierarchyTable() {
       });
     }
     return list;
-  }, [allCampaigns, campaignRangeMetrics, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet, hideZero]);
+  }, [allCampaigns, campaignRangeMetrics, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet, hideZero, agencyClientIds]);
 
   // Group campaigns by client
   const campaignsByClient = useMemo(() => {
