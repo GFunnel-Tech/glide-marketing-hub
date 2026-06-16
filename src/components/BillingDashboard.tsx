@@ -277,7 +277,7 @@ export default function BillingDashboard() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
-              {["Client", "Status", "Stripe", "Last charge", "Amount", "Notes", ""].map((h) => (
+              {["Client", "Status", "Last charge", "Amount", "Notes", ""].map((h) => (
                 <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
