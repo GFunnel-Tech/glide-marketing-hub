@@ -3,6 +3,7 @@
 // member; we only sync accounts in that user's workspaces.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { recordPaymentEvent } from "../_shared/paymentEvents.ts";
 
 const DAYS_DEFAULT = 90;
 const PAGE_LIMIT = 100;
@@ -54,6 +55,29 @@ async function syncOneAccount(admin: any, acct: any, sinceUnix: number) {
       .from("stripe_charges")
       .upsert(rows, { onConflict: "stripe_user_id,stripe_charge_id" });
     if (error) return { ok: false, error: error.message, synced: total };
+
+    // Surface failed/refunded charges as payment events (idempotent).
+    for (const c of charges) {
+      const isFailed = c.status === "failed";
+      const isRefunded = !!c.refunded || (c.amount_refunded ?? 0) > 0;
+      if (!isFailed && !isRefunded) continue;
+      await recordPaymentEvent(admin, {
+        workspaceId: acct.workspace_id,
+        clientId: acct.client_id,
+        stripeUserId: acct.stripe_user_id,
+        stripeChargeId: c.id,
+        stripeCustomerId: typeof c.customer === "string" ? c.customer : c.customer?.id ?? null,
+        customerEmail: c.billing_details?.email ?? c.receipt_email ?? null,
+        eventType: isFailed ? "charge_failed" : "charge_refunded",
+        amount: c.amount ?? 0,
+        currency: c.currency ?? "usd",
+        failureCode: c.failure_code ?? null,
+        failureMessage: c.failure_message ?? null,
+        description: c.description ?? null,
+        raw: c,
+        createdAt: new Date((c.created ?? 0) * 1000).toISOString(),
+      });
+    }
 
     total += rows.length;
     if (!json.has_more) break;

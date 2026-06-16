@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { StripeConnectDialog } from "@/components/billing/StripeConnectDialog";
 import { ClientRevenueReport } from "@/components/billing/ClientRevenueReport";
+import { PaymentIssuesPanel } from "@/components/billing/PaymentIssuesPanel";
 import {
   useClientStripeConnections,
   useDisconnectClientStripe,
@@ -229,6 +230,8 @@ export default function BillingDashboard() {
           </div>
         ))}
       </div>
+
+      <PaymentIssuesPanel clientNames={Object.fromEntries(rows.map((r) => [r.id, r.name]))} />
 
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-xs">

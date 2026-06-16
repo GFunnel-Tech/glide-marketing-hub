@@ -3840,6 +3840,84 @@ export type Database = {
           },
         ]
       }
+      payment_events: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          amount: number | null
+          client_id: number | null
+          created_at: string
+          currency: string | null
+          customer_email: string | null
+          description: string | null
+          event_type: string
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          raw: Json | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          stripe_charge_id: string | null
+          stripe_customer_id: string | null
+          stripe_user_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          amount?: number | null
+          client_id?: number | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          description?: string | null
+          event_type: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          raw?: Json | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_user_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          amount?: number | null
+          client_id?: number | null
+          created_at?: string
+          currency?: string | null
+          customer_email?: string | null
+          description?: string | null
+          event_type?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          raw?: Json | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_customer_id?: string | null
+          stripe_user_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       portal_onboarding: {
         Row: {
           billing_done: boolean
