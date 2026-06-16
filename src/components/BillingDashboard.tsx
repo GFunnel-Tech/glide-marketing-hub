@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Link2, Link2Off, Loader2 } from "lucide-react";
+import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Link2, Link2Off, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { StripeConnectDialog } from "@/components/billing/StripeConnectDialog";
 import { ClientRevenueReport } from "@/components/billing/ClientRevenueReport";
 import {
@@ -76,6 +77,7 @@ export default function BillingDashboard() {
   const [search, setSearch] = useState("");
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [connectDialog, setConnectDialog] = useState<{ clientId: number; name: string } | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const { data: connections = {} } = useClientStripeConnections();
@@ -84,6 +86,34 @@ export default function BillingDashboard() {
 
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const connectedCount = useMemo(
+    () => Object.values(connections).filter((c: any) => c?.is_connected).length,
+    [connections],
+  );
+
+  const handleSyncAll = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    const t = toast.loading(`Syncing ${connectedCount} Stripe account${connectedCount === 1 ? "" : "s"}…`);
+    try {
+      const { data, error } = await supabase.functions.invoke("stripe-sync-all-charges", {
+        body: { days: 90 },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success(
+        `Synced ${data?.synced ?? 0} charges from ${data?.accounts ?? 0} account${data?.accounts === 1 ? "" : "s"}${data?.failed ? ` · ${data.failed} failed` : ""}`,
+        { id: t },
+      );
+      qc.invalidateQueries({ queryKey: ["workspace-charge-summaries"] });
+      qc.invalidateQueries({ queryKey: ["client-stripe-connections"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Sync failed", { id: t });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Surface the result of the Stripe Connect OAuth round-trip.
   useEffect(() => {
@@ -162,7 +192,18 @@ export default function BillingDashboard() {
             <p className="text-xs text-gray-500">Client payment status · synced with Stripe</p>
           </div>
         </div>
-        <span className="text-xs text-gray-400">{fmtDate(new Date())}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400">{fmtDate(new Date())}</span>
+          <button
+            onClick={handleSyncAll}
+            disabled={syncing || connectedCount === 0}
+            title={connectedCount === 0 ? "Connect at least one client's Stripe first" : `Backfill last 90 days for ${connectedCount} connected account${connectedCount === 1 ? "" : "s"}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            {syncing ? "Syncing…" : `Sync all Stripe accounts${connectedCount ? ` (${connectedCount})` : ""}`}
+          </button>
+        </div>
       </div>
 
       {alerts.length > 0 && (
