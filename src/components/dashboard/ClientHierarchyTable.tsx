@@ -982,11 +982,11 @@ export function ClientHierarchyTable() {
                               const cplVal = rLeads > 0 ? rSpend / rLeads : 0;
                               return (
                                 <>
-                                  {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(campImpr)}</td>}
-                                  {isVisible("clicks") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{campClicks || "—"}</td>}
-                                  {isVisible("ctr") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{campCtr > 0 ? `${campCtr.toFixed(2)}%` : "—"}</td>}
-                                  {isVisible("spend") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(camp.spend || 0, cur)}</td>}
-                                  {isVisible("leads") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{camp.leads ?? 0}</td>}
+                                  {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(rImpr)}</td>}
+                                  {isVisible("clicks") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{rClicks || "—"}</td>}
+                                  {isVisible("ctr") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{rCtr > 0 ? `${rCtr.toFixed(2)}%` : "—"}</td>}
+                                  {isVisible("spend") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(rSpend, cur)}</td>}
+                                  {isVisible("leads") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{rLeads}</td>}
                                   {isVisible("cpl") && (
                                     <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cplVal))}>
                                       {cplVal > 0 ? fmtMoney(cplVal, cur, 2) : "—"}
@@ -1008,8 +1008,8 @@ export function ClientHierarchyTable() {
                                   )}
                                   {extraCols.map((col) => {
                                     const scope: Record<string, number> = {
-                                      impressions: campImpr, clicks: campClicks, ctr: campCtr,
-                                      spend: camp.spend || 0, leads: camp.leads || 0, cpl: cplVal,
+                                      impressions: rImpr, clicks: rClicks, ctr: rCtr,
+                                      spend: rSpend, leads: rLeads, cpl: cplVal,
                                       cpm: campCpm, frequency: campFreq, above640: campAbove?.pct ?? 0,
                                     };
                                     if (col.kind === "formula") {
