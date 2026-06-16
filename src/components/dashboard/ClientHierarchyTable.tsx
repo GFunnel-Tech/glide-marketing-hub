@@ -512,7 +512,7 @@ export function ClientHierarchyTable() {
   const showCompanyCol = isAllClients;
 
   const filters: StatusFilter[] = ["All", "Active", "Paused", "Issues"];
-  const isLoading = clientsLoading || campLoading;
+  const isLoading = clientsLoading || campLoading || rangeLoading || campaignRangeLoading;
 
   return (
     <div className="space-y-4">
