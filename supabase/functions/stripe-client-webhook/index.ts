@@ -112,6 +112,34 @@ Deno.serve(async (req) => {
     }, { onConflict: "stripe_user_id,stripe_charge_id" });
   }
 
+  // Surface payment problems into payment_events + notifications.
+  let pe: PaymentEventType | null = null;
+  let chargeObj: any = null;
+  if (event.type === "charge.failed") { pe = "charge_failed"; chargeObj = event.data?.object; }
+  else if (event.type === "charge.refunded") { pe = "charge_refunded"; chargeObj = event.data?.object; }
+  else if (event.type === "charge.dispute.created") { pe = "charge_disputed"; chargeObj = event.data?.object?.charge ? null : event.data?.object; }
+  else if (event.type === "invoice.payment_failed") { pe = "invoice_payment_failed"; chargeObj = event.data?.object; }
+
+  if (pe) {
+    const c = chargeObj ?? event.data?.object ?? {};
+    await recordPaymentEvent(admin, {
+      workspaceId: acct.workspace_id,
+      clientId,
+      stripeUserId: acct.stripe_user_id,
+      stripeChargeId: c.id ?? c.charge ?? null,
+      stripeCustomerId: typeof c.customer === "string" ? c.customer : c.customer?.id ?? null,
+      customerEmail: c.billing_details?.email ?? c.receipt_email ?? c.customer_email ?? null,
+      eventType: pe,
+      amount: c.amount ?? c.amount_due ?? 0,
+      currency: c.currency ?? "usd",
+      failureCode: c.failure_code ?? c.last_payment_error?.code ?? null,
+      failureMessage: c.failure_message ?? c.last_payment_error?.message ?? null,
+      description: c.description ?? null,
+      raw: c,
+      createdAt: new Date((c.created ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+    });
+  }
+
   return new Response(JSON.stringify({ received: true }), {
     status: 200, headers: { "Content-Type": "application/json" },
   });
