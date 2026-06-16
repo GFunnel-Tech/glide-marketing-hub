@@ -24,6 +24,31 @@ export interface CampaignsRangeMetrics {
   ads: Record<string, RangeEntityMetrics>;
 }
 
+type QueryError = { message?: string } | null;
+type QueryResult<T> = { data: T[] | null; error: QueryError };
+type QueryBuilder<T> = PromiseLike<QueryResult<T>> & {
+  select: (columns: string) => QueryBuilder<T>;
+  eq: (column: string, value: unknown) => QueryBuilder<T>;
+  in: (column: string, values: unknown[]) => QueryBuilder<T>;
+  gte: (column: string, value: unknown) => QueryBuilder<T>;
+  lte: (column: string, value: unknown) => QueryBuilder<T>;
+};
+type SupabaseQuery = { from: <T extends Record<string, unknown>>(table: string) => QueryBuilder<T> };
+
+type CampaignLookupRow = { id: string | number };
+type InsightRow = {
+  level: "campaign" | "adset" | "ad";
+  object_id: string | number;
+  object_name?: string | null;
+  parent_campaign_id?: string | number | null;
+  parent_adset_id?: string | number | null;
+  spend?: number | string | null;
+  impressions?: number | string | null;
+  clicks?: number | string | null;
+  leads?: number | string | null;
+  raw?: { frequency?: number | string | null } | null;
+};
+
 export const EMPTY_CAMPAIGNS_RANGE_METRICS: CampaignsRangeMetrics = {
   campaigns: {},
   adsets: {},
@@ -53,24 +78,25 @@ export function useCampaignsRangeMetrics() {
     queryKey: ["campaigns-range-metrics-v1", wsId, ...rangeKey],
     enabled: !!wsId,
     queryFn: async (): Promise<CampaignsRangeMetrics> => {
+      const db = supabase as unknown as SupabaseQuery;
       const fromStr = fmtDate(from);
       const toStr = fmtDate(to);
 
-      const { data: campaignRows, error: campErr } = await (supabase as any)
-        .from("campaigns")
+      const { data: campaignRows, error: campErr } = await db
+        .from<CampaignLookupRow>("campaigns")
         .select("id")
         .eq("workspace_id", wsId);
       if (campErr) throw campErr;
 
-      const campaignIds = (campaignRows || []).map((c: any) => String(c.id));
+      const campaignIds = (campaignRows || []).map((c) => String(c.id));
       if (campaignIds.length === 0) return EMPTY_CAMPAIGNS_RANGE_METRICS;
 
-      const rows: any[] = [];
+      const rows: InsightRow[] = [];
       const chunkSize = 200;
       for (let i = 0; i < campaignIds.length; i += chunkSize) {
         const chunk = campaignIds.slice(i, i + chunkSize);
-        const { data: campaignData, error: campaignErr } = await (supabase as any)
-          .from("meta_insights_granular_daily")
+        const { data: campaignData, error: campaignErr } = await db
+          .from<InsightRow>("meta_insights_granular_daily")
           .select("level, object_id, object_name, parent_campaign_id, parent_adset_id, date, spend, impressions, clicks, leads, raw")
           .eq("level", "campaign")
           .in("object_id", chunk)
@@ -79,8 +105,8 @@ export function useCampaignsRangeMetrics() {
         if (campaignErr) throw campaignErr;
         rows.push(...(campaignData || []));
 
-        const { data: childData, error: childErr } = await (supabase as any)
-          .from("meta_insights_granular_daily")
+        const { data: childData, error: childErr } = await db
+          .from<InsightRow>("meta_insights_granular_daily")
           .select("level, object_id, object_name, parent_campaign_id, parent_adset_id, date, spend, impressions, clicks, leads, raw")
           .in("level", ["adset", "ad"])
           .in("parent_campaign_id", chunk)
@@ -110,7 +136,7 @@ export function useCampaignsRangeMetrics() {
       const ads = new Map<string, RangeEntityMetrics>();
       const freq = new Map<string, { sum: number; weight: number }>();
 
-      const bump = (map: Map<string, RangeEntityMetrics>, row: any, campaignId?: string | null, adsetId?: string | null) => {
+      const bump = (map: Map<string, RangeEntityMetrics>, row: InsightRow, campaignId?: string | null, adsetId?: string | null) => {
         const id = String(row.object_id);
         const cur = map.get(id) ?? make(id, row.object_name, campaignId, adsetId);
         cur.name = cur.name || row.object_name || id;
