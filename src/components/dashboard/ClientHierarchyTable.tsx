@@ -966,12 +966,20 @@ export function ClientHierarchyTable() {
                               </button>
                             </td>
                             {(() => {
-                              const campCpm = (camp.cpm || 0) > 0
-                                ? Number(camp.cpm)
-                                : (campImpr > 0 ? ((camp.spend || 0) / campImpr) * 1000 : 0);
-                              const campFreq = Number(camp.frequency || 0);
+                              // Re-resolve metrics directly from the date-ranged
+                              // source so we NEVER fall back to the static
+                              // `campaigns.spend` lifetime snapshot, even if the
+                              // earlier rewrite is racing/missing for this row.
+                              const rangedCamp = campaignRangeMetrics.campaigns[camp.id];
+                              const rSpend = rangedCamp?.spend ?? 0;
+                              const rLeads = rangedCamp?.leads ?? 0;
+                              const rImpr = rangedCamp?.impressions ?? campImpr;
+                              const rClicks = rangedCamp?.clicks ?? campClicks;
+                              const rCtr = rImpr > 0 ? (rClicks / rImpr) * 100 : 0;
+                              const campCpm = rangedCamp?.cpm ?? (rImpr > 0 ? (rSpend / rImpr) * 1000 : 0);
+                              const campFreq = Number(rangedCamp?.frequency ?? 0);
                               const campAbove = leadBreakdown.byCampaign[camp.id] ?? null;
-                              const cplVal = camp.cpl > 0 ? camp.cpl : ((camp.leads || 0) > 0 ? (camp.spend || 0) / camp.leads : 0);
+                              const cplVal = rLeads > 0 ? rSpend / rLeads : 0;
                               return (
                                 <>
                                   {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(campImpr)}</td>}
