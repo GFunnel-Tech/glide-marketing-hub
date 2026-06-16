@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -70,6 +70,11 @@ export function useTasks(opts: UseTasksOptions = {}) {
   const wsId = currentWorkspace?.id ?? null;
   const qc = useQueryClient();
   const { clientId = "any", view = "all", assigneeId, scope } = opts;
+  const subscriptionIdRef = useRef<string>();
+
+  if (!subscriptionIdRef.current) {
+    subscriptionIdRef.current = Math.random().toString(36).slice(2);
+  }
 
   const queryKey = ["tasks", wsId, clientId, scope ?? "any", assigneeId ?? "any"];
 
@@ -101,7 +106,7 @@ export function useTasks(opts: UseTasksOptions = {}) {
   useEffect(() => {
     if (!wsId) return;
     const channel = supabase
-      .channel(`tasks-${wsId}`)
+      .channel(`tasks-${wsId}-${subscriptionIdRef.current}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "client_notes", filter: `workspace_id=eq.${wsId}` },
