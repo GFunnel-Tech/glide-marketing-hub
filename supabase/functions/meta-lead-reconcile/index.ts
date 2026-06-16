@@ -218,6 +218,16 @@ async function notify(
   );
 }
 
+// Mark prior "missing"/"failed" alerts for this lead as read once it eventually shows up in GHL.
+async function resolveLeadAlerts(admin: any, leadId: string) {
+  await admin
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .in("type", ["lead_sync_missing", "lead_sync_failed"])
+    .is("read_at", null)
+    .contains("meta", { lead_id: leadId });
+}
+
 
 async function createClickupTask(
   token: string,
