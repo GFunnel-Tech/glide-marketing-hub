@@ -660,17 +660,15 @@ export function ClientHierarchyTable() {
                 // Account currency for this client; sub-rows (campaigns/ads)
                 // inherit it since they belong to the same account.
                 const cur: string | undefined = rm?.currency;
-                // Prefer meta_insights_daily (range metrics) when it actually
-                // has data; otherwise fall back to the campaign rollup so
-                // mapped campaigns are never hidden behind an empty insights
-                // row (which would show 0 spend / 0 impressions even when
-                // child campaigns clearly have spend).
-                const pick = (rmVal: number | undefined, campVal: number) =>
-                  (rmVal ?? 0) > 0 ? (rmVal as number) : campVal;
-                const totSpend = pick(rm?.spend, campSpend);
-                const totLeads = pick(rm?.effectiveLeads, campLeads);
-                const totClicks = pick(rm?.clicks, campClicks);
-                const totImpr = pick(rm?.impressions, campImpr);
+                // Date-ranged metrics come exclusively from rangeMetrics
+                // (sourced from meta_insights_granular_daily / _daily). The
+                // static `campaigns.spend` snapshot is a lifetime/last-sync
+                // total and would lie about the picker window — never display
+                // it as the date-ranged number.
+                const totSpend = rm?.spend ?? 0;
+                const totLeads = rm?.effectiveLeads ?? 0;
+                const totClicks = rm?.clicks ?? 0;
+                const totImpr = rm?.impressions ?? 0;
                 const avgCtr = totImpr > 0 ? (totClicks / totImpr) * 100 : 0;
                 const avgCpl = rm?.cpl ?? (totLeads > 0 ? totSpend / totLeads : 0);
                 const cAvgCpm = rm?.cpm ?? (totImpr > 0 ? (totSpend / totImpr) * 1000 : 0);

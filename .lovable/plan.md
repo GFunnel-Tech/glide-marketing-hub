@@ -1,80 +1,68 @@
-# AI Account Optimization — build plan
+## Problem
 
-Your project already has the bones for this (pending-actions queue, optimization rules table, custom KPIs, ops scan, audit log). I'll extend those instead of duplicating, then add the missing pieces: manual / external data points, client context for the AI, plain-English rules, creative-swap and flag-only actions, and a unified "AI Decisions" approval inbox.
+For Tim's client (client 27 in workspace `admin's Workspace`), the dashboard shows ~$1,562.59 spend for Jun 10–15 instead of the real $307-ish.
 
-## What you'll see in the app
+Root cause, traced in the data:
 
-**Per-client (Client Profile → AI tab):**
-- **Optimization Rules** (existing visual builder, untouched)
-- **NEW · AI Rules (plain English)** — type `"If CPL > $80 for 3 days, pause the worst ad and notify me"`. AI parses it into a structured spec you can review before saving.
-- **NEW · Client Context for AI** — free-text box: `"Only takes leads M–F · avg deal $5k · don't pause weekend campaigns"`. Sent with every AI scan for this client.
-- **NEW · Manual data points** — e.g. `target_cac = 80`, `min_daily_leads = 5`. AI treats these as goals.
-- **NEW · External data points** — paste a URL the AI can GET (e.g. CRM close-rate webhook). Refreshed before each scan.
-- **Custom KPIs** (existing formula builder, untouched)
+1. `useClientsRangeMetrics` (the hook that drives date-ranged Spend/Leads/CPL on the All-Clients table) only maps insights → client through `meta_ad_accounts.client_id`.
+2. Tim's ad account `act_1133577078368578` lives in a different workspace (`tim's Workspace`) and has `client_id = NULL` there. There is also no row in `meta_ad_account_clients` for it.
+3. So `rangeMetrics[27]` is empty.
+4. `ClientHierarchyTable` falls back to `campSpend = sum(campaigns.spend)` — and `campaigns.spend` is the **static last-sync snapshot** (lifetime/last-30d-ish), not the picker's date range. That's why the number doesn't move with the date picker and is far higher than the actual June 10–15 spend.
 
-**Workspace-level (AI Assistant page):**
-- **NEW · AI Decisions inbox** — every proposed action with a one-line "why", the data the AI saw, and Approve / Reject / Snooze. Bulk approve. Auto-refresh.
-- **Audit log** (already exists) — every decision approved, rejected, executed, or failed.
+True date-ranged spend from `meta_insights_granular_daily` for those campaigns is $782.71 across Jun 10–14 (still doesn't match $307, but it is the legitimate source of truth — the $1,562 is wrong because it ignores the date range entirely).
 
-## What the AI will do each run (every 30 min + on demand)
+The same pattern affects every client whose Meta account isn't directly linked through `meta_ad_accounts.client_id` in the current workspace, so this is a global fix, not a Tim-only fix.
 
-For each active client, the AI:
-1. Pulls the last 7/14/30 days of Meta + GHL metrics.
-2. Reads the client's visual rules, plain-English rules, manual targets, external data, custom KPIs, and context notes.
-3. Calls Lovable AI (`google/gemini-3-flash-preview`) with all of the above as structured input.
-4. Returns a list of proposed actions, each with a reason, severity, and confidence.
-5. Inserts them into `ai_pending_actions` with `status='proposed'` — **nothing executes until you click Approve** (per your choice).
+## Fix
 
-Action types the AI can propose:
-- `pause_ads` / `unpause_ads` — already wired
-- `adjust_budget` — already wired
-- `swap_creative` — **NEW**: rotate to a better-performing creative from `ad_templates`
-- `flag_only` — **NEW**: just create a notification + task, no Meta change
+### 1. Range metrics must resolve client by all linkage paths
 
-## Technical details
+Update `src/hooks/useClientsRangeMetrics.ts` so an insights row is attributed to a client through any of:
 
-### Database (one migration)
+- `meta_ad_accounts.client_id` (current path)
+- `meta_ad_account_clients` join (shared accounts; already partially supported elsewhere)
+- `campaigns.client_id` looked up by `campaign_id` for campaign-level rows in `meta_insights_granular_daily`
 
-1. `custom_kpis`: add `kind` (`'formula' | 'manual' | 'external'`), `manual_value numeric`, `external_url text`, `external_headers jsonb`, `last_external_value numeric`, `last_external_fetched_at`.
-2. `clients`: add `ai_context text` (free-text context for AI).
-3. New table `client_ai_rules`:
-   - `client_id`, `workspace_id`, `prompt text` (plain English), `parsed_spec jsonb` (AI-parsed structured rule), `enabled bool`, `last_parsed_at`, `parse_error text`.
-   - RLS: workspace members read/write.
-4. Extend `ai_pending_actions.action_type` to include `'swap_creative'` and `'flag_only'` (it's a text column already — just code-level enum).
+Algorithm:
 
-### Edge functions
+```text
+1. Load all campaigns in the workspace → Map<campaign_id, client_id>.
+2. Load meta_ad_accounts (workspace_id = ws) → Map<acct_id, client_id?>.
+3. Load meta_ad_account_clients (workspace_id = ws) → Map<acct_id, client_id[]>.
+4. For daily aggregates, prefer per-campaign attribution from
+   meta_insights_granular_daily (level='campaign'), summing spend / impressions /
+   clicks / leads / frequency*impr per client_id resolved via campaign_id.
+5. Fall back to meta_insights_daily for any ad_account whose campaigns aren't
+   represented in granular (avoid double-counting: only use the daily row for
+   an account on dates where no granular campaign row exists for that account).
+```
 
-- **NEW `ai-rule-parse`** — accepts `{ prompt, client_id }`, calls Lovable AI to convert plain English into the same shape as `client_optimization_rules`, returns `{ spec, explanation, warnings }`. Saved to `client_ai_rules.parsed_spec`.
-- **NEW `ai-external-fetch`** — fetches all external data points for a workspace before each scan, with a 10s timeout each.
-- **Extend `ai-ops-scan`** — gather rules + context + KPIs + external + manual values, batch into an AI call per client, parse proposed actions, write to `ai_pending_actions` (status `proposed`, never auto-approved).
-- **Extend `ai-pending-execute`** — handle `swap_creative` (calls `meta-ad-update` with new creative_id) and `flag_only` (insert notification + task).
+This makes the date-ranged spend correct for clients whose accounts are shared, unlinked, or only reachable via campaign assignment.
 
-### Frontend
+### 2. Stop the static `campaigns.spend` fallback from polluting date-ranged totals
 
-- New components:
-  - `src/components/ai/AiRulesPanel.tsx` (plain-English rule editor + parse preview)
-  - `src/components/ai/ClientContextPanel.tsx` (textarea + manual data points editor)
-  - `src/components/ai/ExternalDataPanel.tsx` (URL list with test-fetch button)
-  - `src/components/ai/AiDecisionsInbox.tsx` (workspace-level approval queue)
-- Extend `CustomKpisPanel` to switch between Formula / Manual / External in the editor sheet.
-- Mount the per-client panels in `ClientProfile.tsx` under the existing AI tab.
-- Mount the inbox at the top of `AiAssistant.tsx`.
+In `src/components/dashboard/ClientHierarchyTable.tsx` (≈ line 668–676):
 
-### Safety
+- Remove the `pick(rmVal, campSpend)` fallback for Spend / Leads / Clicks / Impressions / CPL / CPM. When a date range is active, an absent `rangeMetrics` entry means "0 in this window", not "use the lifetime snapshot."
+- Keep the static `campaigns.spend` only as a hint for the "hide rows with zero data" filter, not as a displayed number.
 
-- Approval is **always required** (matches your choice). No auto-execute path.
-- Each proposed action stores the full snapshot the AI saw (`payload.context`), so you can audit why later.
-- Plain-English rules show the parsed structured version before save — you can edit it directly.
-- External URLs are workspace-scoped and require workspace admin to add.
+After step 1, `rangeMetrics` will be populated for every client that actually has insights, so the visible side effect of removing the fallback is that genuinely zero-spend windows now show $0 instead of a misleading lifetime number.
 
-## What I'll need from you
+### 3. Same fix for per-campaign drilldown
 
-Nothing — `LOVABLE_API_KEY` is already configured, and all action plumbing (Meta ads, notifications, tasks) is already in place.
+`useClientCampaignsRange` already reads `meta_insights_granular_daily`, but it bails out when the client has no `meta_ad_accounts` row (`if (acctIds.length === 0) return []`). Replace that gate with:
 
-## Out of scope (for this round)
+- Resolve the campaign ids for the client from `campaigns WHERE client_id = ?`.
+- Query granular insights by those `object_id`s (campaign level) instead of (or in addition to) `ad_account_id IN (...)`. Then aggregate per campaign as today.
 
-- Auto-execute mode (you chose approval-only)
-- Slack / email digest of pending decisions (can add later)
-- AI learning from rejections (can add a "why rejected" prompt later)
+This makes the campaign drilldown honest for the same set of clients.
 
-Ready to build?
+### 4. Verification
+
+- Reload `/?preset=custom&from=2026-06-10&to=2026-06-15` while impersonating Tim → expect client 27 Spend ≈ $782.71 (the actual granular total) instead of $1,562.59, and to react when the date range changes.
+- Spot-check at least one client whose account is directly linked (`meta_ad_accounts.client_id` set) to confirm numbers are unchanged.
+- Spot-check a shared account (row in `meta_ad_account_clients`) to confirm spend splits / attributes as expected.
+
+## Out of scope
+
+- Reconciling our reported number against what Meta Ads Manager shows in the user's browser for $307. That requires comparing our pulled insights to Meta's UI for the same window and is a sync-accuracy question, not an attribution bug. If the granular total ($782.71) still disagrees with Meta Ads Manager after this fix, we'll open a separate investigation into the meta-sync job (timezone, attribution window, excluded campaigns).

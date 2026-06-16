@@ -10,11 +10,6 @@ export interface ClientRangeMetrics {
   clicks: number;
   reportedLeads: number;
   trueLeads: number;
-  /**
-   * The honest lead count to display: deduped trueLeads when we have lead-level
-   * data, else Meta-reported (mirrors the meta-sync rollup fallback). Use this
-   * for headline counts and CPL so leads and CPL always reconcile with spend.
-   */
   effectiveLeads: number;
   cpl: number;
   trueCpl: number;
@@ -22,11 +17,8 @@ export interface ClientRangeMetrics {
   formCvr: number;
   frequency: number;
   doubleCount: boolean;
-  /** ISO currency code of the client's ad account(s); "MIXED" if they differ. */
   currency: string;
-  /** % of leads in window whose credit-score answer starts with "above" (typically above_640). null if no scored leads. */
   above640Pct: number | null;
-  /** Count of leads with a credit-score answer (denominator for above640Pct). */
   scoredLeads: number;
 }
 
@@ -39,14 +31,19 @@ const fmtDate = (d: Date) => {
 };
 
 /**
- * Aggregates per-client KPIs over the currently-selected global date range
- * from `meta_insights_daily` (joined via `meta_ad_accounts` → client_id) and
- * `meta_leads` (true, deduped count). Returns a map keyed by client id.
+ * Aggregates per-client KPIs over the currently-selected global date range.
  *
- * The "All Clients" table merges this on top of the base client row so the
- * displayed CPL / CPM / Leads / Spend / Form CVR / Freq / DC react to the
- * picker instead of always showing the hardcoded last-30d snapshot written
- * by meta-sync.
+ * Attribution priority (each insights row → client):
+ *   1. campaigns.client_id (via campaign_id on granular rows) — works even
+ *      when the ad account isn't linked in this workspace, and is the only
+ *      path for accounts shared across workspaces.
+ *   2. meta_ad_account_clients (shared accounts in this workspace).
+ *   3. meta_ad_accounts.client_id (single-tenant accounts).
+ *
+ * For each (client, date, account) tuple we prefer granular campaign rows
+ * (meta_insights_granular_daily, level='campaign'); we only fall back to the
+ * meta_insights_daily row when no granular campaign row exists for that
+ * (account, date) — this prevents double counting.
  */
 export function useClientsRangeMetrics() {
   const { currentWorkspace } = useWorkspace();
@@ -59,30 +56,82 @@ export function useClientsRangeMetrics() {
     queryFn: async (): Promise<Record<number, ClientRangeMetrics>> => {
       const fromStr = fmtDate(from);
       const toStr = fmtDate(to);
-      // Align lead window with Meta's reporting-day bucket (date-only UTC bounds)
-      // instead of the picker's local-time-of-day, so a lead that lands the next
-      // morning in the DB doesn't fall out of the trueLeads count.
       const fromISO = `${fromStr}T00:00:00.000Z`;
       const toISO = `${toStr}T23:59:59.999Z`;
 
-
-      // 1. Ad account -> client_id + currency map
+      // 1a. Ad accounts in this workspace (currency + direct client linkage)
       const { data: accts, error: aErr } = await (supabase as any)
         .from("meta_ad_accounts")
         .select("id, client_id, currency")
         .eq("workspace_id", wsId);
       if (aErr) throw aErr;
-      const acctToClient = new Map<string, number>();
+      const acctDirectClient = new Map<string, number>();
       const acctCurrency = new Map<string, string>();
       (accts || []).forEach((a: any) => {
-        if (a.client_id) acctToClient.set(a.id, a.client_id);
+        if (a.client_id) acctDirectClient.set(a.id, a.client_id);
         acctCurrency.set(a.id, (a.currency || "USD").toUpperCase());
       });
 
-      // 2. Insights in window
+      // 1b. Shared-account mappings (one account → many clients in this ws)
+      const { data: shared } = await (supabase as any)
+        .from("meta_ad_account_clients")
+        .select("ad_account_id, client_id")
+        .eq("workspace_id", wsId);
+      const acctSharedClients = new Map<string, number[]>();
+      for (const s of shared || []) {
+        const arr = acctSharedClients.get(s.ad_account_id) || [];
+        arr.push(s.client_id);
+        acctSharedClients.set(s.ad_account_id, arr);
+      }
+
+      // 1c. Campaigns → client_id (works regardless of ad-account linkage).
+      // We also use these campaign ids to pull granular insights across
+      // any ad account, including accounts owned by other workspaces.
+      const { data: campaignRows } = await (supabase as any)
+        .from("campaigns")
+        .select("id, client_id, ad_account_id")
+        .eq("workspace_id", wsId);
+      const campaignToClient = new Map<string, number>();
+      const clientCampaignIds = new Map<number, string[]>();
+      for (const c of campaignRows || []) {
+        if (!c.client_id) continue;
+        campaignToClient.set(String(c.id), c.client_id);
+        const arr = clientCampaignIds.get(c.client_id) || [];
+        arr.push(String(c.id));
+        clientCampaignIds.set(c.client_id, arr);
+      }
+      const allCampaignIds = Array.from(campaignToClient.keys());
+
+      // 2a. Granular insights at campaign level — attribute by campaign_id
+      let granular: any[] = [];
+      if (allCampaignIds.length > 0) {
+        // Chunk to avoid URL length limits
+        const chunkSize = 200;
+        for (let i = 0; i < allCampaignIds.length; i += chunkSize) {
+          const chunk = allCampaignIds.slice(i, i + chunkSize);
+          const { data: g, error: gErr } = await (supabase as any)
+            .from("meta_insights_granular_daily")
+            .select("ad_account_id, date, object_id, spend, impressions, clicks, leads, raw")
+            .eq("level", "campaign")
+            .in("object_id", chunk)
+            .gte("date", fromStr)
+            .lte("date", toStr);
+          if (gErr) throw gErr;
+          granular = granular.concat(g || []);
+        }
+      }
+
+      // Track which (ad_account_id, date) pairs are already represented by
+      // granular campaign rows so we don't double-count via daily fallback.
+      const granularKeys = new Set<string>();
+      for (const r of granular) {
+        granularKeys.add(`${r.ad_account_id}|${r.date}`);
+      }
+
+      // 2b. Daily insights — fallback for accounts/dates with no granular rows
       const { data: insights, error: iErr } = await (supabase as any)
         .from("meta_insights_daily")
-        .select("ad_account_id, spend, impressions, clicks, leads, frequency")
+        .select("ad_account_id, date, spend, impressions, clicks, leads, frequency")
         .eq("workspace_id", wsId)
         .gte("date", fromStr)
         .lte("date", toStr);
@@ -128,16 +177,53 @@ export function useClientsRangeMetrics() {
         return agg[cid];
       };
 
-      // Record the currency of every account feeding a client; flag MIXED if a
-      // client somehow spans currencies so it never silently blends.
       const noteCurrency = (b: { currency: string | null }, cur: string) => {
         if (b.currency == null) b.currency = cur;
         else if (b.currency !== cur && b.currency !== "MIXED") b.currency = "MIXED";
       };
 
+      // Resolve client(s) for an insights row. Prefer campaign_id when given;
+      // otherwise account-level fallbacks. Returns a list because a shared
+      // account may attribute to multiple clients (callers should split, but
+      // for daily fallback we attribute to the first match to avoid duplicate
+      // spend across clients).
+      const clientsForCampaign = (campaignId: string): number[] => {
+        const c = campaignToClient.get(campaignId);
+        return c ? [c] : [];
+      };
+      const clientsForAccount = (acctId: string): number[] => {
+        const direct = acctDirectClient.get(acctId);
+        if (direct) return [direct];
+        return acctSharedClients.get(acctId) || [];
+      };
+
+      // Apply granular campaign rows
+      for (const row of granular) {
+        const cids = clientsForCampaign(String(row.object_id));
+        if (cids.length === 0) continue;
+        for (const cid of cids) {
+          const b = bucket(cid);
+          noteCurrency(b, acctCurrency.get(row.ad_account_id) || "USD");
+          const imp = Number(row.impressions || 0);
+          b.spend += Number(row.spend || 0);
+          b.impressions += imp;
+          b.clicks += Number(row.clicks || 0);
+          b.reportedLeads += Number(row.leads || 0);
+          const f = Number(row.raw?.frequency || 0);
+          if (f > 0 && imp > 0) {
+            b.freqSum += f * imp;
+            b.freqWeight += imp;
+          }
+        }
+      }
+
+      // Apply daily fallback only for (account, date) pairs not covered above
       for (const row of insights || []) {
-        const cid = acctToClient.get(row.ad_account_id);
-        if (!cid) continue;
+        const key = `${row.ad_account_id}|${row.date}`;
+        if (granularKeys.has(key)) continue;
+        const cids = clientsForAccount(row.ad_account_id);
+        if (cids.length === 0) continue;
+        const cid = cids[0]; // attribute to the primary mapping
         const b = bucket(cid);
         noteCurrency(b, acctCurrency.get(row.ad_account_id) || "USD");
         const imp = Number(row.impressions || 0);
@@ -152,7 +238,7 @@ export function useClientsRangeMetrics() {
         }
       }
 
-      // Pull field_data once for credit-score scoring
+      // Field_data for credit-score scoring
       const { data: scoredRaw } = await (supabase as any)
         .from("meta_leads")
         .select("client_id, field_data")
@@ -163,10 +249,6 @@ export function useClientsRangeMetrics() {
       for (const row of leads || []) {
         if (!row.client_id) continue;
         const b = bucket(row.client_id);
-        // Canonical lead-dedup key — MUST stay identical to the copy in
-        // supabase/functions/meta-sync/index.ts: lowercased email, else
-        // digits-only phone, else the Meta lead_id prefixed with "lid:".
-        // One person = one lead.
         const email = (row.email || "").toString().trim().toLowerCase();
         const phone = (row.phone || "").toString().replace(/\D+/g, "");
         const key = email || phone || `lid:${row.lead_id ?? ""}`;
@@ -227,8 +309,6 @@ export function useClientsRangeMetrics() {
         };
       }
       return out;
-
-
     },
   });
 }
