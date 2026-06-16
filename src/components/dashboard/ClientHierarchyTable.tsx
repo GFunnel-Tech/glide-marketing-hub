@@ -739,16 +739,23 @@ export function ClientHierarchyTable() {
                 // static `campaigns.spend` snapshot is a lifetime/last-sync
                 // total and would lie about the picker window — never display
                 // it as the date-ranged number.
-                const totSpend = rm?.spend ?? 0;
-                const totLeads = rm?.effectiveLeads ?? 0;
-                const totClicks = rm?.clicks ?? 0;
-                const totImpr = rm?.impressions ?? 0;
+                // For the agency-owned client, `rangeMetrics` is often empty
+                // because the agency's ad accounts may not be linked through
+                // `meta_ad_accounts.client_id` in this workspace. Fall back to
+                // summing the date-ranged campaign metrics so the company row
+                // and its drilldown stay consistent.
+                const isAgency = !!(client as any).isAgencyAccount;
+                const totSpend = rm?.spend ?? (isAgency ? campSpend : 0);
+                const totLeads = rm?.effectiveLeads ?? (isAgency ? campLeads : 0);
+                const totClicks = rm?.clicks ?? (isAgency ? campClicks : 0);
+                const totImpr = rm?.impressions ?? (isAgency ? campImpr : 0);
                 const avgCtr = totImpr > 0 ? (totClicks / totImpr) * 100 : 0;
                 const avgCpl = rm?.cpl ?? (totLeads > 0 ? totSpend / totLeads : 0);
                 const cAvgCpm = rm?.cpm ?? (totImpr > 0 ? (totSpend / totImpr) * 1000 : 0);
                 const cAvgFreq = rm?.frequency ?? 0;
                 const cAbove640 = rm?.above640Pct ?? null;
                 const cScored = rm?.scoredLeads ?? 0;
+
 
                 return (
                   <>
