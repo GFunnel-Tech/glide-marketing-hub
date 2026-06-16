@@ -172,15 +172,51 @@ export default function BillingDashboard() {
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-400">{fmtDate(new Date())}</span>
           <button
-            onClick={handleSyncAll}
-            disabled={syncing || connectedCount === 0}
-            title={connectedCount === 0 ? "Connect at least one client's Stripe first" : `Backfill last 90 days for ${connectedCount} connected account${connectedCount === 1 ? "" : "s"}`}
+            onClick={handleSyncAgency}
+            disabled={syncAgency.isPending || !agencyStatus?.connected}
+            title={!agencyStatus?.connected ? "Connect your agency Stripe account first" : "Sync last 90 days of charges from your Stripe account"}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-            {syncing ? "Syncing…" : `Sync all Stripe accounts${connectedCount ? ` (${connectedCount})` : ""}`}
+            {syncAgency.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            {syncAgency.isPending ? "Syncing…" : "Sync Stripe"}
           </button>
         </div>
+      </div>
+
+      {/* Agency Stripe connection card */}
+      <div className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl border ${agencyStatus?.connected ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+        <div className="flex items-center gap-3 min-w-0">
+          {agencyStatus?.connected ? (
+            <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          ) : (
+            <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          )}
+          <div className="min-w-0">
+            {agencyStatus?.connected ? (
+              <>
+                <div className="text-sm font-medium text-emerald-900 truncate">
+                  Connected to {agencyStatus.account_name ?? agencyStatus.account_email ?? agencyStatus.account_id}
+                </div>
+                <div className="text-xs text-emerald-700">
+                  {agencyStatus.last_sync_at
+                    ? `Last synced ${fmtDate(new Date(agencyStatus.last_sync_at))} · ${agencyStatus.last_sync_charges_count ?? 0} charges, ${agencyStatus.last_sync_matched_count ?? 0} matched`
+                    : "Not synced yet"}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-sm font-medium text-amber-900">Stripe not connected</div>
+                <div className="text-xs text-amber-700">Connect your agency's Stripe account once to sync billing across all clients.</div>
+              </>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => setAgencyModalOpen(true)}
+          className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors flex-shrink-0 ${agencyStatus?.connected ? "border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-100" : "border-amber-300 text-amber-800 bg-white hover:bg-amber-100"}`}
+        >
+          {agencyStatus?.connected ? "Reconnect" : "Connect Stripe"}
+        </button>
       </div>
 
       {alerts.length > 0 && (
