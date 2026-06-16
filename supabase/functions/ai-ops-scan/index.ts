@@ -272,6 +272,11 @@ async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId
           }
         }
       }
+
+      // AI-driven proposals (uses ai_context, client_ai_rules, custom_kpis).
+      // Always status='pending' — never auto-executed.
+      const proposed = await proposeAiActions(admin, c);
+      if (proposed > 0) summary.actions_auto_queued += proposed;
     } catch (e) {
       summary.errors.push(`client ${c.client_id}: ${(e as Error).message}`);
     }
