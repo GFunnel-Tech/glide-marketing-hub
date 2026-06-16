@@ -3,6 +3,7 @@
 // member; we only sync accounts in that user's workspaces.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { recordPaymentEvent } from "../_shared/paymentEvents.ts";
 
 const DAYS_DEFAULT = 90;
 const PAGE_LIMIT = 100;
