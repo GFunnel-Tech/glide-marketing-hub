@@ -66,7 +66,8 @@ export function useClientCampaignsRange(clientId: number | null | undefined) {
       const fromStr = fmt(from);
       const toStr = fmt(to);
 
-      // 1. Client's ad accounts
+      // 1a. Client's ad accounts (may be empty when account is owned by
+      // another workspace and only linked via campaigns.client_id).
       const { data: accts, error: aErr } = await (supabase as any)
         .from("meta_ad_accounts")
         .select("id")
@@ -74,19 +75,78 @@ export function useClientCampaignsRange(clientId: number | null | undefined) {
         .eq("client_id", clientId);
       if (aErr) throw aErr;
       const acctIds = (accts || []).map((a: any) => a.id);
-      if (acctIds.length === 0) return [];
 
-      // 2. Granular insights in window
-      const { data: rows, error: gErr } = await (supabase as any)
-        .from("meta_insights_granular_daily")
-        .select(
-          "level, object_id, object_name, parent_campaign_id, parent_adset_id, spend, impressions, clicks, leads, raw"
-        )
+      // 1b. Client's campaign ids — primary attribution path. Works even
+      // when no ad-account row links to this client.
+      const { data: campRows } = await (supabase as any)
+        .from("campaigns")
+        .select("id")
         .eq("workspace_id", wsId)
-        .in("ad_account_id", acctIds)
-        .gte("date", fromStr)
-        .lte("date", toStr);
-      if (gErr) throw gErr;
+        .eq("client_id", clientId);
+      const campIds = (campRows || []).map((c: any) => String(c.id));
+
+      if (acctIds.length === 0 && campIds.length === 0) return [];
+
+      // 2. Granular insights in window — union of (any campaign owned by the
+      // client) OR (any row in one of the client's ad accounts).
+      const rows: any[] = [];
+      const seen = new Set<string>();
+      const pushRows = (arr: any[]) => {
+        for (const r of arr || []) {
+          const k = `${r.level}|${r.object_id}|${r.date ?? ""}|${r.ad_account_id ?? ""}`;
+          if (seen.has(k)) continue;
+          seen.add(k);
+          rows.push(r);
+        }
+      };
+
+      if (campIds.length > 0) {
+        const chunkSize = 200;
+        // Campaign-level rows for the client's campaigns
+        for (let i = 0; i < campIds.length; i += chunkSize) {
+          const chunk = campIds.slice(i, i + chunkSize);
+          const { data, error } = await (supabase as any)
+            .from("meta_insights_granular_daily")
+            .select(
+              "level, object_id, object_name, parent_campaign_id, parent_adset_id, ad_account_id, date, spend, impressions, clicks, leads, raw"
+            )
+            .eq("level", "campaign")
+            .in("object_id", chunk)
+            .gte("date", fromStr)
+            .lte("date", toStr);
+          if (error) throw error;
+          pushRows(data || []);
+        }
+        // Adset/ad rows whose parent_campaign_id is one of the client's campaigns
+        for (let i = 0; i < campIds.length; i += chunkSize) {
+          const chunk = campIds.slice(i, i + chunkSize);
+          const { data, error } = await (supabase as any)
+            .from("meta_insights_granular_daily")
+            .select(
+              "level, object_id, object_name, parent_campaign_id, parent_adset_id, ad_account_id, date, spend, impressions, clicks, leads, raw"
+            )
+            .in("level", ["adset", "ad"])
+            .in("parent_campaign_id", chunk)
+            .gte("date", fromStr)
+            .lte("date", toStr);
+          if (error) throw error;
+          pushRows(data || []);
+        }
+      }
+
+      if (acctIds.length > 0) {
+        const { data, error: gErr } = await (supabase as any)
+          .from("meta_insights_granular_daily")
+          .select(
+            "level, object_id, object_name, parent_campaign_id, parent_adset_id, ad_account_id, date, spend, impressions, clicks, leads, raw"
+          )
+          .eq("workspace_id", wsId)
+          .in("ad_account_id", acctIds)
+          .gte("date", fromStr)
+          .lte("date", toStr);
+        if (gErr) throw gErr;
+        pushRows(data || []);
+      }
 
       // 3. Enrich ad creative info (optional, for nicer display)
       const { data: adRows } = await (supabase as any)
