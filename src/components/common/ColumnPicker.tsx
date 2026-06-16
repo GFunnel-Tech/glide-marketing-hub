@@ -93,10 +93,21 @@ export function ColumnPicker({ tableKey, builtins, alwaysIds = [], formulaTokens
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Columns
-        </Button>
+        {triggerMode === "icon" ? (
+          <button
+            type="button"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            aria-label="Add column"
+            title="Add or customize columns"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        ) : (
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Columns
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[360px] p-0">
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
