@@ -15,6 +15,104 @@ const json = (b: unknown, s = 200) =>
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
+
+const AI_SYSTEM = `You are an ad-account optimization analyst.
+Given a client's recent metrics, their goals, custom KPIs, plain-English rules, and free-text context, propose 0–5 concrete actions for a human to approve.
+
+Allowed action types: "pause_ads", "unpause_ads", "adjust_budget", "swap_creative", "flag_only".
+
+Return ONLY JSON: { "actions": [ { "action_type": "...", "payload": {...}, "reasoning": "...", "confidence": 0.0-1.0, "severity": "info"|"warn"|"critical" } ] }
+- Use "flag_only" when unsure or when human judgment is needed.
+- "payload" for pause_ads/unpause_ads: { "ad_ids": ["..."] }
+- "payload" for adjust_budget: { "adset_id": "...", "budget_percent": -25 }  (negative to reduce)
+- "payload" for swap_creative: { "ad_id": "...", "new_creative_id": "..." }
+- "payload" for flag_only: { "title": "...", "body": "...", "notify_severity": "warn" }
+- Only propose actions justified by the data. If nothing is wrong, return { "actions": [] }.
+- Respect the client's context (goals, constraints, hours of operation) above raw metrics.`;
+
+async function proposeAiActions(admin: any, client: ClientRow): Promise<number> {
+  if (!LOVABLE_KEY) return 0;
+  try {
+    const [rulesRes, aiRulesRes, kpisRes, ctxRes, adsRes] = await Promise.all([
+      admin.from("client_optimization_rules").select("*").eq("client_id", client.client_id).maybeSingle(),
+      admin.from("client_ai_rules").select("prompt,parsed_spec,enabled").eq("client_id", client.client_id).eq("enabled", true),
+      admin.from("custom_kpis").select("name,kind,manual_value,last_external_value,direction,unit")
+        .eq("workspace_id", client.workspace_id)
+        .or(`client_id.is.null,client_id.eq.${client.client_id}`),
+      admin.from("clients").select("ai_context").eq("id", client.client_id).maybeSingle(),
+      admin.from("meta_ads").select("ad_id,name,spend,leads,cpl,ctr,frequency,effective_status,adset_id,creative_id")
+        .eq("client_id", client.client_id).eq("effective_status", "ACTIVE").order("spend", { ascending: false }).limit(15),
+    ]);
+
+    const aiContext = (ctxRes.data as any)?.ai_context ?? "";
+    const aiRules = (aiRulesRes.data ?? []) as any[];
+    const kpis = (kpisRes.data ?? []) as any[];
+    const ads = (adsRes.data ?? []) as any[];
+
+    // Skip if no AI inputs at all
+    if (!aiContext && aiRules.length === 0 && kpis.length === 0) return 0;
+
+    const userPayload = {
+      client: { id: client.client_id, name: client.name, status: client.status },
+      metrics: {
+        spend_7d: client.spend_7d, leads_7d: client.leads_7d, cpl_7d: client.cpl_7d,
+        cpl_30d: client.cpl_30d, cpl_wow_pct: client.cpl_wow_pct, frequency_7d: client.frequency_7d,
+      },
+      context: aiContext,
+      plain_english_rules: aiRules.map((r) => ({ prompt: r.prompt, spec: r.parsed_spec })),
+      custom_kpis: kpis.map((k) => ({
+        name: k.name, kind: k.kind, direction: k.direction, unit: k.unit,
+        value: k.kind === "manual" ? k.manual_value : k.kind === "external" ? k.last_external_value : null,
+      })),
+      structured_rules: rulesRes.data,
+      top_active_ads: ads,
+    };
+
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": LOVABLE_KEY },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: AI_SYSTEM },
+          { role: "user", content: JSON.stringify(userPayload) },
+        ],
+      }),
+    });
+    if (!aiRes.ok) {
+      console.warn(`[ai-ops-scan] AI ${aiRes.status} for client ${client.client_id}`);
+      return 0;
+    }
+    const aiJson = await aiRes.json();
+    const content = aiJson?.choices?.[0]?.message?.content;
+    if (!content) return 0;
+    let parsed: any;
+    try { parsed = JSON.parse(content); } catch { return 0; }
+    const actions = Array.isArray(parsed?.actions) ? parsed.actions : [];
+    if (actions.length === 0) return 0;
+
+    const rows = actions.slice(0, 5).map((a: any) => ({
+      workspace_id: client.workspace_id,
+      client_id: client.client_id,
+      proposed_by: null,
+      action_type: a.action_type,
+      payload: { ...a.payload, context: userPayload, confidence: a.confidence, severity: a.severity },
+      reasoning: a.reasoning || "AI proposal",
+      status: "pending",
+    }));
+    const { error } = await admin.from("ai_pending_actions").insert(rows);
+    if (error) {
+      console.warn(`[ai-ops-scan] action insert failed: ${error.message}`);
+      return 0;
+    }
+    return rows.length;
+  } catch (e) {
+    console.warn(`[ai-ops-scan] proposeAiActions error: ${(e as Error).message}`);
+    return 0;
+  }
+}
 
 interface ClientRow {
   client_id: number;
