@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Loader2, RefreshCw, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+
 import { ClientRevenueReport } from "@/components/billing/ClientRevenueReport";
 import { PaymentIssuesPanel } from "@/components/billing/PaymentIssuesPanel";
 import { AgencyStripeConnectModal } from "@/components/billing/AgencyStripeConnectModal";
@@ -62,15 +62,6 @@ const FILTERS: { value: "all" | PaymentStatus; label: string }[] = [
   { value: "pending", label: "Pending" },
 ];
 
-const OAUTH_ERRORS: Record<string, string> = {
-  oauth_not_configured: "Stripe Connect isn't configured on the platform yet.",
-  state_expired: "That Stripe link expired — please try again.",
-  state_used: "That Stripe link was already used — please try again.",
-  invalid_state: "Stripe link could not be verified — please try again.",
-  access_denied: "Stripe connection was declined.",
-  token_exchange_failed: "Stripe rejected the connection — please try again.",
-  save_failed: "Connected to Stripe but couldn't save it — please retry.",
-};
 
 export default function BillingDashboard() {
   const [filter, setFilter] = useState<"all" | PaymentStatus>("all");
