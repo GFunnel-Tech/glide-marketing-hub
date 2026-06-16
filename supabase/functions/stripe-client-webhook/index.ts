@@ -4,6 +4,7 @@
 // connect time, then mirror charge events into public.stripe_charges so
 // the UI can show charges/failures and offer rebill.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { recordPaymentEvent, type PaymentEventType } from "../_shared/paymentEvents.ts";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
