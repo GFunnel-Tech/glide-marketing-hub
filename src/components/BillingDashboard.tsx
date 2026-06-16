@@ -346,14 +346,11 @@ export default function BillingDashboard() {
 
       <ClientRevenueReport clients={rows.map((c) => ({ id: String(c.id), name: c.name, company: c.company }))} />
 
-      {connectDialog && (
-        <StripeConnectDialog
-          open={!!connectDialog}
-          onOpenChange={(v) => !v && setConnectDialog(null)}
-          clientId={connectDialog.clientId}
-          clientName={connectDialog.name}
-        />
-      )}
+      <AgencyStripeConnectModal
+        open={agencyModalOpen}
+        onOpenChange={setAgencyModalOpen}
+        dismissible={!!agencyStatus?.connected}
+      />
     </div>
   );
 }
