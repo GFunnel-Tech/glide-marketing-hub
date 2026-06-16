@@ -260,6 +260,25 @@ export function ClientHierarchyTable() {
     ? openClients
     : (focusedClient ? { [String(focusedClient.id)]: true } : {});
 
+  // Agency-owned clients are always shown with their full sub-tree, even when
+  // the selected date range has no insights for them (e.g. sync hasn't caught
+  // up yet). Without this the agency row collapses to "—" with no campaigns.
+  const agencyClientIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of clients as any[]) if (c.isAgencyAccount) s.add(String(c.id));
+    return s;
+  }, [clients]);
+  const campaignToClientId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of allCampaigns as any[]) m.set(String(c.id), String(c.clientId));
+    return m;
+  }, [allCampaigns]);
+  const isAgencyCampaignId = (campaignId: string) => {
+    const cid = campaignToClientId.get(String(campaignId));
+    return cid ? agencyClientIds.has(cid) : false;
+  };
+
+
   // Filter campaigns
   const campaigns = useMemo(() => {
     let list = (allCampaigns as any[]).map((campaign) => {
@@ -299,9 +318,12 @@ export function ClientHierarchyTable() {
     if (statusFilter === "Issues") list = list.filter((c) => c.doubleCount || c.issuesStatus);
     if (!showArchived) list = list.filter((c) => !archivedSet.has(`campaign:${c.id}`));
     if (hideZero) list = list.filter((c) => {
+      // Always keep agency-owned campaigns so the agency row stays expandable.
+      if (agencyClientIds.has(String(c.clientId))) return true;
       const impr = (c.impressions || 0) > 0 ? (c.impressions || 0) : deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0);
       return (c.spend || 0) > 0 && impr > 0;
     });
+
     if (search) {
       const s = search.toLowerCase();
       list = list.filter((c) => {
@@ -315,7 +337,7 @@ export function ClientHierarchyTable() {
       });
     }
     return list;
-  }, [allCampaigns, campaignRangeMetrics, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet, hideZero]);
+  }, [allCampaigns, campaignRangeMetrics, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet, hideZero, agencyClientIds]);
 
   // Group campaigns by client
   const campaignsByClient = useMemo(() => {
@@ -347,12 +369,14 @@ export function ClientHierarchyTable() {
         if (archivedSet.has(`ad:${ad.id}`)) continue;
         if (ad.adset_id && archivedSet.has(`adset:${ad.adset_id}`)) continue;
       }
-      if (hideZero && !(rangedAd.impressions || 0) && !(rangedAd.spend || 0) && !(rangedAd.clicks || 0) && !(rangedAd.leads || 0)) continue;
+      const keepForAgency = isAgencyCampaignId(ad.campaign_id);
+      if (hideZero && !keepForAgency && !(rangedAd.impressions || 0) && !(rangedAd.spend || 0) && !(rangedAd.clicks || 0) && !(rangedAd.leads || 0)) continue;
       if (!byCamp.has(ad.campaign_id)) byCamp.set(ad.campaign_id, []);
       byCamp.get(ad.campaign_id)!.push(rangedAd);
     }
     return byCamp;
-  }, [allAds, campaignRangeMetrics, showArchived, archivedSet, hideZero]);
+  }, [allAds, campaignRangeMetrics, showArchived, archivedSet, hideZero, campaignToClientId, agencyClientIds]);
+
 
   // Compute which clients have ANY non-zero campaign activity (regardless of archive state)
   const clientsWithActivity = useMemo(() => {
@@ -715,16 +739,23 @@ export function ClientHierarchyTable() {
                 // static `campaigns.spend` snapshot is a lifetime/last-sync
                 // total and would lie about the picker window — never display
                 // it as the date-ranged number.
-                const totSpend = rm?.spend ?? 0;
-                const totLeads = rm?.effectiveLeads ?? 0;
-                const totClicks = rm?.clicks ?? 0;
-                const totImpr = rm?.impressions ?? 0;
+                // For the agency-owned client, `rangeMetrics` is often empty
+                // because the agency's ad accounts may not be linked through
+                // `meta_ad_accounts.client_id` in this workspace. Fall back to
+                // summing the date-ranged campaign metrics so the company row
+                // and its drilldown stay consistent.
+                const isAgency = !!(client as any).isAgencyAccount;
+                const totSpend = rm?.spend ?? (isAgency ? campSpend : 0);
+                const totLeads = rm?.effectiveLeads ?? (isAgency ? campLeads : 0);
+                const totClicks = rm?.clicks ?? (isAgency ? campClicks : 0);
+                const totImpr = rm?.impressions ?? (isAgency ? campImpr : 0);
                 const avgCtr = totImpr > 0 ? (totClicks / totImpr) * 100 : 0;
                 const avgCpl = rm?.cpl ?? (totLeads > 0 ? totSpend / totLeads : 0);
                 const cAvgCpm = rm?.cpm ?? (totImpr > 0 ? (totSpend / totImpr) * 1000 : 0);
                 const cAvgFreq = rm?.frequency ?? 0;
                 const cAbove640 = rm?.above640Pct ?? null;
                 const cScored = rm?.scoredLeads ?? 0;
+
 
                 return (
                   <>
