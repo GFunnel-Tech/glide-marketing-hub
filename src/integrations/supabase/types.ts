@@ -5194,6 +5194,68 @@ export type Database = {
           },
         ]
       }
+      workspace_stripe_accounts: {
+        Row: {
+          account_email: string | null
+          account_id: string | null
+          account_name: string | null
+          api_key: string
+          connected_at: string
+          connected_by: string | null
+          created_at: string
+          last_sync_at: string | null
+          last_sync_charges_count: number | null
+          last_sync_error: string | null
+          last_sync_matched_count: number | null
+          last_sync_status: string | null
+          livemode: boolean | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          account_email?: string | null
+          account_id?: string | null
+          account_name?: string | null
+          api_key: string
+          connected_at?: string
+          connected_by?: string | null
+          created_at?: string
+          last_sync_at?: string | null
+          last_sync_charges_count?: number | null
+          last_sync_error?: string | null
+          last_sync_matched_count?: number | null
+          last_sync_status?: string | null
+          livemode?: boolean | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          account_email?: string | null
+          account_id?: string | null
+          account_name?: string | null
+          api_key?: string
+          connected_at?: string
+          connected_by?: string | null
+          created_at?: string
+          last_sync_at?: string | null
+          last_sync_charges_count?: number | null
+          last_sync_error?: string | null
+          last_sync_matched_count?: number | null
+          last_sync_status?: string | null
+          livemode?: boolean | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_stripe_accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspaces: {
         Row: {
           auth_mode: string
@@ -5372,6 +5434,10 @@ export type Database = {
       detect_client_anomalies: { Args: { _client_id: number }; Returns: Json }
       fire_due_client_notes: { Args: never; Returns: number }
       forecast_client_eom: { Args: { _client_id: number }; Returns: Json }
+      get_workspace_stripe_status: {
+        Args: { _workspace_id: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

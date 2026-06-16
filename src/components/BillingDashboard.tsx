@@ -1,18 +1,17 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Link2, Link2Off, Loader2, RefreshCw } from "lucide-react";
+import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Loader2, RefreshCw, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { StripeConnectDialog } from "@/components/billing/StripeConnectDialog";
+
 import { ClientRevenueReport } from "@/components/billing/ClientRevenueReport";
 import { PaymentIssuesPanel } from "@/components/billing/PaymentIssuesPanel";
+import { AgencyStripeConnectModal } from "@/components/billing/AgencyStripeConnectModal";
 import {
-  useClientStripeConnections,
-  useDisconnectClientStripe,
   useWorkspaceChargeSummaries,
   type ClientChargeSummary,
 } from "@/hooks/useClientStripe";
+import { useAgencyStripeStatus, useSyncAgencyStripe } from "@/hooks/useAgencyStripe";
 import { useClients } from "@/hooks/useDatabase";
 
 type PaymentStatus = "active" | "failed" | "overdue" | "pending";
@@ -63,89 +62,57 @@ const FILTERS: { value: "all" | PaymentStatus; label: string }[] = [
   { value: "pending", label: "Pending" },
 ];
 
-const OAUTH_ERRORS: Record<string, string> = {
-  oauth_not_configured: "Stripe Connect isn't configured on the platform yet.",
-  state_expired: "That Stripe link expired — please try again.",
-  state_used: "That Stripe link was already used — please try again.",
-  invalid_state: "Stripe link could not be verified — please try again.",
-  access_denied: "Stripe connection was declined.",
-  token_exchange_failed: "Stripe rejected the connection — please try again.",
-  save_failed: "Connected to Stripe but couldn't save it — please retry.",
-};
 
 export default function BillingDashboard() {
   const [filter, setFilter] = useState<"all" | PaymentStatus>("all");
   const [search, setSearch] = useState("");
   const [notes, setNotes] = useState<Record<number, string>>({});
-  const [connectDialog, setConnectDialog] = useState<{ clientId: number; name: string } | null>(null);
-  const [syncing, setSyncing] = useState(false);
+  const [agencyModalOpen, setAgencyModalOpen] = useState(false);
 
   const { data: clients = [], isLoading: clientsLoading } = useClients();
-  const { data: connections = {} } = useClientStripeConnections();
   const { data: chargeSummaries = {} } = useWorkspaceChargeSummaries();
-  const disconnect = useDisconnectClientStripe();
+  const { data: agencyStatus, isLoading: statusLoading } = useAgencyStripeStatus();
+  const syncAgency = useSyncAgencyStripe();
 
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const connectedCount = useMemo(
-    () => Object.values(connections).filter((c: any) => c?.is_connected).length,
-    [connections],
-  );
+  // Auto-prompt to connect the agency Stripe if not connected
+  useEffect(() => {
+    if (statusLoading) return;
+    if (agencyStatus && !agencyStatus.connected) {
+      setAgencyModalOpen(true);
+    }
+  }, [statusLoading, agencyStatus]);
 
-  const handleSyncAll = async () => {
-    if (syncing) return;
-    setSyncing(true);
-    const t = toast.loading(`Syncing ${connectedCount} Stripe account${connectedCount === 1 ? "" : "s"}…`);
+  const handleSyncAgency = async () => {
+    if (syncAgency.isPending) return;
+    const t = toast.loading("Syncing your agency Stripe account…");
     try {
-      const { data, error } = await supabase.functions.invoke("stripe-sync-all-charges", {
-        body: { days: 90 },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
+      const res = await syncAgency.mutateAsync(90);
       toast.success(
-        `Synced ${data?.synced ?? 0} charges from ${data?.accounts ?? 0} account${data?.accounts === 1 ? "" : "s"}${data?.failed ? ` · ${data.failed} failed` : ""}`,
+        `Synced ${res.fetched} charge${res.fetched === 1 ? "" : "s"} · ${res.matched} matched · ${res.unmatched} unmatched`,
         { id: t },
       );
-      qc.invalidateQueries({ queryKey: ["workspace-charge-summaries"] });
-      qc.invalidateQueries({ queryKey: ["client-stripe-connections"] });
     } catch (e: any) {
       toast.error(e?.message ?? "Sync failed", { id: t });
-    } finally {
-      setSyncing(false);
     }
   };
 
-  // Surface the result of the Stripe Connect OAuth round-trip.
+  // Surface legacy OAuth round-trip params (kept for backward compatibility)
   useEffect(() => {
     const stripeParam = searchParams.get("stripe");
     if (!stripeParam) return;
     if (stripeParam === "connected") {
       toast.success("Stripe account connected.");
-      qc.invalidateQueries({ queryKey: ["client-stripe-connections"] });
     } else if (stripeParam === "error") {
-      const reason = searchParams.get("reason") ?? "";
-      toast.error(OAUTH_ERRORS[reason] ?? "Stripe connection failed — please try again.");
+      toast.error("Stripe connection failed — please try again.");
     }
     searchParams.delete("stripe");
     searchParams.delete("reason");
     searchParams.delete("client");
     setSearchParams(searchParams, { replace: true });
   }, [searchParams, setSearchParams, qc]);
-
-  const handleConnectStripe = (row: BillingRow) => {
-    setConnectDialog({ clientId: row.id, name: row.name });
-  };
-
-  const handleDisconnectStripe = async (row: BillingRow) => {
-    if (!confirm(`Disconnect ${row.name}'s Stripe account? Their stored credentials will be deleted from our backend.`)) return;
-    try {
-      await disconnect.mutateAsync(row.id);
-      toast.success(`Disconnected ${row.name}'s Stripe account`);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to disconnect");
-    }
-  };
 
   // Build billing rows from real clients + their latest mirrored charge.
   const rows = useMemo<BillingRow[]>(() =>
@@ -196,15 +163,51 @@ export default function BillingDashboard() {
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-400">{fmtDate(new Date())}</span>
           <button
-            onClick={handleSyncAll}
-            disabled={syncing || connectedCount === 0}
-            title={connectedCount === 0 ? "Connect at least one client's Stripe first" : `Backfill last 90 days for ${connectedCount} connected account${connectedCount === 1 ? "" : "s"}`}
+            onClick={handleSyncAgency}
+            disabled={syncAgency.isPending || !agencyStatus?.connected}
+            title={!agencyStatus?.connected ? "Connect your agency Stripe account first" : "Sync last 90 days of charges from your Stripe account"}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-            {syncing ? "Syncing…" : `Sync all Stripe accounts${connectedCount ? ` (${connectedCount})` : ""}`}
+            {syncAgency.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            {syncAgency.isPending ? "Syncing…" : "Sync Stripe"}
           </button>
         </div>
+      </div>
+
+      {/* Agency Stripe connection card */}
+      <div className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl border ${agencyStatus?.connected ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+        <div className="flex items-center gap-3 min-w-0">
+          {agencyStatus?.connected ? (
+            <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          ) : (
+            <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          )}
+          <div className="min-w-0">
+            {agencyStatus?.connected ? (
+              <>
+                <div className="text-sm font-medium text-emerald-900 truncate">
+                  Connected to {agencyStatus.account_name ?? agencyStatus.account_email ?? agencyStatus.account_id}
+                </div>
+                <div className="text-xs text-emerald-700">
+                  {agencyStatus.last_sync_at
+                    ? `Last synced ${fmtDate(new Date(agencyStatus.last_sync_at))} · ${agencyStatus.last_sync_charges_count ?? 0} charges, ${agencyStatus.last_sync_matched_count ?? 0} matched`
+                    : "Not synced yet"}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-sm font-medium text-amber-900">Stripe not connected</div>
+                <div className="text-xs text-amber-700">Connect your agency's Stripe account once to sync billing across all clients.</div>
+              </>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => setAgencyModalOpen(true)}
+          className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors flex-shrink-0 ${agencyStatus?.connected ? "border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-100" : "border-amber-300 text-amber-800 bg-white hover:bg-amber-100"}`}
+        >
+          {agencyStatus?.connected ? "Reconnect" : "Connect Stripe"}
+        </button>
       </div>
 
       {alerts.length > 0 && (
@@ -265,7 +268,7 @@ export default function BillingDashboard() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
-              {["Client", "Status", "Stripe", "Last charge", "Amount", "Notes", ""].map((h) => (
+              {["Client", "Status", "Last charge", "Amount", "Notes", ""].map((h) => (
                 <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
@@ -286,46 +289,6 @@ export default function BillingDashboard() {
                     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cfg.classes}`}>
                       <Icon className="w-3 h-3" />{cfg.label}
                     </span>
-                  </td>
-                  <td className="px-3 py-2.5">
-                    {(() => {
-                      const conn = connections[client.id];
-                      const busy = disconnect.isPending && disconnect.variables === client.id;
-                      if (busy) {
-                        return (
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-                            <Loader2 className="w-3 h-3 animate-spin" /> Working…
-                          </span>
-                        );
-                      }
-                      if (conn?.is_connected) {
-                        return (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                              <Link2 className="w-3 h-3" /> Connected
-                              <span className="ml-1 px-1 rounded bg-indigo-100 text-[10px] uppercase tracking-wide">
-                                {conn.livemode ? "live" : "test"}
-                              </span>
-                            </span>
-                            <button
-                              onClick={() => handleDisconnectStripe(client)}
-                              title={`Disconnect ${conn.stripe_user_id}`}
-                              className="text-xs text-gray-400 hover:text-red-600 transition-colors"
-                            >
-                              <Link2Off className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        );
-                      }
-                      return (
-                        <button
-                          onClick={() => handleConnectStripe(client)}
-                          className="inline-flex items-center gap-1 text-xs px-2.5 py-1 border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-colors"
-                        >
-                          <Link2 className="w-3 h-3" /> Connect Stripe
-                        </button>
-                      );
-                    })()}
                   </td>
                   <td className="px-3 py-2.5 text-gray-600">
                     {client.lastCharge ? (
@@ -374,14 +337,11 @@ export default function BillingDashboard() {
 
       <ClientRevenueReport clients={rows.map((c) => ({ id: String(c.id), name: c.name, company: c.company }))} />
 
-      {connectDialog && (
-        <StripeConnectDialog
-          open={!!connectDialog}
-          onOpenChange={(v) => !v && setConnectDialog(null)}
-          clientId={connectDialog.clientId}
-          clientName={connectDialog.name}
-        />
-      )}
+      <AgencyStripeConnectModal
+        open={agencyModalOpen}
+        onOpenChange={setAgencyModalOpen}
+        dismissible={!!agencyStatus?.connected}
+      />
     </div>
   );
 }
