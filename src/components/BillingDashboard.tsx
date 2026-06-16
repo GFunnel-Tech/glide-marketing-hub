@@ -1,18 +1,17 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Link2, Link2Off, Loader2, RefreshCw } from "lucide-react";
+import { CreditCard, AlertTriangle, CheckCircle2, Clock, XCircle, Search, Loader2, RefreshCw, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { StripeConnectDialog } from "@/components/billing/StripeConnectDialog";
 import { ClientRevenueReport } from "@/components/billing/ClientRevenueReport";
 import { PaymentIssuesPanel } from "@/components/billing/PaymentIssuesPanel";
+import { AgencyStripeConnectModal } from "@/components/billing/AgencyStripeConnectModal";
 import {
-  useClientStripeConnections,
-  useDisconnectClientStripe,
   useWorkspaceChargeSummaries,
   type ClientChargeSummary,
 } from "@/hooks/useClientStripe";
+import { useAgencyStripeStatus, useSyncAgencyStripe } from "@/hooks/useAgencyStripe";
 import { useClients } from "@/hooks/useDatabase";
 
 type PaymentStatus = "active" | "failed" | "overdue" | "pending";
