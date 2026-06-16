@@ -295,11 +295,14 @@ function ClientProfileInner() {
     { spend: 0, leads: 0, impressions: 0, clicks: 0, freqSum: 0, cpmSum: 0 },
   );
   const hasLiveData = agg.spend > 0 || agg.leads > 0 || agg.impressions > 0;
-  const liveSpend = hasLiveData ? agg.spend : client.spend;
-  const liveLeads = hasLiveData ? agg.leads : client.leads;
-  const liveCpl = liveLeads > 0 ? liveSpend / liveLeads : client.cpl;
-  const liveCpm = hasLiveData && agg.spend > 0 ? agg.cpmSum / agg.spend : client.cpm;
-  const liveFreq = hasLiveData && agg.spend > 0 ? agg.freqSum / agg.spend : client.frequency;
+  // Always reflect the picker window. `client.*` snapshot fields are lifetime
+  // totals and would misrepresent the selected range; show 0 when there's no
+  // ranged data instead of falling back to lifetime.
+  const liveSpend = agg.spend;
+  const liveLeads = agg.leads;
+  const liveCpl = liveLeads > 0 ? liveSpend / liveLeads : 0;
+  const liveCpm = agg.spend > 0 ? agg.cpmSum / agg.spend : 0;
+  const liveFreq = agg.spend > 0 ? agg.freqSum / agg.spend : 0;
   const liveCvr = client.formCvr; // form CVR still snapshot-sourced
 
 

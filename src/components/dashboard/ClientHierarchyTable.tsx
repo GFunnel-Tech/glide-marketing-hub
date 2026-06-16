@@ -966,19 +966,27 @@ export function ClientHierarchyTable() {
                               </button>
                             </td>
                             {(() => {
-                              const campCpm = (camp.cpm || 0) > 0
-                                ? Number(camp.cpm)
-                                : (campImpr > 0 ? ((camp.spend || 0) / campImpr) * 1000 : 0);
-                              const campFreq = Number(camp.frequency || 0);
+                              // Re-resolve metrics directly from the date-ranged
+                              // source so we NEVER fall back to the static
+                              // `campaigns.spend` lifetime snapshot, even if the
+                              // earlier rewrite is racing/missing for this row.
+                              const rangedCamp = campaignRangeMetrics.campaigns[camp.id];
+                              const rSpend = rangedCamp?.spend ?? 0;
+                              const rLeads = rangedCamp?.leads ?? 0;
+                              const rImpr = rangedCamp?.impressions ?? campImpr;
+                              const rClicks = rangedCamp?.clicks ?? campClicks;
+                              const rCtr = rImpr > 0 ? (rClicks / rImpr) * 100 : 0;
+                              const campCpm = rangedCamp?.cpm ?? (rImpr > 0 ? (rSpend / rImpr) * 1000 : 0);
+                              const campFreq = Number(rangedCamp?.frequency ?? 0);
                               const campAbove = leadBreakdown.byCampaign[camp.id] ?? null;
-                              const cplVal = camp.cpl > 0 ? camp.cpl : ((camp.leads || 0) > 0 ? (camp.spend || 0) / camp.leads : 0);
+                              const cplVal = rLeads > 0 ? rSpend / rLeads : 0;
                               return (
                                 <>
-                                  {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(campImpr)}</td>}
-                                  {isVisible("clicks") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{campClicks || "—"}</td>}
-                                  {isVisible("ctr") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{campCtr > 0 ? `${campCtr.toFixed(2)}%` : "—"}</td>}
-                                  {isVisible("spend") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(camp.spend || 0, cur)}</td>}
-                                  {isVisible("leads") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{camp.leads ?? 0}</td>}
+                                  {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(rImpr)}</td>}
+                                  {isVisible("clicks") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{rClicks || "—"}</td>}
+                                  {isVisible("ctr") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{rCtr > 0 ? `${rCtr.toFixed(2)}%` : "—"}</td>}
+                                  {isVisible("spend") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtMoney(rSpend, cur)}</td>}
+                                  {isVisible("leads") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{rLeads}</td>}
                                   {isVisible("cpl") && (
                                     <td className={cn("px-2 py-2 text-right tabular-nums font-semibold", cplColor(cplVal))}>
                                       {cplVal > 0 ? fmtMoney(cplVal, cur, 2) : "—"}
@@ -1000,8 +1008,8 @@ export function ClientHierarchyTable() {
                                   )}
                                   {extraCols.map((col) => {
                                     const scope: Record<string, number> = {
-                                      impressions: campImpr, clicks: campClicks, ctr: campCtr,
-                                      spend: camp.spend || 0, leads: camp.leads || 0, cpl: cplVal,
+                                      impressions: rImpr, clicks: rClicks, ctr: rCtr,
+                                      spend: rSpend, leads: rLeads, cpl: cplVal,
                                       cpm: campCpm, frequency: campFreq, above640: campAbove?.pct ?? 0,
                                     };
                                     if (col.kind === "formula") {
