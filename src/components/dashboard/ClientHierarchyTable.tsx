@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useClients, useCampaigns, useClientsWithMetaAccount } from "@/hooks/useDatabase";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
+import { EMPTY_CAMPAIGNS_RANGE_METRICS, useCampaignsRangeMetrics } from "@/hooks/useCampaignsRangeMetrics";
 import { useMetaAds, type MetaAd } from "@/hooks/useMetaAds";
 import {
   useArchivedSet, useArchiveEntities, useUnarchiveEntities,
@@ -159,7 +160,8 @@ export function ClientHierarchyTable() {
   const { data: allCampaigns = [], isLoading: campLoading } = useCampaigns();
   const { data: allAds = [] } = useMetaAds();
   const { data: clientsWithMetaAcct = new Set<number>() } = useClientsWithMetaAccount();
-  const { data: rangeMetrics = {} } = useClientsRangeMetrics();
+  const { data: rangeMetrics = {}, isLoading: rangeLoading } = useClientsRangeMetrics();
+  const { data: campaignRangeMetrics = EMPTY_CAMPAIGNS_RANGE_METRICS, isLoading: campaignRangeLoading } = useCampaignsRangeMetrics();
   const { data: leadBreakdown = { byCampaign: {}, byAdset: {}, byAd: {} } } = useCampaignLeadBreakdown();
   const { view } = useTableView(TABLE_KEY);
   const { data: customKpis = [] } = useCustomKpis();
@@ -260,7 +262,37 @@ export function ClientHierarchyTable() {
 
   // Filter campaigns
   const campaigns = useMemo(() => {
-    let list = allCampaigns as any[];
+    let list = (allCampaigns as any[]).map((campaign) => {
+      const metric = campaignRangeMetrics.campaigns[campaign.id];
+      if (!metric) {
+        return {
+          ...campaign,
+          spend: 0,
+          leads: 0,
+          trueLeads: 0,
+          cpl: 0,
+          trueCpl: 0,
+          cpm: 0,
+          frequency: 0,
+          impressions: 0,
+          clicks: 0,
+          ctr: 0,
+        };
+      }
+      return {
+        ...campaign,
+        spend: metric.spend,
+        leads: metric.leads,
+        trueLeads: metric.leads,
+        cpl: metric.cpl,
+        trueCpl: metric.cpl,
+        cpm: metric.cpm,
+        frequency: metric.frequency,
+        impressions: metric.impressions,
+        clicks: metric.clicks,
+        ctr: metric.ctr,
+      };
+    });
     if (!isAllClients) list = list.filter((c) => String(c.clientId) === String(clientId));
     if (statusFilter === "Active") list = list.filter((c) => c.status === "active");
     if (statusFilter === "Paused") list = list.filter((c) => c.status === "paused");
@@ -283,7 +315,7 @@ export function ClientHierarchyTable() {
       });
     }
     return list;
-  }, [allCampaigns, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet, hideZero]);
+  }, [allCampaigns, campaignRangeMetrics, isAllClients, clientId, statusFilter, search, clients, showArchived, archivedSet, hideZero]);
 
   // Group campaigns by client
   const campaignsByClient = useMemo(() => {
@@ -301,26 +333,35 @@ export function ClientHierarchyTable() {
     const byCamp = new Map<string, MetaAd[]>();
     for (const ad of allAds) {
       if (!ad.campaign_id) continue;
+      const metric = campaignRangeMetrics.ads[ad.id];
+      const rangedAd = {
+        ...ad,
+        spend: metric?.spend ?? 0,
+        impressions: metric?.impressions ?? 0,
+        clicks: metric?.clicks ?? 0,
+        leads: metric?.leads ?? 0,
+        ctr: metric?.ctr ?? 0,
+        cpl: metric?.cpl ?? 0,
+      };
       if (!showArchived) {
         if (archivedSet.has(`ad:${ad.id}`)) continue;
         if (ad.adset_id && archivedSet.has(`adset:${ad.adset_id}`)) continue;
       }
-      if (hideZero && !(ad.impressions || 0) && !(ad.spend || 0) && !(ad.clicks || 0) && !(ad.leads || 0)) continue;
+      if (hideZero && !(rangedAd.impressions || 0) && !(rangedAd.spend || 0) && !(rangedAd.clicks || 0) && !(rangedAd.leads || 0)) continue;
       if (!byCamp.has(ad.campaign_id)) byCamp.set(ad.campaign_id, []);
-      byCamp.get(ad.campaign_id)!.push(ad);
+      byCamp.get(ad.campaign_id)!.push(rangedAd);
     }
     return byCamp;
-  }, [allAds, showArchived, archivedSet, hideZero]);
+  }, [allAds, campaignRangeMetrics, showArchived, archivedSet, hideZero]);
 
   // Compute which clients have ANY non-zero campaign activity (regardless of archive state)
   const clientsWithActivity = useMemo(() => {
     const s = new Set<string>();
-    for (const c of allCampaigns as any[]) {
-      const impr = (c.impressions || 0) > 0 ? (c.impressions || 0) : deriveImpressionsFromCpm(c.spend || 0, c.cpm || 0);
-      if ((c.spend || 0) > 0 && impr > 0) s.add(String(c.clientId));
+    for (const [cid, metric] of Object.entries(rangeMetrics as Record<string, any>)) {
+      if ((metric?.spend || 0) > 0 && (metric?.impressions || 0) > 0) s.add(String(cid));
     }
     return s;
-  }, [allCampaigns]);
+  }, [rangeMetrics]);
 
   // A client is considered "fully synced" when it is (1) linked to a GHL
   // sub-account and (2) has at least one Meta ad account mapped to it.
@@ -471,7 +512,7 @@ export function ClientHierarchyTable() {
   const showCompanyCol = isAllClients;
 
   const filters: StatusFilter[] = ["All", "Active", "Paused", "Issues"];
-  const isLoading = clientsLoading || campLoading;
+  const isLoading = clientsLoading || campLoading || rangeLoading || campaignRangeLoading;
 
   return (
     <div className="space-y-4">
