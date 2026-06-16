@@ -260,6 +260,25 @@ export function ClientHierarchyTable() {
     ? openClients
     : (focusedClient ? { [String(focusedClient.id)]: true } : {});
 
+  // Agency-owned clients are always shown with their full sub-tree, even when
+  // the selected date range has no insights for them (e.g. sync hasn't caught
+  // up yet). Without this the agency row collapses to "—" with no campaigns.
+  const agencyClientIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of clients as any[]) if (c.isAgencyAccount) s.add(String(c.id));
+    return s;
+  }, [clients]);
+  const campaignToClientId = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of allCampaigns as any[]) m.set(String(c.id), String(c.clientId));
+    return m;
+  }, [allCampaigns]);
+  const isAgencyCampaignId = (campaignId: string) => {
+    const cid = campaignToClientId.get(String(campaignId));
+    return cid ? agencyClientIds.has(cid) : false;
+  };
+
+
   // Filter campaigns
   const campaigns = useMemo(() => {
     let list = (allCampaigns as any[]).map((campaign) => {
