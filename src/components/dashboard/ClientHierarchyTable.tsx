@@ -369,12 +369,14 @@ export function ClientHierarchyTable() {
         if (archivedSet.has(`ad:${ad.id}`)) continue;
         if (ad.adset_id && archivedSet.has(`adset:${ad.adset_id}`)) continue;
       }
-      if (hideZero && !(rangedAd.impressions || 0) && !(rangedAd.spend || 0) && !(rangedAd.clicks || 0) && !(rangedAd.leads || 0)) continue;
+      const keepForAgency = isAgencyCampaignId(ad.campaign_id);
+      if (hideZero && !keepForAgency && !(rangedAd.impressions || 0) && !(rangedAd.spend || 0) && !(rangedAd.clicks || 0) && !(rangedAd.leads || 0)) continue;
       if (!byCamp.has(ad.campaign_id)) byCamp.set(ad.campaign_id, []);
       byCamp.get(ad.campaign_id)!.push(rangedAd);
     }
     return byCamp;
-  }, [allAds, campaignRangeMetrics, showArchived, archivedSet, hideZero]);
+  }, [allAds, campaignRangeMetrics, showArchived, archivedSet, hideZero, campaignToClientId, agencyClientIds]);
+
 
   // Compute which clients have ANY non-zero campaign activity (regardless of archive state)
   const clientsWithActivity = useMemo(() => {
