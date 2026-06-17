@@ -3,7 +3,7 @@ import { ChurnRiskBadge } from "./ChurnRiskBadge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { AlertTriangle, RefreshCw, ChevronRight } from "lucide-react";
-import { clientPath } from "@/lib/clientPath";
+import { useClientPath } from "@/lib/clientPath";
 import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
