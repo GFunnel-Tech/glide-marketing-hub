@@ -122,6 +122,27 @@ export function ClientSyncStatus({ clientId }: Props) {
     onError: (e: any) => toast.error(e?.message || "Worker failed"),
   });
 
+  const backfill = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("meta-leads-sync", {
+        body: { workspaceId: wsId, clientId, sinceDays: null, exhaustiveDiscovery: true },
+      });
+      if (error) throw error;
+      return data as { leadsSynced?: number };
+    },
+    onSuccess: (data) => {
+      toast.success(
+        data?.leadsSynced != null
+          ? `Pulled ${data.leadsSynced} lead${data.leadsSynced === 1 ? "" : "s"} from Meta`
+          : "Backfill triggered"
+      );
+      qc.invalidateQueries({ queryKey: ["client-sync-counts", wsId, clientId] });
+      qc.invalidateQueries({ queryKey: ["client-sync-failed", wsId, clientId] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Backfill failed"),
+  });
+
+
   const retry = useMutation({
     mutationFn: async (lead: Row) => {
       const { error } = await supabase
@@ -224,6 +245,23 @@ export function ClientSyncStatus({ clientId }: Props) {
             variant="outline"
             onClick={(e) => {
               e.stopPropagation();
+              backfill.mutate();
+            }}
+            disabled={backfill.isPending}
+            title="Pull every lead Meta still has on file for this client and upsert any missing ones"
+          >
+            {backfill.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Backfill from Meta
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
               runWorker.mutate();
             }}
             disabled={runWorker.isPending}
@@ -235,6 +273,7 @@ export function ClientSyncStatus({ clientId }: Props) {
             )}
             Run check
           </Button>
+
           <ChevronDown
             className={cn(
               "h-4 w-4 text-muted-foreground transition-transform",
