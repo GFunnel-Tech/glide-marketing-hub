@@ -1103,7 +1103,7 @@ export function ClientHierarchyTable() {
 
                             return (
                               <>
-                                <tr key={`as-${adsetId}`} className="border-b border-border bg-muted/20 hover:bg-muted/30">
+                                <tr key={`as-${adsetId}`} className="border-b border-border bg-muted/30 hover:bg-muted/50">
                                   <td className={cn("px-2 py-2", showCompanyCol ? "pl-14" : "pl-8")}>
                                     <button
                                       onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
@@ -1125,16 +1125,21 @@ export function ClientHierarchyTable() {
                                   <td className="px-2 py-2"></td>
                                   {showCompanyCol && <td className="px-2 py-2"></td>}
                                   <td className="px-2 py-2">
-                                    <button
-                                      onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
-                                      className="flex items-center gap-2 text-left w-full"
-                                    >
-                                      <div className="flex h-6 w-6 items-center justify-center rounded bg-warning/10 text-warning">
-                                        <Layers className="h-3 w-3" />
-                                      </div>
-                                      <p className="text-sm text-foreground hover:text-primary truncate max-w-[340px]">{adsetName}</p>
-                                      <span className="text-[10px] text-muted-foreground">· {ads.length} ad{ads.length === 1 ? "" : "s"}</span>
-                                    </button>
+                                    <div className="flex items-stretch gap-2">
+                                      <div className="w-px self-stretch bg-blue-500/30 shrink-0" aria-hidden />
+                                      <div className="w-px self-stretch bg-amber-500/40 shrink-0" aria-hidden />
+                                      <button
+                                        onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
+                                        className="flex items-center gap-2 text-left w-full"
+                                      >
+                                        <LevelBadge level="adset" />
+                                        <div className="flex h-6 w-6 items-center justify-center rounded bg-warning/10 text-warning">
+                                          <Layers className="h-3 w-3" />
+                                        </div>
+                                        <p className="text-sm text-foreground hover:text-primary truncate max-w-[340px]">{adsetName}</p>
+                                        <span className="text-[10px] text-muted-foreground">· {ads.length} ad{ads.length === 1 ? "" : "s"}</span>
+                                      </button>
+                                    </div>
                                   </td>
                                   {(() => {
                                     const asCpm = impr > 0 ? (spend / impr) * 1000 : 0;
