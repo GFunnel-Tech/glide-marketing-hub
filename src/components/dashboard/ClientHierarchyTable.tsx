@@ -1184,7 +1184,7 @@ export function ClientHierarchyTable() {
                                     const rating = ratings.get(ad.id) ?? "ok";
                                     return (
                                       <tr key={`ad-${ad.id}`} className="border-b border-border/50 bg-muted/50 hover:bg-muted/70">
-                                        <td className={cn("px-2 py-2", showCompanyCol ? "pl-20" : "pl-14")}></td>
+                                        <td className="px-2 py-2"></td>
                                         <td className="px-2 py-2">
                                           <Checkbox
                                             checked={isSelected("ad", ad.id)}
@@ -1193,12 +1193,8 @@ export function ClientHierarchyTable() {
                                           />
                                         </td>
                                         <td className="px-2 py-2"></td>
-                                        {showCompanyCol && <td className="px-2 py-2"></td>}
                                         <td className="px-2 py-2">
-                                          <div className="flex items-stretch gap-2 min-w-0">
-                                            <div className="w-px self-stretch bg-blue-500/30 shrink-0" aria-hidden />
-                                            <div className="w-px self-stretch bg-amber-500/40 shrink-0" aria-hidden />
-                                            <div className="w-px self-stretch bg-pink-500/40 shrink-0" aria-hidden />
+                                          <div className="flex items-center gap-2 min-w-0">
                                             <div className="flex items-center gap-2 min-w-0">
                                               <LevelBadge level="ad" />
                                               {ad.thumbnail_url ? (
