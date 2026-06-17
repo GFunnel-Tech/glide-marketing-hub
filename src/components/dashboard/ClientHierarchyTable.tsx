@@ -633,7 +633,10 @@ export function ClientHierarchyTable() {
             <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={collapseAll}>
               <ChevronsDownUp className="h-3.5 w-3.5" /> Collapse all
             </Button>
+          </div>
+
           <DateRangePicker />
+
 
 
 
