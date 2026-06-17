@@ -1010,23 +1010,27 @@ export function ClientHierarchyTable() {
                             </td>
                             {showCompanyCol && <td className="px-2 py-2 text-xs text-muted-foreground truncate max-w-[160px]">{client.name}</td>}
                             <td className="px-2 py-2">
-                              <button
-                                onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
-                                className="flex items-center gap-2 text-left w-full"
-                              >
-                                <div className="flex h-6 w-6 items-center justify-center rounded bg-success/10 text-success">
-                                  <FolderKanban className="h-3 w-3" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium text-foreground hover:text-primary truncate max-w-[360px]">{camp.name}</p>
-                                  {(camp.issuesStatus || camp.doubleCount) && (
-                                    <p className="text-[10px] text-destructive flex items-center gap-1">
-                                      <AlertTriangle className="h-3 w-3" />
-                                      {camp.issuesStatus || "double-counting"}
-                                    </p>
-                                  )}
-                                </div>
-                              </button>
+                              <div className="flex items-stretch gap-2">
+                                <div className="w-px self-stretch bg-blue-500/30 shrink-0" aria-hidden />
+                                <button
+                                  onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
+                                  className="flex items-center gap-2 text-left w-full"
+                                >
+                                  <LevelBadge level="campaign" />
+                                  <div className="flex h-6 w-6 items-center justify-center rounded bg-success/10 text-success">
+                                    <FolderKanban className="h-3 w-3" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-foreground hover:text-primary truncate max-w-[360px]">{camp.name}</p>
+                                    {(camp.issuesStatus || camp.doubleCount) && (
+                                      <p className="text-[10px] text-destructive flex items-center gap-1">
+                                        <AlertTriangle className="h-3 w-3" />
+                                        {camp.issuesStatus || "double-counting"}
+                                      </p>
+                                    )}
+                                  </div>
+                                </button>
+                              </div>
                             </td>
                             {(() => {
                               // Re-resolve metrics directly from the date-ranged
