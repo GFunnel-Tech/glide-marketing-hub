@@ -828,6 +828,15 @@ export function ClientHierarchyTable() {
                                     <Building2 className="h-2.5 w-2.5" /> Agency
                                   </span>
                                 )}
+                                {(() => {
+                                  const risk = churnByClient.get(Number(client.id));
+                                  if (!risk || risk.risk_level === "low") return null;
+                                  return (
+                                    <span onClick={(e) => e.stopPropagation()}>
+                                      <ChurnRiskBadge level={risk.risk_level} score={risk.score} summary={risk.summary} compact />
+                                    </span>
+                                  );
+                                })()}
                                 <span onClick={(e) => e.stopPropagation()}>
                                   <NoteBubble clientId={client.id} variant="icon" align="start" />
                                 </span>
