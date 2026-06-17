@@ -165,15 +165,28 @@ export function LeadSyncHealth() {
             Every Meta lead is checked against GoHighLevel 5 minutes after arrival; missing leads are pushed automatically.
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => runWorker.mutate()}
-          disabled={runWorker.isPending}
-        >
-          {runWorker.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
-          Run check now
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => backfill.mutate()}
+            disabled={backfill.isPending}
+            title="Pull every lead Meta still has on file and upsert any missing into the database"
+          >
+            {backfill.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+            Backfill from Meta
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => runWorker.mutate()}
+            disabled={runWorker.isPending}
+          >
+            {runWorker.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+            Run check now
+          </Button>
+        </div>
+
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
