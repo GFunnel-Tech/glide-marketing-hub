@@ -271,14 +271,46 @@ export function useLeads() {
   });
 }
 
+// Map workspace roles to display labels in the Team panel
+const WS_ROLE_LABEL: Record<string, string> = {
+  owner: "Owner",
+  admin: "Admin",
+  member: "Member",
+  viewer: "Member",
+};
+
 export function useTeamMembers() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
   return useQuery({
-    queryKey: ["team_members"],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("team_members").select("*").order("created_at");
+    queryKey: ["team_members", wsId],
+    enabled: !!wsId,
+    queryFn: async (): Promise<DbTeamMember[]> => {
+      // Source of truth: real workspace members joined with profile info.
+      const { data: members, error } = await (supabase as any)
+        .from("workspace_members")
+        .select("user_id, role")
+        .eq("workspace_id", wsId);
       if (error) throw error;
-      return (data || []) as DbTeamMember[];
+      const ids = (members || []).map((m: any) => m.user_id);
+      if (ids.length === 0) return [];
+      const { data: profiles } = await (supabase as any)
+        .from("profiles")
+        .select("id, display_name, email, phone")
+        .in("id", ids);
+      const pMap = new Map<string, any>((profiles || []).map((p: any) => [p.id, p]));
+      return (members || []).map((m: any) => {
+        const p = pMap.get(m.user_id) || {};
+        return {
+          id: m.user_id,
+          name: p.display_name || p.email || "Unknown",
+          email: p.email ?? null,
+          phone: p.phone ?? null,
+          role: WS_ROLE_LABEL[m.role] ?? (m.role || "Member"),
+          access_level: "Standard",
+          member_status: "active",
+        } as DbTeamMember;
+      });
     },
   });
 }
@@ -296,12 +328,6 @@ export function useCreateTeamMember() {
     mutationFn: async (input: TeamMemberInput): Promise<CreateTeamMemberResult> => {
       if (!currentWorkspace?.id) throw new Error("Select a workspace first");
       if (!input.email) throw new Error("An email is required to create a login");
-      // Provision a REAL login user via the service-role edge function. A direct
-      // client-side insert is blocked by the admin-only RLS on team_members and
-      // would never create an actual auth account.
-      // We call the function via raw fetch instead of supabase.functions.invoke
-      // because the Lovable preview iframe's fetch proxy can drop the invoke POST,
-      // surfacing as a generic "Failed to send a request to the Edge Function".
       const { data: sess } = await supabase.auth.getSession();
       const token = sess.session?.access_token;
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/workspace-invite-user`;
@@ -336,14 +362,24 @@ export function useCreateTeamMember() {
   });
 }
 
+// Updating role on a workspace member; other fields are display-only here.
 export function useUpdateTeamMember() {
   const qc = useQueryClient();
+  const { currentWorkspace } = useWorkspace();
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<TeamMemberInput> & { id: string }) => {
-      const { data, error } = await (supabase as any)
-        .from("team_members").update(patch).eq("id", id).select().single();
-      if (error) throw error;
-      return data as DbTeamMember;
+      const wsId = currentWorkspace?.id;
+      if (!wsId) throw new Error("No workspace");
+      if (patch.role) {
+        const wsRole = (Object.entries(WS_ROLE_LABEL).find(([, v]) => v === patch.role)?.[0]) ?? "member";
+        const { error } = await (supabase as any)
+          .from("workspace_members")
+          .update({ role: wsRole })
+          .eq("user_id", id)
+          .eq("workspace_id", wsId);
+        if (error) throw error;
+      }
+      return { id } as any;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
   });
@@ -351,13 +387,22 @@ export function useUpdateTeamMember() {
 
 export function useDeleteTeamMember() {
   const qc = useQueryClient();
+  const { currentWorkspace } = useWorkspace();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("team_members").delete().eq("id", id);
+      const wsId = currentWorkspace?.id;
+      if (!wsId) throw new Error("No workspace");
+      const { error } = await (supabase as any)
+        .from("workspace_members")
+        .delete()
+        .eq("user_id", id)
+        .eq("workspace_id", wsId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team_members"] }),
   });
+}
+
 }
 
 // Flag (or clear) a client as the workspace's agency account. At most one is
