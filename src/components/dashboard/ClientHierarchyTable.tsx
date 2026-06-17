@@ -1101,7 +1101,7 @@ export function ClientHierarchyTable() {
                             return (
                               <>
                                 <tr key={`as-${adsetId}`} className="border-b border-border bg-muted/30 hover:bg-muted/50">
-                                  <td className={cn("px-2 py-2", showCompanyCol ? "pl-14" : "pl-8")}>
+                                  <td className="px-2 py-2">
                                     <button
                                       onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
                                       className="flex h-6 w-6 items-center justify-center rounded hover:bg-accent transition-colors"
@@ -1120,11 +1120,8 @@ export function ClientHierarchyTable() {
                                     />
                                   </td>
                                   <td className="px-2 py-2"></td>
-                                  {showCompanyCol && <td className="px-2 py-2"></td>}
                                   <td className="px-2 py-2">
-                                    <div className="flex items-stretch gap-2">
-                                      <div className="w-px self-stretch bg-blue-500/30 shrink-0" aria-hidden />
-                                      <div className="w-px self-stretch bg-amber-500/40 shrink-0" aria-hidden />
+                                    <div className="flex items-center gap-2">
                                       <button
                                         onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
                                         className="flex items-center gap-2 text-left w-full"
