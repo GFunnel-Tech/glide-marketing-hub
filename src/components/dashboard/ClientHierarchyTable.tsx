@@ -98,6 +98,28 @@ function deriveImpressionsFromCpm(spend: number, cpm: number) {
   return (spend / cpm) * 1000;
 }
 
+// ---------- Level identifier badge (Client / Campaign / Ad set / Ad) ----------
+type LevelKind = "client" | "campaign" | "adset" | "ad";
+const LEVEL_STYLES: Record<LevelKind, { label: string; classes: string }> = {
+  client:   { label: "CLIENT", classes: "bg-slate-500/10 text-slate-600 dark:text-slate-300 ring-slate-500/20" },
+  campaign: { label: "CAMP",   classes: "bg-blue-500/10 text-blue-600 dark:text-blue-300 ring-blue-500/20" },
+  adset:    { label: "ADSET",  classes: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/20" },
+  ad:       { label: "AD",     classes: "bg-pink-500/10 text-pink-600 dark:text-pink-300 ring-pink-500/20" },
+};
+function LevelBadge({ level }: { level: LevelKind }) {
+  const s = LEVEL_STYLES[level];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 shrink-0",
+        s.classes,
+      )}
+    >
+      {s.label}
+    </span>
+  );
+}
+
 // ---------- Ad performance rating within an ad set ----------
 type AdRating = "best" | "ok" | "worst" | "learning";
 function rateAdsInAdset(ads: MetaAd[]): Map<string, AdRating> {
@@ -681,7 +703,7 @@ export function ClientHierarchyTable() {
                   <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Company</th>
                 )}
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                  Campaign / Ad set / Ad
+                  Hierarchy
                 </th>
                 {isVisible("impressions") && <th className="w-28 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Impressions</th>}
                 {isVisible("clicks") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Clicks</th>}
@@ -785,6 +807,7 @@ export function ClientHierarchyTable() {
                         </td>
                         <td className="px-2 py-2.5">
                           <div className="flex items-center gap-2">
+                            <LevelBadge level="client" />
                             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                               <Building2 className="h-3.5 w-3.5" />
                             </div>
@@ -961,7 +984,7 @@ export function ClientHierarchyTable() {
 
                       return (
                         <>
-                          <tr key={`camp-${camp.id}`} className="border-b border-border hover:bg-accent/30">
+                          <tr key={`camp-${camp.id}`} className="border-b border-border bg-muted/10 hover:bg-muted/30">
                             <td className={cn("px-2 py-2", showCompanyCol && "pl-8")}>
                               <button
                                 onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
@@ -987,23 +1010,27 @@ export function ClientHierarchyTable() {
                             </td>
                             {showCompanyCol && <td className="px-2 py-2 text-xs text-muted-foreground truncate max-w-[160px]">{client.name}</td>}
                             <td className="px-2 py-2">
-                              <button
-                                onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
-                                className="flex items-center gap-2 text-left w-full"
-                              >
-                                <div className="flex h-6 w-6 items-center justify-center rounded bg-success/10 text-success">
-                                  <FolderKanban className="h-3 w-3" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium text-foreground hover:text-primary truncate max-w-[360px]">{camp.name}</p>
-                                  {(camp.issuesStatus || camp.doubleCount) && (
-                                    <p className="text-[10px] text-destructive flex items-center gap-1">
-                                      <AlertTriangle className="h-3 w-3" />
-                                      {camp.issuesStatus || "double-counting"}
-                                    </p>
-                                  )}
-                                </div>
-                              </button>
+                              <div className="flex items-stretch gap-2">
+                                <div className="w-px self-stretch bg-blue-500/30 shrink-0" aria-hidden />
+                                <button
+                                  onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
+                                  className="flex items-center gap-2 text-left w-full"
+                                >
+                                  <LevelBadge level="campaign" />
+                                  <div className="flex h-6 w-6 items-center justify-center rounded bg-success/10 text-success">
+                                    <FolderKanban className="h-3 w-3" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-foreground hover:text-primary truncate max-w-[360px]">{camp.name}</p>
+                                    {(camp.issuesStatus || camp.doubleCount) && (
+                                      <p className="text-[10px] text-destructive flex items-center gap-1">
+                                        <AlertTriangle className="h-3 w-3" />
+                                        {camp.issuesStatus || "double-counting"}
+                                      </p>
+                                    )}
+                                  </div>
+                                </button>
+                              </div>
                             </td>
                             {(() => {
                               // Re-resolve metrics directly from the date-ranged
@@ -1076,7 +1103,7 @@ export function ClientHierarchyTable() {
 
                             return (
                               <>
-                                <tr key={`as-${adsetId}`} className="border-b border-border bg-muted/20 hover:bg-muted/30">
+                                <tr key={`as-${adsetId}`} className="border-b border-border bg-muted/30 hover:bg-muted/50">
                                   <td className={cn("px-2 py-2", showCompanyCol ? "pl-14" : "pl-8")}>
                                     <button
                                       onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
@@ -1098,16 +1125,21 @@ export function ClientHierarchyTable() {
                                   <td className="px-2 py-2"></td>
                                   {showCompanyCol && <td className="px-2 py-2"></td>}
                                   <td className="px-2 py-2">
-                                    <button
-                                      onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
-                                      className="flex items-center gap-2 text-left w-full"
-                                    >
-                                      <div className="flex h-6 w-6 items-center justify-center rounded bg-warning/10 text-warning">
-                                        <Layers className="h-3 w-3" />
-                                      </div>
-                                      <p className="text-sm text-foreground hover:text-primary truncate max-w-[340px]">{adsetName}</p>
-                                      <span className="text-[10px] text-muted-foreground">· {ads.length} ad{ads.length === 1 ? "" : "s"}</span>
-                                    </button>
+                                    <div className="flex items-stretch gap-2">
+                                      <div className="w-px self-stretch bg-blue-500/30 shrink-0" aria-hidden />
+                                      <div className="w-px self-stretch bg-amber-500/40 shrink-0" aria-hidden />
+                                      <button
+                                        onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
+                                        className="flex items-center gap-2 text-left w-full"
+                                      >
+                                        <LevelBadge level="adset" />
+                                        <div className="flex h-6 w-6 items-center justify-center rounded bg-warning/10 text-warning">
+                                          <Layers className="h-3 w-3" />
+                                        </div>
+                                        <p className="text-sm text-foreground hover:text-primary truncate max-w-[340px]">{adsetName}</p>
+                                        <span className="text-[10px] text-muted-foreground">· {ads.length} ad{ads.length === 1 ? "" : "s"}</span>
+                                      </button>
+                                    </div>
                                   </td>
                                   {(() => {
                                     const asCpm = impr > 0 ? (spend / impr) * 1000 : 0;
@@ -1157,7 +1189,7 @@ export function ClientHierarchyTable() {
                                     const adCtr = ad.impressions > 0 ? (ad.clicks / ad.impressions) * 100 : 0;
                                     const rating = ratings.get(ad.id) ?? "ok";
                                     return (
-                                      <tr key={`ad-${ad.id}`} className="border-b border-border/50 hover:bg-accent/20">
+                                      <tr key={`ad-${ad.id}`} className="border-b border-border/50 bg-muted/50 hover:bg-muted/70">
                                         <td className={cn("px-2 py-2", showCompanyCol ? "pl-20" : "pl-14")}></td>
                                         <td className="px-2 py-2">
                                           <Checkbox
@@ -1169,16 +1201,22 @@ export function ClientHierarchyTable() {
                                         <td className="px-2 py-2"></td>
                                         {showCompanyCol && <td className="px-2 py-2"></td>}
                                         <td className="px-2 py-2">
-                                          <div className="flex items-center gap-2 min-w-0">
-                                            {ad.thumbnail_url ? (
-                                              <img src={ad.thumbnail_url} alt="" className="h-6 w-6 rounded object-cover flex-shrink-0" />
-                                            ) : (
-                                              <div className="flex h-6 w-6 items-center justify-center rounded bg-accent text-muted-foreground flex-shrink-0">
-                                                <ImageIcon className="h-3 w-3" />
-                                              </div>
-                                            )}
-                                            <p className="text-xs text-foreground truncate max-w-[280px]">{ad.name ?? "Untitled"}</p>
-                                            <AdRatingBadge rating={rating} />
+                                          <div className="flex items-stretch gap-2 min-w-0">
+                                            <div className="w-px self-stretch bg-blue-500/30 shrink-0" aria-hidden />
+                                            <div className="w-px self-stretch bg-amber-500/40 shrink-0" aria-hidden />
+                                            <div className="w-px self-stretch bg-pink-500/40 shrink-0" aria-hidden />
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <LevelBadge level="ad" />
+                                              {ad.thumbnail_url ? (
+                                                <img src={ad.thumbnail_url} alt="" className="h-6 w-6 rounded object-cover flex-shrink-0" />
+                                              ) : (
+                                                <div className="flex h-6 w-6 items-center justify-center rounded bg-accent text-muted-foreground flex-shrink-0">
+                                                  <ImageIcon className="h-3 w-3" />
+                                                </div>
+                                              )}
+                                              <p className="text-xs text-foreground truncate max-w-[280px]">{ad.name ?? "Untitled"}</p>
+                                              <AdRatingBadge rating={rating} />
+                                            </div>
                                           </div>
                                         </td>
                                       {(() => {
