@@ -245,6 +245,23 @@ export function ClientSyncStatus({ clientId }: Props) {
             variant="outline"
             onClick={(e) => {
               e.stopPropagation();
+              backfill.mutate();
+            }}
+            disabled={backfill.isPending}
+            title="Pull every lead Meta still has on file for this client and upsert any missing ones"
+          >
+            {backfill.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Backfill from Meta
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
               runWorker.mutate();
             }}
             disabled={runWorker.isPending}
@@ -256,6 +273,7 @@ export function ClientSyncStatus({ clientId }: Props) {
             )}
             Run check
           </Button>
+
           <ChevronDown
             className={cn(
               "h-4 w-4 text-muted-foreground transition-transform",
