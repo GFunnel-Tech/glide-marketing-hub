@@ -984,7 +984,7 @@ export function ClientHierarchyTable() {
 
                       return (
                         <>
-                          <tr key={`camp-${camp.id}`} className="border-b border-border hover:bg-accent/30">
+                          <tr key={`camp-${camp.id}`} className="border-b border-border bg-muted/10 hover:bg-muted/30">
                             <td className={cn("px-2 py-2", showCompanyCol && "pl-8")}>
                               <button
                                 onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
