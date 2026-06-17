@@ -281,9 +281,14 @@ export function useClientsRangeMetrics() {
         const cid = Number(cidStr);
         const trueLeads = b.leadKeys.size;
         const coverage = b.reportedLeads > 0 ? trueLeads / b.reportedLeads : 1;
-        const effectiveLeads = trueLeads > 0 ? trueLeads : b.reportedLeads;
-        const cpl = effectiveLeads > 0 ? b.spend / effectiveLeads : 0;
         const reliableTrueCpl = trueLeads > 0 && coverage >= 0.8;
+        // Only trust deduped trueLeads when we have ≥80% coverage of Meta-reported
+        // leads. Otherwise fall back to reportedLeads so CPL isn't inflated by
+        // leads we haven't ingested into meta_leads yet (missing email/phone, etc.).
+        const effectiveLeads = reliableTrueCpl
+          ? trueLeads
+          : (b.reportedLeads > 0 ? b.reportedLeads : trueLeads);
+        const cpl = effectiveLeads > 0 ? b.spend / effectiveLeads : 0;
         const trueCpl = reliableTrueCpl ? b.spend / trueLeads : cpl;
         const cpm = b.impressions > 0 ? (b.spend / b.impressions) * 1000 : 0;
         const formCvr = b.clicks > 0 ? (b.reportedLeads / b.clicks) * 100 : 0;
