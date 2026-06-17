@@ -984,7 +984,7 @@ export function ClientHierarchyTable() {
                       return (
                         <>
                           <tr key={`camp-${camp.id}`} className="border-b border-border bg-muted/10 hover:bg-muted/30">
-                            <td className={cn("px-2 py-2", showCompanyCol && "pl-8")}>
+                            <td className="px-2 py-2">
                               <button
                                 onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
                                 className="flex h-6 w-6 items-center justify-center rounded hover:bg-accent transition-colors"
@@ -1007,10 +1007,9 @@ export function ClientHierarchyTable() {
                                 ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                                 : <Switch checked={camp.status === "active"} onCheckedChange={(v) => handleToggleCampaign(camp, v)} className="scale-75 origin-left" />}
                             </td>
-                            {showCompanyCol && <td className="px-2 py-2 text-xs text-muted-foreground truncate max-w-[160px]">{client.name}</td>}
                             <td className="px-2 py-2">
-                              <div className="flex items-stretch gap-2">
-                                <div className="w-px self-stretch bg-blue-500/30 shrink-0" aria-hidden />
+                              <div className="flex items-center gap-2">
+                                <button
                                 <button
                                   onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
                                   className="flex items-center gap-2 text-left w-full"
