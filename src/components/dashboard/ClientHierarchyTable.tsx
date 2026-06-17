@@ -699,7 +699,7 @@ export function ClientHierarchyTable() {
                 <th className="w-8 px-2 py-2.5"></th>
                 <th className="w-8 px-2 py-2.5"></th>
                 <th className="w-16 px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
-                <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                <th className="w-[280px] px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
                   Company
                 </th>
                 {isVisible("impressions") && <th className="w-28 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Impressions</th>}
