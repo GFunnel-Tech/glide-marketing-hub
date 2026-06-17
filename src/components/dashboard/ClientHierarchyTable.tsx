@@ -185,6 +185,12 @@ export function ClientHierarchyTable() {
   const { data: allAds = [] } = useMetaAds();
   const { data: clientsWithMetaAcct = new Set<number>() } = useClientsWithMetaAccount();
   const { data: rangeMetrics = {}, isLoading: rangeLoading } = useClientsRangeMetrics();
+  const { data: churnRisks = [] } = useChurnRisks();
+  const churnByClient = useMemo(() => {
+    const m = new Map<number, typeof churnRisks[number]>();
+    for (const r of churnRisks) m.set(r.client_id, r);
+    return m;
+  }, [churnRisks]);
   const { data: campaignRangeMetrics = EMPTY_CAMPAIGNS_RANGE_METRICS, isLoading: campaignRangeLoading } = useCampaignsRangeMetrics();
   const { data: leadBreakdown = { byCampaign: {}, byAdset: {}, byAd: {} } } = useCampaignLeadBreakdown();
   const { view } = useTableView(TABLE_KEY);
