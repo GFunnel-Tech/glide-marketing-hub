@@ -98,6 +98,28 @@ function deriveImpressionsFromCpm(spend: number, cpm: number) {
   return (spend / cpm) * 1000;
 }
 
+// ---------- Level identifier badge (Client / Campaign / Ad set / Ad) ----------
+type LevelKind = "client" | "campaign" | "adset" | "ad";
+const LEVEL_STYLES: Record<LevelKind, { label: string; classes: string }> = {
+  client:   { label: "CLIENT", classes: "bg-slate-500/10 text-slate-600 dark:text-slate-300 ring-slate-500/20" },
+  campaign: { label: "CAMP",   classes: "bg-blue-500/10 text-blue-600 dark:text-blue-300 ring-blue-500/20" },
+  adset:    { label: "ADSET",  classes: "bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-500/20" },
+  ad:       { label: "AD",     classes: "bg-pink-500/10 text-pink-600 dark:text-pink-300 ring-pink-500/20" },
+};
+function LevelBadge({ level }: { level: LevelKind }) {
+  const s = LEVEL_STYLES[level];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 shrink-0",
+        s.classes,
+      )}
+    >
+      {s.label}
+    </span>
+  );
+}
+
 // ---------- Ad performance rating within an ad set ----------
 type AdRating = "best" | "ok" | "worst" | "learning";
 function rateAdsInAdset(ads: MetaAd[]): Map<string, AdRating> {
