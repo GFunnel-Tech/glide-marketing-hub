@@ -1,26 +1,51 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckSquare } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useTasks, TaskView } from "@/hooks/useTasks";
+import { useTasks, TaskView, taskDueAt, TaskRow } from "@/hooks/useTasks";
 import { TaskList } from "@/components/tasks/TaskList";
 import { TaskQuickAdd } from "@/components/tasks/TaskQuickAdd";
 
 export default function TasksPage() {
   const [view, setView] = useState<TaskView>("today");
-  const { items: today, isLoading } = useTasks({ view: "today" });
-  const { items: upcoming } = useTasks({ view: "upcoming" });
-  const { items: overdue } = useTasks({ view: "overdue" });
-  const { items: notes } = useTasks({ view: "notes" });
-  const { items: completed } = useTasks({ view: "completed" });
+  const { allItems, isLoading } = useTasks();
 
-  const tabData: Record<TaskView, { items: any[]; empty: string }> = {
-    today: { items: today, empty: "No tasks due today." },
-    upcoming: { items: upcoming, empty: "Nothing scheduled ahead." },
-    overdue: { items: overdue, empty: "All caught up." },
-    notes: { items: notes, empty: "No notes yet." },
-    completed: { items: completed, empty: "No completed tasks." },
-    all: { items: [], empty: "" },
+  const buckets = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(startOfToday);
+    endOfToday.setDate(endOfToday.getDate() + 1);
+    const today: TaskRow[] = [];
+    const upcoming: TaskRow[] = [];
+    const overdue: TaskRow[] = [];
+    const notes: TaskRow[] = [];
+    const completed: TaskRow[] = [];
+    for (const t of allItems) {
+      if (t.done) { completed.push(t); continue; }
+      const due = taskDueAt(t);
+      const d = due ? new Date(due) : null;
+      if (d) {
+        if (d < startOfToday) overdue.push(t);
+        else if (d < endOfToday) today.push(t);
+        else upcoming.push(t);
+      }
+      if (t.kind === "note") notes.push(t);
+    }
+    return { today, upcoming, overdue, notes, completed };
+  }, [allItems]);
+
+  const tabData: Record<TaskView, { items: TaskRow[]; empty: string }> = {
+    today: { items: buckets.today, empty: "No tasks due today." },
+    upcoming: { items: buckets.upcoming, empty: "Nothing scheduled ahead." },
+    overdue: { items: buckets.overdue, empty: "All caught up." },
+    notes: { items: buckets.notes, empty: "No notes yet." },
+    completed: { items: buckets.completed, empty: "No completed tasks." },
+    all: { items: allItems, empty: "" },
   };
+
+  const today = buckets.today;
+  const overdue = buckets.overdue;
+  const upcoming = buckets.upcoming;
+
 
   return (
     <div className="space-y-5 p-6">
@@ -70,16 +95,15 @@ export default function TasksPage() {
           <TabsTrigger value="completed">Completed</TabsTrigger>
         </TabsList>
 
-        {(Object.keys(tabData) as TaskView[]).filter((k) => k !== "all").map((k) => (
-          <TabsContent key={k} value={k} className="mt-4">
-            <TaskList
-              tasks={tabData[k].items}
-              isLoading={isLoading}
-              emptyMessage={tabData[k].empty}
-              showClient
-            />
-          </TabsContent>
-        ))}
+        <TabsContent value={view} className="mt-4">
+          <TaskList
+            tasks={tabData[view].items}
+            isLoading={isLoading}
+            emptyMessage={tabData[view].empty}
+            showClient
+          />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
