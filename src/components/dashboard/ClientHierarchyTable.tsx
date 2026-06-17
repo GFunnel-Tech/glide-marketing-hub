@@ -807,6 +807,7 @@ export function ClientHierarchyTable() {
                         </td>
                         <td className="px-2 py-2.5">
                           <div className="flex items-center gap-2">
+                            <LevelBadge level="client" />
                             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                               <Building2 className="h-3.5 w-3.5" />
                             </div>
