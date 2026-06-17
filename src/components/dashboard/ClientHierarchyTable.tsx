@@ -804,7 +804,6 @@ export function ClientHierarchyTable() {
                         </td>
                         <td className="px-2 py-2.5">
                           <div className="flex items-center gap-2">
-                            <LevelBadge level="client" />
                             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                               <Building2 className="h-3.5 w-3.5" />
                             </div>
@@ -870,11 +869,14 @@ export function ClientHierarchyTable() {
                               {client.brand && client.name && (
                                 <p className="text-[10px] text-muted-foreground truncate">{client.name}</p>
                               )}
+                              {clientCampaigns.length > 0 && (
+                                <p className="text-[11px] text-muted-foreground">
+                                  {clientCampaigns.length} campaign{clientCampaigns.length === 1 ? "" : "s"}
+                                  {allClientAds.length > 0 && ` · ${allClientAds.length} ad${allClientAds.length === 1 ? "" : "s"}`}
+                                </p>
+                              )}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-2 py-2.5 text-xs text-muted-foreground">
-                          {clientCampaigns.length} campaign{clientCampaigns.length === 1 ? "" : "s"}
                         </td>
                         {isVisible("impressions") && <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{fmtInt(totImpr)}</td>}
                         {isVisible("clicks") && <td className="px-2 py-2.5 text-right tabular-nums text-foreground">{totClicks > 0 ? fmtInt(totClicks) : "—"}</td>}
