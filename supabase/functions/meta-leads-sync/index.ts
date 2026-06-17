@@ -203,22 +203,29 @@ Deno.serve(async (req) => {
         }
 
         for (const [formId, info] of formMap.entries()) {
-          const url =
+          let url: string | null =
             `https://graph.facebook.com/v21.0/${formId}/leads` +
             `?fields=id,created_time,field_data,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,form_id` +
-            `&filtering=[{"field":"time_created","operator":"GREATER_THAN","value":${since}}]` +
+            sinceParam +
             `&limit=200&access_token=${encodeURIComponent(conn.access_token)}`;
-
-          const leadsRes = await fetch(url);
-          const leadsJson = await leadsRes.json();
-          if (!leadsRes.ok) {
-            errors.push({ form: formId, act_id: acc.act_id, error: leadsJson });
-            continue;
-          }
+          let pages = 0;
           const adById = new Map(info.ads.map((a) => [a.id, a]));
-          const rows = buildLeadRows(leadsJson.data ?? [], acc, (lead: any) => lead.ad_id ? adById.get(lead.ad_id) : undefined, info.name, formId, resolveClient);
-          totalLeads += await upsertLeadRows(admin, rows, errors, { form: formId });
+          while (url && pages < 50) {
+            const leadsRes = await fetch(url);
+            const leadsJson = await leadsRes.json();
+            if (!leadsRes.ok) {
+              errors.push({ form: formId, act_id: acc.act_id, error: leadsJson });
+              break;
+            }
+            const rows = buildLeadRows(leadsJson.data ?? [], acc, (lead: any) => lead.ad_id ? adById.get(lead.ad_id) : undefined, info.name, formId, resolveClient);
+            // When scoped to a single client, drop rows whose resolved client doesn't match.
+            const filtered = clientFilter != null ? rows.filter((r) => r.client_id === clientFilter) : rows;
+            totalLeads += await upsertLeadRows(admin, filtered, errors, { form: formId });
+            url = leadsJson.paging?.next ?? null;
+            pages++;
+          }
         }
+
       } catch (e) {
         errors.push({ act_id: acc.act_id, error: String(e) });
       }
