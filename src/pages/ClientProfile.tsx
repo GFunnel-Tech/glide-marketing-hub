@@ -8,6 +8,7 @@ import { useClientPath } from "@/lib/clientPath";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AgentChat } from "@/components/ai/AgentChat";
 import { AiInsightsFeed } from "@/components/ai/AiInsightsFeed";
+import { ChurnRiskPanel } from "@/components/dashboard/ChurnRiskPanel";
 import { PendingActionsPanel } from "@/components/ai/PendingActionsPanel";
 import { AiRulesPanel } from "@/components/ai/AiRulesPanel";
 import { ClientContextPanel } from "@/components/ai/ClientContextPanel";
