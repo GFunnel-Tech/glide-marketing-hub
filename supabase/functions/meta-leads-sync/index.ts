@@ -14,14 +14,23 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let workspaceFilter: string | null = null;
+  let clientFilter: number | null = null;
   // Default to exhaustive discovery so accounts without pre-synced meta_ads
   // (e.g. brand-new mappings) still pull their Lead Gen forms.
   let exhaustiveDiscovery = true;
+  // Default lookback. Pass `sinceDays: null` for an all-time backfill.
+  let sinceDays: number | null = 90;
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
+    clientFilter = typeof body.clientId === "number" ? body.clientId : null;
     if (typeof body.exhaustiveDiscovery === "boolean") {
       exhaustiveDiscovery = body.exhaustiveDiscovery;
+    }
+    if (body.sinceDays === null) {
+      sinceDays = null;
+    } else if (typeof body.sinceDays === "number" && body.sinceDays > 0) {
+      sinceDays = body.sinceDays;
     }
   }
 
@@ -37,6 +46,7 @@ Deno.serve(async (req) => {
   if (workspaceFilter) connQ = connQ.eq("workspace_id", workspaceFilter);
   const { data: connections, error: connErr } = await connQ;
   if (connErr) return json({ error: connErr.message }, 500);
+
 
   let totalLeads = 0;
   const errors: any[] = [];
