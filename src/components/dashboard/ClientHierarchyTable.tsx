@@ -1010,7 +1010,6 @@ export function ClientHierarchyTable() {
                             <td className="px-2 py-2">
                               <div className="flex items-center gap-2">
                                 <button
-                                <button
                                   onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
                                   className="flex items-center gap-2 text-left w-full"
                                 >
