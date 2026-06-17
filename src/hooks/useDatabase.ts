@@ -403,7 +403,7 @@ export function useDeleteTeamMember() {
   });
 }
 
-}
+
 
 // Flag (or clear) a client as the workspace's agency account. At most one is
 // allowed per workspace, so we clear any existing flag before setting the new
