@@ -8,6 +8,7 @@ import { useClientPath } from "@/lib/clientPath";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AgentChat } from "@/components/ai/AgentChat";
 import { AiInsightsFeed } from "@/components/ai/AiInsightsFeed";
+import { ChurnRiskPanel } from "@/components/dashboard/ChurnRiskPanel";
 import { PendingActionsPanel } from "@/components/ai/PendingActionsPanel";
 import { AiRulesPanel } from "@/components/ai/AiRulesPanel";
 import { ClientContextPanel } from "@/components/ai/ClientContextPanel";
@@ -559,6 +560,7 @@ function ClientProfileInner() {
         <TabsContent value="overview" className="mt-5">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div className="lg:col-span-2 space-y-5">
+              <ChurnRiskPanel clientId={Number(id)} />
               <SectionCard
                 title="Active Campaigns"
                 icon={Target}

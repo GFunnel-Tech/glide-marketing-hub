@@ -837,6 +837,73 @@ export type Database = {
           },
         ]
       }
+      client_churn_risk: {
+        Row: {
+          client_id: number
+          computed_at: string
+          created_at: string
+          model: string | null
+          reasons: Json
+          risk_level: string
+          score: number
+          signals: Json
+          suggested_actions: Json
+          summary: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: number
+          computed_at?: string
+          created_at?: string
+          model?: string | null
+          reasons?: Json
+          risk_level: string
+          score: number
+          signals?: Json
+          suggested_actions?: Json
+          summary?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number
+          computed_at?: string
+          created_at?: string
+          model?: string | null
+          reasons?: Json
+          risk_level?: string
+          score?: number
+          signals?: Json
+          suggested_actions?: Json
+          summary?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_churn_risk_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_churn_risk_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_churn_risk_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_guarantees: {
         Row: {
           client_id: number

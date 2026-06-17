@@ -2,6 +2,7 @@ import { KPIStrip } from "@/components/dashboard/KPIStrip";
 import { ClientHierarchyTable } from "@/components/dashboard/ClientHierarchyTable";
 import { DailyFocus } from "@/components/dashboard/DailyFocus";
 import { TodaysTasksPanel } from "@/components/dashboard/TodaysTasksPanel";
+import { AtRiskClientsCard } from "@/components/dashboard/AtRiskClientsCard";
 
 import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
 import { QuickActionBar } from "@/components/dashboard/QuickActionBar";
@@ -132,6 +133,8 @@ const Index = () => {
           <PortfolioHealthCard />
         </div>
       </div>
+
+      <AtRiskClientsCard />
 
       <ClientHierarchyTable />
     </div>
