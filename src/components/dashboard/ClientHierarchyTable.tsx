@@ -46,6 +46,8 @@ import { ColumnPicker, BuiltinColumnOption } from "@/components/common/ColumnPic
 import { useTableView, evalFormula, formatColumnValue } from "@/hooks/useTableColumns";
 import { useCampaignLeadBreakdown } from "@/hooks/useCampaignLeadBreakdown";
 import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
+import { useChurnRisks } from "@/hooks/useChurnRisk";
+import { ChurnRiskBadge } from "./ChurnRiskBadge";
 
 const TABLE_KEY = "client_hierarchy";
 
