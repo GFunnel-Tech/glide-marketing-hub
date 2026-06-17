@@ -95,16 +95,15 @@ export default function TasksPage() {
           <TabsTrigger value="completed">Completed</TabsTrigger>
         </TabsList>
 
-        {(Object.keys(tabData) as TaskView[]).filter((k) => k !== "all").map((k) => (
-          <TabsContent key={k} value={k} className="mt-4">
-            <TaskList
-              tasks={tabData[k].items}
-              isLoading={isLoading}
-              emptyMessage={tabData[k].empty}
-              showClient
-            />
-          </TabsContent>
-        ))}
+        <TabsContent value={view} className="mt-4">
+          <TaskList
+            tasks={tabData[view].items}
+            isLoading={isLoading}
+            emptyMessage={tabData[view].empty}
+            showClient
+          />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
