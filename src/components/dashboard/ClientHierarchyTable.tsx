@@ -681,7 +681,7 @@ export function ClientHierarchyTable() {
                   <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Company</th>
                 )}
                 <th className="px-2 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                  Campaign / Ad set / Ad
+                  Hierarchy
                 </th>
                 {isVisible("impressions") && <th className="w-28 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Impressions</th>}
                 {isVisible("clicks") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Clicks</th>}
