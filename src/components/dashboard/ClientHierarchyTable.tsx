@@ -1018,7 +1018,7 @@ export function ClientHierarchyTable() {
                                     <FolderKanban className="h-3 w-3" />
                                   </div>
                                   <div className="min-w-0">
-                                    <p className="text-sm font-medium text-foreground hover:text-primary truncate max-w-[360px]">{camp.name}</p>
+                                    <p className="text-sm font-medium text-foreground hover:text-primary truncate max-w-[200px]">{camp.name}</p>
                                     {(camp.issuesStatus || camp.doubleCount) && (
                                       <p className="text-[10px] text-destructive flex items-center gap-1">
                                         <AlertTriangle className="h-3 w-3" />
@@ -1130,7 +1130,7 @@ export function ClientHierarchyTable() {
                                         <div className="flex h-6 w-6 items-center justify-center rounded bg-warning/10 text-warning">
                                           <Layers className="h-3 w-3" />
                                         </div>
-                                        <p className="text-sm text-foreground hover:text-primary truncate max-w-[340px]">{adsetName}</p>
+                                        <p className="text-sm text-foreground hover:text-primary truncate max-w-[180px]">{adsetName}</p>
                                         <span className="text-[10px] text-muted-foreground">· {ads.length} ad{ads.length === 1 ? "" : "s"}</span>
                                       </button>
                                     </div>
@@ -1203,7 +1203,7 @@ export function ClientHierarchyTable() {
                                                 <ImageIcon className="h-3 w-3" />
                                               </div>
                                             )}
-                                            <p className="text-xs text-foreground truncate max-w-[280px]">{ad.name ?? "Untitled"}</p>
+                                            <p className="text-xs text-foreground truncate max-w-[160px]">{ad.name ?? "Untitled"}</p>
                                             <AdRatingBadge rating={rating} />
                                           </div>
                                         </td>
