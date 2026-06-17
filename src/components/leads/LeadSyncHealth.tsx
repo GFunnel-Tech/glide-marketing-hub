@@ -124,6 +124,26 @@ export function LeadSyncHealth() {
     onError: (e: any) => toast.error(e?.message || "Worker failed"),
   });
 
+  const backfill = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("meta-leads-sync", {
+        body: { workspaceId: wsId, sinceDays: null, exhaustiveDiscovery: true },
+      });
+      if (error) throw error;
+      return data as { leadsSynced?: number };
+    },
+    onSuccess: (data) => {
+      toast.success(
+        data?.leadsSynced != null
+          ? `Pulled ${data.leadsSynced} lead${data.leadsSynced === 1 ? "" : "s"} from Meta`
+          : "Backfill triggered"
+      );
+      qc.invalidateQueries({ queryKey: ["lead-sync-counts", wsId] });
+      qc.invalidateQueries({ queryKey: ["lead-sync-failed", wsId] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Backfill failed"),
+  });
+
   const tiles = useMemo(
     () => [
       { key: "synced", label: "Synced", value: counts?.synced ?? 0, icon: CheckCircle2, tone: "text-success" },
@@ -134,6 +154,7 @@ export function LeadSyncHealth() {
     ],
     [counts],
   );
+
 
   return (
     <Card className="p-4 space-y-4">
