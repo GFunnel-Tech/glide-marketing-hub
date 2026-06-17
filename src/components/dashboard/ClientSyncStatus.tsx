@@ -122,6 +122,27 @@ export function ClientSyncStatus({ clientId }: Props) {
     onError: (e: any) => toast.error(e?.message || "Worker failed"),
   });
 
+  const backfill = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("meta-leads-sync", {
+        body: { workspaceId: wsId, clientId, sinceDays: null, exhaustiveDiscovery: true },
+      });
+      if (error) throw error;
+      return data as { leadsSynced?: number };
+    },
+    onSuccess: (data) => {
+      toast.success(
+        data?.leadsSynced != null
+          ? `Pulled ${data.leadsSynced} lead${data.leadsSynced === 1 ? "" : "s"} from Meta`
+          : "Backfill triggered"
+      );
+      qc.invalidateQueries({ queryKey: ["client-sync-counts", wsId, clientId] });
+      qc.invalidateQueries({ queryKey: ["client-sync-failed", wsId, clientId] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Backfill failed"),
+  });
+
+
   const retry = useMutation({
     mutationFn: async (lead: Row) => {
       const { error } = await supabase
