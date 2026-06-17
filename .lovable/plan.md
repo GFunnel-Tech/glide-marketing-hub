@@ -1,50 +1,27 @@
-## Goal
-Drop the separate **Hierarchy** column. Merge campaign / ad set / ad names into the **Company** column so everything stacks under the client name, recovering horizontal space and matching the "Dan Nguyen | 3 Campaigns" pattern.
+## What you actually need
 
-## What changes (all in `src/components/dashboard/ClientHierarchyTable.tsx`)
+Good news — the plumbing already exists. Shared ad accounts support per-campaign attribution today via `campaigns.client_id`, and there's a dedicated "Map campaigns" dialog under **Settings → Integrations → Shared ad accounts**. The metrics engine and lead sync both prefer the campaign-level mapping over the account-level one, so as soon as you tag the right campaigns to Anthony, only those campaigns' spend/leads/insights flow to him.
 
-### 1. Client row — Company cell
-Today the company cell shows just the client name. Change it to show name + a quiet meta line:
+The only gap is discoverability: from Anthony's client profile you can see the shared account but can't open the campaign mapper from there — you have to detour through Settings.
 
-```
-Dan Nguyen
-3 campaigns · 12 ads
-```
+## Plan
 
-- Name stays as the primary line (same size/weight).
-- Meta line: `text-[11px] text-muted-foreground`, computed from `clientCampaigns.length` and the sum of `adsByCampaign.get(camp.id).length` for that client. Hidden when the row is collapsed-empty or zero.
+1. **Add a "Map campaigns" action to `MetaAccountsForClient`** (the panel on the Client Profile page).
+   - For any account row flagged as Shared, add a button that opens the existing `CampaignClientMapperDialog`.
+   - Pre-filter the dialog to Anthony's client so unmapped campaigns are highlighted, and default the bulk-apply target to the current client for one-click "assign all visible to Anthony".
 
-### 2. Nested rows — move name INTO the Company column
-- Campaign / Ad set / Ad rows render their badge + icon + name inside the existing Company `<td>` (instead of the Hierarchy `<td>`).
-- The Hierarchy `<td>` is removed from those rows.
-- Keep the level badge (`CAMP` / `ADSET` / `AD`) and icon chip — they're the only visual cue for depth now.
-- Keep the subtle row tinting (`bg-muted/10` → `/30` → `/50`).
+2. **Surface unmapped-campaign warnings** on the shared-account row.
+   - Show a small badge like "3 campaigns unmapped" when the shared account has campaigns with `client_id IS NULL`. Today these silently drop out of attribution.
+   - Tooltip explains: "Unmapped campaigns won't count toward any client — open Map campaigns to assign them."
 
-### 3. Remove the Hierarchy column entirely
-- Delete the `<th>Hierarchy</th>` from the header row.
-- Delete the Hierarchy `<td>` from the client, campaign, ad set, and ad rows.
-- Drop the `LEVEL_STYLES.client` chip / `LevelBadge level="client"` usage in the client row (the client name itself is the identifier now).
-- Drop the leftover rail/`pl-14`/`pl-20` indent code — no longer needed.
+3. **No backend / migration changes.** `meta_ad_account_clients`, `campaigns.client_id`, `useClientsRangeMetrics`, and `meta-leads-sync` already do the right thing.
 
-### 4. Column header guard
-`showCompanyCol` (currently the toggle for the Company column) becomes effectively always-on whenever the table is multi-client; force it true so we don't end up with no name column. When a single client is focused, keep the column visible but skip the redundant client-name line on nested rows (they already belong to the focused client).
+### For Anthony specifically (no code needed, do it now)
+- Settings → Integrations → Shared ad accounts → find **General Real Estate Investor Loans** → click **Map campaigns** → set the relevant campaigns' client dropdown to **Anthony Grego** → Save. Leads and spend for only those campaigns will start attributing to him on the next sync.
 
-## Visual result
+### Technical notes
+- File to edit: `src/components/integrations/MetaAccountsForClient.tsx` (~lines 196–254 — add button + unmapped-count badge).
+- Reuse `CampaignClientMapperDialog` as-is; pass `adAccountId` and optionally a `defaultClientId={client.id}` prop (new optional prop, additive).
+- Unmapped count: `select count(*) from campaigns where ad_account_id = ? and client_id is null`.
 
-```text
-Status  Company                              Spend   Leads   CPL …
-─────────────────────────────────────────────────────────────────
-●       Dan Nguyen                           $4,210   142    $29
-        3 campaigns · 12 ads
-   ▾    CAMP   Spring Promo                  $1,800    61    $29
-      ▾ ADSET  Lookalike 1%                    $900    33    $27
-        AD     Hero video v3                   $300    11    $27
-```
-
-## Technical notes
-- One file: `src/components/dashboard/ClientHierarchyTable.tsx`.
-- Header: remove the Hierarchy `<th>`; keep all metric `<th>`s.
-- Client row: append `<p className="text-[11px] text-muted-foreground">{n} campaigns · {m} ads</p>` under the existing name `<p>`. Compute `n`/`m` from `campaignsByClient.get(String(client.id))` and `adsByCampaign`.
-- Campaign / Ad set / Ad rows: move the existing `<div className="flex items-center gap-2">…LevelBadge + icon + name…</div>` block into the Company `<td>`; delete the old Hierarchy `<td>`.
-- Drop the now-unused empty `<td className="px-2 py-2"></td>` placeholders on nested rows.
-- No data, hook, or business-logic changes.
+Want me to also (a) add a "Tag only my campaigns" quick-action that bulk-applies the current client to every campaign the user has selected in the dialog, or (b) keep it to just exposing the existing dialog from the client profile?
