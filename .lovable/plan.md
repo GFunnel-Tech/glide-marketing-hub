@@ -1,51 +1,50 @@
 ## Goal
-Make it instantly clear what level each row in the hierarchy table represents — Client, Campaign, Ad set, or Ad — without forcing the eye to count indents.
+Drop the separate **Hierarchy** column. Merge campaign / ad set / ad names into the **Company** column so everything stacks under the client name, recovering horizontal space and matching the "Dan Nguyen | 3 Campaigns" pattern.
 
-## What changes
+## What changes (all in `src/components/dashboard/ClientHierarchyTable.tsx`)
 
-### 1. Level badge on every row
-Add a small colored chip in the name cell, immediately before the row label:
+### 1. Client row — Company cell
+Today the company cell shows just the client name. Change it to show name + a quiet meta line:
 
-- `CLIENT` — slate / neutral chip
-- `CAMP` — blue chip
-- `ADSET` — amber chip
-- `AD` — pink chip
-
-Compact (10–11px uppercase, monospace tracking-wider), so it reads like a tag, not a button. Same color family already used for icon chips elsewhere in the dashboard.
-
-### 2. Indent rails (vertical guide lines)
-Replace the current flat left-padding with thin vertical rails on the left edge of each nested row:
-
-```text
-│       Client row                 (no rail)
-│ │     Campaign row               (1 rail)
-│ │ │   Ad set row                 (2 rails)
-│ │ │ │ Ad row                     (3 rails)
+```
+Dan Nguyen
+3 campaigns · 12 ads
 ```
 
-Rails are 1px, `border-border/60`, and align to the indent so the parent/child relationship is visible at a glance even when scrolled.
+- Name stays as the primary line (same size/weight).
+- Meta line: `text-[11px] text-muted-foreground`, computed from `clientCampaigns.length` and the sum of `adsByCampaign.get(camp.id).length` for that client. Hidden when the row is collapsed-empty or zero.
 
-### 3. Header column rename
-Change the column header from `Campaign / Ad set / Ad` to `Hierarchy` (single word, fits on one line, doesn't lie about the contents now that Client rows also live there).
+### 2. Nested rows — move name INTO the Company column
+- Campaign / Ad set / Ad rows render their badge + icon + name inside the existing Company `<td>` (instead of the Hierarchy `<td>`).
+- The Hierarchy `<td>` is removed from those rows.
+- Keep the level badge (`CAMP` / `ADSET` / `AD`) and icon chip — they're the only visual cue for depth now.
+- Keep the subtle row tinting (`bg-muted/10` → `/30` → `/50`).
 
-### 4. Row background tinting (subtle)
-- Client rows: keep current card-like background
-- Campaign rows: `bg-muted/20`
-- Ad set rows: `bg-muted/40`
-- Ad rows: `bg-muted/60`
+### 3. Remove the Hierarchy column entirely
+- Delete the `<th>Hierarchy</th>` from the header row.
+- Delete the Hierarchy `<td>` from the client, campaign, ad set, and ad rows.
+- Drop the `LEVEL_STYLES.client` chip / `LevelBadge level="client"` usage in the client row (the client name itself is the identifier now).
+- Drop the leftover rail/`pl-14`/`pl-20` indent code — no longer needed.
 
-Progressive shading reinforces the hierarchy the same way the rails do, but works for users who scroll the body away from the header.
+### 4. Column header guard
+`showCompanyCol` (currently the toggle for the Company column) becomes effectively always-on whenever the table is multi-client; force it true so we don't end up with no name column. When a single client is focused, keep the column visible but skip the redundant client-name line on nested rows (they already belong to the focused client).
 
-### 5. Sticky "you are viewing" breadcrumb (only when a row is expanded deep)
-When the user has scrolled past the parent row, show a tiny sticky breadcrumb above the table body:
+## Visual result
 
-`Acme Co  ›  Spring Promo  ›  Lookalike 1%`
-
-Updates based on the deepest currently-visible expanded chain. Hidden when nothing is expanded or when the parent is still on screen.
+```text
+Status  Company                              Spend   Leads   CPL …
+─────────────────────────────────────────────────────────────────
+●       Dan Nguyen                           $4,210   142    $29
+        3 campaigns · 12 ads
+   ▾    CAMP   Spring Promo                  $1,800    61    $29
+      ▾ ADSET  Lookalike 1%                    $900    33    $27
+        AD     Hero video v3                   $300    11    $27
+```
 
 ## Technical notes
-- All changes are in `src/components/dashboard/ClientHierarchyTable.tsx`.
-- Badge component: small inline `<span>` with the existing tinted-chip classes (`bg-blue-500/10 text-blue-600` etc., mapped to semantic tokens).
-- Rails: a flex container of N `<div className="w-px self-stretch bg-border/60" />` elements before the label, where N is the depth.
-- Sticky breadcrumb: a single `<tr>` with `position: sticky; top: 2.25rem` sitting just under the header. Computed from `openClients` / `openCampaigns` / `openAdSets` plus the IntersectionObserver of the parent row (or simpler: just always show the deepest open chain when any campaign-or-deeper row is open).
-- No business logic changes, no data changes.
+- One file: `src/components/dashboard/ClientHierarchyTable.tsx`.
+- Header: remove the Hierarchy `<th>`; keep all metric `<th>`s.
+- Client row: append `<p className="text-[11px] text-muted-foreground">{n} campaigns · {m} ads</p>` under the existing name `<p>`. Compute `n`/`m` from `campaignsByClient.get(String(client.id))` and `adsByCampaign`.
+- Campaign / Ad set / Ad rows: move the existing `<div className="flex items-center gap-2">…LevelBadge + icon + name…</div>` block into the Company `<td>`; delete the old Hierarchy `<td>`.
+- Drop the now-unused empty `<td className="px-2 py-2"></td>` placeholders on nested rows.
+- No data, hook, or business-logic changes.
