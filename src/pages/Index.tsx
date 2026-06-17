@@ -134,6 +134,8 @@ const Index = () => {
         </div>
       </div>
 
+      <AtRiskClientsCard />
+
       <ClientHierarchyTable />
     </div>
   );
