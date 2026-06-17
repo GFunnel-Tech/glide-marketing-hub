@@ -11,6 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 export function AtRiskClientsCard() {
   const { data: risks = [], isLoading } = useChurnRisks();
   const clients = useVisibleClients();
+  const run = useRunChurnRiskScan();
   const clientPath = useClientPath();
 
   const clientNames = useMemo(() => {
