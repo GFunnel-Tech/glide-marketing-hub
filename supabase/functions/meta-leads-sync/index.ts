@@ -61,6 +61,20 @@ Deno.serve(async (req) => {
       .eq("is_active", true);
 
     for (const acc of accounts ?? []) {
+      // When scoped to a single client: skip accounts that don't serve that client
+      // (either via account.client_id or via meta_ad_account_clients).
+      if (clientFilter != null) {
+        if (acc.client_id !== clientFilter) {
+          const { data: m } = await admin
+            .from("meta_ad_account_clients")
+            .select("client_id")
+            .eq("ad_account_id", acc.id)
+            .eq("client_id", clientFilter)
+            .maybeSingle();
+          if (!m) continue;
+        }
+      }
+
       // Detect shared accounts: if any membership rows exist, attribute leads
       // by campaign->client mapping rather than the account's single client_id.
       const { data: members } = await admin
