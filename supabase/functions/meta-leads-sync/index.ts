@@ -1,8 +1,10 @@
 // Pulls Meta Lead Ads (Lead Gen Forms) leads for every active connection.
-// For each ad account, lists lead-gen forms and fetches recent leads,
-// then upserts them into meta_leads. If the access token lacks
-// leads_retrieval permission the call will return an error and we just skip
-// that account/form (the aggregated lead counts remain available).
+// Tracks per-form sync state in `meta_lead_form_sync_state` so transient
+// Meta rate limits (error code 4) and other errors don't silently swallow
+// missing leads. Failed forms get exponential backoff; persistent failures
+// fire a `lead_sync_failed` notification so the team is alerted instead of
+// blind. Accounts with no recent insights-lead activity are throttled to
+// conserve Meta's app-level rate quota.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -10,16 +12,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Backoff schedule for failed form pulls (minutes).
+// Rate-limit failures clear within ~1h on Meta's side.
+const BACKOFF_MINUTES = [5, 15, 30, 60, 120, 240];
+// Notify on the Nth consecutive failure (>= ~30 min of broken sync).
+const NOTIFY_AFTER_FAILURES = 3;
+// Cold accounts (no leads in N days) only run every COLD_INTERVAL_MIN minutes
+const COLD_LOOKBACK_DAYS = 14;
+const COLD_INTERVAL_MIN = 120;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let workspaceFilter: string | null = null;
   let clientFilter: number | null = null;
-  // Default to exhaustive discovery so accounts without pre-synced meta_ads
-  // (e.g. brand-new mappings) still pull their Lead Gen forms.
   let exhaustiveDiscovery = true;
-  // Default lookback. Pass `sinceDays: null` for an all-time backfill.
   let sinceDays: number | null = 90;
+  let force = false; // if true, ignore next_retry_at backoff
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
@@ -32,6 +41,7 @@ Deno.serve(async (req) => {
     } else if (typeof body.sinceDays === "number" && body.sinceDays > 0) {
       sinceDays = body.sinceDays;
     }
+    force = body.force === true || clientFilter != null;
   }
 
   const admin = createClient(
@@ -47,8 +57,11 @@ Deno.serve(async (req) => {
   const { data: connections, error: connErr } = await connQ;
   if (connErr) return json({ error: connErr.message }, 500);
 
-
   let totalLeads = 0;
+  let skippedColdAccounts = 0;
+  let skippedBackoffForms = 0;
+  let retriedForms = 0;
+  let firedNotifications = 0;
   const errors: any[] = [];
 
   for (const conn of connections ?? []) {
@@ -61,8 +74,6 @@ Deno.serve(async (req) => {
       .eq("is_active", true);
 
     for (const acc of accounts ?? []) {
-      // When scoped to a single client: skip accounts that don't serve that client
-      // (either via account.client_id or via meta_ad_account_clients).
       if (clientFilter != null) {
         if (acc.client_id !== clientFilter) {
           const { data: m } = await admin
@@ -75,8 +86,15 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Detect shared accounts: if any membership rows exist, attribute leads
-      // by campaign->client mapping rather than the account's single client_id.
+      // Adaptive scheduling: cold accounts run less often (unless forced).
+      if (!force) {
+        const cold = await isAccountCold(admin, acc.id);
+        if (cold) {
+          skippedColdAccounts++;
+          continue;
+        }
+      }
+
       const { data: members } = await admin
         .from("meta_ad_account_clients")
         .select("client_id")
@@ -96,18 +114,12 @@ Deno.serve(async (req) => {
         }
         return acc.client_id ?? null;
       };
+
       try {
-        // Lead-gen forms live on Pages, not ad accounts. We discover the
-        // forms used by this ad account by listing its lead-gen ads, then
-        // fetch leads from each unique form id.
-        // Filter to ads with objective LEAD_GENERATION when possible; fall
-        // back to all ads (cheap, the form list is what matters).
         const sinceParam = sinceDays != null
           ? `&filtering=[{"field":"time_created","operator":"GREATER_THAN","value":${Math.floor((Date.now() - sinceDays * 24 * 60 * 60 * 1000) / 1000)}}]`
           : "";
 
-        // Treat per-client requests + all-time backfills as forced exhaustive,
-        // so we don't miss forms whose meta_ads rows have leads=0 or aren't synced.
         const forceExhaustive = clientFilter != null || sinceDays == null;
 
         let leadAdsQ = admin
@@ -148,7 +160,6 @@ Deno.serve(async (req) => {
 
         if (!exhaustiveDiscovery && !forceExhaustive) continue;
 
-
         const adFields = [
           "id",
           "name",
@@ -180,7 +191,6 @@ Deno.serve(async (req) => {
         }
         if (!ads.length) continue;
 
-        // Build form_id -> { name, ads: [{id,name,adset,campaign}] }
         const formMap = new Map<string, {
           name: string | null;
           ads: { id: string; name: string | null; adset_id: string | null; adset_name: string | null; campaign_id: string | null; campaign_name: string | null }[];
@@ -202,28 +212,68 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Load existing sync state for all forms on this account in one shot
+        const formIds = Array.from(formMap.keys());
+        const stateMap = new Map<string, any>();
+        if (formIds.length) {
+          const { data: states } = await admin
+            .from("meta_lead_form_sync_state")
+            .select("*")
+            .eq("ad_account_id", acc.id)
+            .in("form_id", formIds);
+          for (const s of states ?? []) stateMap.set(s.form_id, s);
+        }
+
         for (const [formId, info] of formMap.entries()) {
+          const state = stateMap.get(formId);
+          // Skip forms in backoff (unless forced)
+          if (!force && state?.next_retry_at && new Date(state.next_retry_at) > new Date()) {
+            skippedBackoffForms++;
+            continue;
+          }
+          if (state) retriedForms++;
+
           let url: string | null =
             `https://graph.facebook.com/v21.0/${formId}/leads` +
             `?fields=id,created_time,field_data,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,form_id` +
             sinceParam +
             `&limit=200&access_token=${encodeURIComponent(conn.access_token)}`;
           let pages = 0;
+          let formError: { code: string | null; message: string } | null = null;
+          let formLeadCount = 0;
           const adById = new Map(info.ads.map((a) => [a.id, a]));
           while (url && pages < 50) {
             const leadsRes = await fetch(url);
             const leadsJson = await leadsRes.json();
             if (!leadsRes.ok) {
+              const e = leadsJson?.error ?? {};
+              formError = {
+                code: e.code != null ? String(e.code) : String(leadsRes.status),
+                message: e.message ?? JSON.stringify(leadsJson).slice(0, 500),
+              };
               errors.push({ form: formId, act_id: acc.act_id, error: leadsJson });
               break;
             }
             const rows = buildLeadRows(leadsJson.data ?? [], acc, (lead: any) => lead.ad_id ? adById.get(lead.ad_id) : undefined, info.name, formId, resolveClient);
-            // When scoped to a single client, drop rows whose resolved client doesn't match.
             const filtered = clientFilter != null ? rows.filter((r) => r.client_id === clientFilter) : rows;
-            totalLeads += await upsertLeadRows(admin, filtered, errors, { form: formId });
+            const n = await upsertLeadRows(admin, filtered, errors, { form: formId });
+            totalLeads += n;
+            formLeadCount += n;
             url = leadsJson.paging?.next ?? null;
             pages++;
           }
+
+          // Record sync state for this form
+          const notified = await recordFormSyncState(admin, {
+            workspace_id: acc.workspace_id,
+            ad_account_id: acc.id,
+            form_id: formId,
+            form_name: info.name,
+            existing: state,
+            error: formError,
+            leads_synced: formLeadCount,
+          });
+          if (notified) firedNotifications++;
         }
 
       } catch (e) {
@@ -232,8 +282,131 @@ Deno.serve(async (req) => {
     }
   }
 
-  return json({ ok: true, leadsSynced: totalLeads, errors });
+  return json({
+    ok: true,
+    leadsSynced: totalLeads,
+    skippedColdAccounts,
+    skippedBackoffForms,
+    retriedForms,
+    firedNotifications,
+    errors,
+  });
 });
+
+async function isAccountCold(admin: any, adAccountId: string): Promise<boolean> {
+  const since = new Date(Date.now() - COLD_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
+    .toISOString().slice(0, 10);
+  const { data } = await admin
+    .from("meta_insights_daily")
+    .select("leads")
+    .eq("ad_account_id", adAccountId)
+    .gte("date", since)
+    .gt("leads", 0)
+    .limit(1);
+  if (data && data.length > 0) return false;
+
+  // No recent leads — has this account been attempted within the cold interval?
+  const { data: lastAttempt } = await admin
+    .from("meta_lead_form_sync_state")
+    .select("last_attempt_at")
+    .eq("ad_account_id", adAccountId)
+    .order("last_attempt_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  if (!lastAttempt?.last_attempt_at) return false; // never attempted — try once
+  const ageMin = (Date.now() - new Date(lastAttempt.last_attempt_at).getTime()) / 60000;
+  return ageMin < COLD_INTERVAL_MIN;
+}
+
+async function recordFormSyncState(
+  admin: any,
+  params: {
+    workspace_id: string;
+    ad_account_id: string;
+    form_id: string;
+    form_name: string | null;
+    existing: any;
+    error: { code: string | null; message: string } | null;
+    leads_synced: number;
+  },
+): Promise<boolean> {
+  const now = new Date();
+  let firedNotification = false;
+
+  if (!params.error) {
+    await admin.from("meta_lead_form_sync_state").upsert({
+      workspace_id: params.workspace_id,
+      ad_account_id: params.ad_account_id,
+      form_id: params.form_id,
+      form_name: params.form_name,
+      last_attempt_at: now.toISOString(),
+      last_success_at: now.toISOString(),
+      last_error: null,
+      last_error_code: null,
+      consecutive_failures: 0,
+      next_retry_at: null,
+      notified_at: null,
+    }, { onConflict: "ad_account_id,form_id" });
+    return false;
+  }
+
+  const prevFailures = params.existing?.consecutive_failures ?? 0;
+  const failures = prevFailures + 1;
+  const backoffMin = BACKOFF_MINUTES[Math.min(failures - 1, BACKOFF_MINUTES.length - 1)];
+  const nextRetry = new Date(now.getTime() + backoffMin * 60000);
+
+  await admin.from("meta_lead_form_sync_state").upsert({
+    workspace_id: params.workspace_id,
+    ad_account_id: params.ad_account_id,
+    form_id: params.form_id,
+    form_name: params.form_name,
+    last_attempt_at: now.toISOString(),
+    last_error: params.error.message,
+    last_error_code: params.error.code,
+    consecutive_failures: failures,
+    next_retry_at: nextRetry.toISOString(),
+  }, { onConflict: "ad_account_id,form_id" });
+
+  // Fire notification once when threshold crossed
+  if (failures >= NOTIFY_AFTER_FAILURES && !params.existing?.notified_at) {
+    const { data: acc } = await admin
+      .from("meta_ad_accounts")
+      .select("account_name, client_id")
+      .eq("id", params.ad_account_id)
+      .maybeSingle();
+    let clientName: string | null = null;
+    let link = "/leads";
+    if (acc?.client_id) {
+      const { data: c } = await admin.from("clients").select("name").eq("id", acc.client_id).maybeSingle();
+      clientName = c?.name ?? null;
+      link = `/client/${acc.client_id}`;
+    }
+    const { data: members } = await admin
+      .from("workspace_members").select("user_id").eq("workspace_id", params.workspace_id);
+    if (members?.length) {
+      await admin.from("notifications").insert(members.map((m: any) => ({
+        user_id: m.user_id,
+        workspace_id: params.workspace_id,
+        type: "lead_sync_failed",
+        title: `Lead sync failing${clientName ? ` — ${clientName}` : ""}`,
+        body: `Meta form ${params.form_name ?? params.form_id} on ${acc?.account_name ?? "ad account"} has failed ${failures}x. Latest error: ${params.error.message.slice(0, 200)}`,
+        link,
+        meta: {
+          ad_account_id: params.ad_account_id,
+          form_id: params.form_id,
+          error_code: params.error.code,
+        },
+      })));
+    }
+    await admin.from("meta_lead_form_sync_state")
+      .update({ notified_at: now.toISOString() })
+      .eq("ad_account_id", params.ad_account_id)
+      .eq("form_id", params.form_id);
+    firedNotification = true;
+  }
+
+  return firedNotification;
+}
 
 function buildLeadRows(leads: any[], acc: any, adRefOrResolver: any, formName: string | null, fallbackFormId?: string, resolveClient?: (campaignId: string | null | undefined) => number | null) {
   return leads.map((l: any) => {
