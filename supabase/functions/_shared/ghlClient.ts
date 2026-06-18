@@ -51,8 +51,25 @@ export async function searchGhlContact(
 ): Promise<{ id: string } | null> {
   if (!email && !phone) return null;
 
+  // Build multiple variants so format mismatches don't cause false misses.
+  const variants: string[] = [];
+  if (email) {
+    const e = email.trim().toLowerCase();
+    if (e) variants.push(e);
+  }
+  if (phone) {
+    const digits = phone.replace(/\D+/g, "");
+    if (digits) {
+      variants.push(phone.trim());
+      variants.push(digits);
+      if (digits.length > 10) variants.push(digits.slice(-10));
+      if (digits.length === 10) variants.push("+1" + digits);
+    }
+  }
+  const tried = new Set<string>();
+
   if (isPit(apiKey)) {
-    if (!locationId) return null; // V2 requires location scope
+    if (!locationId) return null;
     const tryOne = async (value: string) => {
       const url = `${V2_BASE}/contacts/?locationId=${encodeURIComponent(locationId)}&query=${encodeURIComponent(value)}`;
       const res = await fetch(url, { headers: v2Headers(apiKey, locationId) });
@@ -62,12 +79,15 @@ export async function searchGhlContact(
       const c = contacts[0];
       return c?.id ? { id: String(c.id) } : null;
     };
-    if (email) { const m = await tryOne(email); if (m) return m; }
-    if (phone) { const m = await tryOne(phone); if (m) return m; }
+    for (const v of variants) {
+      if (tried.has(v)) continue;
+      tried.add(v);
+      const m = await tryOne(v);
+      if (m) return m;
+    }
     return null;
   }
 
-  // V1
   const tryLookup = async (param: string, value: string) => {
     const url = `${V1_BASE}/contacts/lookup?${param}=${encodeURIComponent(value)}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
@@ -77,8 +97,13 @@ export async function searchGhlContact(
     const match = locationId ? contacts.find((c) => c.locationId === locationId) : contacts[0];
     return match?.id ? { id: String(match.id) } : null;
   };
-  if (email) { const m = await tryLookup("email", email); if (m) return m; }
-  if (phone) { const m = await tryLookup("phone", phone); if (m) return m; }
+  for (const v of variants) {
+    if (tried.has(v)) continue;
+    tried.add(v);
+    const isEmail = v.includes("@");
+    const m = await tryLookup(isEmail ? "email" : "phone", v);
+    if (m) return m;
+  }
   return null;
 }
 
