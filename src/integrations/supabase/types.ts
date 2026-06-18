@@ -3568,6 +3568,57 @@ export type Database = {
         }
         Relationships: []
       }
+      meta_lead_form_sync_state: {
+        Row: {
+          ad_account_id: string
+          consecutive_failures: number
+          created_at: string
+          form_id: string
+          form_name: string | null
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          last_error_code: string | null
+          last_success_at: string | null
+          next_retry_at: string | null
+          notified_at: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_account_id: string
+          consecutive_failures?: number
+          created_at?: string
+          form_id: string
+          form_name?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_error_code?: string | null
+          last_success_at?: string | null
+          next_retry_at?: string | null
+          notified_at?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_account_id?: string
+          consecutive_failures?: number
+          created_at?: string
+          form_id?: string
+          form_name?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_error_code?: string | null
+          last_success_at?: string | null
+          next_retry_at?: string | null
+          notified_at?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       meta_leads: {
         Row: {
           ad_account_id: string
