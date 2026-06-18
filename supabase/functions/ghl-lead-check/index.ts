@@ -23,26 +23,49 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Wait 8h before flagging (was 4h): gives slow GHL syncs / delayed Zapier-
+  // style integrations time to land. Reduces false-positive "missing" alerts.
+  const flagAfterMs = 8 * 60 * 60 * 1000;
+  const flagBefore = new Date(Date.now() - flagAfterMs).toISOString();
+  const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
 
+  // 1) Primary queue: leads aged 8h–72h not yet checked / pending.
   let q = admin
     .from("meta_leads")
-    .select("id, workspace_id, client_id, full_name, email, phone, campaign_name, form_name, created_time")
+    .select("id, workspace_id, client_id, full_name, email, phone, campaign_name, form_name, created_time, clickup_task_id")
     .or("ghl_check_status.is.null,ghl_check_status.eq.pending")
-    .gte("created_time", oneDayAgo)
-    .lte("created_time", fourHoursAgo)
+    .gte("created_time", threeDaysAgo)
+    .lte("created_time", flagBefore)
     .limit(500);
   if (workspaceFilter) q = q.eq("workspace_id", workspaceFilter);
 
   const { data: leads, error } = await q;
   if (error) return json({ error: error.message }, 500);
 
-  const stats = { checked: 0, found: 0, missing: 0, flagged: 0, errors: [] as any[] };
+  // 2) Recovery queue: already-flagged/missing leads from the last 7 days —
+  // re-check to catch false alarms that later landed in GHL.
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  let recoverQ = admin
+    .from("meta_leads")
+    .select("id, workspace_id, client_id, full_name, email, phone, campaign_name, form_name, created_time, clickup_task_id")
+    .in("ghl_check_status", ["missing", "flagged"])
+    .gte("created_time", sevenDaysAgo)
+    .limit(500);
+  if (workspaceFilter) recoverQ = recoverQ.eq("workspace_id", workspaceFilter);
+  const { data: recoverLeads } = await recoverQ;
 
-  // Group leads by workspace so we fetch credentials once per workspace
-  const byWs = new Map<string, typeof leads>();
-  for (const l of leads ?? []) {
+  const stats = { checked: 0, found: 0, missing: 0, flagged: 0, recovered: 0, errors: [] as any[] };
+
+  // Combine, tagging each with its origin so we know how to handle the result
+  type Tagged = (typeof leads)[number] & { _phase: "primary" | "recover" };
+  const all: Tagged[] = [
+    ...(leads ?? []).map((l) => ({ ...l, _phase: "primary" as const })),
+    ...(recoverLeads ?? []).map((l) => ({ ...l, _phase: "recover" as const })),
+  ];
+
+  // Group by workspace so we fetch credentials once per workspace
+  const byWs = new Map<string, Tagged[]>();
+  for (const l of all) {
     if (!byWs.has(l.workspace_id)) byWs.set(l.workspace_id, []);
     byWs.get(l.workspace_id)!.push(l);
   }
@@ -54,12 +77,8 @@ Deno.serve(async (req) => {
       .eq("workspace_id", wsId)
       .maybeSingle();
 
-    if (!cfg?.ghl_api_key) {
-      // Skip — no GHL configured for this workspace
-      continue;
-    }
+    if (!cfg?.ghl_api_key) continue;
 
-    // Cache client info
     const clientIds = Array.from(new Set(wsLeads.map(l => l.client_id).filter(Boolean)));
     const { data: clientRows } = await admin
       .from("clients")
@@ -76,13 +95,59 @@ Deno.serve(async (req) => {
         const found = await searchGhlContact(cfg.ghl_api_key, locationId, lead.email, lead.phone);
 
         if (found) {
-          await admin.from("meta_leads").update({
-            ghl_check_status: "found",
-            ghl_checked_at: new Date().toISOString(),
-          }).eq("id", lead.id);
-          stats.found++;
-        } else {
-          // Missing — create ClickUp task if configured
+          // Recovery: was flagged, now found → mark recovered + notify so the
+          // user knows the earlier alert was a false alarm.
+          if (lead._phase === "recover") {
+            await admin.from("meta_leads").update({
+              ghl_check_status: "found",
+              ghl_checked_at: new Date().toISOString(),
+              recovered_at: new Date().toISOString(),
+              ghl_contact_id: found.id,
+            }).eq("id", lead.id);
+
+            const { data: members } = await admin
+              .from("workspace_members").select("user_id").eq("workspace_id", wsId);
+            if (members?.length) {
+              await admin.from("notifications").insert(members.map(m => ({
+                user_id: m.user_id,
+                workspace_id: wsId,
+                type: "lead_sync_recovered",
+                title: `Lead found in GHL${client ? ` — ${client.name}` : ""}`,
+                body: `${lead.full_name || lead.email || lead.phone || "Lead"} did appear in GoHighLevel — the earlier "missing" alert was a false alarm.`,
+                link: lead.client_id ? `/client/${lead.client_id}` : "/leads",
+                meta: { lead_id: lead.id, contact_id: found.id, clickup_task_id: lead.clickup_task_id },
+              })));
+            }
+
+            // Auto-close ClickUp task if one was created
+            if (lead.clickup_task_id && cfg.clickup_api_token) {
+              await closeClickupTask(cfg.clickup_api_token, lead.clickup_task_id);
+            }
+            stats.recovered++;
+          } else {
+            await admin.from("meta_leads").update({
+              ghl_check_status: "found",
+              ghl_checked_at: new Date().toISOString(),
+              ghl_contact_id: found.id,
+            }).eq("id", lead.id);
+            stats.found++;
+          }
+        } else if (lead._phase === "primary") {
+          // CONFIRM before flagging: short 2s delay then a 2nd search to guard
+          // against transient GHL API blips returning empty results.
+          await new Promise((r) => setTimeout(r, 2000));
+          const confirm = await searchGhlContact(cfg.ghl_api_key, locationId, lead.email, lead.phone);
+          if (confirm) {
+            await admin.from("meta_leads").update({
+              ghl_check_status: "found",
+              ghl_checked_at: new Date().toISOString(),
+              ghl_contact_id: confirm.id,
+            }).eq("id", lead.id);
+            stats.found++;
+            continue;
+          }
+
+          // Truly missing — create ClickUp task + notification
           let taskId: string | null = null;
           const listId = client?.clickup_list_id || cfg.clickup_default_list_id;
           if (cfg.clickup_api_token && listId) {
@@ -95,16 +160,15 @@ Deno.serve(async (req) => {
             clickup_task_id: taskId,
           }).eq("id", lead.id);
 
-          // In-app notification — one per workspace member
           const { data: members } = await admin
             .from("workspace_members").select("user_id").eq("workspace_id", wsId);
           if (members?.length) {
             await admin.from("notifications").insert(members.map(m => ({
               user_id: m.user_id,
               workspace_id: wsId,
-              type: "info",
+              type: "lead_sync_missing",
               title: `Lead missing from GHL${client ? ` — ${client.name}` : ""}`,
-              body: `${lead.full_name || lead.email || lead.phone || "Unknown lead"} did not appear in GoHighLevel within 4 hours.`,
+              body: `${lead.full_name || lead.email || lead.phone || "Unknown lead"} has not appeared in GoHighLevel after 8 hours. We'll keep rechecking and auto-clear if it shows up.`,
               link: lead.client_id ? `/client/${lead.client_id}` : "/leads",
               meta: { lead_id: lead.id, clickup_task_id: taskId },
             })));
@@ -112,18 +176,33 @@ Deno.serve(async (req) => {
 
           taskId ? stats.flagged++ : stats.missing++;
         }
+        // recover phase + still missing: leave it as-is, will recheck next run
       } catch (e) {
         stats.errors.push({ lead_id: lead.id, error: String(e) });
-        await admin.from("meta_leads").update({
-          ghl_check_status: "pending",
-          ghl_checked_at: new Date().toISOString(),
-        }).eq("id", lead.id);
+        if (lead._phase === "primary") {
+          await admin.from("meta_leads").update({
+            ghl_check_status: "pending",
+            ghl_checked_at: new Date().toISOString(),
+          }).eq("id", lead.id);
+        }
       }
     }
   }
 
   return json({ ok: true, ...stats });
 });
+
+async function closeClickupTask(token: string, taskId: string) {
+  try {
+    await fetch(`https://api.clickup.com/api/v2/task/${taskId}`, {
+      method: "PUT",
+      headers: { Authorization: token, "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "closed" }),
+    });
+  } catch (_) { /* best-effort */ }
+}
+
+
 
 
 async function createClickupTask(
