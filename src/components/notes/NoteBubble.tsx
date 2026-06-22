@@ -358,14 +358,44 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
           </Button>
         </div>
 
+        <div className="flex items-center gap-1 border-b border-border px-2 pt-2">
+          {(["active", "completed"] as const).map((t) => {
+            const count = t === "active"
+              ? notes.filter((n) => !n.done).length
+              : notes.filter((n) => n.done).length;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setActiveTab(t)}
+                className={cn(
+                  "rounded-t-md px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  activeTab === t
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t === "active" ? "Active" : "Completed"}
+                {count > 0 && (
+                  <span className="ml-1 text-[10px] text-muted-foreground tabular-nums">
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="max-h-[300px] overflow-y-auto p-2">
           {isLoading && (
             <div className="py-6 text-center text-xs text-muted-foreground">Loading…</div>
           )}
-          {!isLoading && notes.length === 0 && (
-            <div className="py-6 text-center text-xs text-muted-foreground">No notes yet.</div>
+          {!isLoading && visibleNotes.length === 0 && (
+            <div className="py-6 text-center text-xs text-muted-foreground">
+              {activeTab === "active" ? "No active notes." : "No completed notes yet."}
+            </div>
           )}
-          {!isLoading && notes.map((n) => {
+          {!isLoading && visibleNotes.map((n) => {
             const overdue = !n.done && n.due_at && new Date(n.due_at) < new Date();
             return (
               <div
@@ -381,7 +411,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   <p
                     className={cn(
                       "text-xs whitespace-pre-wrap break-words",
-                      n.done && "line-through text-muted-foreground",
+                      n.done && "text-muted-foreground",
                     )}
                   >
                     {n.content}
