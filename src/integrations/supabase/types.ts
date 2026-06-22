@@ -1129,6 +1129,7 @@ export type Database = {
           title: string | null
           updated_at: string
           user_id: string
+          visible_to_client: boolean
           workspace_id: string
         }
         Insert: {
@@ -1148,6 +1149,7 @@ export type Database = {
           title?: string | null
           updated_at?: string
           user_id: string
+          visible_to_client?: boolean
           workspace_id: string
         }
         Update: {
@@ -1167,6 +1169,7 @@ export type Database = {
           title?: string | null
           updated_at?: string
           user_id?: string
+          visible_to_client?: boolean
           workspace_id?: string
         }
         Relationships: [
@@ -1842,6 +1845,45 @@ export type Database = {
           id?: string
           last_message_at?: string
           subject?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      creative_approvals: {
+        Row: {
+          ad_id: string
+          client_id: number
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          feedback: string | null
+          id: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ad_id: string
+          client_id: number
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          feedback?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ad_id?: string
+          client_id?: number
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          feedback?: string | null
+          id?: string
+          status?: string
           updated_at?: string
           workspace_id?: string
         }
