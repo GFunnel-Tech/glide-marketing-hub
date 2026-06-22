@@ -172,14 +172,7 @@ export function MorningBriefDialog() {
               </div>
             )}
 
-            {brief?.summary && (
-              <section>
-                <SectionLabel icon={<Info className="h-3 w-3" />} tint="primary">Overview</SectionLabel>
-                <div className="rounded-xl border border-border bg-card p-4 prose prose-sm dark:prose-invert max-w-none [&_p]:my-1.5 [&_ul]:my-1.5 [&_li]:my-0.5 [&_strong]:text-foreground [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_h1]:mt-3 [&_h2]:mt-3 [&_h3]:mt-3 [&_h1]:mb-1.5 [&_h2]:mb-1.5 [&_h3]:mb-1.5">
-                  <ReactMarkdown>{brief.summary}</ReactMarkdown>
-                </div>
-              </section>
-            )}
+            {brief?.summary && <OverviewSection summary={brief.summary} />}
 
             {highlights.length > 0 && (
               <section>
