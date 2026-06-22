@@ -134,8 +134,6 @@ export default function ClientPortal() {
       })()}
 
       {activeTab === "dashboard" && (
-      </header>
-
       <div className="mx-auto max-w-[900px] px-6 py-10 space-y-8">
         {/* Hero */}
         <div>
