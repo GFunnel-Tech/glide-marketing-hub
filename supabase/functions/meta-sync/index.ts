@@ -260,7 +260,11 @@ async function runSync(
   }
 
   // ROLLUP to clients table — sum last 30 days per linked client
-  await rollupClients(admin, workspaceFilter);
+  // Hot tier only pulled today's account-level data; the 30-day rollup would
+  // be a wasted write loop. Warm/cold/manual all rebuild the client rollup.
+  if (tier !== "hot") {
+    await rollupClients(admin, workspaceFilter);
+  }
 
   return { ok: true, tier, datePreset, rowsSynced: totalRows, skippedRateLimited, skippedColdHot, errors };
 }
