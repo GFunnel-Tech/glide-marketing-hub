@@ -47,6 +47,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   const [calOpen, setCalOpen] = useState(false);
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
+  const [shareWithClient, setShareWithClient] = useState(false);
 
   const { data: members = [] } = useQuery<Member[]>({
     queryKey: ["ws-members-for-notes", wsId],
