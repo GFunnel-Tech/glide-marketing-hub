@@ -70,8 +70,14 @@ export default function Settings() {
           <TabsTrigger value="kpis">KPIs</TabsTrigger>
           <TabsTrigger value="guarantees">Guarantees</TabsTrigger>
           <TabsTrigger value="statuses">Statuses</TabsTrigger>
+          <TabsTrigger value="embeds">Portal Tabs</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="embeds">
+          <EmbedTabsPanel />
+        </TabsContent>
+
 
         <TabsContent value="statuses">
           <StatusPhasesPanel />
