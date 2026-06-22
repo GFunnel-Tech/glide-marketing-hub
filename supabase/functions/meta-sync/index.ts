@@ -448,7 +448,12 @@ async function fetchJsonWithTimeout(url: string, timeoutMs = 15_000) {
   }
 }
 
-async function syncGranularInsights(admin: any, acc: any, accessToken: string): Promise<number> {
+async function syncGranularInsights(
+  admin: any,
+  acc: any,
+  accessToken: string,
+  datePreset: string = "last_7d",
+): Promise<number> {
   const fields = [
     "campaign_id","campaign_name","adset_id","adset_name","ad_id","ad_name",
     "spend","impressions","clicks","actions",
@@ -456,7 +461,8 @@ async function syncGranularInsights(admin: any, acc: any, accessToken: string): 
 
   let total = 0;
   for (const level of ["campaign", "adset", "ad"] as const) {
-    const url = `https://graph.facebook.com/v21.0/${acc.act_id}/insights?fields=${fields}&level=${level}&time_increment=1&date_preset=last_30d&limit=500&access_token=${encodeURIComponent(accessToken)}`;
+    const url = `https://graph.facebook.com/v21.0/${acc.act_id}/insights?fields=${fields}&level=${level}&time_increment=1&date_preset=${datePreset}&limit=500&access_token=${encodeURIComponent(accessToken)}`;
+
     let next: string | null = url;
     const rows: any[] = [];
     while (next) {
