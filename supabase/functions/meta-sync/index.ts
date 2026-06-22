@@ -111,10 +111,16 @@ async function runSync(
 
     let acctQ = admin
       .from("meta_ad_accounts")
-      .select("id, act_id, workspace_id, client_id, rate_limited_until")
-      .eq("connection_id", conn.id)
-      .eq("is_active", true);
-    if (adAccountFilter) acctQ = acctQ.eq("id", adAccountFilter);
+      .select("id, act_id, workspace_id, client_id, rate_limited_until, is_active")
+      .eq("connection_id", conn.id);
+    if (adAccountFilter) {
+      acctQ = acctQ.eq("id", adAccountFilter);
+    } else {
+      // Include inactive accounts only when they are explicitly assigned to a
+      // client — users expect their mapped accounts to keep syncing even if
+      // Meta flagged the account inactive at some point.
+      acctQ = acctQ.or("is_active.eq.true,client_id.not.is.null");
+    }
     const { data: accounts } = await acctQ;
 
     // Shuffle so the same accounts aren't always processed last (and starved
