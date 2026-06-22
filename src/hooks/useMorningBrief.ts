@@ -119,9 +119,30 @@ export function useMorningBrief() {
         createdIds = (inserted ?? []).map((r: any) => r.id);
       }
 
+      // Track which suggested tasks have been added (by signature), so the UI can
+      // disable them on subsequent opens. Stored inside `signals` to avoid a schema change.
+      const newKeys = tasks.map((t) => `${t.title}::${t.client_id ?? ""}`);
+      const prevKeys: string[] = Array.isArray(brief.signals?.applied_task_keys)
+        ? brief.signals.applied_task_keys
+        : [];
+      const mergedKeys = Array.from(new Set([...prevKeys, ...newKeys]));
+      const mergedIds = Array.from(new Set([...(brief.applied_task_ids ?? []), ...createdIds]));
+      const nextSignals = { ...(brief.signals ?? {}), applied_task_keys: mergedKeys };
+
+      // Mark applied only when ALL suggested tasks have been added; otherwise keep
+      // the brief available so the user can come back and apply the remaining ones.
+      const allApplied = (brief.suggested_tasks ?? []).every((t) =>
+        mergedKeys.includes(`${t.title}::${t.client_id ?? ""}`),
+      );
+
       const { error: updErr } = await db
         .from("morning_briefs")
-        .update({ status: "applied", applied_at: new Date().toISOString(), applied_task_ids: createdIds })
+        .update({
+          status: allApplied ? "applied" : brief.status,
+          applied_at: allApplied ? new Date().toISOString() : brief.applied_at,
+          applied_task_ids: mergedIds,
+          signals: nextSignals,
+        })
         .eq("id", brief.id);
       if (updErr) throw updErr;
       return createdIds.length;
