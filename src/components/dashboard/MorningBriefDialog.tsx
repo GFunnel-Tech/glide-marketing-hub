@@ -50,10 +50,10 @@ function clientName(brief: any, clientId: number | null): string | null {
 }
 
 /**
- * The morning brief surfaces once per day. On first load of the day (when no brief
+ * The daily brief surfaces once per day. On first load of the day (when no brief
  * row exists yet) it generates one and opens automatically. After the user applies
  * or dismisses it, the row's status flips and it no longer auto-opens — but it can
- * be reopened any time via the dashboard's "Morning Brief" button.
+ * be reopened any time via the dashboard's "Daily Brief" button.
  */
 export function MorningBriefDialog() {
   const { currentWorkspace } = useWorkspace();
@@ -128,7 +128,7 @@ export function MorningBriefDialog() {
           <span className="flex h-5 w-5 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-transform group-hover:scale-110">
             <Sun className="h-3 w-3" />
           </span>
-          Morning Brief
+          Daily Brief
         </button>
       )}
 
@@ -144,7 +144,7 @@ export function MorningBriefDialog() {
                   <Sparkles className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
-                  <DialogTitle className="text-lg font-semibold tracking-tight">Morning Brief</DialogTitle>
+                  <DialogTitle className="text-lg font-semibold tracking-tight">Daily Brief</DialogTitle>
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground mt-0.5">
                     {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
                   </p>
