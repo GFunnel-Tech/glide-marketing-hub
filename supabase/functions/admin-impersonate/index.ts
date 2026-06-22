@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
       super_admin_id: caller.id,
       target_user_id,
       action: "start",
-      meta: { email: target.user.email, target_roles: roles, reason: reason ?? null },
+      meta: { email: target.user.email, target_roles: roles, reason: reason ?? null, scope: isSuperAdmin ? "super_admin" : "agency" },
     });
 
     return json({ hashed_token, email: target.user.email });
