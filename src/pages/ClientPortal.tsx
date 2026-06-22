@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { clientPortalData } from "@/data/mockData";
 import { cn } from "@/lib/utils";
-import { TrendingUp, Filter, Calendar, FileText, DollarSign, LogOut, ChevronDown, MessageSquare, Pencil, Check, X, Bot, Play } from "lucide-react";
+import { TrendingUp, Filter, Calendar, FileText, DollarSign, LogOut, ChevronDown, MessageSquare, Pencil, Check, X, Bot, Play, LayoutDashboard, type LucideIcon } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { useClientEmbeds } from "@/hooks/useClientEmbeds";
+import { EmbedFrame } from "@/components/portal/EmbedFrame";
 
 function DeltaBadge({ delta, type }: { delta: number; type: string }) {
   return (
@@ -21,7 +27,32 @@ const appointmentSources = ["Booked by AI", "Appointment Setter", "Direct From A
 const pipelineColors = ["#f97316", "#ea6f10", "#db5b00", "#c74f00", "#b34400"];
 
 export default function ClientPortal() {
+  const { id } = useParams<{ id: string }>();
+  const clientId = id ? Number(id) : null;
+
+  // Load real client name/status; falls back gracefully if RLS blocks it.
+  const { data: realClient } = useQuery({
+    queryKey: ["client-portal-client", clientId],
+    enabled: !!clientId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("id, name, brand, status")
+        .eq("id", clientId!)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const embedsQuery = useClientEmbeds(clientId);
+  const embeds = embedsQuery.data ?? [];
+
+  const [activeTab, setActiveTab] = useState<string>("dashboard");
+
   const d = clientPortalData;
+  const brandLabel = realClient?.brand ?? realClient?.name ?? d.brand;
+  const clientName = realClient?.name ?? d.clientName;
+
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
   const [editingNote, setEditingNote] = useState<string | null>(null);
@@ -53,10 +84,10 @@ export default function ClientPortal() {
     <div className="min-h-screen bg-background">
       {/* Top bar */}
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-[900px] items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-[1100px] items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">G</div>
-            <span className="text-sm font-semibold text-foreground">{d.brand}</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">{brandLabel?.[0]?.toUpperCase() ?? "G"}</div>
+            <span className="text-sm font-semibold text-foreground">{brandLabel}</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-xs text-muted-foreground">Powered by GFunnel</span>
@@ -65,8 +96,44 @@ export default function ClientPortal() {
             </button>
           </div>
         </div>
+
+        {/* Tabs */}
+        <div className="mx-auto max-w-[1100px] px-6">
+          <nav className="flex items-center gap-1 -mb-px overflow-x-auto">
+            <TabButton
+              active={activeTab === "dashboard"}
+              onClick={() => setActiveTab("dashboard")}
+              icon={LayoutDashboard}
+              label="Dashboard"
+            />
+            {embeds.map((emb) => {
+              const Icon = (LucideIcons as any)[emb.tab.icon] as LucideIcon | undefined;
+              return (
+                <TabButton
+                  key={emb.id}
+                  active={activeTab === emb.id}
+                  onClick={() => setActiveTab(emb.id)}
+                  icon={Icon ?? FileText}
+                  label={emb.tab.label}
+                  badge={emb.status === "accepted" ? "Accepted" : emb.status === "declined" ? "Declined" : null}
+                />
+              );
+            })}
+          </nav>
+        </div>
       </header>
 
+      {activeTab !== "dashboard" && (() => {
+        const emb = embeds.find((e) => e.id === activeTab);
+        if (!emb) return null;
+        return (
+          <div className="mx-auto max-w-[1100px] px-6 py-6">
+            <EmbedFrame embedId={emb.id} clientId={clientId!} url={emb.embed_url} title={emb.tab.label} />
+          </div>
+        );
+      })()}
+
+      {activeTab === "dashboard" && (
       <div className="mx-auto max-w-[900px] px-6 py-10 space-y-8">
         {/* Hero */}
         <div>
@@ -279,6 +346,41 @@ export default function ClientPortal() {
           </div>
         </div>
       </div>
+      )}
     </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+  badge,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: LucideIcon;
+  label: string;
+  badge?: string | null;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+        active
+          ? "border-primary text-foreground"
+          : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+      {badge && (
+        <span className="ml-1 rounded-full bg-success/15 text-success px-2 py-0.5 text-[10px] font-semibold">
+          {badge}
+        </span>
+      )}
+    </button>
   );
 }

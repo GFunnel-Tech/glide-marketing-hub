@@ -20,6 +20,7 @@ import { StatusPhasesPanel } from "@/components/settings/StatusPhasesPanel";
 import { AgencyProfilePanel } from "@/components/settings/AgencyProfilePanel";
 import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { TeamMembersPanel } from "@/components/settings/TeamMembersPanel";
+import { EmbedTabsPanel } from "@/components/settings/EmbedTabsPanel";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -69,8 +70,14 @@ export default function Settings() {
           <TabsTrigger value="kpis">KPIs</TabsTrigger>
           <TabsTrigger value="guarantees">Guarantees</TabsTrigger>
           <TabsTrigger value="statuses">Statuses</TabsTrigger>
+          <TabsTrigger value="embeds">Portal Tabs</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="embeds">
+          <EmbedTabsPanel />
+        </TabsContent>
+
 
         <TabsContent value="statuses">
           <StatusPhasesPanel />
