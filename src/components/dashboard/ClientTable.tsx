@@ -490,7 +490,7 @@ export function ClientTable() {
             <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuItem onClick={handleQuickSync} disabled={syncing}>
                 <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                {focusedClient ? `Sync Meta for ${focusedClient.name}` : "Sync Meta for all clients"}
+                {focusedClient ? `Sync Meta · ${focusedClient.name}` : "Sync Meta · all clients"}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setImportOpen(true)}
