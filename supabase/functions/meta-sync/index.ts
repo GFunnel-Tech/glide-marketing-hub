@@ -35,6 +35,7 @@ Deno.serve(async (req) => {
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
+    adAccountFilter = body.adAccountId ?? null;
     adsOnly = body.adsOnly === true || (body.syncAds === true && body.includeDetails !== true);
     if (body.tier === "hot" || body.tier === "warm" || body.tier === "cold") {
       tier = body.tier;
