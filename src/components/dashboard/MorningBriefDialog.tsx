@@ -61,27 +61,39 @@ export function MorningBriefDialog() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const autoTriedRef = useRef<string | null>(null);
+  const autoOpenedBriefRef = useRef<string | null>(null);
 
-  // Generate-on-first-load and auto-open for a brand new brief.
+  // Generate-on-first-load and auto-open for a brand-new brief.
+  // CRITICAL: only auto-open ONCE per brief id. Without this guard, every
+  // re-render (which changes the `generate` mutation reference) re-fires this
+  // effect and slams `setOpen(true)`, fighting the user's close action and
+  // causing the dialog/overlay to flicker on hover.
   useEffect(() => {
     if (!currentWorkspace?.id || isLoading) return;
     const wsKey = currentWorkspace.id;
     if (!brief) {
-      // Only attempt generation once per workspace per mount to avoid loops.
       if (autoTriedRef.current === wsKey || generate.isPending) return;
       autoTriedRef.current = wsKey;
       generate.mutate(
         {},
         {
           onSuccess: (b) => {
-            if (b?.status === "new") setOpen(true);
+            if (b?.status === "new" && autoOpenedBriefRef.current !== b.id) {
+              autoOpenedBriefRef.current = b.id;
+              setOpen(true);
+            }
           },
         },
       );
       return;
     }
-    if (brief.status === "new") setOpen(true);
-  }, [currentWorkspace?.id, isLoading, brief, generate]);
+    if (brief.status === "new" && autoOpenedBriefRef.current !== brief.id) {
+      autoOpenedBriefRef.current = brief.id;
+      setOpen(true);
+    }
+    // Intentionally exclude `generate` from deps — it's a fresh ref each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWorkspace?.id, isLoading, brief?.id, brief?.status]);
 
   // Track applied task keys so we can disable/skip already-added tasks.
   const appliedKeys = useMemo(() => {
