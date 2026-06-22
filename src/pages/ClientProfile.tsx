@@ -13,6 +13,7 @@ import { PendingActionsPanel } from "@/components/ai/PendingActionsPanel";
 import { AiRulesPanel } from "@/components/ai/AiRulesPanel";
 import { ClientContextPanel } from "@/components/ai/ClientContextPanel";
 import { KnowledgeBasePanel } from "@/components/ai/KnowledgeBasePanel";
+import { ClientEmbedsCard } from "@/components/client/ClientEmbedsCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
