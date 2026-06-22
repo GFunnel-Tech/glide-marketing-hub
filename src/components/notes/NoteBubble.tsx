@@ -50,6 +50,8 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [shareWithClient, setShareWithClient] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
+  type SortKey = "newest" | "oldest" | "az" | "za" | "due_soonest" | "due_latest";
+  const [sortKey, setSortKey] = useState<SortKey>("newest");
 
   const { data: members = [] } = useQuery<Member[]>({
     queryKey: ["ws-members-for-notes", wsId],
