@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useMorningBrief, type MorningBriefTask } from "@/hooks/useMorningBrief";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Sparkles, AlertTriangle, TriangleAlert, Info, Loader2, RefreshCw, Sun } from "lucide-react";
+import { Sparkles, AlertTriangle, TriangleAlert, Info, Loader2, RefreshCw, Sun, ListChecks, Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const severityIcon = {
@@ -20,15 +20,27 @@ const severityIcon = {
   warn: TriangleAlert,
   info: Info,
 };
-const severityColor = {
-  critical: "text-destructive",
-  warn: "text-warning",
-  info: "text-primary",
+
+// Pretty per-severity styling: tinted icon chip + matching left rail on the card.
+const severityStyles: Record<"critical" | "warn" | "info", { chip: string; rail: string }> = {
+  critical: {
+    chip: "bg-destructive/10 text-destructive",
+    rail: "before:bg-destructive/70",
+  },
+  warn: {
+    chip: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    rail: "before:bg-amber-500/70",
+  },
+  info: {
+    chip: "bg-primary/10 text-primary",
+    rail: "before:bg-primary/70",
+  },
 };
+
 const priorityChip: Record<string, string> = {
-  high: "bg-destructive/10 text-destructive",
-  normal: "bg-primary/10 text-primary",
-  low: "bg-muted text-muted-foreground",
+  high: "bg-destructive/10 text-destructive ring-1 ring-destructive/20",
+  normal: "bg-primary/10 text-primary ring-1 ring-primary/20",
+  low: "bg-muted text-muted-foreground ring-1 ring-border",
 };
 
 function clientName(brief: any, clientId: number | null): string | null {
