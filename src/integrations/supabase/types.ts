@@ -3142,6 +3142,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_synced_at: string | null
+          rate_limited_until: string | null
           timezone_name: string | null
           updated_at: string
           workspace_id: string
@@ -3159,6 +3160,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_synced_at?: string | null
+          rate_limited_until?: string | null
           timezone_name?: string | null
           updated_at?: string
           workspace_id: string
@@ -3176,6 +3178,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_synced_at?: string | null
+          rate_limited_until?: string | null
           timezone_name?: string | null
           updated_at?: string
           workspace_id?: string
