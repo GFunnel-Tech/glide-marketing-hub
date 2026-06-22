@@ -30,7 +30,7 @@ import {
   ExternalLink, Building2, Layers, Image as ImageIcon, FolderKanban,
   Sparkles, DollarSign, Settings2, Pause as PauseIcon, AlertTriangle,
   Play, Trash2, X, ChevronsDownUp, ChevronsUpDown, Archive, ArchiveRestore,
-  Trophy, TrendingDown, Hourglass,
+  Trophy, TrendingDown, Hourglass, BarChart3,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -49,6 +49,7 @@ import { useCampaignLeadBreakdown } from "@/hooks/useCampaignLeadBreakdown";
 import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { useChurnRisks } from "@/hooks/useChurnRisk";
 import { ChurnRiskBadge } from "./ChurnRiskBadge";
+import { EntityChartsDrawer, type EntityLevel } from "./EntityChartsDrawer";
 
 const TABLE_KEY = "client_hierarchy";
 
@@ -245,6 +246,7 @@ export function ClientHierarchyTable() {
   const [openClients, setOpenClients] = useState<Record<string, boolean>>({});
   const [openCampaigns, setOpenCampaigns] = useState<Record<string, boolean>>({});
   const [openAdSets, setOpenAdSets] = useState<Record<string, boolean>>({});
+  const [chartEntity, setChartEntity] = useState<{ level: EntityLevel; id: string; name: string } | null>(null);
   // Single unified view: hide manually-archived + non-fully-synced clients,
   // hide campaigns with no spend/impressions. The All/Active/Paused/Issues
   // filter is the only view toggle.
@@ -1033,7 +1035,7 @@ export function ClientHierarchyTable() {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
-                                  className="flex items-center gap-2 text-left w-full"
+                                  className="flex items-center gap-2 text-left flex-1 min-w-0"
                                 >
                                   <LevelBadge level="campaign" />
                                   <div className="flex h-6 w-6 items-center justify-center rounded bg-success/10 text-success">
@@ -1049,6 +1051,19 @@ export function ClientHierarchyTable() {
                                     )}
                                   </div>
                                 </button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); setChartEntity({ level: "campaign", id: String(camp.id), name: camp.name }); }}
+                                      className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-primary"
+                                      aria-label="View charts"
+                                    >
+                                      <BarChart3 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View charts</TooltipContent>
+                                </Tooltip>
                               </div>
                             </td>
                             {(() => {
@@ -1146,7 +1161,7 @@ export function ClientHierarchyTable() {
                                     <div className="flex items-center gap-2">
                                       <button
                                         onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
-                                        className="flex items-center gap-2 text-left w-full"
+                                        className="flex items-center gap-2 text-left flex-1 min-w-0"
                                       >
                                         <LevelBadge level="adset" />
                                         <div className="flex h-6 w-6 items-center justify-center rounded bg-warning/10 text-warning">
@@ -1155,6 +1170,19 @@ export function ClientHierarchyTable() {
                                         <p className="text-sm text-foreground hover:text-primary truncate max-w-[180px]">{adsetName}</p>
                                         <span className="text-[10px] text-muted-foreground">· {ads.length} ad{ads.length === 1 ? "" : "s"}</span>
                                       </button>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); setChartEntity({ level: "adset", id: adsetId, name: adsetName }); }}
+                                            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-primary"
+                                            aria-label="View charts"
+                                          >
+                                            <BarChart3 className="h-3.5 w-3.5" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>View charts</TooltipContent>
+                                      </Tooltip>
                                     </div>
                                   </td>
                                   {(() => {
@@ -1227,6 +1255,19 @@ export function ClientHierarchyTable() {
                                             )}
                                             <p className="text-xs text-foreground truncate max-w-[160px]">{ad.name ?? "Untitled"}</p>
                                             <AdRatingBadge rating={rating} />
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => { e.stopPropagation(); setChartEntity({ level: "ad", id: String(ad.id), name: ad.name ?? "Untitled" }); }}
+                                                  className="ml-auto flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-primary"
+                                                  aria-label="View charts"
+                                                >
+                                                  <BarChart3 className="h-3.5 w-3.5" />
+                                                </button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>View charts</TooltipContent>
+                                            </Tooltip>
                                           </div>
                                         </td>
                                       {(() => {
@@ -1354,6 +1395,13 @@ export function ClientHierarchyTable() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <EntityChartsDrawer
+        open={chartEntity !== null}
+        onOpenChange={(v) => { if (!v) setChartEntity(null); }}
+        level={chartEntity?.level ?? null}
+        objectId={chartEntity?.id ?? null}
+        name={chartEntity?.name ?? null}
+      />
     </div>
   );
 }
