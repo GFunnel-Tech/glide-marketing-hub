@@ -15,6 +15,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let workspaceFilter: string | null = null;
+  let adAccountFilter: string | null = null;
   // Default to true so scheduled (cron) syncs always refresh granular
   // campaign/adset/ad insights — otherwise the per-campaign breakdown in the
   // Client Profile / date-range views drifts out of date.
@@ -34,6 +35,7 @@ Deno.serve(async (req) => {
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
+    adAccountFilter = body.adAccountId ?? null;
     adsOnly = body.adsOnly === true || (body.syncAds === true && body.includeDetails !== true);
     if (body.tier === "hot" || body.tier === "warm" || body.tier === "cold") {
       tier = body.tier;
@@ -53,7 +55,7 @@ Deno.serve(async (req) => {
   );
 
   const work = async () => {
-    return await runSync(admin, { workspaceFilter, includeDetails, adsOnly, tier });
+    return await runSync(admin, { workspaceFilter, adAccountFilter, includeDetails, adsOnly, tier });
   };
 
   // Background mode: return 202 immediately, keep the loop running via waitUntil.
@@ -74,9 +76,9 @@ Deno.serve(async (req) => {
 
 async function runSync(
   admin: any,
-  opts: { workspaceFilter: string | null; includeDetails: boolean; adsOnly: boolean; tier: "hot" | "warm" | "cold" | null },
+  opts: { workspaceFilter: string | null; adAccountFilter: string | null; includeDetails: boolean; adsOnly: boolean; tier: "hot" | "warm" | "cold" | null },
 ) {
-  const { workspaceFilter, includeDetails, adsOnly, tier } = opts;
+  const { workspaceFilter, adAccountFilter, includeDetails, adsOnly, tier } = opts;
   // Meta finalizes attribution within ~72h. Once a day is stored it doesn't
   // need to be re-pulled — that's why the cold tier window is only 7 days,
   // not 30. Older days are already frozen in meta_insights_daily.
@@ -107,11 +109,13 @@ async function runSync(
       continue;
     }
 
-    const { data: accounts } = await admin
+    let acctQ = admin
       .from("meta_ad_accounts")
       .select("id, act_id, workspace_id, client_id, rate_limited_until")
       .eq("connection_id", conn.id)
       .eq("is_active", true);
+    if (adAccountFilter) acctQ = acctQ.eq("id", adAccountFilter);
+    const { data: accounts } = await acctQ;
 
     // Shuffle so the same accounts aren't always processed last (and starved
     // if the function hits its execution-time limit before reaching them).
@@ -249,9 +253,13 @@ async function runSync(
 
         // ---- Ad-level creatives + 30d performance (for the Creatives page) ----
         let adRows = 0;
+        let adsError: string | null = null;
         if (includeDetails) {
           try { adRows = await syncAds(admin, acc, conn.access_token); }
-          catch (e) { errors.push({ account: acc.act_id, scope: "ads", error: String(e) }); }
+          catch (e) {
+            adsError = String(e);
+            errors.push({ account: acc.act_id, scope: "ads", error: adsError });
+          }
         }
 
         await admin.from("meta_ad_accounts")
@@ -259,7 +267,12 @@ async function runSync(
           .eq("id", acc.id);
 
         await admin.from("meta_sync_log").update({
-          status: "success",
+          // Surface partial failures: if ads failed but insights/campaigns
+          // succeeded, mark as "partial" and stamp the error so the UI can
+          // show why the Creatives/Hierarchy dropdown is empty for this
+          // account.
+          status: adsError ? "partial" : "success",
+          error_message: adsError ? ("ads: " + adsError).slice(0, 2000) : null,
           rows_synced: rows.length + campaignRows + granularRows + adRows,
           finished_at: new Date().toISOString(),
         }).eq("id", log.data!.id);
@@ -525,24 +538,42 @@ function firstAssetUrl(images: any): string | null {
 }
 
 async function syncAds(admin: any, acc: any, accessToken: string): Promise<number> {
+  // Keep the /ads page lean — Meta returns "(#1) Please reduce the amount of
+  // data you're asking for" when expanding creative.object_story_spec and
+  // asset_feed_spec inline on accounts with many ads. We only ask for IDs +
+  // names here and fetch the full creative shape in the batched call below.
   const adFields = [
     "id","name","status","effective_status","created_time",
     "campaign_id","campaign{name}","adset_id","adset{name,targeting}",
-    // Field expansion modifiers ensure Graph returns a 600px thumbnail
-    // instead of the default ~64px (which renders blurry when scaled up).
-    "creative{id,thumbnail_url.width(600).height(600),image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id,asset_feed_spec}",
+    "creative{id}",
   ].join(",");
 
   const ads: any[] = [];
+  const ADS_PAGE_LIMIT = 50;
   let next: string | null =
-    `https://graph.facebook.com/v21.0/${acc.act_id}/ads?fields=${adFields}&thumbnail_width=600&thumbnail_height=600&limit=200&access_token=${encodeURIComponent(accessToken)}`;
+    `https://graph.facebook.com/v21.0/${acc.act_id}/ads?fields=${adFields}&limit=${ADS_PAGE_LIMIT}&access_token=${encodeURIComponent(accessToken)}`;
 
-  // safety cap: 5 pages = 1000 ads per account
+  // safety cap: 20 pages = 1000 ads per account (same overall ceiling as before)
   let page = 0;
-  while (next && page < 5) {
+  while (next && page < 20) {
     const r: Response = await fetch(next);
     const j: any = await r.json();
-    if (!r.ok) throw new Error("ads list: " + JSON.stringify(j));
+    if (!r.ok) {
+      // On "reduce the amount of data" errors, retry once at an even smaller
+      // page size before giving up so a single fat account doesn't block sync.
+      const code = j?.error?.code;
+      if (code === 1 && page === 0) {
+        const retryUrl = `https://graph.facebook.com/v21.0/${acc.act_id}/ads?fields=id,name,status,effective_status,created_time,campaign_id,adset_id,creative{id}&limit=25&access_token=${encodeURIComponent(accessToken)}`;
+        const r2 = await fetch(retryUrl);
+        const j2: any = await r2.json();
+        if (!r2.ok) throw new Error("ads list: " + JSON.stringify(j2));
+        for (const a of j2.data ?? []) ads.push(a);
+        next = j2.paging?.next ?? null;
+        page++;
+        continue;
+      }
+      throw new Error("ads list: " + JSON.stringify(j));
+    }
     for (const a of j.data ?? []) ads.push(a);
     next = j.paging?.next ?? null;
     page++;
@@ -686,7 +717,20 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
 
   const now = Date.now();
 
-
+  // Attribute each ad to the correct client. On shared accounts the account
+  // owner (acc.client_id) is NOT the campaign owner — we honor the campaign's
+  // current client_id so ads land under the right client in the hierarchy.
+  const campaignIds = Array.from(new Set(
+    ads.map((a: any) => a.campaign_id).filter((x: any) => typeof x === "string" && x.length > 0),
+  )) as string[];
+  const campaignClientMap = new Map<string, number | null>();
+  if (campaignIds.length > 0) {
+    const { data: campRows } = await admin
+      .from("campaigns")
+      .select("id, client_id")
+      .in("id", campaignIds);
+    for (const r of campRows ?? []) campaignClientMap.set(r.id, r.client_id ?? null);
+  }
 
   const rows = ads.map((a: any) => {
     const ins = insMap.get(a.id) ?? {};
@@ -720,7 +764,7 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     return {
       id: a.id,
       workspace_id: acc.workspace_id,
-      client_id: acc.client_id,
+      client_id: campaignClientMap.get(a.campaign_id) ?? acc.client_id,
       ad_account_id: acc.id,
       campaign_id: a.campaign_id ?? null,
       campaign_name: a.campaign?.name ?? null,
