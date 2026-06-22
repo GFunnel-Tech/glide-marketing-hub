@@ -259,107 +259,26 @@ async function runSync(
     }
   }
 
-  // ROLLUP to clients table — sum last 30 days per linked client
-  // Hot tier only pulled today's account-level data; the 30-day rollup would
-  // be a wasted write loop. Warm/cold/manual all rebuild the client rollup.
-  if (tier !== "hot") {
-    await rollupClients(admin, workspaceFilter);
-  }
+  // ROLLUP — sums last-30d insights + dedupes leads per client in one
+  // SQL round-trip, so it's now cheap enough to run on every tier
+  // (including hot) and keep client KPIs always current.
+  await rollupClients(admin, workspaceFilter);
+
 
   return { ok: true, tier, datePreset, rowsSynced: totalRows, skippedRateLimited, skippedColdHot, errors };
 }
 
 async function rollupClients(admin: any, workspaceFilter: string | null) {
-  let q = admin
-    .from("meta_ad_accounts")
-    .select("client_id, workspace_id")
-    .not("client_id", "is", null);
-  if (workspaceFilter) q = q.eq("workspace_id", workspaceFilter);
-  const { data: links } = await q;
-  const clientIds = Array.from(new Set((links ?? []).map((l: any) => l.client_id)));
-
-  // 30-day window — same boundary for spend, reported leads AND lead dedup
-  // so the resulting CPLs reconcile.
-  const sinceMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const sinceDate = new Date(sinceMs).toISOString().slice(0, 10);
-  const sinceIso = new Date(sinceMs).toISOString();
-
-  for (const cid of clientIds) {
-    // All ad accounts linked to this client
-    const { data: accs } = await admin
-      .from("meta_ad_accounts")
-      .select("id")
-      .eq("client_id", cid);
-    const ids = (accs ?? []).map((a: any) => a.id);
-    if (!ids.length) continue;
-
-    // ---- 1) Spend + Meta-reported leads from daily insights ----
-    const { data: rows } = await admin
-      .from("meta_insights_daily")
-      .select("spend,leads,cpm,frequency,impressions,clicks")
-      .in("ad_account_id", ids)
-      .gte("date", sinceDate);
-
-    const sum = (rows ?? []).reduce((acc: any, r: any) => ({
-      spend: acc.spend + Number(r.spend ?? 0),
-      leads: acc.leads + Number(r.leads ?? 0),
-      clicks: acc.clicks + Number(r.clicks ?? 0),
-      impressions: acc.impressions + Number(r.impressions ?? 0),
-      cpmW: acc.cpmW + Number(r.cpm ?? 0) * Number(r.impressions ?? 0),
-      freqW: acc.freqW + Number(r.frequency ?? 0) * Number(r.impressions ?? 0),
-    }), { spend: 0, leads: 0, clicks: 0, impressions: 0, cpmW: 0, freqW: 0 });
-
-    const reportedLeads = sum.leads;
-    const cpl = reportedLeads > 0 ? sum.spend / reportedLeads : 0;
-    const cpm = sum.impressions > 0 ? sum.cpmW / sum.impressions : 0;
-    const frequency = sum.impressions > 0 ? sum.freqW / sum.impressions : 0;
-
-    // ---- 2) Form CVR = leads / link_clicks (Meta convention) ----
-    const formCvr = sum.clicks > 0 ? (reportedLeads / sum.clicks) * 100 : 0;
-
-    // ---- 3) True (deduplicated) leads from meta_leads ----
-    // Canonical lead-dedup key — MUST stay identical to the copy in
-    // src/hooks/useClientsRangeMetrics.ts: lowercased email, else digits-only
-    // phone, else the Meta lead_id prefixed with "lid:". One person = one lead.
-    const { data: leadRows } = await admin
-      .from("meta_leads")
-      .select("lead_id,email,phone")
-      .eq("client_id", cid)
-      .gte("created_time", sinceIso)
-      .limit(50000);
-
-    const seen = new Set<string>();
-    for (const l of leadRows ?? []) {
-      const email = (l.email ?? "").trim().toLowerCase();
-      const phone = (l.phone ?? "").replace(/\D+/g, "");
-      const key = email || phone || `lid:${l.lead_id ?? ""}`;
-      if (key) seen.add(key);
-    }
-    const trueLeadsCount = seen.size;
-    // Only trust dedup when we actually have lead-level data; otherwise
-    // fall back to the Meta-reported number rather than silently writing 0.
-    const haveLeadDetails = (leadRows ?? []).length > 0;
-    const trueLeads = haveLeadDetails ? trueLeadsCount : reportedLeads;
-    const trueCpl = trueLeads > 0 ? sum.spend / trueLeads : 0;
-    // Flag double-count when Meta reports >15% more leads than we can dedupe
-    const doubleCount = haveLeadDetails && reportedLeads > 0
-      && reportedLeads > trueLeads * 1.15;
-
-    await admin.from("clients").update({
-      spend: sum.spend,
-      leads: reportedLeads,
-      reported_leads: reportedLeads,
-      true_leads: trueLeads,
-      cpl,
-      true_cpl: trueCpl,
-      cpm,
-      frequency,
-      form_cvr: formCvr,
-      double_count: doubleCount,
-      last_audit: new Date().toISOString().slice(0, 10),
-    }).eq("id", cid);
-  }
+  // Single bulk SQL aggregation (replaces the old per-client loop that
+  // routinely timed out partway through, leaving most clients with stale
+  // spend/leads/CPL). Sums last-30-day insights and dedupes meta_leads for
+  // every linked client in one round-trip.
+  const { error } = await admin.rpc("rollup_client_kpis_for_workspace", {
+    _workspace_id: workspaceFilter,
+  });
+  if (error) console.error("rollup_client_kpis_for_workspace error:", error);
 }
+
 
 async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise<number> {
   // 1. List campaigns for the ad account

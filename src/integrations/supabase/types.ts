@@ -5919,6 +5919,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rollup_client_kpis_for_workspace: {
+        Args: { _workspace_id?: string }
+        Returns: number
+      }
       seed_default_status_phases: {
         Args: { _workspace_id: string }
         Returns: undefined
