@@ -490,7 +490,7 @@ export function ClientTable() {
             <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuItem onClick={handleQuickSync} disabled={syncing}>
                 <RefreshCw className="mr-2 h-3.5 w-3.5" />
-                {focusedClient ? `Sync Meta for ${focusedClient.name}` : "Sync Meta for all clients"}
+                {focusedClient ? `Sync Meta · ${focusedClient.name}` : "Sync Meta · all clients"}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setImportOpen(true)}
@@ -781,7 +781,7 @@ function CampaignImportDialog({
             <div className="p-6 text-center text-sm text-muted-foreground">Loading campaigns…</div>
           ) : campaigns.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              No campaigns found for this client yet. Use “Sync Meta campaigns now” to pull them from Meta.
+              No campaigns found for this client yet. Use “Sync Meta” to pull them from Meta.
             </div>
           ) : (
             <ul className="divide-y divide-border">

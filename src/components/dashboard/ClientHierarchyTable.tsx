@@ -457,20 +457,23 @@ export function ClientHierarchyTable() {
   }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero, search]);
 
   const handleQuickSync = async () => {
-    if (!focusedClient) {
-      toast.error("Select a specific client to sync");
-      return;
-    }
     setSyncing(true);
     try {
-      await api.syncMetaAds(String(focusedClient.id));
-      toast.success(`Synced ${focusedClient.name}`);
+      // Pass "all" when no client is focused so the edge function syncs every
+      // account in the current workspace.
+      await api.syncMetaAds(focusedClient ? String(focusedClient.id) : "all");
+      toast.success(
+        focusedClient
+          ? `Synced ${focusedClient.name}`
+          : "Meta sync started for all clients",
+      );
     } catch (e: any) {
       toast.error(e?.message ?? "Sync failed");
     } finally {
       setSyncing(false);
     }
   };
+
 
   const collapseAll = () => {
     setOpenClients({});
@@ -693,9 +696,11 @@ export function ClientHierarchyTable() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={handleQuickSync} disabled={!focusedClient || syncing}>
-                <RefreshCw className="mr-2 h-3.5 w-3.5" /> Sync Meta campaigns
+              <DropdownMenuItem onClick={handleQuickSync} disabled={syncing}>
+                <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                {focusedClient ? `Sync Meta · ${focusedClient.name}` : "Sync Meta · all clients"}
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>
                 <Sparkles className="mr-2 h-3.5 w-3.5" /> AI optimize (soon)
