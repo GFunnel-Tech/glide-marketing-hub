@@ -904,6 +904,64 @@ export type Database = {
           },
         ]
       }
+      client_embeds: {
+        Row: {
+          client_id: number
+          created_at: string
+          embed_url: string
+          id: string
+          last_event_at: string | null
+          public_token: string | null
+          status: string
+          tab_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          embed_url: string
+          id?: string
+          last_event_at?: string | null
+          public_token?: string | null
+          status?: string
+          tab_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          embed_url?: string
+          id?: string
+          last_event_at?: string | null
+          public_token?: string | null
+          status?: string
+          tab_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_embeds_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_embeds_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_embeds_tab_id_fkey"
+            columns: ["tab_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_embed_tabs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_guarantees: {
         Row: {
           client_id: number
@@ -5344,6 +5402,53 @@ export type Database = {
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "client_wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_embed_tabs: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          icon: string | null
+          id: string
+          label: string
+          provider: string
+          sort_order: number
+          updated_at: string
+          url_template: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          icon?: string | null
+          id?: string
+          label: string
+          provider?: string
+          sort_order?: number
+          updated_at?: string
+          url_template?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          icon?: string | null
+          id?: string
+          label?: string
+          provider?: string
+          sort_order?: number
+          updated_at?: string
+          url_template?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_embed_tabs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
