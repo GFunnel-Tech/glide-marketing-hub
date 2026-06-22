@@ -72,13 +72,26 @@ export default function PortalPerformance() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {[
-          { label: "Spend", value: `$${(client?.spend ?? 0).toLocaleString()}` },
-          { label: "Impressions", value: series.reduce((s, d) => s + 0, 0).toLocaleString() || "—" },
-          { label: "CTR", value: "—" },
-          { label: "True CPL", value: `$${(client?.true_cpl ?? 0).toFixed(2)}` },
-          { label: "Leads", value: `${client?.leads ?? 0}` },
-        ].map((m) => (
+        {(() => {
+          const totals = (insights.data ?? []).reduce(
+            (acc: any, d: any) => {
+              acc.imp += Number(d.impressions ?? 0);
+              acc.clk += Number(d.clicks ?? 0);
+              acc.spend += Number(d.spend ?? 0);
+              acc.leads += Number(d.leads ?? 0);
+              return acc;
+            },
+            { imp: 0, clk: 0, spend: 0, leads: 0 }
+          );
+          const ctr = totals.imp > 0 ? (totals.clk / totals.imp) * 100 : 0;
+          return [
+            { label: "Spend (30d)", value: `$${totals.spend.toLocaleString()}` },
+            { label: "Impressions", value: totals.imp.toLocaleString() },
+            { label: "CTR", value: totals.imp ? `${ctr.toFixed(2)}%` : "—" },
+            { label: "True CPL", value: `$${(client?.true_cpl ?? 0).toFixed(2)}` },
+            { label: "Leads (30d)", value: `${totals.leads}` },
+          ];
+        })().map((m) => (
           <Card key={m.label} className="p-4">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">{m.label}</p>
             <p className="mt-1 text-2xl font-bold tabular-nums">{m.value}</p>

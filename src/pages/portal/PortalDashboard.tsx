@@ -7,6 +7,7 @@ import { Upload, CheckCircle2, Calendar, Bot, Activity, DollarSign, Target, User
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
+import { PortalTasksCard } from "@/components/portal/PortalTasksCard";
 
 const TONE = {
   blue: "bg-primary/10 text-primary",
@@ -130,10 +131,7 @@ export default function PortalDashboard() {
             <div className="flex justify-between"><dt className="text-muted-foreground">Reported leads</dt><dd className="tabular-nums">{client?.reported_leads ?? 0}</dd></div>
           </dl>
         </div>
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-2">Pending items</h3>
-          <p className="text-sm text-muted-foreground">You're all caught up. We'll notify you when something needs your review.</p>
-        </div>
+        <PortalTasksCard clientId={clientId} />
       </div>
 
       {clientId && (

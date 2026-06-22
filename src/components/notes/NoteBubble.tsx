@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, StickyNote, Trash2, Plus, Loader2, User, Check } from "lucide-react";
+import { CalendarIcon, StickyNote, Trash2, Plus, Loader2, User, Check, Eye, EyeOff } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -23,6 +23,7 @@ type Note = {
   assigned_to: string | null;
   created_at: string;
   user_id: string;
+  visible_to_client: boolean;
 };
 
 type Member = { id: string; display_name: string | null; email: string | null };
@@ -46,6 +47,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   const [calOpen, setCalOpen] = useState(false);
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
+  const [shareWithClient, setShareWithClient] = useState(false);
 
   const { data: members = [] } = useQuery<Member[]>({
     queryKey: ["ws-members-for-notes", wsId],
@@ -135,6 +137,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
         content: draft.trim(),
         due_at: dueAt,
         assigned_to: assigneeId,
+        visible_to_client: shareWithClient && !!clientId,
       });
       if (error) throw error;
     },
@@ -143,6 +146,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
       setDraftDate(undefined);
       setDraftTime("09:00");
       setAssigneeId(null);
+      setShareWithClient(false);
       qc.invalidateQueries({ queryKey });
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not save note"),
@@ -162,6 +166,17 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   const delMut = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("client_notes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey }),
+  });
+
+  const visibilityMut = useMutation({
+    mutationFn: async (n: Note) => {
+      const { error } = await supabase
+        .from("client_notes")
+        .update({ visible_to_client: !n.visible_to_client })
+        .eq("id", n.id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey }),
@@ -314,6 +329,24 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
               </Button>
             )}
           </div>
+          {clientId != null && (
+            <div className="mt-1.5">
+              <button
+                type="button"
+                onClick={() => setShareWithClient((v) => !v)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-medium transition-colors",
+                  shareWithClient
+                    ? "bg-success/10 text-success"
+                    : "bg-muted text-muted-foreground hover:bg-accent",
+                )}
+                title="Toggle visibility in the client portal"
+              >
+                {shareWithClient ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
+                {shareWithClient ? "Visible to client" : "Internal only"}
+              </button>
+            </div>
+          )}
           <Button
             size="sm"
             className="mt-2 h-7 w-full gap-1.5 text-xs"
@@ -374,6 +407,18 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                     </div>
                   )}
                 </div>
+                <button
+                  onClick={() => visibilityMut.mutate(n)}
+                  className={cn(
+                    "transition-opacity",
+                    n.visible_to_client
+                      ? "text-success opacity-100"
+                      : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground",
+                  )}
+                  title={n.visible_to_client ? "Visible to client — click to hide" : "Internal — click to share with client"}
+                >
+                  {n.visible_to_client ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                </button>
                 <button
                   onClick={() => delMut.mutate(n.id)}
                   className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
