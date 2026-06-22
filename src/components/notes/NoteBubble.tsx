@@ -118,6 +118,10 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   }, [wsId, clientId]);
 
   const dueCount = notes.filter((n) => !n.done).length;
+  const visibleNotes = useMemo(
+    () => notes.filter((n) => (activeTab === "active" ? !n.done : n.done)),
+    [notes, activeTab],
+  );
 
   const addMut = useMutation({
     mutationFn: async () => {
