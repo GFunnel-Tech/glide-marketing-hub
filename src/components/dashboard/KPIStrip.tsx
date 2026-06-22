@@ -135,6 +135,8 @@ function ClientCountTile({
 export function KPIStrip() {
   const { data: rangeMetrics = {}, isFetching } = useClientsRangeMetrics();
   const { label } = useDateRange();
+  const { data: clients = [] } = useClients();
+
 
   // All client counts come from one source of truth so the dashboard can never
   // show two unexplained totals. Each number is labelled with its denominator.
