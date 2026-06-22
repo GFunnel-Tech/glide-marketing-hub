@@ -1,0 +1,106 @@
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  Home, BarChart3, Users, CheckSquare, Image as ImageIcon,
+  FileText, CreditCard, LifeBuoy, Settings as SettingsIcon, Bot, LogOut,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { usePortalClient } from "@/hooks/usePortalClient";
+import { PortalClientSwitcher } from "@/components/portal/PortalClientSwitcher";
+
+const nav = [
+  { to: "/portal", end: true, icon: Home, label: "Dashboard" },
+  { to: "/portal/performance", icon: BarChart3, label: "Performance" },
+  { to: "/portal/leads", icon: Users, label: "Leads" },
+  { to: "/portal/approvals", icon: CheckSquare, label: "Approvals" },
+  { to: "/portal/creative", icon: ImageIcon, label: "Creative" },
+  { to: "/portal/documents", icon: FileText, label: "Documents" },
+  { to: "/portal/billing", icon: CreditCard, label: "Billing" },
+  { to: "/portal/support", icon: LifeBuoy, label: "Support" },
+  { to: "/portal/settings", icon: SettingsIcon, label: "Settings" },
+];
+
+const statusStyles: Record<string, string> = {
+  GREEN: "bg-[hsl(var(--success))]/15 text-[hsl(var(--success))] border-[hsl(var(--success))]/30",
+  YELLOW: "bg-[hsl(var(--warning))]/15 text-[hsl(var(--warning))] border-[hsl(var(--warning))]/30",
+  RED: "bg-destructive/15 text-destructive border-destructive/30",
+  BLOCKED: "bg-muted text-muted-foreground border-border",
+};
+
+export function PortalTopNav() {
+  const navigate = useNavigate();
+  const { client, isLoading } = usePortalClient();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/portal/login");
+  };
+
+  return (
+    <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
+      <div className="flex h-14 items-center justify-between gap-3 px-6 border-b border-border/60">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold shrink-0">E</div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate">
+              {isLoading ? "Loading…" : client?.name ?? "Your account"}
+            </p>
+            {client && (
+              <span className={cn(
+                "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                statusStyles[client.status as keyof typeof statusStyles] ?? statusStyles.BLOCKED,
+              )}>
+                {client.status}
+              </span>
+            )}
+          </div>
+          <div className="hidden md:block w-56 ml-2">
+            <PortalClientSwitcher />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <a
+            href="https://agents.gfunnel.com"
+            target="_blank"
+            rel="noreferrer"
+            className="hidden sm:flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <Bot className="h-4 w-4" /> AI Assistant
+          </a>
+          <button
+            onClick={handleLogout}
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            aria-label="Logout"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <nav className="flex items-center gap-1 px-6 overflow-x-auto">
+        {nav.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 whitespace-nowrap",
+                  isActive
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+                )
+              }
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
+      </nav>
+    </header>
+  );
+}
