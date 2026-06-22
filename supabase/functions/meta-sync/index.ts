@@ -109,11 +109,16 @@ async function runSync(
       .eq("connection_id", conn.id)
       .eq("is_active", true);
 
-    for (const acc of accounts ?? []) {
+    // Shuffle so the same accounts aren't always processed last (and starved
+    // if the function hits its execution-time limit before reaching them).
+    const shuffled = [...(accounts ?? [])].sort(() => Math.random() - 0.5);
+
+    const CONCURRENCY = 6;
+    const syncOneAccount = async (acc: any) => {
       // Respect Meta rate-limit backoff stamped from a prior run.
       if (acc.rate_limited_until && new Date(acc.rate_limited_until) > new Date()) {
         skippedRateLimited++;
-        continue;
+        return;
       }
 
       // Hot tier: skip accounts whose client isn't actively running AND had
@@ -137,7 +142,7 @@ async function runSync(
             .maybeSingle();
           if (todayRow) isHot = true;
         }
-        if (!isHot) { skippedColdHot++; continue; }
+        if (!isHot) { skippedColdHot++; return; }
       }
 
       const log = await admin.from("meta_sync_log").insert({
@@ -162,7 +167,7 @@ async function runSync(
           }).eq("id", log.data!.id);
 
           totalRows += adRows;
-          continue;
+          return;
         }
 
         const fields = [
@@ -186,7 +191,7 @@ async function runSync(
               finished_at: new Date().toISOString(),
             }).eq("id", log.data!.id);
             skippedRateLimited++;
-            continue;
+            return;
           }
           throw new Error(JSON.stringify(json_));
         }
@@ -226,8 +231,6 @@ async function runSync(
         }
 
         // ---- Granular daily insights (campaign + adset + ad) ----
-        // The bulk workspace sync must finish quickly so account analytics
-        // populate reliably. Detailed creative/ad scans are intentionally opt-in.
         const granularRows = includeDetails ? await syncGranularInsights(admin, acc, conn.access_token) : 0;
 
         // ---- Ad-level creatives + 30d performance (for the Creatives page) ----
@@ -256,7 +259,18 @@ async function runSync(
           finished_at: new Date().toISOString(),
         }).eq("id", log.data!.id);
       }
-    }
+    };
+
+    // Process accounts in parallel batches so a single slow account can't
+    // starve the rest of the workspace within the function's time budget.
+    let cursor = 0;
+    const workers = Array.from({ length: CONCURRENCY }, async () => {
+      while (cursor < shuffled.length) {
+        const acc = shuffled[cursor++];
+        await syncOneAccount(acc);
+      }
+    });
+    await Promise.all(workers);
   }
 
   // ROLLUP — sums last-30d insights + dedupes leads per client in one
