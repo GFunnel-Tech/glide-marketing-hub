@@ -83,19 +83,28 @@ export function MorningBriefDialog() {
     if (brief.status === "new") setOpen(true);
   }, [currentWorkspace?.id, isLoading, brief, generate]);
 
-  // Default every suggested task to checked when the brief loads.
+  // Track applied task keys so we can disable/skip already-added tasks.
+  const appliedKeys = useMemo(() => {
+    const arr = (brief as any)?.signals?.applied_task_keys;
+    return new Set<string>(Array.isArray(arr) ? arr : []);
+  }, [brief]);
+  const taskKey = (t: MorningBriefTask) => `${t.title}::${t.client_id ?? ""}`;
+
+  // Default every NOT-yet-applied suggested task to checked when the brief loads.
   useEffect(() => {
     if (!brief) return;
     const next: Record<number, boolean> = {};
-    (brief.suggested_tasks ?? []).forEach((_, i) => (next[i] = true));
+    (brief.suggested_tasks ?? []).forEach((t, i) => {
+      next[i] = !appliedKeys.has(taskKey(t));
+    });
     setSelected(next);
-  }, [brief?.id, brief?.suggested_tasks]);
+  }, [brief?.id, brief?.suggested_tasks, appliedKeys]);
 
   const tasks = brief?.suggested_tasks ?? [];
   const highlights = brief?.highlights ?? [];
   const selectedTasks = useMemo(
-    () => tasks.filter((_, i) => selected[i]),
-    [tasks, selected],
+    () => tasks.filter((t, i) => selected[i] && !appliedKeys.has(taskKey(t))),
+    [tasks, selected, appliedKeys],
   );
 
   const handleApply = () => {
