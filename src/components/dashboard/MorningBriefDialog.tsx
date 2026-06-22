@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useMorningBrief, type MorningBriefTask } from "@/hooks/useMorningBrief";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Sparkles, AlertTriangle, TriangleAlert, Info, Loader2, RefreshCw, Sun, ListChecks, Flag } from "lucide-react";
+import { Sparkles, AlertTriangle, TriangleAlert, Info, Loader2, RefreshCw, Sun, ListChecks, Flag, ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const severityIcon = {
@@ -83,19 +83,28 @@ export function MorningBriefDialog() {
     if (brief.status === "new") setOpen(true);
   }, [currentWorkspace?.id, isLoading, brief, generate]);
 
-  // Default every suggested task to checked when the brief loads.
+  // Track applied task keys so we can disable/skip already-added tasks.
+  const appliedKeys = useMemo(() => {
+    const arr = (brief as any)?.signals?.applied_task_keys;
+    return new Set<string>(Array.isArray(arr) ? arr : []);
+  }, [brief]);
+  const taskKey = (t: MorningBriefTask) => `${t.title}::${t.client_id ?? ""}`;
+
+  // Default every NOT-yet-applied suggested task to checked when the brief loads.
   useEffect(() => {
     if (!brief) return;
     const next: Record<number, boolean> = {};
-    (brief.suggested_tasks ?? []).forEach((_, i) => (next[i] = true));
+    (brief.suggested_tasks ?? []).forEach((t, i) => {
+      next[i] = !appliedKeys.has(taskKey(t));
+    });
     setSelected(next);
-  }, [brief?.id, brief?.suggested_tasks]);
+  }, [brief?.id, brief?.suggested_tasks, appliedKeys]);
 
   const tasks = brief?.suggested_tasks ?? [];
   const highlights = brief?.highlights ?? [];
   const selectedTasks = useMemo(
-    () => tasks.filter((_, i) => selected[i]),
-    [tasks, selected],
+    () => tasks.filter((t, i) => selected[i] && !appliedKeys.has(taskKey(t))),
+    [tasks, selected, appliedKeys],
   );
 
   const handleApply = () => {
@@ -163,14 +172,7 @@ export function MorningBriefDialog() {
               </div>
             )}
 
-            {brief?.summary && (
-              <section>
-                <SectionLabel icon={<Info className="h-3 w-3" />} tint="primary">Overview</SectionLabel>
-                <div className="rounded-xl border border-border bg-card p-4 prose prose-sm dark:prose-invert max-w-none [&_p]:my-1.5 [&_ul]:my-1.5 [&_li]:my-0.5 [&_strong]:text-foreground [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_h1]:mt-3 [&_h2]:mt-3 [&_h3]:mt-3 [&_h1]:mb-1.5 [&_h2]:mb-1.5 [&_h3]:mb-1.5">
-                  <ReactMarkdown>{brief.summary}</ReactMarkdown>
-                </div>
-              </section>
-            )}
+            {brief?.summary && <OverviewSection summary={brief.summary} />}
 
             {highlights.length > 0 && (
               <section>
@@ -220,35 +222,53 @@ export function MorningBriefDialog() {
                 <ul className="space-y-2">
                   {tasks.map((t: MorningBriefTask, i: number) => {
                     const name = clientName(brief, t.client_id);
-                    const checked = !!selected[i];
+                    const isApplied = appliedKeys.has(taskKey(t));
+                    const checked = !!selected[i] && !isApplied;
                     return (
                       <li
                         key={i}
                         className={cn(
-                          "group flex items-start gap-3 rounded-xl border bg-card p-3.5 cursor-pointer transition-all",
-                          checked
-                            ? "border-primary/40 bg-primary/[0.03] shadow-sm"
-                            : "border-border hover:border-primary/30 hover:bg-accent/30",
+                          "group flex items-start gap-3 rounded-xl border bg-card p-3.5 transition-all",
+                          isApplied
+                            ? "border-emerald-500/30 bg-emerald-500/[0.04] opacity-75 cursor-default"
+                            : checked
+                              ? "border-primary/40 bg-primary/[0.03] shadow-sm cursor-pointer"
+                              : "border-border hover:border-primary/30 hover:bg-accent/30 cursor-pointer",
                         )}
-                        onClick={() => setSelected((s) => ({ ...s, [i]: !s[i] }))}
+                        onClick={() => {
+                          if (isApplied) return;
+                          setSelected((s) => ({ ...s, [i]: !s[i] }));
+                        }}
                       >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(v) => setSelected((s) => ({ ...s, [i]: !!v }))}
-                          onClick={(e) => e.stopPropagation()}
-                          className="mt-0.5"
-                        />
+                        {isApplied ? (
+                          <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] bg-emerald-500 text-white">
+                            <Check className="h-3 w-3" strokeWidth={3} />
+                          </span>
+                        ) : (
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) => setSelected((s) => ({ ...s, [i]: !!v }))}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-0.5"
+                          />
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-foreground leading-snug">{t.title}</span>
-                            <span
-                              className={cn(
-                                "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-md font-semibold",
-                                priorityChip[t.priority] ?? priorityChip.normal,
-                              )}
-                            >
-                              {t.priority}
-                            </span>
+                            <span className={cn("text-sm font-semibold leading-snug", isApplied ? "text-muted-foreground line-through" : "text-foreground")}>{t.title}</span>
+                            {isApplied ? (
+                              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-md font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                                Added
+                              </span>
+                            ) : (
+                              <span
+                                className={cn(
+                                  "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-md font-semibold",
+                                  priorityChip[t.priority] ?? priorityChip.normal,
+                                )}
+                              >
+                                {t.priority}
+                              </span>
+                            )}
                             {name && (
                               <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
                                 <span className="h-1 w-1 rounded-full bg-muted-foreground/50" />
@@ -334,5 +354,72 @@ function SectionLabel({
       <span className={cn("flex h-5 w-5 items-center justify-center rounded-md", tints[tint])}>{icon}</span>
       {children}
     </h4>
+  );
+}
+
+// Collapsible overview rendered as scannable bullet points. Markdown noise
+// (headings, list markers, bold) is stripped so the brief reads cleanly.
+function OverviewSection({ summary }: { summary: string }) {
+  const [open, setOpen] = useState(false);
+
+  const bullets = useMemo(() => {
+    const cleaned = summary
+      .replace(/\r/g, "")
+      .replace(/^\s*#{1,6}\s+/gm, "") // strip markdown headings
+      .replace(/\*\*(.+?)\*\*/g, "$1") // bold
+      .replace(/\*(.+?)\*/g, "$1") // italics
+      .replace(/`([^`]+)`/g, "$1"); // inline code
+
+    // First try splitting on lines/list markers; fall back to sentence splits.
+    let parts = cleaned
+      .split(/\n+/)
+      .map((l) => l.replace(/^\s*[-*•]\s+/, "").replace(/^\s*\d+\.\s+/, "").trim())
+      .filter(Boolean);
+
+    if (parts.length <= 1) {
+      parts = cleaned
+        .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    return parts.slice(0, 12);
+  }, [summary]);
+
+  const preview = bullets[0];
+
+  return (
+    <section>
+      <SectionLabel icon={<Info className="h-3 w-3" />} tint="primary">Overview</SectionLabel>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <div className="rounded-xl border border-border bg-card">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/30 rounded-xl"
+            >
+              <span className="text-sm text-foreground/90 leading-snug line-clamp-2">
+                {open ? "Hide overview" : preview ?? "Show overview"}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                  open && "rotate-180",
+                )}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <ul className="space-y-2 border-t border-border px-4 py-3">
+              {bullets.map((b, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90 leading-relaxed">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+    </section>
   );
 }
