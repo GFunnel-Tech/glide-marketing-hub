@@ -346,6 +346,41 @@ export default function ClientPortal() {
           </div>
         </div>
       </div>
+      )}
     </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+  badge,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: LucideIcon;
+  label: string;
+  badge?: string | null;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+        active
+          ? "border-primary text-foreground"
+          : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+      {badge && (
+        <span className="ml-1 rounded-full bg-success/15 text-success px-2 py-0.5 text-[10px] font-semibold">
+          {badge}
+        </span>
+      )}
+    </button>
   );
 }
