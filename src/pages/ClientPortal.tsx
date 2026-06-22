@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { clientPortalData } from "@/data/mockData";
 import { cn } from "@/lib/utils";
-import { TrendingUp, Filter, Calendar, FileText, DollarSign, LogOut, ChevronDown, MessageSquare, Pencil, Check, X, Bot, Play } from "lucide-react";
+import { TrendingUp, Filter, Calendar, FileText, DollarSign, LogOut, ChevronDown, MessageSquare, Pencil, Check, X, Bot, Play, LayoutDashboard, type LucideIcon } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { useClientEmbeds } from "@/hooks/useClientEmbeds";
+import { EmbedFrame } from "@/components/portal/EmbedFrame";
 
 function DeltaBadge({ delta, type }: { delta: number; type: string }) {
   return (
