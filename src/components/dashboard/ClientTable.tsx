@@ -781,7 +781,7 @@ function CampaignImportDialog({
             <div className="p-6 text-center text-sm text-muted-foreground">Loading campaigns…</div>
           ) : campaigns.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              No campaigns found for this client yet. Use “Sync Meta campaigns now” to pull them from Meta.
+              No campaigns found for this client yet. Use “Sync Meta” to pull them from Meta.
             </div>
           ) : (
             <ul className="divide-y divide-border">
