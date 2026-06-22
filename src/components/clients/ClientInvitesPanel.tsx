@@ -123,6 +123,31 @@ export function ClientInvitesPanel({
     load();
   };
 
+  const impersonate = async (p: PortalUser) => {
+    const label = profiles[p.user_id]?.email ?? p.user_id.slice(0, 8);
+    if (!confirm(`Impersonate ${label}? You will be signed in as this portal user.`)) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-impersonate", {
+        body: { target_user_id: p.user_id, reason: `Agency impersonation of client ${clientName}` },
+      });
+      if (error) throw error;
+      const { hashed_token, email } = data;
+      const { data: sess } = await supabase.auth.getSession();
+      if (sess.session) {
+        localStorage.setItem("impersonation.original_session", JSON.stringify(sess.session));
+        localStorage.setItem("impersonation.target_email", email);
+      }
+      const { error: vErr } = await supabase.auth.verifyOtp({
+        type: "magiclink", token_hash: hashed_token,
+      });
+      if (vErr) throw vErr;
+      toast.success(`Now acting as ${email}`);
+      window.location.href = "/portal";
+    } catch (e: any) {
+      toast.error(e.message ?? "Impersonation failed");
+    }
+  };
+
   const copy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied`);
