@@ -74,9 +74,10 @@ Deno.serve(async (req) => {
 
 async function runSync(
   admin: any,
-  opts: { workspaceFilter: string | null; includeDetails: boolean; adsOnly: boolean },
+  opts: { workspaceFilter: string | null; includeDetails: boolean; adsOnly: boolean; tier: "hot" | "warm" | "cold" | null },
 ) {
-  const { workspaceFilter, includeDetails, adsOnly } = opts;
+  const { workspaceFilter, includeDetails, adsOnly, tier } = opts;
+  const datePreset = tier === "hot" ? "today" : tier === "warm" ? "last_3d" : tier === "cold" ? "last_28d" : "last_30d";
 
   // Fetch active connections
   let connQ = admin
@@ -88,7 +89,12 @@ async function runSync(
   if (connErr) return { error: connErr.message };
 
   let totalRows = 0;
+  let skippedRateLimited = 0;
+  let skippedColdHot = 0;
   const errors: any[] = [];
+
+  // Hot-tier filter: only clients that are actively running or had spend today.
+  const HOT_STATUSES = new Set(["LAUNCHING", "LEARNING", "GREEN", "YELLOW", "RED", "RELAUNCH"]);
 
   for (const conn of connections ?? []) {
     // skip expired
@@ -99,16 +105,46 @@ async function runSync(
 
     const { data: accounts } = await admin
       .from("meta_ad_accounts")
-      .select("id, act_id, workspace_id, client_id")
+      .select("id, act_id, workspace_id, client_id, rate_limited_until")
       .eq("connection_id", conn.id)
       .eq("is_active", true);
 
     for (const acc of accounts ?? []) {
+      // Respect Meta rate-limit backoff stamped from a prior run.
+      if (acc.rate_limited_until && new Date(acc.rate_limited_until) > new Date()) {
+        skippedRateLimited++;
+        continue;
+      }
+
+      // Hot tier: skip accounts whose client isn't actively running AND had
+      // no spend today. Keeps the 20-min loop dirt-cheap.
+      if (tier === "hot") {
+        let isHot = false;
+        if (acc.client_id) {
+          const { data: c } = await admin
+            .from("clients").select("status").eq("id", acc.client_id).maybeSingle();
+          if (c?.status && HOT_STATUSES.has(String(c.status))) isHot = true;
+        }
+        if (!isHot) {
+          const today = new Date().toISOString().slice(0, 10);
+          const { data: todayRow } = await admin
+            .from("meta_insights_daily")
+            .select("spend")
+            .eq("ad_account_id", acc.id)
+            .eq("date", today)
+            .gt("spend", 0)
+            .limit(1)
+            .maybeSingle();
+          if (todayRow) isHot = true;
+        }
+        if (!isHot) { skippedColdHot++; continue; }
+      }
+
       const log = await admin.from("meta_sync_log").insert({
         workspace_id: acc.workspace_id,
         connection_id: conn.id,
         ad_account_id: acc.id,
-        trigger: workspaceFilter ? "manual" : "scheduled",
+        trigger: workspaceFilter ? "manual" : (tier ? `scheduled-${tier}` : "scheduled"),
         status: "running",
       }).select().single();
 
@@ -133,13 +169,31 @@ async function runSync(
           "spend","impressions","clicks","ctr","cpm","frequency","reach",
           "actions","cost_per_action_type",
         ].join(",");
-        const url = `https://graph.facebook.com/v21.0/${acc.act_id}/insights?fields=${fields}&time_increment=1&date_preset=last_30d&level=account&limit=500&access_token=${encodeURIComponent(conn.access_token)}`;
+        const url = `https://graph.facebook.com/v21.0/${acc.act_id}/insights?fields=${fields}&time_increment=1&date_preset=${datePreset}&level=account&limit=500&access_token=${encodeURIComponent(conn.access_token)}`;
 
         const { res, json: json_ } = await fetchJsonWithTimeout(url);
-        if (!res.ok) throw new Error(JSON.stringify(json_));
+        if (!res.ok) {
+          // Meta rate-limit codes — stamp backoff and skip cleanly.
+          const code = json_?.error?.code;
+          const sub = json_?.error?.error_subcode;
+          if (code === 17 || code === 4 || code === 32 || sub === 2446079 || code === 80004) {
+            await admin.from("meta_ad_accounts")
+              .update({ rate_limited_until: new Date(Date.now() + 30 * 60 * 1000).toISOString() })
+              .eq("id", acc.id);
+            await admin.from("meta_sync_log").update({
+              status: "rate_limited",
+              error_message: JSON.stringify(json_).slice(0, 500),
+              finished_at: new Date().toISOString(),
+            }).eq("id", log.data!.id);
+            skippedRateLimited++;
+            continue;
+          }
+          throw new Error(JSON.stringify(json_));
+        }
 
         const rows = (json_.data ?? []).map((d: any) => {
           const leads = extractLeads(d.actions);
+
           const spend = Number(d.spend ?? 0);
           return {
             workspace_id: acc.workspace_id,
