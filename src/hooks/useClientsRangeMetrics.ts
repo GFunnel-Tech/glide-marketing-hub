@@ -206,9 +206,13 @@ export function useClientsRangeMetrics() {
         return acctSharedClients.get(acctId) || [];
       };
 
-      // Apply granular campaign rows
+      // Apply granular campaign rows — ACTIVE campaigns only.
+      // (We still added the row's account/date to granularKeys above so the
+      // daily fallback won't re-introduce paused-campaign spend.)
       for (const row of granular) {
-        const cids = clientsForCampaign(String(row.object_id));
+        const campaignId = String(row.object_id);
+        if (!activeCampaignIds.has(campaignId)) continue;
+        const cids = clientsForCampaign(campaignId);
         if (cids.length === 0) continue;
         for (const cid of cids) {
           const b = bucket(cid);
@@ -225,6 +229,7 @@ export function useClientsRangeMetrics() {
           }
         }
       }
+
 
       // Apply daily fallback only for (account, date) pairs not covered above
       for (const row of insights || []) {
