@@ -222,35 +222,53 @@ export function MorningBriefDialog() {
                 <ul className="space-y-2">
                   {tasks.map((t: MorningBriefTask, i: number) => {
                     const name = clientName(brief, t.client_id);
-                    const checked = !!selected[i];
+                    const isApplied = appliedKeys.has(taskKey(t));
+                    const checked = !!selected[i] && !isApplied;
                     return (
                       <li
                         key={i}
                         className={cn(
-                          "group flex items-start gap-3 rounded-xl border bg-card p-3.5 cursor-pointer transition-all",
-                          checked
-                            ? "border-primary/40 bg-primary/[0.03] shadow-sm"
-                            : "border-border hover:border-primary/30 hover:bg-accent/30",
+                          "group flex items-start gap-3 rounded-xl border bg-card p-3.5 transition-all",
+                          isApplied
+                            ? "border-emerald-500/30 bg-emerald-500/[0.04] opacity-75 cursor-default"
+                            : checked
+                              ? "border-primary/40 bg-primary/[0.03] shadow-sm cursor-pointer"
+                              : "border-border hover:border-primary/30 hover:bg-accent/30 cursor-pointer",
                         )}
-                        onClick={() => setSelected((s) => ({ ...s, [i]: !s[i] }))}
+                        onClick={() => {
+                          if (isApplied) return;
+                          setSelected((s) => ({ ...s, [i]: !s[i] }));
+                        }}
                       >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(v) => setSelected((s) => ({ ...s, [i]: !!v }))}
-                          onClick={(e) => e.stopPropagation()}
-                          className="mt-0.5"
-                        />
+                        {isApplied ? (
+                          <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] bg-emerald-500 text-white">
+                            <Check className="h-3 w-3" strokeWidth={3} />
+                          </span>
+                        ) : (
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) => setSelected((s) => ({ ...s, [i]: !!v }))}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-0.5"
+                          />
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-foreground leading-snug">{t.title}</span>
-                            <span
-                              className={cn(
-                                "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-md font-semibold",
-                                priorityChip[t.priority] ?? priorityChip.normal,
-                              )}
-                            >
-                              {t.priority}
-                            </span>
+                            <span className={cn("text-sm font-semibold leading-snug", isApplied ? "text-muted-foreground line-through" : "text-foreground")}>{t.title}</span>
+                            {isApplied ? (
+                              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-md font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                                Added
+                              </span>
+                            ) : (
+                              <span
+                                className={cn(
+                                  "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-md font-semibold",
+                                  priorityChip[t.priority] ?? priorityChip.normal,
+                                )}
+                              >
+                                {t.priority}
+                              </span>
+                            )}
                             {name && (
                               <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
                                 <span className="h-1 w-1 rounded-full bg-muted-foreground/50" />
