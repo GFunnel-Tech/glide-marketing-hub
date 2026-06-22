@@ -7,6 +7,7 @@ import { Upload, CheckCircle2, Calendar, Bot, Activity, DollarSign, Target, User
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
+import { PortalTasksCard } from "@/components/portal/PortalTasksCard";
 
 const TONE = {
   blue: "bg-primary/10 text-primary",
