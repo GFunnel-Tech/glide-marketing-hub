@@ -23,6 +23,7 @@ type Note = {
   assigned_to: string | null;
   created_at: string;
   user_id: string;
+  visible_to_client: boolean;
 };
 
 type Member = { id: string; display_name: string | null; email: string | null };
