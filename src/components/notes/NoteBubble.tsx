@@ -137,6 +137,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
         content: draft.trim(),
         due_at: dueAt,
         assigned_to: assigneeId,
+        visible_to_client: shareWithClient && !!clientId,
       });
       if (error) throw error;
     },
@@ -145,6 +146,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
       setDraftDate(undefined);
       setDraftTime("09:00");
       setAssigneeId(null);
+      setShareWithClient(false);
       qc.invalidateQueries({ queryKey });
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not save note"),
