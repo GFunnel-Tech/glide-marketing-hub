@@ -26,8 +26,12 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { target_user_id, reason, action } = body;
 
-    // For "start" we require super_admin. For "end" the caller is the impersonated
-    // user, so we authorize via the existence of an open start record (handled below).
+    // For "start" we require super_admin OR an agency owner/admin impersonating
+    // one of their own client portal users. For "end" the caller is the
+    // impersonated user, so we authorize via the existence of an open start
+    // record (handled below).
+    let isSuperAdmin = false;
+    let isAgencyScoped = false;
     if (action !== "end") {
       const { data: roleRow } = await admin
         .from("user_roles")
@@ -35,14 +39,40 @@ Deno.serve(async (req) => {
         .eq("user_id", caller.id)
         .eq("role", "super_admin")
         .maybeSingle();
-      if (!roleRow) {
-        await admin.from("impersonation_log").insert({
-          super_admin_id: caller.id,
-          target_user_id: target_user_id ?? null,
-          action: "denied_impersonation",
-          meta: { endpoint: "admin-impersonate", email: caller.email ?? null },
-        }).then(() => {}, () => {});
-        return json({ error: "Forbidden" }, 403);
+      isSuperAdmin = !!roleRow;
+
+      if (!isSuperAdmin) {
+        if (!target_user_id) return json({ error: "target_user_id required" }, 400);
+
+        // Agency-scoped path: caller must be owner/admin of a workspace that
+        // contains a client linked to target via portal_users.
+        const { data: mappings } = await admin
+          .from("portal_users")
+          .select("workspace_id")
+          .eq("user_id", target_user_id);
+        const workspaceIds = Array.from(
+          new Set((mappings ?? []).map((m: any) => m.workspace_id).filter(Boolean)),
+        );
+        if (workspaceIds.length > 0) {
+          const { data: memberships } = await admin
+            .from("workspace_members")
+            .select("workspace_id, role")
+            .eq("user_id", caller.id)
+            .in("workspace_id", workspaceIds);
+          isAgencyScoped = (memberships ?? []).some((m: any) =>
+            ["owner", "admin"].includes(m.role),
+          );
+        }
+
+        if (!isAgencyScoped) {
+          await admin.from("impersonation_log").insert({
+            super_admin_id: caller.id,
+            target_user_id: target_user_id ?? null,
+            action: "denied_impersonation",
+            meta: { endpoint: "admin-impersonate", email: caller.email ?? null, scope: "agency_attempt" },
+          }).then(() => {}, () => {});
+          return json({ error: "Forbidden" }, 403);
+        }
       }
     }
 
