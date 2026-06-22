@@ -397,7 +397,8 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
           </Button>
         </div>
 
-        <div className="flex items-center gap-1 border-b border-border px-2 pt-2">
+        <div className="flex items-center justify-between gap-1 border-b border-border px-2 pt-2">
+          <div className="flex items-center gap-1">
           {(["active", "completed"] as const).map((t) => {
             const count = t === "active"
               ? notes.filter((n) => !n.done).length
