@@ -14,6 +14,11 @@ verify_jwt = true
 [functions.workspace-invite-user]
 verify_jwt = true
 
+# Portal chat thread provisioner — requires a valid Supabase JWT at the gateway;
+# the function then enforces that the caller is a portal user for the client.
+[functions.portal-chat]
+verify_jwt = true
+
 # Public tracking collector + snippet
 [functions.track]
 verify_jwt = false

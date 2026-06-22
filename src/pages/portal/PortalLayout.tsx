@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePortalClient } from "@/hooks/usePortalClient";
 import { Badge } from "@/components/ui/badge";
 import { PortalClientSwitcher } from "@/components/portal/PortalClientSwitcher";
+import { PortalChatBubble } from "@/components/portal/PortalChatBubble";
 
 // EMM brand palette as CSS-var overrides scoped to this subtree.
 const emmTheme: CSSProperties = {
@@ -192,6 +193,9 @@ export default function PortalLayout() {
           })}
         </nav>
       </div>
+
+      {/* Floating chat — routes messages to the client's point of contact */}
+      <PortalChatBubble />
     </div>
   );
 }
