@@ -171,6 +171,17 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
     onSuccess: () => qc.invalidateQueries({ queryKey }),
   });
 
+  const visibilityMut = useMutation({
+    mutationFn: async (n: Note) => {
+      const { error } = await supabase
+        .from("client_notes")
+        .update({ visible_to_client: !n.visible_to_client })
+        .eq("id", n.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey }),
+  });
+
   const Trigger =
     variant === "button" ? (
       <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs relative">
