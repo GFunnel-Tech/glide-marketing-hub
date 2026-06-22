@@ -1165,6 +1165,7 @@ function ClientProfileInner() {
                 <ClientContextPanel clientId={client.id} />
                 <AiRulesPanel clientId={client.id} workspaceId={workspaceId} />
                 <KnowledgeBasePanel workspaceId={workspaceId} clientId={client.id} clientName={client.name} />
+                <ClientEmbedsCard clientId={client.id} workspaceId={workspaceId} />
               </div>
             </div>
           ) : (
