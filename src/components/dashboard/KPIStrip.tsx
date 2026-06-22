@@ -1,14 +1,21 @@
-import { Users, Activity, DollarSign, Target, Percent } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Users, Activity, DollarSign, Target, Percent, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClientSegments } from "@/hooks/useClientSegments";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
 import { useDateRange } from "@/hooks/useDateRange";
+import { useClients } from "@/hooks/useDatabase";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuTrigger,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 
 function deriveImpressionsFromCpm(spend: number, cpm: number) {
   if (!cpm || cpm <= 0) return 0;
   return (spend / cpm) * 1000;
 }
+
 
 interface KPITileProps {
   label: string;
