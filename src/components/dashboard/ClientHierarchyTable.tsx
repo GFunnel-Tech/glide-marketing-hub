@@ -1255,6 +1255,19 @@ export function ClientHierarchyTable() {
                                             )}
                                             <p className="text-xs text-foreground truncate max-w-[160px]">{ad.name ?? "Untitled"}</p>
                                             <AdRatingBadge rating={rating} />
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => { e.stopPropagation(); setChartEntity({ level: "ad", id: String(ad.id), name: ad.name ?? "Untitled" }); }}
+                                                  className="ml-auto flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-primary"
+                                                  aria-label="View charts"
+                                                >
+                                                  <BarChart3 className="h-3.5 w-3.5" />
+                                                </button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>View charts</TooltipContent>
+                                            </Tooltip>
                                           </div>
                                         </td>
                                       {(() => {
