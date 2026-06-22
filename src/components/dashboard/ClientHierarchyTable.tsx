@@ -457,20 +457,23 @@ export function ClientHierarchyTable() {
   }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero, search]);
 
   const handleQuickSync = async () => {
-    if (!focusedClient) {
-      toast.error("Select a specific client to sync");
-      return;
-    }
     setSyncing(true);
     try {
-      await api.syncMetaAds(String(focusedClient.id));
-      toast.success(`Synced ${focusedClient.name}`);
+      // Pass "all" when no client is focused so the edge function syncs every
+      // account in the current workspace.
+      await api.syncMetaAds(focusedClient ? String(focusedClient.id) : "all");
+      toast.success(
+        focusedClient
+          ? `Synced ${focusedClient.name}`
+          : "Meta sync started for all clients",
+      );
     } catch (e: any) {
       toast.error(e?.message ?? "Sync failed");
     } finally {
       setSyncing(false);
     }
   };
+
 
   const collapseAll = () => {
     setOpenClients({});
