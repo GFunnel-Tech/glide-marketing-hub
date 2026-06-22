@@ -350,7 +350,13 @@ export function ClientTable() {
   const filtered = useMemo(() => {
     let list = clients;
     if (selectedClientId !== "all") list = list.filter((c) => c.id === selectedClientId);
-    if (filter !== "ALL") list = list.filter((c) => c.status === filter);
+    // Hide paused/cancelled clients from the main list unless explicitly filtered to them
+    const hiddenStatuses = new Set(["PAUSED", "CANCELLED", "PENDING_CANCELLATION"]);
+    if (filter === "ALL") {
+      list = list.filter((c) => !hiddenStatuses.has(c.status as string));
+    } else {
+      list = list.filter((c) => c.status === filter);
+    }
     if (search) list = list.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.brand.toLowerCase().includes(search.toLowerCase()));
     const sorted = [...list].sort((a, b) => {
       if (sortKey === "status") {
