@@ -1161,7 +1161,7 @@ export function ClientHierarchyTable() {
                                     <div className="flex items-center gap-2">
                                       <button
                                         onClick={() => setOpenAdSets((s) => ({ ...s, [adsetId]: !s[adsetId] }))}
-                                        className="flex items-center gap-2 text-left w-full"
+                                        className="flex items-center gap-2 text-left flex-1 min-w-0"
                                       >
                                         <LevelBadge level="adset" />
                                         <div className="flex h-6 w-6 items-center justify-center rounded bg-warning/10 text-warning">
@@ -1170,6 +1170,19 @@ export function ClientHierarchyTable() {
                                         <p className="text-sm text-foreground hover:text-primary truncate max-w-[180px]">{adsetName}</p>
                                         <span className="text-[10px] text-muted-foreground">· {ads.length} ad{ads.length === 1 ? "" : "s"}</span>
                                       </button>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); setChartEntity({ level: "adset", id: adsetId, name: adsetName }); }}
+                                            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-primary"
+                                            aria-label="View charts"
+                                          >
+                                            <BarChart3 className="h-3.5 w-3.5" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>View charts</TooltipContent>
+                                      </Tooltip>
                                     </div>
                                   </td>
                                   {(() => {
