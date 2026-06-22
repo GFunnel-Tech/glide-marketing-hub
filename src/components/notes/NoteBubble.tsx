@@ -121,10 +121,41 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   }, [wsId, clientId]);
 
   const dueCount = notes.filter((n) => !n.done).length;
-  const visibleNotes = useMemo(
-    () => notes.filter((n) => (activeTab === "active" ? !n.done : n.done)),
-    [notes, activeTab],
-  );
+  const visibleNotes = useMemo(() => {
+    const filtered = notes.filter((n) => (activeTab === "active" ? !n.done : n.done));
+    const arr = [...filtered];
+    const t = (s: string | null) => (s ? new Date(s).getTime() : 0);
+    switch (sortKey) {
+      case "newest":
+        arr.sort((a, b) => t(b.created_at) - t(a.created_at));
+        break;
+      case "oldest":
+        arr.sort((a, b) => t(a.created_at) - t(b.created_at));
+        break;
+      case "az":
+        arr.sort((a, b) => a.content.localeCompare(b.content));
+        break;
+      case "za":
+        arr.sort((a, b) => b.content.localeCompare(a.content));
+        break;
+      case "due_soonest":
+        arr.sort((a, b) => {
+          const at = a.due_at ? t(a.due_at) : Infinity;
+          const bt = b.due_at ? t(b.due_at) : Infinity;
+          return at - bt;
+        });
+        break;
+      case "due_latest":
+        arr.sort((a, b) => {
+          const at = a.due_at ? t(a.due_at) : -Infinity;
+          const bt = b.due_at ? t(b.due_at) : -Infinity;
+          return bt - at;
+        });
+        break;
+    }
+    return arr;
+  }, [notes, activeTab, sortKey]);
+
 
   const addMut = useMutation({
     mutationFn: async () => {
