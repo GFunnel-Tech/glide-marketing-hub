@@ -62,8 +62,6 @@ export default function ClientPortal() {
   const [leadOverrides, setLeadOverrides] = useState<Record<string, Record<string, string>>>({});
 
   const saveNote = (leadName: string) => {
-
-  const saveNote = (leadName: string) => {
     setLeadNotes(prev => ({ ...prev, [leadName]: noteDraft }));
     setEditingNote(null);
     setNoteDraft("");
