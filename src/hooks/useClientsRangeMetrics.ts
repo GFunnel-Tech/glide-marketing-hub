@@ -200,12 +200,12 @@ export function useClientsRangeMetrics() {
         return acctSharedClients.get(acctId) || [];
       };
 
-      // Apply granular campaign rows — ACTIVE campaigns only.
-      // (We still added the row's account/date to granularKeys above so the
-      // daily fallback won't re-introduce paused-campaign spend.)
+      // Apply granular campaign rows. Every row already represents a date
+      // the campaign actually ran, so we attribute it whether the campaign
+      // is currently active or paused — what matters is that it ran during
+      // the selected window.
       for (const row of granular) {
         const campaignId = String(row.object_id);
-        if (!activeCampaignIds.has(campaignId)) continue;
         const cids = clientsForCampaign(campaignId);
         if (cids.length === 0) continue;
         for (const cid of cids) {
