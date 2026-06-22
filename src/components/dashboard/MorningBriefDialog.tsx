@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useMorningBrief, type MorningBriefTask } from "@/hooks/useMorningBrief";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Sparkles, AlertTriangle, TriangleAlert, Info, Loader2, RefreshCw, Sun, ListChecks, Flag } from "lucide-react";
+import { Sparkles, AlertTriangle, TriangleAlert, Info, Loader2, RefreshCw, Sun, ListChecks, Flag, ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const severityIcon = {
