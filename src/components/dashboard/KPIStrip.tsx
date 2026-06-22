@@ -193,7 +193,7 @@ export function KPIStrip() {
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-      <KPITile label="Total Clients" value={String(segments.total)} sublabel={`${segments.inWorkflow} in workflow · ${segments.synced} synced`} Icon={Users} iconTone="blue" />
+      <ClientCountTile clients={clients} segments={segments} />
       <KPITile label="Total Leads" kpiKey="leads" value={totalLeads.toLocaleString()} sublabel={dedupRemoved > 0 ? `${sub} · deduped (−${dedupRemoved.toLocaleString()} vs Meta)` : sub} Icon={Activity} iconTone="green" />
       <KPITile label={others.length ? `CPL (${primary.currency})` : "Blended CPL"} kpiKey="cpl" value={money(primary.cpl, primary.currency, 2)} sublabel={cplSub} Icon={Target} iconTone="amber" />
       <KPITile label="Form CVR" kpiKey="formcvr" value={`${blendedCvr.toFixed(2)}%`} sublabel={sub} Icon={Percent} iconTone="green" />
