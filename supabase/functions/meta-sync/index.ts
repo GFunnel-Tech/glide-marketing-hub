@@ -262,7 +262,7 @@ async function runSync(
   // ROLLUP to clients table — sum last 30 days per linked client
   await rollupClients(admin, workspaceFilter);
 
-  return { ok: true, rowsSynced: totalRows, errors };
+  return { ok: true, tier, datePreset, rowsSynced: totalRows, skippedRateLimited, skippedColdHot, errors };
 }
 
 async function rollupClients(admin: any, workspaceFilter: string | null) {
