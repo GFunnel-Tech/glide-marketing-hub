@@ -259,12 +259,11 @@ async function runSync(
     }
   }
 
-  // ROLLUP to clients table — sum last 30 days per linked client
-  // Hot tier only pulled today's account-level data; the 30-day rollup would
-  // be a wasted write loop. Warm/cold/manual all rebuild the client rollup.
-  if (tier !== "hot") {
-    await rollupClients(admin, workspaceFilter);
-  }
+  // ROLLUP — sums last-30d insights + dedupes leads per client in one
+  // SQL round-trip, so it's now cheap enough to run on every tier
+  // (including hot) and keep client KPIs always current.
+  await rollupClients(admin, workspaceFilter);
+
 
   return { ok: true, tier, datePreset, rowsSynced: totalRows, skippedRateLimited, skippedColdHot, errors };
 }
