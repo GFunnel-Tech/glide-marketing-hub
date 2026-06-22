@@ -3863,6 +3863,68 @@ export type Database = {
           },
         ]
       }
+      morning_briefs: {
+        Row: {
+          applied_at: string | null
+          applied_task_ids: Json
+          brief_date: string
+          created_at: string
+          dismissed_at: string | null
+          headline: string | null
+          highlights: Json
+          id: string
+          model: string | null
+          signals: Json
+          status: string
+          suggested_tasks: Json
+          summary: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_task_ids?: Json
+          brief_date?: string
+          created_at?: string
+          dismissed_at?: string | null
+          headline?: string | null
+          highlights?: Json
+          id?: string
+          model?: string | null
+          signals?: Json
+          status?: string
+          suggested_tasks?: Json
+          summary?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_task_ids?: Json
+          brief_date?: string
+          created_at?: string
+          dismissed_at?: string | null
+          headline?: string | null
+          highlights?: Json
+          id?: string
+          model?: string | null
+          signals?: Json
+          status?: string
+          suggested_tasks?: Json
+          summary?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "morning_briefs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           created_at: string
