@@ -356,3 +356,69 @@ function SectionLabel({
     </h4>
   );
 }
+
+// Collapsible overview rendered as scannable bullet points. Markdown noise
+// (headings, list markers, bold) is stripped so the brief reads cleanly.
+function OverviewSection({ summary }: { summary: string }) {
+  const [open, setOpen] = useState(false);
+
+  const bullets = useMemo(() => {
+    const cleaned = summary
+      .replace(/\r/g, "")
+      .replace(/^\s*#{1,6}\s+/gm, "") // strip markdown headings
+      .replace(/\*\*(.+?)\*\*/g, "$1") // bold
+      .replace(/\*(.+?)\*/g, "$1") // italics
+      .replace(/`([^`]+)`/g, "$1"); // inline code
+
+    // First try splitting on lines/list markers; fall back to sentence splits.
+    let parts = cleaned
+      .split(/\n+/)
+      .map((l) => l.replace(/^\s*[-*•]\s+/, "").replace(/^\s*\d+\.\s+/, "").trim())
+      .filter(Boolean);
+
+    if (parts.length <= 1) {
+      parts = cleaned
+        .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    return parts.slice(0, 12);
+  }, [summary]);
+
+  const preview = bullets[0];
+
+  return (
+    <section>
+      <SectionLabel icon={<Info className="h-3 w-3" />} tint="primary">Overview</SectionLabel>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <div className="rounded-xl border border-border bg-card">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/30 rounded-xl"
+            >
+              <span className="text-sm text-foreground/90 leading-snug line-clamp-2">
+                {open ? "Hide overview" : preview ?? "Show overview"}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                  open && "rotate-180",
+                )}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <ul className="space-y-2 border-t border-border px-4 py-3">
+              {bullets.map((b, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90 leading-relaxed">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+    </section>
+  );
