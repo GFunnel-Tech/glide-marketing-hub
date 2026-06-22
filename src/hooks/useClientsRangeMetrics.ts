@@ -84,29 +84,23 @@ export function useClientsRangeMetrics() {
         acctSharedClients.set(s.ad_account_id, arr);
       }
 
-      // 1c. Campaigns → client_id (works regardless of ad-account linkage).
-      // We also use these campaign ids to pull granular insights across
-      // any ad account, including accounts owned by other workspaces.
-      // We pull ALL campaigns so we can mark (account,date) tuples as
-      // "covered by granular" to prevent the account-level daily fallback
-      // from double-counting paused-campaign spend back in.
+      // 1c. Campaigns → client_id mapping. We attribute every granular daily
+      // row regardless of the campaign's CURRENT status — a campaign that
+      // was running during the selected window should count toward that
+      // window's totals even if it's paused today. Granular rows only exist
+      // for dates the campaign actually delivered, so campaigns that were
+      // already paused before the window naturally contribute zero.
       const { data: campaignRows } = await (supabase as any)
         .from("campaigns")
         .select("id, client_id, ad_account_id, status")
         .eq("workspace_id", wsId);
       const campaignToClient = new Map<string, number>();
-      const activeCampaignIds = new Set<string>();
       const allCampaignIdsForCover = new Set<string>();
       for (const c of campaignRows || []) {
         if (!c.client_id) continue;
         const cid = String(c.id);
         campaignToClient.set(cid, c.client_id);
         allCampaignIdsForCover.add(cid);
-        // Only ACTIVE campaigns contribute to client averages — paused/archived
-        // campaigns shouldn't drag historical numbers into "current" KPIs.
-        if (String(c.status || "").toLowerCase() === "active") {
-          activeCampaignIds.add(cid);
-        }
       }
       const allCampaignIds = Array.from(allCampaignIdsForCover);
 
