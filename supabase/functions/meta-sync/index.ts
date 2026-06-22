@@ -20,6 +20,13 @@ Deno.serve(async (req) => {
   // Client Profile / date-range views drifts out of date.
   let includeDetails = true;
   let adsOnly = false;
+  // Tier controls polling cost & freshness window:
+  //   hot  -> today only, account-level only (cheapest, runs every 20 min)
+  //   warm -> last 3 days, account + campaign rollup (hourly, attribution catch-up)
+  //   cold -> last 28 days + full granular ads/campaigns/adsets (nightly)
+  // Default is null = legacy behavior (last_30d + granular) so the manual
+  // "Sync now" button keeps working unchanged.
+  let tier: "hot" | "warm" | "cold" | null = null;
   // Manual UI invocations should return immediately and let the long-running
   // Meta API loop finish in the background (avoids "connection closed before
   // message completed" timeouts when a workspace has many ad accounts).
@@ -28,10 +35,15 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
     adsOnly = body.adsOnly === true || (body.syncAds === true && body.includeDetails !== true);
+    if (body.tier === "hot" || body.tier === "warm" || body.tier === "cold") {
+      tier = body.tier;
+    }
     // Explicit `includeDetails: false` opts out; otherwise granular sync runs.
+    // For hot/warm tiers, force granular OFF unless caller overrides.
+    const tierGranular = tier === "cold" ? true : tier ? false : true;
     includeDetails = body.includeDetails === false
       ? false
-      : (body.includeDetails === true || body.syncAds === true || adsOnly || true);
+      : (body.includeDetails === true || body.syncAds === true || adsOnly || tierGranular);
     waitForCompletion = body.wait === true;
   }
 
@@ -41,7 +53,7 @@ Deno.serve(async (req) => {
   );
 
   const work = async () => {
-    return await runSync(admin, { workspaceFilter, includeDetails, adsOnly });
+    return await runSync(admin, { workspaceFilter, includeDetails, adsOnly, tier });
   };
 
   // Background mode: return 202 immediately, keep the loop running via waitUntil.
