@@ -222,9 +222,14 @@ export function ClientInvitesPanel({
                   <span className="font-medium">{profiles[p.user_id]?.display_name ?? profiles[p.user_id]?.email}</span>
                   <span className="text-xs text-muted-foreground ml-2">{profiles[p.user_id]?.email}</span>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => removePortalUser(p.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="outline" onClick={() => impersonate(p)} title="Sign in as this portal user">
+                    <LogIn className="h-3.5 w-3.5 mr-1" />Impersonate
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => removePortalUser(p.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
