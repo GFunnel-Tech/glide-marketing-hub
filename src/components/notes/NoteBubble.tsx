@@ -424,6 +424,33 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
               </button>
             );
           })}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground"
+                title="Sort"
+              >
+                <ArrowUpDown className="h-3 w-3" />
+                Sort
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Sort by
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup value={sortKey} onValueChange={(v) => setSortKey(v as any)}>
+                <DropdownMenuRadioItem value="newest" className="text-xs">Newest first</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="oldest" className="text-xs">Oldest first</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="az" className="text-xs">A → Z</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="za" className="text-xs">Z → A</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="due_soonest" className="text-xs">Due soonest</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="due_latest" className="text-xs">Due latest</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="max-h-[300px] overflow-y-auto p-2">
