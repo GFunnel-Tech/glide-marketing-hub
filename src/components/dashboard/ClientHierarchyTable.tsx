@@ -49,6 +49,7 @@ import { useCampaignLeadBreakdown } from "@/hooks/useCampaignLeadBreakdown";
 import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { useChurnRisks } from "@/hooks/useChurnRisk";
 import { ChurnRiskBadge } from "./ChurnRiskBadge";
+import { EntityChartsDrawer, type EntityLevel } from "./EntityChartsDrawer";
 
 const TABLE_KEY = "client_hierarchy";
 
