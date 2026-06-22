@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
   );
 
   const work = async () => {
-    return await runSync(admin, { workspaceFilter, includeDetails, adsOnly, tier });
+    return await runSync(admin, { workspaceFilter, adAccountFilter, includeDetails, adsOnly, tier });
   };
 
   // Background mode: return 202 immediately, keep the loop running via waitUntil.
