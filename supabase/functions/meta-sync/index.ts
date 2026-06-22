@@ -249,9 +249,13 @@ async function runSync(
 
         // ---- Ad-level creatives + 30d performance (for the Creatives page) ----
         let adRows = 0;
+        let adsError: string | null = null;
         if (includeDetails) {
           try { adRows = await syncAds(admin, acc, conn.access_token); }
-          catch (e) { errors.push({ account: acc.act_id, scope: "ads", error: String(e) }); }
+          catch (e) {
+            adsError = String(e);
+            errors.push({ account: acc.act_id, scope: "ads", error: adsError });
+          }
         }
 
         await admin.from("meta_ad_accounts")
@@ -259,7 +263,12 @@ async function runSync(
           .eq("id", acc.id);
 
         await admin.from("meta_sync_log").update({
-          status: "success",
+          // Surface partial failures: if ads failed but insights/campaigns
+          // succeeded, mark as "partial" and stamp the error so the UI can
+          // show why the Creatives/Hierarchy dropdown is empty for this
+          // account.
+          status: adsError ? "partial" : "success",
+          error_message: adsError ? ("ads: " + adsError).slice(0, 2000) : null,
           rows_synced: rows.length + campaignRows + granularRows + adRows,
           finished_at: new Date().toISOString(),
         }).eq("id", log.data!.id);
@@ -686,7 +695,20 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
 
   const now = Date.now();
 
-
+  // Attribute each ad to the correct client. On shared accounts the account
+  // owner (acc.client_id) is NOT the campaign owner — we honor the campaign's
+  // current client_id so ads land under the right client in the hierarchy.
+  const campaignIds = Array.from(new Set(
+    ads.map((a: any) => a.campaign_id).filter((x: any) => typeof x === "string" && x.length > 0),
+  )) as string[];
+  const campaignClientMap = new Map<string, number | null>();
+  if (campaignIds.length > 0) {
+    const { data: campRows } = await admin
+      .from("campaigns")
+      .select("id, client_id")
+      .in("id", campaignIds);
+    for (const r of campRows ?? []) campaignClientMap.set(r.id, r.client_id ?? null);
+  }
 
   const rows = ads.map((a: any) => {
     const ins = insMap.get(a.id) ?? {};
@@ -720,7 +742,7 @@ async function syncAds(admin: any, acc: any, accessToken: string): Promise<numbe
     return {
       id: a.id,
       workspace_id: acc.workspace_id,
-      client_id: acc.client_id,
+      client_id: campaignClientMap.get(a.campaign_id) ?? acc.client_id,
       ad_account_id: acc.id,
       campaign_id: a.campaign_id ?? null,
       campaign_name: a.campaign?.name ?? null,
