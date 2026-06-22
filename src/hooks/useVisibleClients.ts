@@ -33,13 +33,11 @@ export function useVisibleClients() {
   }, [allCampaigns]);
 
   return useMemo(() => {
+    const hiddenStatuses = new Set(["PAUSED", "CANCELLED", "PENDING_CANCELLATION"]);
     return clients.filter((c: any) => {
       if (archivedSet.has(`client:${c.id}`)) return false;
-      if (c.isAgencyAccount) return true; // agency's own account is always shown
-      const synced = !!c.ghlLocationId && clientsWithMetaAcct.has(Number(c.id));
-      const hasActivity = clientsWithActivity.has(String(c.id));
-      if (synced && !hasActivity) return false;
+      if (hiddenStatuses.has(String(c.status))) return false;
       return true;
     });
-  }, [clients, archivedSet, clientsWithMetaAcct, clientsWithActivity]);
+  }, [clients, archivedSet]);
 }
