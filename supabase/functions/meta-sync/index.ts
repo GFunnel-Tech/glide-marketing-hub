@@ -538,24 +538,42 @@ function firstAssetUrl(images: any): string | null {
 }
 
 async function syncAds(admin: any, acc: any, accessToken: string): Promise<number> {
+  // Keep the /ads page lean — Meta returns "(#1) Please reduce the amount of
+  // data you're asking for" when expanding creative.object_story_spec and
+  // asset_feed_spec inline on accounts with many ads. We only ask for IDs +
+  // names here and fetch the full creative shape in the batched call below.
   const adFields = [
     "id","name","status","effective_status","created_time",
     "campaign_id","campaign{name}","adset_id","adset{name,targeting}",
-    // Field expansion modifiers ensure Graph returns a 600px thumbnail
-    // instead of the default ~64px (which renders blurry when scaled up).
-    "creative{id,thumbnail_url.width(600).height(600),image_url,image_hash,video_id,body,title,call_to_action_type,object_story_spec,effective_object_story_id,asset_feed_spec}",
+    "creative{id}",
   ].join(",");
 
   const ads: any[] = [];
+  const ADS_PAGE_LIMIT = 50;
   let next: string | null =
-    `https://graph.facebook.com/v21.0/${acc.act_id}/ads?fields=${adFields}&thumbnail_width=600&thumbnail_height=600&limit=200&access_token=${encodeURIComponent(accessToken)}`;
+    `https://graph.facebook.com/v21.0/${acc.act_id}/ads?fields=${adFields}&limit=${ADS_PAGE_LIMIT}&access_token=${encodeURIComponent(accessToken)}`;
 
-  // safety cap: 5 pages = 1000 ads per account
+  // safety cap: 20 pages = 1000 ads per account (same overall ceiling as before)
   let page = 0;
-  while (next && page < 5) {
+  while (next && page < 20) {
     const r: Response = await fetch(next);
     const j: any = await r.json();
-    if (!r.ok) throw new Error("ads list: " + JSON.stringify(j));
+    if (!r.ok) {
+      // On "reduce the amount of data" errors, retry once at an even smaller
+      // page size before giving up so a single fat account doesn't block sync.
+      const code = j?.error?.code;
+      if (code === 1 && page === 0) {
+        const retryUrl = `https://graph.facebook.com/v21.0/${acc.act_id}/ads?fields=id,name,status,effective_status,created_time,campaign_id,adset_id,creative{id}&limit=25&access_token=${encodeURIComponent(accessToken)}`;
+        const r2 = await fetch(retryUrl);
+        const j2: any = await r2.json();
+        if (!r2.ok) throw new Error("ads list: " + JSON.stringify(j2));
+        for (const a of j2.data ?? []) ads.push(a);
+        next = j2.paging?.next ?? null;
+        page++;
+        continue;
+      }
+      throw new Error("ads list: " + JSON.stringify(j));
+    }
     for (const a of j.data ?? []) ads.push(a);
     next = j.paging?.next ?? null;
     page++;
