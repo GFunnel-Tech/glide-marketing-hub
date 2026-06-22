@@ -1395,6 +1395,13 @@ export function ClientHierarchyTable() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <EntityChartsDrawer
+        open={chartEntity !== null}
+        onOpenChange={(v) => { if (!v) setChartEntity(null); }}
+        level={chartEntity?.level ?? null}
+        objectId={chartEntity?.id ?? null}
+        name={chartEntity?.name ?? null}
+      />
     </div>
   );
 }
