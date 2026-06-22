@@ -696,9 +696,11 @@ export function ClientHierarchyTable() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={handleQuickSync} disabled={!focusedClient || syncing}>
-                <RefreshCw className="mr-2 h-3.5 w-3.5" /> Sync Meta campaigns
+              <DropdownMenuItem onClick={handleQuickSync} disabled={syncing}>
+                <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                {focusedClient ? `Sync Meta · ${focusedClient.name}` : "Sync Meta · all clients"}
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>
                 <Sparkles className="mr-2 h-3.5 w-3.5" /> AI optimize (soon)
