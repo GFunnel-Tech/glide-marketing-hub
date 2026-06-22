@@ -109,11 +109,13 @@ async function runSync(
       continue;
     }
 
-    const { data: accounts } = await admin
+    let acctQ = admin
       .from("meta_ad_accounts")
       .select("id, act_id, workspace_id, client_id, rate_limited_until")
       .eq("connection_id", conn.id)
       .eq("is_active", true);
+    if (adAccountFilter) acctQ = acctQ.eq("id", adAccountFilter);
+    const { data: accounts } = await acctQ;
 
     // Shuffle so the same accounts aren't always processed last (and starved
     // if the function hits its execution-time limit before reaching them).
