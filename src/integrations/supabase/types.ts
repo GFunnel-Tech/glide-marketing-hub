@@ -1643,7 +1643,6 @@ export type Database = {
           leads: number
           name: string
           plai_connected: boolean
-          point_of_contact_user_id: string | null
           reported_leads: number
           spend: number
           status: Database["public"]["Enums"]["client_status"]
@@ -1677,7 +1676,6 @@ export type Database = {
           leads?: number
           name: string
           plai_connected?: boolean
-          point_of_contact_user_id?: string | null
           reported_leads?: number
           spend?: number
           status?: Database["public"]["Enums"]["client_status"]
@@ -1711,7 +1709,6 @@ export type Database = {
           leads?: number
           name?: string
           plai_connected?: boolean
-          point_of_contact_user_id?: string | null
           reported_leads?: number
           spend?: number
           status?: Database["public"]["Enums"]["client_status"]
@@ -1764,34 +1761,28 @@ export type Database = {
       }
       conversations: {
         Row: {
-          client_id: number | null
           created_at: string
           created_by: string
           id: string
           last_message_at: string
-          portal_user_id: string | null
           subject: string
           updated_at: string
           workspace_id: string
         }
         Insert: {
-          client_id?: number | null
           created_at?: string
           created_by: string
           id?: string
           last_message_at?: string
-          portal_user_id?: string | null
           subject?: string
           updated_at?: string
           workspace_id: string
         }
         Update: {
-          client_id?: number | null
           created_at?: string
           created_by?: string
           id?: string
           last_message_at?: string
-          portal_user_id?: string | null
           subject?: string
           updated_at?: string
           workspace_id?: string
