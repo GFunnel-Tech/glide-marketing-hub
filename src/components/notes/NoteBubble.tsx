@@ -408,6 +408,18 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   )}
                 </div>
                 <button
+                  onClick={() => visibilityMut.mutate(n)}
+                  className={cn(
+                    "transition-opacity",
+                    n.visible_to_client
+                      ? "text-success opacity-100"
+                      : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground",
+                  )}
+                  title={n.visible_to_client ? "Visible to client — click to hide" : "Internal — click to share with client"}
+                >
+                  {n.visible_to_client ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                </button>
+                <button
                   onClick={() => delMut.mutate(n.id)}
                   className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                   title="Delete"
