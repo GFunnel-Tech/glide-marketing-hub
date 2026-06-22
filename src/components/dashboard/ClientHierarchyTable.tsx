@@ -1035,7 +1035,7 @@ export function ClientHierarchyTable() {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => setOpenCampaigns((s) => ({ ...s, [camp.id]: !s[camp.id] }))}
-                                  className="flex items-center gap-2 text-left w-full"
+                                  className="flex items-center gap-2 text-left flex-1 min-w-0"
                                 >
                                   <LevelBadge level="campaign" />
                                   <div className="flex h-6 w-6 items-center justify-center rounded bg-success/10 text-success">
@@ -1051,6 +1051,19 @@ export function ClientHierarchyTable() {
                                     )}
                                   </div>
                                 </button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); setChartEntity({ level: "campaign", id: String(camp.id), name: camp.name }); }}
+                                      className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-primary"
+                                      aria-label="View charts"
+                                    >
+                                      <BarChart3 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View charts</TooltipContent>
+                                </Tooltip>
                               </div>
                             </td>
                             {(() => {
