@@ -76,9 +76,9 @@ Deno.serve(async (req) => {
 
 async function runSync(
   admin: any,
-  opts: { workspaceFilter: string | null; includeDetails: boolean; adsOnly: boolean; tier: "hot" | "warm" | "cold" | null },
+  opts: { workspaceFilter: string | null; adAccountFilter: string | null; includeDetails: boolean; adsOnly: boolean; tier: "hot" | "warm" | "cold" | null },
 ) {
-  const { workspaceFilter, includeDetails, adsOnly, tier } = opts;
+  const { workspaceFilter, adAccountFilter, includeDetails, adsOnly, tier } = opts;
   // Meta finalizes attribution within ~72h. Once a day is stored it doesn't
   // need to be re-pulled — that's why the cold tier window is only 7 days,
   // not 30. Older days are already frozen in meta_insights_daily.
