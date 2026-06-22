@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Loader2, Plus, Trash2, UserCheck, UserX, Mail } from "lucide-react";
+import { Copy, Loader2, Plus, Trash2, UserCheck, UserX, Mail, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -123,6 +123,31 @@ export function ClientInvitesPanel({
     load();
   };
 
+  const impersonate = async (p: PortalUser) => {
+    const label = profiles[p.user_id]?.email ?? p.user_id.slice(0, 8);
+    if (!confirm(`Impersonate ${label}? You will be signed in as this portal user.`)) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-impersonate", {
+        body: { target_user_id: p.user_id, reason: `Agency impersonation of client ${clientName}` },
+      });
+      if (error) throw error;
+      const { hashed_token, email } = data;
+      const { data: sess } = await supabase.auth.getSession();
+      if (sess.session) {
+        localStorage.setItem("impersonation.original_session", JSON.stringify(sess.session));
+        localStorage.setItem("impersonation.target_email", email);
+      }
+      const { error: vErr } = await supabase.auth.verifyOtp({
+        type: "magiclink", token_hash: hashed_token,
+      });
+      if (vErr) throw vErr;
+      toast.success(`Now acting as ${email}`);
+      window.location.href = "/portal";
+    } catch (e: any) {
+      toast.error(e.message ?? "Impersonation failed");
+    }
+  };
+
   const copy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied`);
@@ -197,9 +222,14 @@ export function ClientInvitesPanel({
                   <span className="font-medium">{profiles[p.user_id]?.display_name ?? profiles[p.user_id]?.email}</span>
                   <span className="text-xs text-muted-foreground ml-2">{profiles[p.user_id]?.email}</span>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => removePortalUser(p.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="outline" onClick={() => impersonate(p)} title="Sign in as this portal user">
+                    <LogIn className="h-3.5 w-3.5 mr-1" />Impersonate
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => removePortalUser(p.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
