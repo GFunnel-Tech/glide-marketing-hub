@@ -77,7 +77,11 @@ async function runSync(
   opts: { workspaceFilter: string | null; includeDetails: boolean; adsOnly: boolean; tier: "hot" | "warm" | "cold" | null },
 ) {
   const { workspaceFilter, includeDetails, adsOnly, tier } = opts;
-  const datePreset = tier === "hot" ? "today" : tier === "warm" ? "last_3d" : tier === "cold" ? "last_28d" : "last_30d";
+  // Meta finalizes attribution within ~72h. Once a day is stored it doesn't
+  // need to be re-pulled — that's why the cold tier window is only 7 days,
+  // not 30. Older days are already frozen in meta_insights_daily.
+  const datePreset = tier === "hot" ? "today" : tier === "warm" ? "last_3d" : tier === "cold" ? "last_7d" : "last_7d";
+
 
   // Fetch active connections
   let connQ = admin
