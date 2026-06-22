@@ -231,7 +231,17 @@ async function runSync(
         }
 
         // ---- Granular daily insights (campaign + adset + ad) ----
-        const granularRows = includeDetails ? await syncGranularInsights(admin, acc, conn.access_token) : 0;
+        // Only re-fetch the window Meta could still revise. Older days are
+        // already stored and frozen — pulling them again wastes rate-limit.
+        const granularPreset =
+          tier === "hot" ? "today" :
+          tier === "warm" ? "last_3d" :
+          tier === "cold" ? "last_7d" :
+          "last_7d";
+        const granularRows = includeDetails
+          ? await syncGranularInsights(admin, acc, conn.access_token, granularPreset)
+          : 0;
+
 
         // ---- Ad-level creatives + 30d performance (for the Creatives page) ----
         let adRows = 0;
