@@ -3,6 +3,7 @@ import { ClientHierarchyTable } from "@/components/dashboard/ClientHierarchyTabl
 import { DailyFocus } from "@/components/dashboard/DailyFocus";
 import { TodaysTasksPanel } from "@/components/dashboard/TodaysTasksPanel";
 import { AtRiskClientsCard } from "@/components/dashboard/AtRiskClientsCard";
+import { MorningBriefDialog } from "@/components/dashboard/MorningBriefDialog";
 
 import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
 import { QuickActionBar } from "@/components/dashboard/QuickActionBar";
@@ -84,7 +85,10 @@ const Index = () => {
           <h1 className="text-2xl font-semibold text-foreground">Overview</h1>
           <p className="text-sm text-muted-foreground">What's happening across your portfolio.</p>
         </div>
-        <DateRangePicker />
+        <div className="flex items-center gap-2">
+          <MorningBriefDialog />
+          <DateRangePicker />
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-card">
