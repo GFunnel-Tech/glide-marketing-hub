@@ -1,14 +1,21 @@
-import { Users, Activity, DollarSign, Target, Percent } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Users, Activity, DollarSign, Target, Percent, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClientSegments } from "@/hooks/useClientSegments";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
 import { useDateRange } from "@/hooks/useDateRange";
+import { useClients } from "@/hooks/useDatabase";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuTrigger,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
 
 function deriveImpressionsFromCpm(spend: number, cpm: number) {
   if (!cpm || cpm <= 0) return 0;
   return (spend / cpm) * 1000;
 }
+
 
 interface KPITileProps {
   label: string;
@@ -47,9 +54,89 @@ function KPITile({ label, kpiKey, value, sublabel, Icon, iconTone }: KPITileProp
   );
 }
 
+type ClientSegmentKey =
+  | "active" | "new" | "paused" | "relaunch" | "cancelled"
+  | "learning" | "blocked" | "all";
+
+const SEGMENT_OPTIONS: { key: ClientSegmentKey; label: string; statuses: string[] | "all" | "active" }[] = [
+  { key: "active",    label: "Active",      statuses: "active" },
+  { key: "new",       label: "New",         statuses: ["NEW"] },
+  { key: "paused",    label: "Paused",      statuses: ["PAUSED"] },
+  { key: "relaunch",  label: "Re-Launch",   statuses: ["RELAUNCH"] },
+  { key: "learning",  label: "Learning",    statuses: ["LEARNING"] },
+  { key: "cancelled", label: "Cancelled",   statuses: ["CANCELLED", "PENDING_CANCELLATION"] },
+  { key: "blocked",   label: "Blocked",     statuses: ["BLOCKED"] },
+  { key: "all",       label: "All time",    statuses: "all" },
+];
+
+// Statuses considered "active" for the default Total Clients view.
+const INACTIVE_STATUSES = new Set([
+  "PAUSED", "CANCELLED", "PENDING_CANCELLATION", "BLOCKED",
+]);
+
+function ClientCountTile({
+  clients,
+  segments,
+}: {
+  clients: any[];
+  segments: { total: number; synced: number; inWorkflow: number };
+}) {
+  const [seg, setSeg] = useState<ClientSegmentKey>("active");
+  const opt = SEGMENT_OPTIONS.find((o) => o.key === seg) ?? SEGMENT_OPTIONS[0];
+
+  const count = useMemo(() => {
+    if (opt.statuses === "all") return clients.length;
+    if (opt.statuses === "active") {
+      return clients.filter((c: any) => !INACTIVE_STATUSES.has(String(c.status))).length;
+    }
+    const set = new Set(opt.statuses);
+    return clients.filter((c: any) => set.has(String(c.status))).length;
+  }, [clients, opt]);
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/30">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                {opt.label} Clients
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Show
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup value={seg} onValueChange={(v) => setSeg(v as ClientSegmentKey)}>
+                {SEGMENT_OPTIONS.map((o) => (
+                  <DropdownMenuRadioItem key={o.key} value={o.key} className="text-xs">
+                    {o.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <p className="mt-3 text-3xl font-bold tabular-nums text-foreground">{count}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            of {segments.total} total · {segments.synced} synced
+          </p>
+        </div>
+        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", TONE.blue)}>
+          <Users className="h-5 w-5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export function KPIStrip() {
   const { data: rangeMetrics = {}, isFetching } = useClientsRangeMetrics();
   const { label } = useDateRange();
+  const { data: clients = [] } = useClients();
+
 
   // All client counts come from one source of truth so the dashboard can never
   // show two unexplained totals. Each number is labelled with its denominator.
@@ -106,7 +193,7 @@ export function KPIStrip() {
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-      <KPITile label="Total Clients" value={String(segments.total)} sublabel={`${segments.inWorkflow} in workflow · ${segments.synced} synced`} Icon={Users} iconTone="blue" />
+      <ClientCountTile clients={clients} segments={segments} />
       <KPITile label="Total Leads" kpiKey="leads" value={totalLeads.toLocaleString()} sublabel={dedupRemoved > 0 ? `${sub} · deduped (−${dedupRemoved.toLocaleString()} vs Meta)` : sub} Icon={Activity} iconTone="green" />
       <KPITile label={others.length ? `CPL (${primary.currency})` : "Blended CPL"} kpiKey="cpl" value={money(primary.cpl, primary.currency, 2)} sublabel={cplSub} Icon={Target} iconTone="amber" />
       <KPITile label="Form CVR" kpiKey="formcvr" value={`${blendedCvr.toFixed(2)}%`} sublabel={sub} Icon={Percent} iconTone="green" />
