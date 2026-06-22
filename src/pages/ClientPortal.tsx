@@ -84,10 +84,10 @@ export default function ClientPortal() {
     <div className="min-h-screen bg-background">
       {/* Top bar */}
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-[900px] items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-[1100px] items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">G</div>
-            <span className="text-sm font-semibold text-foreground">{d.brand}</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">{brandLabel?.[0]?.toUpperCase() ?? "G"}</div>
+            <span className="text-sm font-semibold text-foreground">{brandLabel}</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-xs text-muted-foreground">Powered by GFunnel</span>
@@ -96,6 +96,44 @@ export default function ClientPortal() {
             </button>
           </div>
         </div>
+
+        {/* Tabs */}
+        <div className="mx-auto max-w-[1100px] px-6">
+          <nav className="flex items-center gap-1 -mb-px overflow-x-auto">
+            <TabButton
+              active={activeTab === "dashboard"}
+              onClick={() => setActiveTab("dashboard")}
+              icon={LayoutDashboard}
+              label="Dashboard"
+            />
+            {embeds.map((emb) => {
+              const Icon = (LucideIcons as any)[emb.tab.icon] as LucideIcon | undefined;
+              return (
+                <TabButton
+                  key={emb.id}
+                  active={activeTab === emb.id}
+                  onClick={() => setActiveTab(emb.id)}
+                  icon={Icon ?? FileText}
+                  label={emb.tab.label}
+                  badge={emb.status === "accepted" ? "Accepted" : emb.status === "declined" ? "Declined" : null}
+                />
+              );
+            })}
+          </nav>
+        </div>
+      </header>
+
+      {activeTab !== "dashboard" && (() => {
+        const emb = embeds.find((e) => e.id === activeTab);
+        if (!emb) return null;
+        return (
+          <div className="mx-auto max-w-[1100px] px-6 py-6">
+            <EmbedFrame embedId={emb.id} clientId={clientId!} url={emb.embed_url} title={emb.tab.label} />
+          </div>
+        );
+      })()}
+
+      {activeTab === "dashboard" && (
       </header>
 
       <div className="mx-auto max-w-[900px] px-6 py-10 space-y-8">
