@@ -3,17 +3,22 @@ import { ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePortalClient, useActiveOnboarding } from "@/hooks/usePortalClients";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useIsAgencyStaff } from "@/hooks/useIsAgencyStaff";
 import { Card } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 
 export function PortalRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const { mappings, activeMapping, activeClientId, isLoading, hasAnyMapping } = usePortalClient();
-  const { data: isSuperAdmin } = useIsSuperAdmin();
+  const { data: isSuperAdmin, isLoading: superAdminLoading } = useIsSuperAdmin();
+  const { data: isAgencyStaff, isLoading: staffLoading } = useIsAgencyStaff();
   const { data: onboarding, isLoading: onbLoading } = useActiveOnboarding(activeClientId);
   const location = useLocation();
 
-  if (loading || (user && isLoading)) {
+  // Wait for all access checks (auth, mappings, super-admin, staff) before
+  // deciding what to render — otherwise agency owners briefly see the
+  // "No portal access" screen while the role queries are still in flight.
+  if (loading || (user && (isLoading || superAdminLoading || staffLoading))) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -25,8 +30,12 @@ export function PortalRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/portal/login" state={{ from: location }} replace />;
   }
 
+  // Super-admins and any workspace member (agency staff) can always preview
+  // the portal, even without a portal_users mapping.
+  const canPreview = !!isSuperAdmin || !!isAgencyStaff;
+
   if (!hasAnyMapping) {
-    if (isSuperAdmin) {
+    if (canPreview) {
       return <>{children}</>;
     }
     return (
@@ -39,9 +48,9 @@ export function PortalRoute({ children }: { children: ReactNode }) {
     );
   }
 
-  // All mappings pending approval → show waiting screen
+  // All mappings pending approval → show waiting screen (unless staff/admin)
   const anyActive = mappings.some((m) => m.status === "active");
-  if (!anyActive && !isSuperAdmin) {
+  if (!anyActive && !canPreview) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] p-4">
         <Card className="w-full max-w-md p-8 text-center">
@@ -55,9 +64,10 @@ export function PortalRoute({ children }: { children: ReactNode }) {
     );
   }
 
-  // Active mapping but onboarding not complete → redirect to onboarding (except when already there)
+  // Active mapping but onboarding not complete → redirect to onboarding
+  // (skip for agency staff / super-admins so they can always preview)
   if (
-    !isSuperAdmin &&
+    !canPreview &&
     activeMapping?.status === "active" &&
     !onbLoading &&
     (!onboarding || !onboarding.completed_at) &&
