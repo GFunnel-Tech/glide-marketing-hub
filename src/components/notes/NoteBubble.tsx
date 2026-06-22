@@ -329,6 +329,24 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
               </Button>
             )}
           </div>
+          {clientId != null && (
+            <div className="mt-1.5">
+              <button
+                type="button"
+                onClick={() => setShareWithClient((v) => !v)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-medium transition-colors",
+                  shareWithClient
+                    ? "bg-success/10 text-success"
+                    : "bg-muted text-muted-foreground hover:bg-accent",
+                )}
+                title="Toggle visibility in the client portal"
+              >
+                {shareWithClient ? <Eye className="h-2.5 w-2.5" /> : <EyeOff className="h-2.5 w-2.5" />}
+                {shareWithClient ? "Visible to client" : "Internal only"}
+              </button>
+            </div>
+          )}
           <Button
             size="sm"
             className="mt-2 h-7 w-full gap-1.5 text-xs"
