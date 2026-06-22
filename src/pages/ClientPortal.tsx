@@ -27,7 +27,32 @@ const appointmentSources = ["Booked by AI", "Appointment Setter", "Direct From A
 const pipelineColors = ["#f97316", "#ea6f10", "#db5b00", "#c74f00", "#b34400"];
 
 export default function ClientPortal() {
+  const { id } = useParams<{ id: string }>();
+  const clientId = id ? Number(id) : null;
+
+  // Load real client name/status; falls back gracefully if RLS blocks it.
+  const { data: realClient } = useQuery({
+    queryKey: ["client-portal-client", clientId],
+    enabled: !!clientId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("id, name, brand, status")
+        .eq("id", clientId!)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const embedsQuery = useClientEmbeds(clientId);
+  const embeds = embedsQuery.data ?? [];
+
+  const [activeTab, setActiveTab] = useState<string>("dashboard");
+
   const d = clientPortalData;
+  const brandLabel = realClient?.brand ?? realClient?.name ?? d.brand;
+  const clientName = realClient?.name ?? d.clientName;
+
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [leadNotes, setLeadNotes] = useState<Record<string, string>>({});
   const [editingNote, setEditingNote] = useState<string | null>(null);
@@ -35,6 +60,8 @@ export default function ClientPortal() {
   const [editingField, setEditingField] = useState<{ name: string; field: string } | null>(null);
   const [fieldDraft, setFieldDraft] = useState("");
   const [leadOverrides, setLeadOverrides] = useState<Record<string, Record<string, string>>>({});
+
+  const saveNote = (leadName: string) => {
 
   const saveNote = (leadName: string) => {
     setLeadNotes(prev => ({ ...prev, [leadName]: noteDraft }));
