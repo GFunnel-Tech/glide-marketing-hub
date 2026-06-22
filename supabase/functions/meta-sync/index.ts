@@ -15,6 +15,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let workspaceFilter: string | null = null;
+  let adAccountFilter: string | null = null;
   // Default to true so scheduled (cron) syncs always refresh granular
   // campaign/adset/ad insights — otherwise the per-campaign breakdown in the
   // Client Profile / date-range views drifts out of date.
