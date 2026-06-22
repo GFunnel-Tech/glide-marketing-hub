@@ -310,7 +310,14 @@ function ClientProfileInner() {
 
   const isMetaMapped = !!(metaMappedSet?.has(client.id) || client.bmId);
   const isGhlMapped = !!client.ghlLocationId;
-  const isSyncing = (isMetaMapped || isGhlMapped) && !hasLiveData;
+  // "Syncing" should only show when the integration is mapped but we have NO
+  // campaigns at all for this client — not just an empty date range. A client
+  // with synced campaigns/ads and zero spend in the picked window is not
+  // "syncing", it just had no delivery in that window.
+  const isSyncing =
+    (isMetaMapped || isGhlMapped) &&
+    clientCampaigns.length === 0 &&
+    !hasLiveData;
 
   const kpis: { label: string; value: string; benchmark?: string; status: KpiStatus; tone?: string }[] = [
     {
