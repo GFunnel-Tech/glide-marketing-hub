@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, StickyNote, Trash2, Plus, Loader2, User, Check, Eye, EyeOff } from "lucide-react";
+import { CalendarIcon, StickyNote, Trash2, Plus, Loader2, User, Check, Eye, EyeOff, ArrowUpDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -49,6 +50,8 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [shareWithClient, setShareWithClient] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
+  type SortKey = "newest" | "oldest" | "az" | "za" | "due_soonest" | "due_latest";
+  const [sortKey, setSortKey] = useState<SortKey>("newest");
 
   const { data: members = [] } = useQuery<Member[]>({
     queryKey: ["ws-members-for-notes", wsId],
@@ -118,10 +121,41 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   }, [wsId, clientId]);
 
   const dueCount = notes.filter((n) => !n.done).length;
-  const visibleNotes = useMemo(
-    () => notes.filter((n) => (activeTab === "active" ? !n.done : n.done)),
-    [notes, activeTab],
-  );
+  const visibleNotes = useMemo(() => {
+    const filtered = notes.filter((n) => (activeTab === "active" ? !n.done : n.done));
+    const arr = [...filtered];
+    const t = (s: string | null) => (s ? new Date(s).getTime() : 0);
+    switch (sortKey) {
+      case "newest":
+        arr.sort((a, b) => t(b.created_at) - t(a.created_at));
+        break;
+      case "oldest":
+        arr.sort((a, b) => t(a.created_at) - t(b.created_at));
+        break;
+      case "az":
+        arr.sort((a, b) => a.content.localeCompare(b.content));
+        break;
+      case "za":
+        arr.sort((a, b) => b.content.localeCompare(a.content));
+        break;
+      case "due_soonest":
+        arr.sort((a, b) => {
+          const at = a.due_at ? t(a.due_at) : Infinity;
+          const bt = b.due_at ? t(b.due_at) : Infinity;
+          return at - bt;
+        });
+        break;
+      case "due_latest":
+        arr.sort((a, b) => {
+          const at = a.due_at ? t(a.due_at) : -Infinity;
+          const bt = b.due_at ? t(b.due_at) : -Infinity;
+          return bt - at;
+        });
+        break;
+    }
+    return arr;
+  }, [notes, activeTab, sortKey]);
+
 
   const addMut = useMutation({
     mutationFn: async () => {
@@ -363,7 +397,8 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
           </Button>
         </div>
 
-        <div className="flex items-center gap-1 border-b border-border px-2 pt-2">
+        <div className="flex items-center justify-between gap-1 border-b border-border px-2 pt-2">
+          <div className="flex items-center gap-1">
           {(["active", "completed"] as const).map((t) => {
             const count = t === "active"
               ? notes.filter((n) => !n.done).length
@@ -389,6 +424,33 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
               </button>
             );
           })}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground"
+                title="Sort"
+              >
+                <ArrowUpDown className="h-3 w-3" />
+                Sort
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Sort by
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup value={sortKey} onValueChange={(v) => setSortKey(v as any)}>
+                <DropdownMenuRadioItem value="newest" className="text-xs">Newest first</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="oldest" className="text-xs">Oldest first</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="az" className="text-xs">A → Z</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="za" className="text-xs">Z → A</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="due_soonest" className="text-xs">Due soonest</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="due_latest" className="text-xs">Due latest</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="max-h-[300px] overflow-y-auto p-2">
