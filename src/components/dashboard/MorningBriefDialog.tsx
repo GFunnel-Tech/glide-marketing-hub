@@ -357,35 +357,115 @@ function SectionLabel({
   );
 }
 
-// Collapsible overview rendered as scannable bullet points. Markdown noise
-// (headings, list markers, bold) is stripped so the brief reads cleanly.
+// Words/phrases that are pure section labels in an AI-generated brief — never
+// useful as a bullet on their own.
+const LABEL_NOISE = new Set([
+  "overview", "summary", "today", "today's focus", "highlights", "concerns",
+  "key concerns", "wins", "what's going well", "whats going well",
+  "what changed", "tasks", "suggested tasks", "notes", "brief", "morning brief",
+  "daily brief",
+]);
+
+type OverviewBlock =
+  | { kind: "heading"; text: string }
+  | { kind: "bullet"; text: string };
+
+function parseOverview(summary: string): OverviewBlock[] {
+  const stripInline = (s: string) =>
+    s
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/__(.+?)__/g, "$1")
+      .replace(/(?<!\*)\*(?!\s)(.+?)\*(?!\*)/g, "$1")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\[(.+?)\]\([^)]+\)/g, "$1")
+      .trim();
+
+  const isLabelOnly = (s: string) => {
+    const norm = s.toLowerCase().replace(/[:.\-–—]+$/g, "").trim();
+    if (!norm) return true;
+    if (LABEL_NOISE.has(norm)) return true;
+    // Short, title-cased, no terminal punctuation → likely a label.
+    const wordCount = norm.split(/\s+/).length;
+    if (wordCount <= 3 && !/[.!?]$/.test(s.trim()) && /^[A-Z]/.test(s.trim())) {
+      return true;
+    }
+    return false;
+  };
+
+  const blocks: OverviewBlock[] = [];
+  const pushBullet = (raw: string) => {
+    const text = stripInline(raw);
+    if (!text) return;
+    if (isLabelOnly(text)) return;
+    // De-dup against the immediately preceding bullet.
+    const prev = blocks[blocks.length - 1];
+    if (prev && prev.kind === "bullet" && prev.text === text) return;
+    blocks.push({ kind: "bullet", text });
+  };
+  const pushHeading = (raw: string) => {
+    const text = stripInline(raw.replace(/^#{1,6}\s+/, "").replace(/:$/, ""));
+    if (!text) return;
+    if (LABEL_NOISE.has(text.toLowerCase())) return; // skip redundant "Overview" etc.
+    blocks.push({ kind: "heading", text });
+  };
+
+  const lines = summary.replace(/\r/g, "").split("\n");
+  let paragraph: string[] = [];
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    const joined = paragraph.join(" ").replace(/\s+/g, " ").trim();
+    paragraph = [];
+    if (!joined) return;
+    // Split long paragraphs into sentence-sized bullets.
+    const sentences = joined.split(/(?<=[.!?])\s+(?=[A-Z0-9"'])/).filter(Boolean);
+    sentences.forEach(pushBullet);
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    if (!line.trim()) {
+      flushParagraph();
+      continue;
+    }
+    if (/^\s*#{1,6}\s+/.test(line)) {
+      flushParagraph();
+      pushHeading(line);
+      continue;
+    }
+    const listMatch = line.match(/^\s*(?:[-*•]|\d+\.)\s+(.*)$/);
+    if (listMatch) {
+      flushParagraph();
+      pushBullet(listMatch[1]);
+      continue;
+    }
+    // Bold-only line acting as a subheading e.g. "**What changed**"
+    const boldHeading = line.trim().match(/^\*\*(.+)\*\*:?$/);
+    if (boldHeading) {
+      flushParagraph();
+      pushHeading(boldHeading[1]);
+      continue;
+    }
+    paragraph.push(line.trim());
+  }
+  flushParagraph();
+
+  // Drop trailing heading with no content beneath it.
+  while (blocks.length && blocks[blocks.length - 1].kind === "heading") blocks.pop();
+
+  return blocks.slice(0, 16);
+}
+
+// Collapsible, content-aware overview: preserves AI subheadings and renders
+// substantive lines as scannable bullets. Strips noise like "Overview" labels.
 function OverviewSection({ summary }: { summary: string }) {
   const [open, setOpen] = useState(false);
+  const blocks = useMemo(() => parseOverview(summary), [summary]);
+  const preview = useMemo(
+    () => blocks.find((b) => b.kind === "bullet")?.text,
+    [blocks],
+  );
 
-  const bullets = useMemo(() => {
-    const cleaned = summary
-      .replace(/\r/g, "")
-      .replace(/^\s*#{1,6}\s+/gm, "") // strip markdown headings
-      .replace(/\*\*(.+?)\*\*/g, "$1") // bold
-      .replace(/\*(.+?)\*/g, "$1") // italics
-      .replace(/`([^`]+)`/g, "$1"); // inline code
-
-    // First try splitting on lines/list markers; fall back to sentence splits.
-    let parts = cleaned
-      .split(/\n+/)
-      .map((l) => l.replace(/^\s*[-*•]\s+/, "").replace(/^\s*\d+\.\s+/, "").trim())
-      .filter(Boolean);
-
-    if (parts.length <= 1) {
-      parts = cleaned
-        .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
-    return parts.slice(0, 12);
-  }, [summary]);
-
-  const preview = bullets[0];
+  if (blocks.length === 0) return null;
 
   return (
     <section>
@@ -409,14 +489,49 @@ function OverviewSection({ summary }: { summary: string }) {
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <ul className="space-y-2 border-t border-border px-4 py-3">
-              {bullets.map((b, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm text-foreground/90 leading-relaxed">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-3 border-t border-border px-4 py-3">
+              {(() => {
+                // Group bullets under their preceding heading for visual rhythm.
+                const groups: { heading?: string; bullets: string[] }[] = [];
+                let current: { heading?: string; bullets: string[] } = { bullets: [] };
+                groups.push(current);
+                for (const b of blocks) {
+                  if (b.kind === "heading") {
+                    if (current.heading || current.bullets.length) {
+                      current = { bullets: [] };
+                      groups.push(current);
+                    }
+                    current.heading = b.text;
+                  } else {
+                    current.bullets.push(b.text);
+                  }
+                }
+                return groups
+                  .filter((g) => g.heading || g.bullets.length)
+                  .map((g, gi) => (
+                    <div key={gi} className="space-y-1.5">
+                      {g.heading && (
+                        <h5 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          {g.heading}
+                        </h5>
+                      )}
+                      {g.bullets.length > 0 && (
+                        <ul className="space-y-1.5">
+                          {g.bullets.map((b, i) => (
+                            <li
+                              key={i}
+                              className="flex items-start gap-2.5 text-sm text-foreground/90 leading-relaxed"
+                            >
+                              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
+                              <span>{b}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ));
+              })()}
+            </div>
           </CollapsibleContent>
         </div>
       </Collapsible>
