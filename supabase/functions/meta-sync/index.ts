@@ -82,7 +82,10 @@ async function runSync(
   // Meta finalizes attribution within ~72h. Once a day is stored it doesn't
   // need to be re-pulled — that's why the cold tier window is only 7 days,
   // not 30. Older days are already frozen in meta_insights_daily.
-  const datePreset = tier === "hot" ? "today" : tier === "warm" ? "last_3d" : tier === "cold" ? "last_7d" : "last_7d";
+  // cold/default fetch a full 30-day window so the dashboard's date range
+  // picker (which can span 30+ days) has data even when Meta back-dates
+  // attribution after a sync. last_7d is too narrow for that case.
+  const datePreset = tier === "hot" ? "today" : tier === "warm" ? "last_3d" : tier === "cold" ? "last_30d" : "last_30d";
 
 
   // Fetch active connections
@@ -250,8 +253,8 @@ async function runSync(
         const granularPreset =
           tier === "hot" ? "today" :
           tier === "warm" ? "last_3d" :
-          tier === "cold" ? "last_7d" :
-          "last_7d";
+          tier === "cold" ? "last_30d" :
+          "last_30d";
         const granularRows = includeDetails
           ? await syncGranularInsights(admin, acc, conn.access_token, granularPreset)
           : 0;
