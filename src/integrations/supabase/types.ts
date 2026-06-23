@@ -4397,6 +4397,7 @@ export type Database = {
           email: string | null
           gfunnel_user_profile_id: string | null
           id: string
+          position: string | null
           updated_at: string
         }
         Insert: {
@@ -4407,6 +4408,7 @@ export type Database = {
           email?: string | null
           gfunnel_user_profile_id?: string | null
           id: string
+          position?: string | null
           updated_at?: string
         }
         Update: {
@@ -4417,6 +4419,7 @@ export type Database = {
           email?: string | null
           gfunnel_user_profile_id?: string | null
           id?: string
+          position?: string | null
           updated_at?: string
         }
         Relationships: []
