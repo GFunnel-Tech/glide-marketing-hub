@@ -497,13 +497,33 @@ export function useClientsWithMetaAccount() {
     queryKey: ["clients_with_meta_account", wsId],
     enabled: !!wsId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      // A client counts as "Meta-synced" if ANY of:
+      //  1. It directly owns a Meta ad account (meta_ad_accounts.client_id)
+      //  2. It's a shared member of a Meta ad account (meta_ad_account_clients)
+      //  3. It has at least one campaign mapped to it (campaigns.client_id)
+      const ownedP = (supabase as any)
         .from("meta_ad_accounts")
         .select("client_id")
         .eq("workspace_id", wsId)
         .not("client_id", "is", null);
-      if (error) throw error;
-      return new Set<number>((data || []).map((r: any) => Number(r.client_id)));
+      const sharedP = (supabase as any)
+        .from("meta_ad_account_clients")
+        .select("client_id")
+        .eq("workspace_id", wsId);
+      const campaignsP = (supabase as any)
+        .from("campaigns")
+        .select("client_id")
+        .eq("workspace_id", wsId)
+        .not("client_id", "is", null);
+      const [owned, shared, campaigns] = await Promise.all([ownedP, sharedP, campaignsP]);
+      if (owned.error) throw owned.error;
+      if (shared.error) throw shared.error;
+      if (campaigns.error) throw campaigns.error;
+      const set = new Set<number>();
+      for (const r of owned.data || []) set.add(Number(r.client_id));
+      for (const r of shared.data || []) set.add(Number(r.client_id));
+      for (const r of campaigns.data || []) set.add(Number(r.client_id));
+      return set;
     },
   });
 }
