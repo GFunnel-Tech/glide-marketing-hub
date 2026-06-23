@@ -253,8 +253,8 @@ async function runSync(
         const granularPreset =
           tier === "hot" ? "today" :
           tier === "warm" ? "last_3d" :
-          tier === "cold" ? "last_7d" :
-          "last_7d";
+          tier === "cold" ? "last_30d" :
+          "last_30d";
         const granularRows = includeDetails
           ? await syncGranularInsights(admin, acc, conn.access_token, granularPreset)
           : 0;
