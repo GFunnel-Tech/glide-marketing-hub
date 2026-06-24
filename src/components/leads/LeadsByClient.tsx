@@ -61,11 +61,21 @@ export function LeadsByClient({ clientId, compact, hideHeader }: Props) {
     if (!currentWorkspace) return;
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("meta-leads-sync", {
-        body: { workspaceId: currentWorkspace.id },
-      });
+      // When viewing a specific client, pull that client's FULL Meta lead
+      // history (no 90-day window). Otherwise pull the workspace default.
+      const body: Record<string, unknown> = { workspaceId: currentWorkspace.id };
+      if (clientId != null) {
+        body.clientId = clientId;
+        body.sinceDays = null;
+        body.exhaustiveDiscovery = true;
+      }
+      const { data, error } = await supabase.functions.invoke("meta-leads-sync", { body });
       if (error) throw error;
-      toast.success(`Synced ${data?.leadsSynced ?? 0} leads`);
+      toast.success(
+        clientId != null
+          ? `Pulled ${data?.leadsSynced ?? 0} lead${data?.leadsSynced === 1 ? "" : "s"} (full history)`
+          : `Synced ${data?.leadsSynced ?? 0} leads`
+      );
       qc.invalidateQueries({ queryKey: ["meta_leads"] });
       // Auto-score newly synced leads
       scoreMutation.mutate(undefined, {
