@@ -129,8 +129,19 @@ export function useMorningBrief() {
           .filter((p: any) => p?.position)
           .map((p: any) => ({ id: p.id, position: String(p.position).toLowerCase() }));
 
+        // Admin-defined per-category overrides take precedence over keyword matching.
+        const { data: routingRows } = await db
+          .from("task_routing_rules")
+          .select("category, assigned_user_id")
+          .eq("workspace_id", brief.workspace_id);
+        const overrides = new Map<string, string>(
+          (routingRows ?? []).map((r: any) => [r.category, r.assigned_user_id]),
+        );
+
         const matchPosition = (cat?: string): string | null => {
           if (!cat) return null;
+          const override = overrides.get(cat);
+          if (override) return override;
           const keywordMap: Record<string, string[]> = {
             creative: ["content", "creative", "design", "video", "copywriter"],
             media_buying: ["media buy", "media buyer", "buying", "paid", "ads specialist", "ppc"],
@@ -146,6 +157,7 @@ export function useMorningBrief() {
           }
           return null;
         };
+
 
         const rows = tasks.map((t) => ({
           workspace_id: brief.workspace_id,
