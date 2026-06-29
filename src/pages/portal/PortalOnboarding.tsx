@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Circle, Loader2, User, Facebook, CreditCard, Palette } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, User, Facebook, CreditCard, Palette, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 
 const STEPS = [
   { key: "profile", label: "Profile", icon: User },
@@ -25,6 +26,7 @@ export default function PortalOnboarding() {
   const { data: onboarding, refetch } = useActiveOnboarding(activeClientId);
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   // form state
   const [businessName, setBusinessName] = useState("");
@@ -92,6 +94,43 @@ export default function PortalOnboarding() {
           <h1 className="text-2xl font-semibold text-[#0F172A]">Welcome{client ? ` to ${client.name}` : ""}</h1>
           <p className="text-sm text-muted-foreground">Complete these steps to finish setup.</p>
         </div>
+
+        {(() => {
+          const o: any = onboarding ?? {};
+          const mediaComplete = !!o.consent_done && !!o.info_done && !!o.images_done && !!o.voice_done && !!o.files_done && !!o.submitted_at;
+          if (mediaComplete) return null;
+          const mediaStarted = !!o.consent_done || !!o.info_done || !!o.images_done || !!o.voice_done || !!o.files_done;
+          return (
+            <Card className="p-5 mb-6 border-[hsl(var(--primary))]/30 bg-[hsl(var(--primary))]/5">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-[hsl(var(--primary))]/15 p-2 text-[hsl(var(--primary))]">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-base font-semibold text-foreground">Create your AI ad assets</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    A short wizard: business info, at least 5 photos, and a 2–3 min voice recording.
+                    We use these to produce your ads.
+                  </p>
+                  <Button className="mt-3" onClick={() => setWizardOpen(true)} size="sm">
+                    {mediaStarted ? "Resume asset capture" : "Start asset capture"}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          );
+        })()}
+
+        {activeClientId && client?.workspace_id && (
+          <OnboardingWizard
+            open={wizardOpen}
+            onOpenChange={setWizardOpen}
+            clientId={activeClientId}
+            workspaceId={client.workspace_id}
+            brandLabel={client?.brand ?? client?.name}
+            onSubmitted={() => refetch()}
+          />
+        )}
 
         {/* Stepper */}
         <div className="flex items-center justify-between mb-6">
