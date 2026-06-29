@@ -127,12 +127,33 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(30),
-    admin.from("clients").select("id,name,status").eq("workspace_id", workspaceId),
+    admin.from("clients").select("id,name,brand,status,website,bio").eq("workspace_id", workspaceId),
   ]);
 
-  const clients = (clientsRes.data ?? []) as { id: number; name: string; status: string }[];
-  const nameOf = (id: number | null | undefined) =>
-    id == null ? null : clients.find((c) => Number(c.id) === Number(id))?.name ?? `Client #${id}`;
+  const clients = (clientsRes.data ?? []) as { id: number; name: string; brand: string | null; status: string; website: string | null; bio: string | null }[];
+  // Build a lookup so we can also resolve IDs that may appear in insights/churn
+  // even if they aren't in the workspace filter (defensive — should be rare).
+  const referencedIds = new Set<number>();
+  for (const arr of [insightsRes.data, churnRes.data, pendingRes.data, tasksRes.data] as any[]) {
+    for (const row of (arr ?? [])) if (row?.client_id != null) referencedIds.add(Number(row.client_id));
+  }
+  const missingIds = [...referencedIds].filter((id) => !clients.find((c) => Number(c.id) === id));
+  if (missingIds.length) {
+    const { data: extra } = await admin
+      .from("clients")
+      .select("id,name,brand,status,website,bio")
+      .in("id", missingIds);
+    for (const e of (extra ?? []) as any[]) {
+      if (!clients.find((c) => Number(c.id) === Number(e.id))) clients.push(e);
+    }
+  }
+  const displayName = (c: { name: string; brand: string | null } | undefined) =>
+    c ? (c.brand && c.brand.trim().length > 0 ? c.brand : c.name) : null;
+  const nameOf = (id: number | null | undefined) => {
+    if (id == null) return null;
+    const c = clients.find((x) => Number(x.id) === Number(id));
+    return displayName(c) ?? null; // null instead of "Client #N" — sanitiser strips placeholders
+  };
 
   const tasks = (tasksRes.data ?? []) as any[];
   const overdue: any[] = [];
