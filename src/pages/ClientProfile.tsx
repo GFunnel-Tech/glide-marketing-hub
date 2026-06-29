@@ -1055,6 +1055,9 @@ function ClientProfileInner() {
               variant="panel"
             />
             <div className="mt-4">
+              <GhlSubaccountTokenInput locationId={client.ghlLocationId} />
+            </div>
+            <div className="mt-4">
               <ClientSyncStatus clientId={client.id} />
             </div>
           </div>
