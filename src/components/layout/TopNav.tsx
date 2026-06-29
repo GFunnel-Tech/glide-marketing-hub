@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useUnreadMessageCount } from "@/hooks/useMessages";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown, Radar, CheckSquare
+  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown, Radar, CheckSquare, Calendar as CalendarIcon
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -29,6 +29,7 @@ const isGroup = (e: NavEntry): e is NavGroup => "children" in e;
 const navItems: NavEntry[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: CheckSquare, label: "Tasks", path: "/tasks" },
+  { icon: CalendarIcon, label: "Calendar", path: "/calendar" },
   { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
   {
     icon: Megaphone, label: "Marketing", children: [
