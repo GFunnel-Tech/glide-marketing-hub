@@ -123,6 +123,12 @@ Deno.serve(async (req) => {
       while (idx < clients.length) {
         const c = clients[idx++];
         const locationId = c.ghl_location_id as string;
+        const apiKey = resolveGhlKey(locKeyMap, locationId, workspaceKey);
+        if (!apiKey) {
+          errors.push({ client_id: c.id, location_id: locationId, step: "no_key", status: 0, body: "No GHL key available for this location" });
+          results.push({ client_id: c.id, name: c.name, calendars: 0, events: 0 });
+          continue;
+        }
         try {
           // 1) List calendars for this location.
           const calRes = await ghlGet(apiKey, `/calendars/?locationId=${encodeURIComponent(locationId)}`);
