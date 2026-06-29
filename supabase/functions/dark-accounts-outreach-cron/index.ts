@@ -147,8 +147,17 @@ async function processWorkspace(admin: ReturnType<typeof createClient>, workspac
   for (const p of (profiles ?? []) as any[]) {
     if (p?.position) positions.set(p.id, String(p.position));
   }
-  const assignee = pickAssignee("client_outreach", (members ?? []) as any, positions);
+  const { data: routingRows } = await admin
+    .from("task_routing_rules")
+    .select("category, assigned_user_id")
+    .eq("workspace_id", workspaceId);
+  const overrides = new Map<string, string>();
+  for (const r of (routingRows ?? []) as any[]) {
+    if (r?.category && r?.assigned_user_id) overrides.set(r.category, r.assigned_user_id);
+  }
+  const assignee = pickAssignee("client_outreach", (members ?? []) as any, positions, overrides);
   if (!assignee) return { workspace_id: workspaceId, dark: dark.length, created: 0 };
+
 
   // 7) Build one outreach task per dark client.
   const endOfToday = new Date();
