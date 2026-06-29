@@ -169,7 +169,7 @@ async function processWorkspace(admin: ReturnType<typeof createClient>, workspac
       if (alreadyOpen.has(dedupeKey)) continue;
 
       const category = KPI_CATEGORY[r.key] ?? "media_buying";
-      const assignee = pickAssignee(category, (members ?? []) as any, positions);
+      const assignee = pickAssignee(category, (members ?? []) as any, positions, overrides);
       if (!assignee) continue;
 
       const label = KPI_LABEL[r.key] ?? r.key;
