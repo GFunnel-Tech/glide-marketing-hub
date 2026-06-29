@@ -36,7 +36,7 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
     queryFn: async (): Promise<Identity> => {
       const { data, error } = await (supabase as any)
         .from("clients")
-        .select("ai_context, website, bio")
+        .select("ai_context, website, bio, country, vertical")
         .eq("id", clientId)
         .maybeSingle();
       if (error) throw error;
@@ -44,11 +44,13 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
         ai_context: (data?.ai_context ?? "") as string,
         website: (data?.website ?? "") as string,
         bio: (data?.bio ?? "") as string,
+        country: (data?.country ?? "") as string,
+        vertical: (data?.vertical ?? "") as string,
       };
     },
   });
 
-  const [form, setForm] = useState<Identity>({ ai_context: "", website: "", bio: "" });
+  const [form, setForm] = useState<Identity>({ ai_context: "", website: "", bio: "", country: "", vertical: "" });
   useEffect(() => {
     if (data) setForm(data);
   }, [data]);
@@ -61,6 +63,8 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
           ai_context: form.ai_context,
           website: form.website.trim() || null,
           bio: form.bio.trim() || null,
+          country: form.country || null,
+          vertical: form.vertical || null,
         })
         .eq("id", clientId);
       if (error) throw error;
@@ -76,7 +80,9 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
     !!data &&
     (form.ai_context !== data.ai_context ||
       form.website !== data.website ||
-      form.bio !== data.bio);
+      form.bio !== data.bio ||
+      form.country !== data.country ||
+      form.vertical !== data.vertical);
 
   return (
     <div className="rounded-lg border border-border bg-card p-5 space-y-4">
