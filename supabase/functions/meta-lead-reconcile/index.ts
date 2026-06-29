@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
 
   let q = admin
     .from("meta_leads")
-    .select("id, workspace_id, client_id, full_name, email, phone, campaign_name, campaign_id, ad_name, ad_id, adset_name, adset_id, form_name, form_id, created_time, sync_status, sync_attempts")
+    .select("id, workspace_id, client_id, full_name, email, phone, campaign_name, campaign_id, ad_name, ad_id, adset_name, adset_id, form_name, form_id, field_data, created_time, sync_status, sync_attempts")
     .in("sync_status", ["pending", "missing"])
     .lte("next_check_at", new Date().toISOString())
     .order("next_check_at", { ascending: true })
