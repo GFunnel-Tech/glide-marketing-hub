@@ -51,6 +51,7 @@ const navItems: NavEntry[] = [
       { icon: FileBarChart, label: "Reports", path: "/reports" },
       { icon: Radar, label: "Tracking", path: "/tracking", badge: "NEW" },
       { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
+      { icon: TrendingUp, label: "Trend Briefs", path: "/trend-briefs", badge: "NEW" },
     ]
   },
   { icon: Settings, label: "Settings", path: "/settings" },
