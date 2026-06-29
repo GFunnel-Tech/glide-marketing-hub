@@ -100,18 +100,20 @@ async function processWorkspace(admin: ReturnType<typeof createClient>, workspac
   }
 
   // 4) Existing open dark-outreach tasks, so we don't pile up duplicates.
+  // We tag every cron-generated task with the title prefix "Reach out to "
+  // and dedupe per client over the last 7 days.
   const { data: openTasks } = await admin
     .from("client_notes")
-    .select("client_id, signals")
+    .select("client_id, title")
     .eq("workspace_id", workspaceId)
     .eq("kind", "task")
     .eq("done", false)
     .in("client_id", clientIds)
-    .gte("created_at", sinceIso);
+    .gte("created_at", sinceIso)
+    .like("title", "Reach out to %");
   const alreadyOpen = new Set<number>();
   for (const t of (openTasks ?? []) as any[]) {
-    const key = t?.signals?.dark_outreach_key;
-    if (key && t.client_id != null) alreadyOpen.add(t.client_id);
+    if (t.client_id != null) alreadyOpen.add(t.client_id);
   }
 
   // 5) Determine dark clients: zero spend AND zero leads in the last 7 days,
