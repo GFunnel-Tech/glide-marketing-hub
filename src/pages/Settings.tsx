@@ -22,6 +22,7 @@ import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { TeamMembersPanel } from "@/components/settings/TeamMembersPanel";
 import { EmbedTabsPanel } from "@/components/settings/EmbedTabsPanel";
 import { TaskRoutingPanel } from "@/components/settings/TaskRoutingPanel";
+import { AuditExportPanel } from "@/components/settings/AuditExportPanel";
 
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -102,6 +103,7 @@ export default function Settings() {
 
         <TabsContent value="agency" className="space-y-6">
           <AgencyProfilePanel />
+          <AuditExportPanel />
         </TabsContent>
 
         <TabsContent value="integrations" className="space-y-4">
