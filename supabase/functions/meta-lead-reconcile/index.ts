@@ -60,20 +60,21 @@ Deno.serve(async (req) => {
       .eq("workspace_id", wsId)
       .maybeSingle();
 
-    if (!cfg?.ghl_api_key) {
-      // No GHL set up — push out next_check_at so we don't hot-loop
-      await admin.from("meta_leads")
-        .update({ next_check_at: new Date(Date.now() + 60 * 60_000).toISOString(), last_sync_error: "No GHL API key configured" })
-        .in("id", wsLeads.map(l => l.id));
-      continue;
-    }
-
     const clientIds = Array.from(new Set(wsLeads.map(l => l.client_id).filter(Boolean)));
     const { data: clientRows } = await admin
       .from("clients")
       .select("id, name, brand, ghl_location_id, clickup_list_id")
       .in("id", clientIds.length ? clientIds : [-1]);
     const clientMap = new Map((clientRows ?? []).map(c => [c.id, c]));
+    const locKeyMap = await fetchLocationKeyMap(admin, wsId);
+
+    if (!cfg?.ghl_api_key && locKeyMap.size === 0) {
+      // No GHL set up — push out next_check_at so we don't hot-loop
+      await admin.from("meta_leads")
+        .update({ next_check_at: new Date(Date.now() + 60 * 60_000).toISOString(), last_sync_error: "No GHL API key configured" })
+        .in("id", wsLeads.map(l => l.id));
+      continue;
+    }
 
     const { data: members } = await admin
       .from("workspace_members").select("user_id").eq("workspace_id", wsId);
