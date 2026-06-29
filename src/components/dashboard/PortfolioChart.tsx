@@ -47,18 +47,6 @@ const METRICS: { key: MetricKey; label: string; format: (v: number) => string; i
   { key: "clicks", label: "Clicks", format: (v) => v.toLocaleString() },
 ];
 
-const COUNTRIES = [
-  { value: "all", label: "All regions" },
-  { value: "US", label: "United States" },
-  { value: "Canada", label: "Canada" },
-];
-const VERTICALS = [
-  { value: "all", label: "All verticals" },
-  { value: "home_buyer", label: "Home Buyer" },
-  { value: "investor", label: "Investor" },
-  { value: "refinance", label: "Refinance" },
-  { value: "reverse_mortgage", label: "Reverse Mortgage" },
-];
 
 export function PortfolioChart() {
   const { currentWorkspace } = useWorkspace();
