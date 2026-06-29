@@ -4,6 +4,7 @@
 //
 // Body: { workspaceId: string, daysBack?: number, daysForward?: number, clientId?: number }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { fetchLocationKeyMap, resolveGhlKey } from "../_shared/ghlClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
