@@ -20,6 +20,15 @@ export interface TrendPoint {
   true: number;
 }
 
+export interface PortfolioTrendFilters {
+  /** "US" | "Canada" | "all" */
+  country?: string;
+  /** "home_buyer" | "investor" | "refinance" | "reverse_mortgage" | "all" */
+  vertical?: string;
+}
+
+const HIDDEN_STATUSES = ["PAUSED", "CANCELLED", "PENDING_CANCELLATION"];
+
 const fmtDate = (d: Date) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -29,15 +38,18 @@ const fmtDate = (d: Date) => {
 
 /**
  * Daily portfolio trend over the selected date range.
- * Provides spend, leads (reported + deduped true), CPL, true CPL, CPM, CTR, frequency.
+ * Restricted to ACTIVE clients only (paused / cancelled / archived excluded)
+ * and optionally narrowed by country + vertical.
  */
-export function usePortfolioTrend() {
+export function usePortfolioTrend(filters: PortfolioTrendFilters = {}) {
   const { currentWorkspace } = useWorkspace();
   const wsId = currentWorkspace?.id ?? null;
   const { from, to, queryKey: rangeKey } = useDateRange();
+  const country = filters.country && filters.country !== "all" ? filters.country : null;
+  const vertical = filters.vertical && filters.vertical !== "all" ? filters.vertical : null;
 
   return useQuery({
-    queryKey: ["portfolio-trend", wsId, ...rangeKey],
+    queryKey: ["portfolio-trend", wsId, country, vertical, ...rangeKey],
     enabled: !!wsId,
     queryFn: async (): Promise<TrendPoint[]> => {
       const fromStr = fmtDate(from);
@@ -45,20 +57,52 @@ export function usePortfolioTrend() {
       const fromISO = new Date(from).toISOString();
       const toISO = new Date(to).toISOString();
 
-      const { data: insights, error: iErr } = await (supabase as any)
-        .from("meta_insights_daily")
-        .select("date, spend, leads, impressions, clicks, reach, frequency")
+      // 1. Resolve the set of clients the trend should reflect.
+      let cq = (supabase as any)
+        .from("clients")
+        .select("id, country, vertical, archived_at, status")
         .eq("workspace_id", wsId)
-        .gte("date", fromStr)
-        .lte("date", toStr);
-      if (iErr) throw iErr;
+        .is("archived_at", null)
+        .not("status", "in", `(${HIDDEN_STATUSES.join(",")})`);
+      if (country) cq = cq.eq("country", country);
+      if (vertical) cq = cq.eq("vertical", vertical);
+      const { data: clientRows, error: cErr } = await cq;
+      if (cErr) throw cErr;
+      const clientIds = (clientRows ?? []).map((c: any) => c.id);
+      if (clientIds.length === 0) return buildEmptySeries(from, to);
 
-      const { data: leads, error: lErr } = await (supabase as any)
+      // 2. Resolve ad accounts owned by those clients (insights have no client_id).
+      const { data: acctRows, error: aErr } = await (supabase as any)
+        .from("meta_ad_accounts")
+        .select("id, client_id")
+        .eq("workspace_id", wsId)
+        .in("client_id", clientIds);
+      if (aErr) throw aErr;
+      const acctIds = (acctRows ?? []).map((a: any) => a.id);
+
+      const insightsPromise = acctIds.length
+        ? (supabase as any)
+            .from("meta_insights_daily")
+            .select("date, spend, leads, impressions, clicks, reach, frequency")
+            .eq("workspace_id", wsId)
+            .in("ad_account_id", acctIds)
+            .gte("date", fromStr)
+            .lte("date", toStr)
+        : Promise.resolve({ data: [], error: null });
+
+      const leadsPromise = (supabase as any)
         .from("meta_leads")
         .select("created_time, email, phone, lead_id")
         .eq("workspace_id", wsId)
+        .in("client_id", clientIds)
         .gte("created_time", fromISO)
         .lte("created_time", toISO);
+
+      const [{ data: insights, error: iErr }, { data: leads, error: lErr }] = await Promise.all([
+        insightsPromise,
+        leadsPromise,
+      ]);
+      if (iErr) throw iErr;
       if (lErr) throw lErr;
 
       type Bucket = {
@@ -97,39 +141,47 @@ export function usePortfolioTrend() {
         b.keys.add(key);
       }
 
-      const out: TrendPoint[] = [];
-      const cursor = new Date(from);
-      cursor.setHours(0, 0, 0, 0);
-      const end = new Date(to);
-      end.setHours(0, 0, 0, 0);
-      while (cursor <= end) {
-        const key = fmtDate(cursor);
-        const b = byDay.get(key) ?? { spend: 0, reported: 0, impressions: 0, clicks: 0, reachSum: 0, freqWeighted: 0, rows: 0, keys: new Set<string>() };
-        const trueLeads = b.keys.size;
-        const reported = b.reported;
-        const cpl = reported > 0 ? b.spend / reported : 0;
-        const trueCpl = trueLeads > 0 ? b.spend / trueLeads : cpl;
-        const cpm = b.impressions > 0 ? (b.spend / b.impressions) * 1000 : 0;
-        const ctr = b.impressions > 0 ? (b.clicks / b.impressions) * 100 : 0;
-        const frequency = b.rows > 0 ? b.freqWeighted / b.rows : 0;
-        out.push({
-          date: key.slice(5),
-          spend: Number(b.spend.toFixed(2)),
-          impressions: b.impressions,
-          clicks: b.clicks,
-          reportedLeads: reported,
-          trueLeads,
-          cpl: Number(cpl.toFixed(2)),
-          trueCpl: Number(trueCpl.toFixed(2)),
-          cpm: Number(cpm.toFixed(2)),
-          ctr: Number(ctr.toFixed(2)),
-          frequency: Number(frequency.toFixed(2)),
-          reported: Number(cpl.toFixed(2)),
-          true: Number(trueCpl.toFixed(2)),
-        });
-        cursor.setDate(cursor.getDate() + 1);
-      }
-      return out;
+      return materialize(from, to, byDay);
     },
   });
+}
+
+function buildEmptySeries(from: Date, to: Date): TrendPoint[] {
+  return materialize(from, to, new Map());
+}
+
+function materialize(from: Date, to: Date, byDay: Map<string, any>): TrendPoint[] {
+  const out: TrendPoint[] = [];
+  const cursor = new Date(from);
+  cursor.setHours(0, 0, 0, 0);
+  const end = new Date(to);
+  end.setHours(0, 0, 0, 0);
+  while (cursor <= end) {
+    const key = fmtDate(cursor);
+    const b = byDay.get(key) ?? { spend: 0, reported: 0, impressions: 0, clicks: 0, reachSum: 0, freqWeighted: 0, rows: 0, keys: new Set<string>() };
+    const trueLeads = b.keys.size;
+    const reported = b.reported;
+    const cpl = reported > 0 ? b.spend / reported : 0;
+    const trueCpl = trueLeads > 0 ? b.spend / trueLeads : cpl;
+    const cpm = b.impressions > 0 ? (b.spend / b.impressions) * 1000 : 0;
+    const ctr = b.impressions > 0 ? (b.clicks / b.impressions) * 100 : 0;
+    const frequency = b.rows > 0 ? b.freqWeighted / b.rows : 0;
+    out.push({
+      date: key.slice(5),
+      spend: Number(b.spend.toFixed(2)),
+      impressions: b.impressions,
+      clicks: b.clicks,
+      reportedLeads: reported,
+      trueLeads,
+      cpl: Number(cpl.toFixed(2)),
+      trueCpl: Number(trueCpl.toFixed(2)),
+      cpm: Number(cpm.toFixed(2)),
+      ctr: Number(ctr.toFixed(2)),
+      frequency: Number(frequency.toFixed(2)),
+      reported: Number(cpl.toFixed(2)),
+      true: Number(trueCpl.toFixed(2)),
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
 }

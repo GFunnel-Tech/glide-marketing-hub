@@ -4,14 +4,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, FileText, Globe, Building2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Save, FileText, Globe, Building2, MapPin, Tag } from "lucide-react";
 import { toast } from "sonner";
 
 type Identity = {
   ai_context: string;
   website: string;
   bio: string;
+  country: string;
+  vertical: string;
 };
+
+const COUNTRY_OPTS = [
+  { value: "", label: "—" },
+  { value: "US", label: "United States" },
+  { value: "Canada", label: "Canada" },
+];
+const VERTICAL_OPTS = [
+  { value: "", label: "—" },
+  { value: "home_buyer", label: "Home Buyer" },
+  { value: "investor", label: "Investor" },
+  { value: "refinance", label: "Refinance" },
+  { value: "reverse_mortgage", label: "Reverse Mortgage" },
+];
 
 export function ClientContextPanel({ clientId }: { clientId: number }) {
   const qc = useQueryClient();
@@ -20,7 +36,7 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
     queryFn: async (): Promise<Identity> => {
       const { data, error } = await (supabase as any)
         .from("clients")
-        .select("ai_context, website, bio")
+        .select("ai_context, website, bio, country, vertical")
         .eq("id", clientId)
         .maybeSingle();
       if (error) throw error;
@@ -28,11 +44,13 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
         ai_context: (data?.ai_context ?? "") as string,
         website: (data?.website ?? "") as string,
         bio: (data?.bio ?? "") as string,
+        country: (data?.country ?? "") as string,
+        vertical: (data?.vertical ?? "") as string,
       };
     },
   });
 
-  const [form, setForm] = useState<Identity>({ ai_context: "", website: "", bio: "" });
+  const [form, setForm] = useState<Identity>({ ai_context: "", website: "", bio: "", country: "", vertical: "" });
   useEffect(() => {
     if (data) setForm(data);
   }, [data]);
@@ -45,6 +63,8 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
           ai_context: form.ai_context,
           website: form.website.trim() || null,
           bio: form.bio.trim() || null,
+          country: form.country || null,
+          vertical: form.vertical || null,
         })
         .eq("id", clientId);
       if (error) throw error;
@@ -60,7 +80,9 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
     !!data &&
     (form.ai_context !== data.ai_context ||
       form.website !== data.website ||
-      form.bio !== data.bio);
+      form.bio !== data.bio ||
+      form.country !== data.country ||
+      form.vertical !== data.vertical);
 
   return (
     <div className="rounded-lg border border-border bg-card p-5 space-y-4">
@@ -101,6 +123,41 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
                 placeholder="What does this business do?"
                 className="h-8 text-xs"
               />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="text-xs space-y-1">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> Country
+              </span>
+              <Select
+                value={form.country || "__none"}
+                onValueChange={(v) => setForm((f) => ({ ...f, country: v === "__none" ? "" : v }))}
+              >
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {COUNTRY_OPTS.map((c) => (
+                    <SelectItem key={c.value || "__none"} value={c.value || "__none"} className="text-xs">{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="text-xs space-y-1">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Tag className="h-3 w-3" /> Vertical
+              </span>
+              <Select
+                value={form.vertical || "__none"}
+                onValueChange={(v) => setForm((f) => ({ ...f, vertical: v === "__none" ? "" : v }))}
+              >
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {VERTICAL_OPTS.map((v) => (
+                    <SelectItem key={v.value || "__none"} value={v.value || "__none"} className="text-xs">{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
           </div>
 
