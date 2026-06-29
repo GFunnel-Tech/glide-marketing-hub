@@ -26,6 +26,8 @@ import Leads from "./pages/Leads";
 import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
 import Onboarding from "./pages/Onboarding";
+import OnboardingWizardPage from "./pages/OnboardingWizardPage";
+import OnboardingAssetsPage from "./pages/OnboardingAssetsPage";
 import AiAssistant from "./pages/AiAssistant";
 import SuperAdmin from "./pages/SuperAdmin";
 import Rebilling from "./pages/Rebilling";
@@ -206,6 +208,8 @@ const App = () => (
                   <Route path="settings" element={<Settings />} />
                   <Route path="settings/integrations" element={<Navigate to="/settings?tab=integrations" replace />} />
                   <Route path="onboarding" element={<Onboarding />} />
+                  <Route path="onboarding/wizard" element={<OnboardingWizardPage />} />
+                  <Route path="onboarding/assets" element={<OnboardingAssetsPage />} />
                   <Route path="rebilling" element={<Rebilling />} />
                   <Route path="ai" element={<AiAssistant />} />
                   <Route path="notifications" element={<Notifications />} />

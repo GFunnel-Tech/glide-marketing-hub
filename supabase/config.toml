@@ -19,6 +19,16 @@ verify_jwt = true
 [functions.portal-chat]
 verify_jwt = true
 
+# Onboarding Drive sync — JWT verified at the gateway, then authorizes the
+# caller as either the client's portal user or a workspace writer.
+[functions.onboarding-drive-sync]
+verify_jwt = true
+
+# Onboarding asset staging — flips processing_status flags and returns signed
+# URLs for the downstream ElevenLabs / Higgsfield pipeline. Workspace writers only.
+[functions.onboarding-process-stage]
+verify_jwt = true
+
 # Public tracking collector + snippet
 [functions.track]
 verify_jwt = false
