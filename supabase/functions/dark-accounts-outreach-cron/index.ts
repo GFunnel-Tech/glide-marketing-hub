@@ -39,15 +39,18 @@ function pickAssignee(
   category: string,
   members: { user_id: string; role: string }[],
   positions: Map<string, string>,
+  overrides: Map<string, string>,
 ): string | null {
+  const override = overrides.get(category);
+  if (override && members.some((m) => m.user_id === override)) return override;
   const kws = POSITION_KEYWORDS[category] ?? [];
   for (const kw of kws) {
     const hit = members.find((m) => (positions.get(m.user_id) ?? "").toLowerCase().includes(kw));
     if (hit) return hit.user_id;
   }
-  // Fall back to the workspace owner so the task is never orphaned.
   return members.find((m) => m.role === "owner")?.user_id ?? members[0]?.user_id ?? null;
 }
+
 
 // Active statuses we consider for outreach. We deliberately skip clients that
 // are paused, cancelled, blocked, or still in onboarding — they aren't "dark",
