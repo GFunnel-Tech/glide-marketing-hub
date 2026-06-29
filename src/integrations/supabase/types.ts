@@ -2321,6 +2321,7 @@ export type Database = {
           created_at: string
           id: string
           last_synced_at: string
+          location_api_key: string | null
           location_id: string
           name: string | null
           raw: Json | null
@@ -2334,6 +2335,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_synced_at?: string
+          location_api_key?: string | null
           location_id: string
           name?: string | null
           raw?: Json | null
@@ -2347,6 +2349,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_synced_at?: string
+          location_api_key?: string | null
           location_id?: string
           name?: string | null
           raw?: Json | null

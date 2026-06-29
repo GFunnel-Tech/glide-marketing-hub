@@ -9,6 +9,43 @@ export function isPit(apiKey: string): boolean {
   return !!apiKey && apiKey.trim().startsWith("pit-");
 }
 
+// Build a map of locationId -> sub-account PIT for a workspace.
+// Lets us prefer a per-client (location-level) Private Integration Token
+// over the workspace-wide agency key.
+export async function fetchLocationKeyMap(
+  admin: any,
+  workspaceId: string,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  try {
+    const { data } = await admin
+      .from("ghl_locations")
+      .select("location_id, location_api_key")
+      .eq("workspace_id", workspaceId)
+      .not("location_api_key", "is", null);
+    for (const row of data ?? []) {
+      if (row?.location_id && row?.location_api_key) {
+        map.set(row.location_id, row.location_api_key);
+      }
+    }
+  } catch {/* ignore — caller falls back to workspace key */}
+  return map;
+}
+
+// Resolve the effective GHL key for a given client/location: prefer the
+// location-level PIT when present, otherwise the workspace agency key.
+export function resolveGhlKey(
+  locKeyMap: Map<string, string> | null | undefined,
+  locationId: string | null | undefined,
+  workspaceKey: string | null | undefined,
+): string | null {
+  if (locationId && locKeyMap) {
+    const k = locKeyMap.get(locationId);
+    if (k) return k;
+  }
+  return workspaceKey || null;
+}
+
 function v2Headers(apiKey: string, locationId?: string | null) {
   const h: Record<string, string> = {
     Authorization: `Bearer ${apiKey}`,

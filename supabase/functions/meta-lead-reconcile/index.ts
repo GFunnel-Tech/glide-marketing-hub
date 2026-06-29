@@ -6,7 +6,7 @@
 // - After 3 failed push attempts: marks 'failed', creates a ClickUp task, notifies
 // Invoked every minute via pg_cron (configured separately) or on-demand POST.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { searchGhlContact, upsertGhlContact } from "../_shared/ghlClient.ts";
+import { searchGhlContact, upsertGhlContact, fetchLocationKeyMap, resolveGhlKey } from "../_shared/ghlClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,20 +60,21 @@ Deno.serve(async (req) => {
       .eq("workspace_id", wsId)
       .maybeSingle();
 
-    if (!cfg?.ghl_api_key) {
-      // No GHL set up — push out next_check_at so we don't hot-loop
-      await admin.from("meta_leads")
-        .update({ next_check_at: new Date(Date.now() + 60 * 60_000).toISOString(), last_sync_error: "No GHL API key configured" })
-        .in("id", wsLeads.map(l => l.id));
-      continue;
-    }
-
     const clientIds = Array.from(new Set(wsLeads.map(l => l.client_id).filter(Boolean)));
     const { data: clientRows } = await admin
       .from("clients")
       .select("id, name, brand, ghl_location_id, clickup_list_id")
       .in("id", clientIds.length ? clientIds : [-1]);
     const clientMap = new Map((clientRows ?? []).map(c => [c.id, c]));
+    const locKeyMap = await fetchLocationKeyMap(admin, wsId);
+
+    if (!cfg?.ghl_api_key && locKeyMap.size === 0) {
+      // No GHL set up — push out next_check_at so we don't hot-loop
+      await admin.from("meta_leads")
+        .update({ next_check_at: new Date(Date.now() + 60 * 60_000).toISOString(), last_sync_error: "No GHL API key configured" })
+        .in("id", wsLeads.map(l => l.id));
+      continue;
+    }
 
     const { data: members } = await admin
       .from("workspace_members").select("user_id").eq("workspace_id", wsId);
@@ -82,10 +83,12 @@ Deno.serve(async (req) => {
     for (const lead of wsLeads) {
       stats.processed++;
       const client = lead.client_id ? clientMap.get(lead.client_id) : null;
+      const ghlKey = resolveGhlKey(locKeyMap, client?.ghl_location_id, cfg?.ghl_api_key);
+      if (!ghlKey) { stats.processed--; continue; }
 
       try {
         // 1. Look it up in GHL
-        const found = await searchGhlContact(cfg.ghl_api_key, client?.ghl_location_id, lead.email, lead.phone);
+        const found = await searchGhlContact(ghlKey, client?.ghl_location_id, lead.email, lead.phone);
 
         if (found) {
           await admin.from("meta_leads").update({
@@ -115,7 +118,7 @@ Deno.serve(async (req) => {
         }
 
         const nextAttempt = (lead.sync_attempts ?? 0) + 1;
-        const pushResult = await upsertGhlContact(cfg.ghl_api_key, client?.ghl_location_id, lead);
+        const pushResult = await upsertGhlContact(ghlKey, client?.ghl_location_id, lead);
 
         if (pushResult.ok) {
           await admin.from("meta_leads").update({

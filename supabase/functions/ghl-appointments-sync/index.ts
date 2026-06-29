@@ -4,6 +4,7 @@
 //
 // Body: { workspaceId: string, daysBack?: number, daysForward?: number, clientId?: number }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { fetchLocationKeyMap, resolveGhlKey } from "../_shared/ghlClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,8 +92,9 @@ Deno.serve(async (req) => {
       .select("ghl_api_key")
       .eq("workspace_id", workspaceId)
       .maybeSingle();
-    if (!cfg?.ghl_api_key) return json({ error: "GHL API key not configured for this workspace" }, 400);
-    const apiKey = cfg.ghl_api_key as string;
+    const locKeyMap = await fetchLocationKeyMap(admin, workspaceId);
+    const workspaceKey = (cfg?.ghl_api_key as string | null) ?? null;
+    if (!workspaceKey && locKeyMap.size === 0) return json({ error: "GHL API key not configured for this workspace" }, 400);
 
     let clientsQ = admin
       .from("clients")
@@ -121,6 +123,12 @@ Deno.serve(async (req) => {
       while (idx < clients.length) {
         const c = clients[idx++];
         const locationId = c.ghl_location_id as string;
+        const apiKey = resolveGhlKey(locKeyMap, locationId, workspaceKey);
+        if (!apiKey) {
+          errors.push({ client_id: c.id, location_id: locationId, step: "no_key", status: 0, body: "No GHL key available for this location" });
+          results.push({ client_id: c.id, name: c.name, calendars: 0, events: 0 });
+          continue;
+        }
         try {
           // 1) List calendars for this location.
           const calRes = await ghlGet(apiKey, `/calendars/?locationId=${encodeURIComponent(locationId)}`);
