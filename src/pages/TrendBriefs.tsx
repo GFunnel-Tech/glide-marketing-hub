@@ -57,7 +57,8 @@ function severityClass(s: string) {
 }
 
 export default function TrendBriefs() {
-  const { workspaceId } = useWorkspace();
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id;
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Brief | null>(null);
   const [tab, setTab] = useState("draft");
