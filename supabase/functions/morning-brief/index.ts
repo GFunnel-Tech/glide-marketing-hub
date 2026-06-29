@@ -63,6 +63,7 @@ Rules:
 - 0-6 highlights, ordered most-to-least urgent. Skip if nothing notable.
 - 0-8 suggested_tasks, each genuinely actionable today. Prefer the highest-leverage work (critical insights, high churn risk, pending approvals, overdue tasks).
 - Only use client_id values that appear in the snapshot's clients list; otherwise use null.
+- CRITICAL: Whenever you mention a client in headline, summary, highlights, or task titles, ALWAYS use the client's actual name or brand (as provided in the snapshot). NEVER write phrases like "Client #105", "Client 135", "client id 42", or any numeric placeholder. If you don't know a client's name, omit the reference entirely.
 - Set category by the type of work required so the task can be auto-routed to the right teammate:
   * "creative" — ad copy, creative refresh, design, video, thumbnails, hooks
   * "media_buying" — budget changes, bid/targeting/audience tweaks, KPI audits, pausing/launching ads
@@ -126,12 +127,33 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(30),
-    admin.from("clients").select("id,name,status").eq("workspace_id", workspaceId),
+    admin.from("clients").select("id,name,brand,status,website,bio").eq("workspace_id", workspaceId),
   ]);
 
-  const clients = (clientsRes.data ?? []) as { id: number; name: string; status: string }[];
-  const nameOf = (id: number | null | undefined) =>
-    id == null ? null : clients.find((c) => Number(c.id) === Number(id))?.name ?? `Client #${id}`;
+  const clients = (clientsRes.data ?? []) as { id: number; name: string; brand: string | null; status: string; website: string | null; bio: string | null }[];
+  // Build a lookup so we can also resolve IDs that may appear in insights/churn
+  // even if they aren't in the workspace filter (defensive — should be rare).
+  const referencedIds = new Set<number>();
+  for (const arr of [insightsRes.data, churnRes.data, pendingRes.data, tasksRes.data] as any[]) {
+    for (const row of (arr ?? [])) if (row?.client_id != null) referencedIds.add(Number(row.client_id));
+  }
+  const missingIds = [...referencedIds].filter((id) => !clients.find((c) => Number(c.id) === id));
+  if (missingIds.length) {
+    const { data: extra } = await admin
+      .from("clients")
+      .select("id,name,brand,status,website,bio")
+      .in("id", missingIds);
+    for (const e of (extra ?? []) as any[]) {
+      if (!clients.find((c) => Number(c.id) === Number(e.id))) clients.push(e);
+    }
+  }
+  const displayName = (c: { name: string; brand: string | null } | undefined) =>
+    c ? (c.brand && c.brand.trim().length > 0 ? c.brand : c.name) : null;
+  const nameOf = (id: number | null | undefined) => {
+    if (id == null) return null;
+    const c = clients.find((x) => Number(x.id) === Number(id));
+    return displayName(c) ?? null; // null instead of "Client #N" — sanitiser strips placeholders
+  };
 
   const tasks = (tasksRes.data ?? []) as any[];
   const overdue: any[] = [];
@@ -184,7 +206,15 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
       overdue: overdue.slice(0, 15).map(summarizeTask),
       due_today: dueToday.slice(0, 15).map(summarizeTask),
     },
-    clients: clients.map((c) => ({ id: c.id, name: c.name, status: c.status })),
+    clients: clients.map((c) => ({
+      id: c.id,
+      name: displayName(c) ?? c.name,
+      legal_name: c.name,
+      brand: c.brand,
+      status: c.status,
+      website: c.website,
+      bio: c.bio,
+    })),
   };
 }
 
@@ -312,15 +342,31 @@ async function generateWithClaude(signals: any) {
 }
 
 function sanitize(parsed: any, signals: any) {
-  const validIds = new Set((signals.clients ?? []).map((c: any) => Number(c.id)));
+  const clientList = (signals.clients ?? []) as Array<{ id: number; name: string }>;
+  const validIds = new Set(clientList.map((c) => Number(c.id)));
+  const nameById = new Map<number, string>(clientList.map((c) => [Number(c.id), String(c.name)]));
   const sev = (s: any): Severity => (s === "critical" || s === "warn" ? s : "info");
   const pri = (p: any): Priority => (p === "high" || p === "low" ? p : "normal");
+
+  // Replace any "Client #105" / "client 135" / "client id: 42" placeholders the
+  // model may emit with the real client name. If we can't resolve, drop the token.
+  const scrub = (s: string): string => {
+    if (!s) return s;
+    return s.replace(/\bclient\s*(?:id[:\s]*|#)?\s*(\d{1,6})\b/gi, (_m, idStr) => {
+      const id = Number(idStr);
+      return nameById.get(id) ?? "a client";
+    });
+  };
 
   const highlights: Highlight[] = Array.isArray(parsed?.highlights)
     ? parsed.highlights
         .filter((h: any) => h && (h.label || h.detail))
         .slice(0, 6)
-        .map((h: any) => ({ label: String(h.label ?? "").slice(0, 160), detail: String(h.detail ?? "").slice(0, 400), severity: sev(h.severity) }))
+        .map((h: any) => ({
+          label: scrub(String(h.label ?? "")).slice(0, 160),
+          detail: scrub(String(h.detail ?? "")).slice(0, 400),
+          severity: sev(h.severity),
+        }))
     : [];
 
   const validCats: Set<TaskCategory> = new Set([
@@ -341,18 +387,18 @@ function sanitize(parsed: any, signals: any) {
         .map((t: any) => {
           const cid = t.client_id != null && validIds.has(Number(t.client_id)) ? Number(t.client_id) : null;
           return {
-            title: String(t.title).slice(0, 200),
+            title: scrub(String(t.title)).slice(0, 200),
             priority: pri(t.priority),
             client_id: cid,
-            reason: String(t.reason ?? "").slice(0, 400),
+            reason: scrub(String(t.reason ?? "")).slice(0, 400),
             category: cat(t.category),
           };
         })
     : [];
 
   return {
-    headline: String(parsed?.headline ?? "").slice(0, 200) || "Your morning brief",
-    summary: String(parsed?.summary ?? ""),
+    headline: scrub(String(parsed?.headline ?? "")).slice(0, 200) || "Your morning brief",
+    summary: scrub(String(parsed?.summary ?? "")),
     highlights,
     suggested_tasks,
   };

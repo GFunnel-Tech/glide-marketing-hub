@@ -2,73 +2,127 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, FileText } from "lucide-react";
+import { Loader2, Save, FileText, Globe, Building2 } from "lucide-react";
 import { toast } from "sonner";
+
+type Identity = {
+  ai_context: string;
+  website: string;
+  bio: string;
+};
 
 export function ClientContextPanel({ clientId }: { clientId: number }) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
-    queryKey: ["client_ai_context", clientId],
-    queryFn: async () => {
+    queryKey: ["client_identity", clientId],
+    queryFn: async (): Promise<Identity> => {
       const { data, error } = await (supabase as any)
         .from("clients")
-        .select("ai_context")
+        .select("ai_context, website, bio")
         .eq("id", clientId)
         .maybeSingle();
       if (error) throw error;
-      return (data?.ai_context ?? "") as string;
+      return {
+        ai_context: (data?.ai_context ?? "") as string,
+        website: (data?.website ?? "") as string,
+        bio: (data?.bio ?? "") as string,
+      };
     },
   });
 
-  const [text, setText] = useState("");
-  useEffect(() => { if (data != null) setText(data); }, [data]);
+  const [form, setForm] = useState<Identity>({ ai_context: "", website: "", bio: "" });
+  useEffect(() => {
+    if (data) setForm(data);
+  }, [data]);
 
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await (supabase as any)
         .from("clients")
-        .update({ ai_context: text })
+        .update({
+          ai_context: form.ai_context,
+          website: form.website.trim() || null,
+          bio: form.bio.trim() || null,
+        })
         .eq("id", clientId);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Context saved");
-      qc.invalidateQueries({ queryKey: ["client_ai_context", clientId] });
+      toast.success("Client identity saved");
+      qc.invalidateQueries({ queryKey: ["client_identity", clientId] });
     },
     onError: (e: any) => toast.error(e.message),
   });
 
+  const dirty =
+    !!data &&
+    (form.ai_context !== data.ai_context ||
+      form.website !== data.website ||
+      form.bio !== data.bio);
+
   return (
-    <div className="rounded-lg border border-border bg-card p-5 space-y-3">
+    <div className="rounded-lg border border-border bg-card p-5 space-y-4">
       <div>
         <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <FileText className="h-3.5 w-3.5" />
-          Client Context for AI
+          Client Identity & AI Context
         </h3>
         <p className="text-[11px] text-muted-foreground mt-1">
-          Free-text the AI reads on every scan. Include goals, constraints, target CAC, avg deal size, hours, etc.
+          The AI uses this on every scan and morning brief. Reference the client by their real
+          business name everywhere — never by ID.
         </p>
       </div>
+
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mx-auto" />
       ) : (
         <>
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value.slice(0, 4000))}
-            rows={6}
-            placeholder={`e.g.\n• Target CAC: $80\n• Min daily leads: 5\n• Only takes leads M–F\n• Avg deal size: $5k\n• Don't pause weekend campaigns`}
-            className="text-xs font-mono"
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="text-xs space-y-1">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Globe className="h-3 w-3" /> Website
+              </span>
+              <Input
+                value={form.website}
+                onChange={(e) => setForm((f) => ({ ...f, website: e.target.value.slice(0, 300) }))}
+                placeholder="https://acme.com"
+                className="h-8 text-xs"
+              />
+            </label>
+            <label className="text-xs space-y-1">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Building2 className="h-3 w-3" /> Short Bio
+              </span>
+              <Input
+                value={form.bio}
+                onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value.slice(0, 300) }))}
+                placeholder="What does this business do?"
+                className="h-8 text-xs"
+              />
+            </label>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[11px] text-muted-foreground">AI context (free-form)</span>
+            <Textarea
+              value={form.ai_context}
+              onChange={(e) => setForm((f) => ({ ...f, ai_context: e.target.value.slice(0, 4000) }))}
+              rows={6}
+              placeholder={`e.g.\n• Target CAC: $80\n• Min daily leads: 5\n• Only takes leads M–F\n• Avg deal size: $5k\n• Don't pause weekend campaigns`}
+              className="text-xs font-mono"
+            />
+          </div>
+
           <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={() => save.mutate()}
-              disabled={save.isPending || text === data}
-            >
-              {save.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-              Save context
+            <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending || !dirty}>
+              {save.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+              ) : (
+                <Save className="h-3.5 w-3.5 mr-1" />
+              )}
+              Save
             </Button>
           </div>
         </>

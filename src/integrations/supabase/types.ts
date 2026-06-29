@@ -1683,6 +1683,7 @@ export type Database = {
           ai_context: string | null
           archived_at: string | null
           autonomous_optimization: boolean
+          bio: string | null
           bm_account_name: string | null
           bm_id: string | null
           bm_type: Database["public"]["Enums"]["bm_type"]
@@ -1710,12 +1711,14 @@ export type Database = {
           true_cpl: number
           true_leads: number
           updated_at: string
+          website: string | null
           workspace_id: string | null
         }
         Insert: {
           ai_context?: string | null
           archived_at?: string | null
           autonomous_optimization?: boolean
+          bio?: string | null
           bm_account_name?: string | null
           bm_id?: string | null
           bm_type?: Database["public"]["Enums"]["bm_type"]
@@ -1743,12 +1746,14 @@ export type Database = {
           true_cpl?: number
           true_leads?: number
           updated_at?: string
+          website?: string | null
           workspace_id?: string | null
         }
         Update: {
           ai_context?: string | null
           archived_at?: string | null
           autonomous_optimization?: boolean
+          bio?: string | null
           bm_account_name?: string | null
           bm_id?: string | null
           bm_type?: Database["public"]["Enums"]["bm_type"]
@@ -1776,6 +1781,7 @@ export type Database = {
           true_cpl?: number
           true_leads?: number
           updated_at?: string
+          website?: string | null
           workspace_id?: string | null
         }
         Relationships: [
