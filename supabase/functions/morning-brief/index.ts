@@ -342,15 +342,31 @@ async function generateWithClaude(signals: any) {
 }
 
 function sanitize(parsed: any, signals: any) {
-  const validIds = new Set((signals.clients ?? []).map((c: any) => Number(c.id)));
+  const clientList = (signals.clients ?? []) as Array<{ id: number; name: string }>;
+  const validIds = new Set(clientList.map((c) => Number(c.id)));
+  const nameById = new Map<number, string>(clientList.map((c) => [Number(c.id), String(c.name)]));
   const sev = (s: any): Severity => (s === "critical" || s === "warn" ? s : "info");
   const pri = (p: any): Priority => (p === "high" || p === "low" ? p : "normal");
+
+  // Replace any "Client #105" / "client 135" / "client id: 42" placeholders the
+  // model may emit with the real client name. If we can't resolve, drop the token.
+  const scrub = (s: string): string => {
+    if (!s) return s;
+    return s.replace(/\bclient\s*(?:id[:\s]*|#)?\s*(\d{1,6})\b/gi, (_m, idStr) => {
+      const id = Number(idStr);
+      return nameById.get(id) ?? "a client";
+    });
+  };
 
   const highlights: Highlight[] = Array.isArray(parsed?.highlights)
     ? parsed.highlights
         .filter((h: any) => h && (h.label || h.detail))
         .slice(0, 6)
-        .map((h: any) => ({ label: String(h.label ?? "").slice(0, 160), detail: String(h.detail ?? "").slice(0, 400), severity: sev(h.severity) }))
+        .map((h: any) => ({
+          label: scrub(String(h.label ?? "")).slice(0, 160),
+          detail: scrub(String(h.detail ?? "")).slice(0, 400),
+          severity: sev(h.severity),
+        }))
     : [];
 
   const validCats: Set<TaskCategory> = new Set([
@@ -371,18 +387,18 @@ function sanitize(parsed: any, signals: any) {
         .map((t: any) => {
           const cid = t.client_id != null && validIds.has(Number(t.client_id)) ? Number(t.client_id) : null;
           return {
-            title: String(t.title).slice(0, 200),
+            title: scrub(String(t.title)).slice(0, 200),
             priority: pri(t.priority),
             client_id: cid,
-            reason: String(t.reason ?? "").slice(0, 400),
+            reason: scrub(String(t.reason ?? "")).slice(0, 400),
             category: cat(t.category),
           };
         })
     : [];
 
   return {
-    headline: String(parsed?.headline ?? "").slice(0, 200) || "Your morning brief",
-    summary: String(parsed?.summary ?? ""),
+    headline: scrub(String(parsed?.headline ?? "")).slice(0, 200) || "Your morning brief",
+    summary: scrub(String(parsed?.summary ?? "")),
     highlights,
     suggested_tasks,
   };
