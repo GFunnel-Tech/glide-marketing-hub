@@ -56,7 +56,10 @@ function pickAssignee(
   category: string,
   members: { user_id: string; role: string }[],
   positions: Map<string, string>,
+  overrides: Map<string, string>,
 ): string | null {
+  const override = overrides.get(category);
+  if (override && members.some((m) => m.user_id === override)) return override;
   const kws = POSITION_KEYWORDS[category] ?? [];
   for (const kw of kws) {
     const hit = members.find((m) => (positions.get(m.user_id) ?? "").toLowerCase().includes(kw));
@@ -64,6 +67,7 @@ function pickAssignee(
   }
   return members.find((m) => m.role === "owner")?.user_id ?? members[0]?.user_id ?? null;
 }
+
 
 const ACTIVE_STATUSES = ["GREEN", "YELLOW", "RED", "LEARNING", "LAUNCHING", "RELAUNCH"];
 
