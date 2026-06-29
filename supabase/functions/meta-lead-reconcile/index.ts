@@ -83,10 +83,12 @@ Deno.serve(async (req) => {
     for (const lead of wsLeads) {
       stats.processed++;
       const client = lead.client_id ? clientMap.get(lead.client_id) : null;
+      const ghlKey = resolveGhlKey(locKeyMap, client?.ghl_location_id, cfg?.ghl_api_key);
+      if (!ghlKey) { stats.processed--; continue; }
 
       try {
         // 1. Look it up in GHL
-        const found = await searchGhlContact(cfg.ghl_api_key, client?.ghl_location_id, lead.email, lead.phone);
+        const found = await searchGhlContact(ghlKey, client?.ghl_location_id, lead.email, lead.phone);
 
         if (found) {
           await admin.from("meta_leads").update({
