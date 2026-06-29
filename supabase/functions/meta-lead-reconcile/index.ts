@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
         }
 
         const nextAttempt = (lead.sync_attempts ?? 0) + 1;
-        const pushResult = await upsertGhlContact(cfg.ghl_api_key, client?.ghl_location_id, lead);
+        const pushResult = await upsertGhlContact(ghlKey, client?.ghl_location_id, lead);
 
         if (pushResult.ok) {
           await admin.from("meta_leads").update({
