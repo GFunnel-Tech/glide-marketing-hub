@@ -180,7 +180,7 @@ export function LeadSyncHealth() {
             Every Meta lead is checked against GoHighLevel 5 minutes after arrival; missing leads are pushed automatically.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             size="sm"
             variant="outline"
@@ -190,6 +190,16 @@ export function LeadSyncHealth() {
           >
             {backfill.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
             Backfill from Meta
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => retryAll.mutate()}
+            disabled={retryAll.isPending}
+            title="Requeue every previously-failed lead and try the GHL push again (use after fixing a PIT token or location mapping)"
+          >
+            {retryAll.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+            Retry all failed
           </Button>
           <Button
             size="sm"
