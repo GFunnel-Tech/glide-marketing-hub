@@ -281,6 +281,11 @@ export function MorningBriefDialog() {
                                 {t.priority}
                               </span>
                             )}
+                            {t.category && t.category !== "general" && (
+                              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-md font-semibold bg-muted text-muted-foreground ring-1 ring-border">
+                                {t.category.replace("_", " ")}
+                              </span>
+                            )}
                             {name && (
                               <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
                                 <span className="h-1 w-1 rounded-full bg-muted-foreground/50" />
