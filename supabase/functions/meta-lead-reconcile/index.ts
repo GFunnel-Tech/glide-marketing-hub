@@ -6,7 +6,7 @@
 // - After 3 failed push attempts: marks 'failed', creates a ClickUp task, notifies
 // Invoked every minute via pg_cron (configured separately) or on-demand POST.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { searchGhlContact, upsertGhlContact } from "../_shared/ghlClient.ts";
+import { searchGhlContact, upsertGhlContact, fetchLocationKeyMap, resolveGhlKey } from "../_shared/ghlClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
