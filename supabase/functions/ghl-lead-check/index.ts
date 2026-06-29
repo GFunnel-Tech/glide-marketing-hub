@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
           // CONFIRM before flagging: short 2s delay then a 2nd search to guard
           // against transient GHL API blips returning empty results.
           await new Promise((r) => setTimeout(r, 2000));
-          const confirm = await searchGhlContact(cfg.ghl_api_key, locationId, lead.email, lead.phone);
+          const confirm = await searchGhlContact(ghlKey, locationId, lead.email, lead.phone);
           if (confirm) {
             await admin.from("meta_leads").update({
               ghl_check_status: "found",
