@@ -5,7 +5,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, KeyRound, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
+import { Loader2, KeyRound, CheckCircle2, AlertCircle, Trash2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 /**
