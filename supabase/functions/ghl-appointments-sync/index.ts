@@ -92,8 +92,9 @@ Deno.serve(async (req) => {
       .select("ghl_api_key")
       .eq("workspace_id", workspaceId)
       .maybeSingle();
-    if (!cfg?.ghl_api_key) return json({ error: "GHL API key not configured for this workspace" }, 400);
-    const apiKey = cfg.ghl_api_key as string;
+    const locKeyMap = await fetchLocationKeyMap(admin, workspaceId);
+    const workspaceKey = (cfg?.ghl_api_key as string | null) ?? null;
+    if (!workspaceKey && locKeyMap.size === 0) return json({ error: "GHL API key not configured for this workspace" }, 400);
 
     let clientsQ = admin
       .from("clients")
