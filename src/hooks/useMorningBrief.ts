@@ -6,11 +6,21 @@ import { toast } from "sonner";
 export type BriefSeverity = "info" | "warn" | "critical";
 export type BriefPriority = "low" | "normal" | "high";
 
+export type TaskCategory =
+  | "creative"
+  | "media_buying"
+  | "account_management"
+  | "client_outreach"
+  | "reporting"
+  | "tech"
+  | "general";
+
 export interface MorningBriefTask {
   title: string;
   priority: BriefPriority;
   client_id: number | null;
   reason: string;
+  category?: TaskCategory;
 }
 
 export interface MorningBriefHighlight {
