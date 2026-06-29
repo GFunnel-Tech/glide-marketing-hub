@@ -1,0 +1,1 @@
+ALTER TABLE public.ghl_locations ADD COLUMN IF NOT EXISTS location_api_key text;
