@@ -1783,6 +1783,7 @@ export type Database = {
           brief_recipients: string[]
           brief_seasonal_context: string | null
           clickup_list_id: string | null
+          country: string | null
           cpl: number
           cpm: number
           created_at: string
@@ -1805,6 +1806,7 @@ export type Database = {
           true_cpl: number
           true_leads: number
           updated_at: string
+          vertical: string | null
           website: string | null
           workspace_id: string | null
         }
@@ -1821,6 +1823,7 @@ export type Database = {
           brief_recipients?: string[]
           brief_seasonal_context?: string | null
           clickup_list_id?: string | null
+          country?: string | null
           cpl?: number
           cpm?: number
           created_at?: string
@@ -1843,6 +1846,7 @@ export type Database = {
           true_cpl?: number
           true_leads?: number
           updated_at?: string
+          vertical?: string | null
           website?: string | null
           workspace_id?: string | null
         }
@@ -1859,6 +1863,7 @@ export type Database = {
           brief_recipients?: string[]
           brief_seasonal_context?: string | null
           clickup_list_id?: string | null
+          country?: string | null
           cpl?: number
           cpm?: number
           created_at?: string
@@ -1881,6 +1886,7 @@ export type Database = {
           true_cpl?: number
           true_leads?: number
           updated_at?: string
+          vertical?: string | null
           website?: string | null
           workspace_id?: string | null
         }
