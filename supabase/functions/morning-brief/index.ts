@@ -319,6 +319,17 @@ function sanitize(parsed: any, signals: any) {
         .map((h: any) => ({ label: String(h.label ?? "").slice(0, 160), detail: String(h.detail ?? "").slice(0, 400), severity: sev(h.severity) }))
     : [];
 
+  const validCats: Set<TaskCategory> = new Set([
+    "creative",
+    "media_buying",
+    "account_management",
+    "client_outreach",
+    "reporting",
+    "tech",
+    "general",
+  ]);
+  const cat = (c: any): TaskCategory => (validCats.has(c) ? c : "general");
+
   const suggested_tasks: SuggestedTask[] = Array.isArray(parsed?.suggested_tasks)
     ? parsed.suggested_tasks
         .filter((t: any) => t && t.title)
@@ -330,6 +341,7 @@ function sanitize(parsed: any, signals: any) {
             priority: pri(t.priority),
             client_id: cid,
             reason: String(t.reason ?? "").slice(0, 400),
+            category: cat(t.category),
           };
         })
     : [];
