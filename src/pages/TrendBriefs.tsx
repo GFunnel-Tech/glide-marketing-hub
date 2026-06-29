@@ -96,8 +96,9 @@ export default function TrendBriefs() {
   });
 
   const updateBrief = useMutation({
-    mutationFn: async (b: Partial<Brief> & { id: string }) => {
-      const { error } = await supabase.from("client_trend_briefs").update(b).eq("id", b.id);
+    mutationFn: async (b: { id: string; subject?: string; body_markdown?: string; recipients?: string[] }) => {
+      const { id, ...rest } = b;
+      const { error } = await supabase.from("client_trend_briefs").update(rest).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
