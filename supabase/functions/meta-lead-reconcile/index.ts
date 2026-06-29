@@ -21,10 +21,12 @@ Deno.serve(async (req) => {
 
   let workspaceFilter: string | null = null;
   let leadIdFilter: string | null = null;
+  let retryFailed = false;
   if (req.method === "POST") {
     const body = await req.json().catch(() => ({}));
     workspaceFilter = body.workspaceId ?? null;
     leadIdFilter = body.leadId ?? null;
+    retryFailed = body.retryFailed === true;
   }
 
   const admin = createClient(
@@ -32,13 +34,28 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  // If asked, requeue all previously-failed leads for this workspace so a
+  // configuration change (PIT scope fix, new location mapping, etc.) gets
+  // immediate retry coverage.
+  if (retryFailed && workspaceFilter) {
+    await admin.from("meta_leads")
+      .update({
+        sync_status: "pending",
+        sync_attempts: 0,
+        next_check_at: new Date().toISOString(),
+        last_sync_error: null,
+      })
+      .eq("workspace_id", workspaceFilter)
+      .in("sync_status", ["failed", "missing"]);
+  }
+
   let q = admin
     .from("meta_leads")
     .select("id, workspace_id, client_id, full_name, email, phone, campaign_name, campaign_id, ad_name, ad_id, adset_name, adset_id, form_name, form_id, created_time, sync_status, sync_attempts")
     .in("sync_status", ["pending", "missing"])
     .lte("next_check_at", new Date().toISOString())
     .order("next_check_at", { ascending: true })
-    .limit(200);
+    .limit(500);
   if (workspaceFilter) q = q.eq("workspace_id", workspaceFilter);
   if (leadIdFilter) q = q.eq("id", leadIdFilter);
 
