@@ -24,11 +24,21 @@ const MODEL = Deno.env.get("AI_OPS_MODEL") ?? "claude-sonnet-4-5";
 type Severity = "info" | "warn" | "critical";
 type Priority = "low" | "normal" | "high";
 
+type TaskCategory =
+  | "creative"
+  | "media_buying"
+  | "account_management"
+  | "client_outreach"
+  | "reporting"
+  | "tech"
+  | "general";
+
 interface SuggestedTask {
   title: string;
   priority: Priority;
   client_id: number | null;
   reason: string;
+  category: TaskCategory;
 }
 interface Highlight {
   label: string;
@@ -46,13 +56,21 @@ Return ONLY a JSON object, no prose around it, with this exact shape:
   "headline": "one short sentence summarising the day's state",
   "summary": "2-5 short markdown paragraphs (or bullet lists) covering what changed overnight, the biggest concerns, and what's going well. Cite real numbers (CPL, spend, churn score, counts) from the snapshot.",
   "highlights": [ { "label": "short title", "detail": "one sentence", "severity": "info"|"warn"|"critical" } ],
-  "suggested_tasks": [ { "title": "imperative task, e.g. 'Review paused ads for Acme'", "priority": "low"|"normal"|"high", "client_id": <number or null>, "reason": "why this matters today" } ]
+  "suggested_tasks": [ { "title": "imperative task", "priority": "low"|"normal"|"high", "client_id": <number or null>, "reason": "why this matters today", "category": "creative"|"media_buying"|"account_management"|"client_outreach"|"reporting"|"tech"|"general" } ]
 }
 
 Rules:
 - 0-6 highlights, ordered most-to-least urgent. Skip if nothing notable.
 - 0-8 suggested_tasks, each genuinely actionable today. Prefer the highest-leverage work (critical insights, high churn risk, pending approvals, overdue tasks).
 - Only use client_id values that appear in the snapshot's clients list; otherwise use null.
+- Set category by the type of work required so the task can be auto-routed to the right teammate:
+  * "creative" — ad copy, creative refresh, design, video, thumbnails, hooks
+  * "media_buying" — budget changes, bid/targeting/audience tweaks, KPI audits, pausing/launching ads
+  * "account_management" — onboarding, contract, billing, internal coordination
+  * "client_outreach" — calling/emailing/messaging a client (dark accounts, check-ins, status updates)
+  * "reporting" — building reports, dashboards, monthly recaps
+  * "tech" — integration/data sync issues, platform errors
+  * "general" — anything that doesn't fit cleanly above
 - Do not invent data. If the workspace is quiet, say so plainly and return few/no tasks.`;
 
 function extractJson(text: string): any | null {
