@@ -206,7 +206,15 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
       overdue: overdue.slice(0, 15).map(summarizeTask),
       due_today: dueToday.slice(0, 15).map(summarizeTask),
     },
-    clients: clients.map((c) => ({ id: c.id, name: c.name, status: c.status })),
+    clients: clients.map((c) => ({
+      id: c.id,
+      name: displayName(c) ?? c.name,
+      legal_name: c.name,
+      brand: c.brand,
+      status: c.status,
+      website: c.website,
+      bio: c.bio,
+    })),
   };
 }
 
