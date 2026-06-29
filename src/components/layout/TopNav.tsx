@@ -34,7 +34,7 @@ const navItems: NavEntry[] = [
     icon: Megaphone, label: "Marketing", children: [
       { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
       { icon: Sparkles, label: "Creatives", path: "/creatives" },
-      { icon: Megaphone, label: "Ads", path: "/ads", badge: "NEW" },
+      { icon: Megaphone, label: "Ads", path: "/ads" },
       { icon: Inbox, label: "Leads", path: "/leads" },
     ]
   },
@@ -49,8 +49,8 @@ const navItems: NavEntry[] = [
   {
     icon: FileBarChart, label: "Insights", children: [
       { icon: FileBarChart, label: "Reports", path: "/reports" },
-      { icon: Radar, label: "Tracking", path: "/tracking", badge: "NEW" },
-      { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
+      { icon: Radar, label: "Tracking", path: "/tracking" },
+      { icon: Bot, label: "AI Assistant", path: "/ai" },
       { icon: TrendingUp, label: "Trend Briefs", path: "/trend-briefs", badge: "NEW" },
     ]
   },
