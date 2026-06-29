@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
-export type CalendarSource = "ghl" | "task" | "google";
+export type CalendarSource = "sales" | "client" | "internal" | "google";
 
 export type CalendarEvent = {
   id: string;
