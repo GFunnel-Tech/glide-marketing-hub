@@ -39,15 +39,18 @@ function pickAssignee(
   category: string,
   members: { user_id: string; role: string }[],
   positions: Map<string, string>,
+  overrides: Map<string, string>,
 ): string | null {
+  const override = overrides.get(category);
+  if (override && members.some((m) => m.user_id === override)) return override;
   const kws = POSITION_KEYWORDS[category] ?? [];
   for (const kw of kws) {
     const hit = members.find((m) => (positions.get(m.user_id) ?? "").toLowerCase().includes(kw));
     if (hit) return hit.user_id;
   }
-  // Fall back to the workspace owner so the task is never orphaned.
   return members.find((m) => m.role === "owner")?.user_id ?? members[0]?.user_id ?? null;
 }
+
 
 // Active statuses we consider for outreach. We deliberately skip clients that
 // are paused, cancelled, blocked, or still in onboarding — they aren't "dark",
@@ -144,8 +147,17 @@ async function processWorkspace(admin: ReturnType<typeof createClient>, workspac
   for (const p of (profiles ?? []) as any[]) {
     if (p?.position) positions.set(p.id, String(p.position));
   }
-  const assignee = pickAssignee("client_outreach", (members ?? []) as any, positions);
+  const { data: routingRows } = await admin
+    .from("task_routing_rules")
+    .select("category, assigned_user_id")
+    .eq("workspace_id", workspaceId);
+  const overrides = new Map<string, string>();
+  for (const r of (routingRows ?? []) as any[]) {
+    if (r?.category && r?.assigned_user_id) overrides.set(r.category, r.assigned_user_id);
+  }
+  const assignee = pickAssignee("client_outreach", (members ?? []) as any, positions, overrides);
   if (!assignee) return { workspace_id: workspaceId, dark: dark.length, created: 0 };
+
 
   // 7) Build one outreach task per dark client.
   const endOfToday = new Date();

@@ -56,7 +56,10 @@ function pickAssignee(
   category: string,
   members: { user_id: string; role: string }[],
   positions: Map<string, string>,
+  overrides: Map<string, string>,
 ): string | null {
+  const override = overrides.get(category);
+  if (override && members.some((m) => m.user_id === override)) return override;
   const kws = POSITION_KEYWORDS[category] ?? [];
   for (const kw of kws) {
     const hit = members.find((m) => (positions.get(m.user_id) ?? "").toLowerCase().includes(kw));
@@ -64,6 +67,7 @@ function pickAssignee(
   }
   return members.find((m) => m.role === "owner")?.user_id ?? members[0]?.user_id ?? null;
 }
+
 
 const ACTIVE_STATUSES = ["GREEN", "YELLOW", "RED", "LEARNING", "LAUNCHING", "RELAUNCH"];
 
@@ -130,6 +134,17 @@ async function processWorkspace(admin: ReturnType<typeof createClient>, workspac
     if (p?.position) positions.set(p.id, String(p.position));
   }
 
+  // Admin-defined per-category routing overrides.
+  const { data: routingRows } = await admin
+    .from("task_routing_rules")
+    .select("category, assigned_user_id")
+    .eq("workspace_id", workspaceId);
+  const overrides = new Map<string, string>();
+  for (const r of (routingRows ?? []) as any[]) {
+    if (r?.category && r?.assigned_user_id) overrides.set(r.category, r.assigned_user_id);
+  }
+
+
   const endOfToday = new Date();
   endOfToday.setHours(23, 59, 59, 0);
   const dueIso = endOfToday.toISOString();
@@ -154,7 +169,7 @@ async function processWorkspace(admin: ReturnType<typeof createClient>, workspac
       if (alreadyOpen.has(dedupeKey)) continue;
 
       const category = KPI_CATEGORY[r.key] ?? "media_buying";
-      const assignee = pickAssignee(category, (members ?? []) as any, positions);
+      const assignee = pickAssignee(category, (members ?? []) as any, positions, overrides);
       if (!assignee) continue;
 
       const label = KPI_LABEL[r.key] ?? r.key;

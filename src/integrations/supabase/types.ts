@@ -4874,6 +4874,41 @@ export type Database = {
           },
         ]
       }
+      task_routing_rules: {
+        Row: {
+          assigned_user_id: string
+          category: string
+          created_at: string
+          id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          assigned_user_id: string
+          category: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          assigned_user_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_routing_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           access_level: string

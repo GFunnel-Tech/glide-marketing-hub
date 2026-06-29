@@ -21,6 +21,8 @@ import { AgencyProfilePanel } from "@/components/settings/AgencyProfilePanel";
 import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { TeamMembersPanel } from "@/components/settings/TeamMembersPanel";
 import { EmbedTabsPanel } from "@/components/settings/EmbedTabsPanel";
+import { TaskRoutingPanel } from "@/components/settings/TaskRoutingPanel";
+
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -172,9 +174,11 @@ export default function Settings() {
           </Tabs>
         </TabsContent>
 
-        <TabsContent value="team">
+        <TabsContent value="team" className="space-y-6">
           <TeamMembersPanel />
+          <TaskRoutingPanel />
         </TabsContent>
+
 
         <TabsContent value="notifications">
           <Tabs
