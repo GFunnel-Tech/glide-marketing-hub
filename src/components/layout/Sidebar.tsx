@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, ChevronLeft, ChevronRight, LogOut
+  Bot, Settings, ChevronLeft, ChevronRight, LogOut, Calendar as CalendarIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -11,6 +11,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
   { icon: Users, label: "Clients", path: "/clients" },
   { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
+  { icon: CalendarIcon, label: "Calendar", path: "/calendar" },
   { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
   { icon: FileBarChart, label: "Reports", path: "/reports" },
   { icon: Bot, label: "AI Assistant", path: "/ai", badge: "NEW" },
