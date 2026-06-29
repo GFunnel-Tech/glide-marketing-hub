@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ListChecks, Plus, ArrowRight } from "lucide-react";
+import { ListChecks, Plus, ArrowRight, AlertCircle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useTasks } from "@/hooks/useTasks";
 import { TaskList } from "@/components/tasks/TaskList";
 import { TaskEditDialog } from "@/components/tasks/TaskEditDialog";
+import { cn } from "@/lib/utils";
 
 export function TodaysTasksPanel() {
   const { items: today, isLoading } = useTasks({ view: "today" });
   const { items: overdue } = useTasks({ view: "overdue" });
   const [newOpen, setNewOpen] = useState(false);
-
-  const combined = [...overdue, ...today];
+  const [tab, setTab] = useState<"overdue" | "today">(overdue.length > 0 ? "overdue" : "today");
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
@@ -40,12 +41,47 @@ export function TodaysTasksPanel() {
         </div>
       </div>
 
-      <TaskList
-        tasks={combined.slice(0, 8)}
-        isLoading={isLoading}
-        emptyMessage="No tasks due today. Add one to bookmark a future action."
-        showClient
-      />
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "overdue" | "today")}>
+        <TabsList className="mb-3">
+          <TabsTrigger value="overdue" className="gap-1.5">
+            <AlertCircle className={cn("h-3.5 w-3.5", overdue.length > 0 && "text-destructive")} />
+            Overdue
+            <span
+              className={cn(
+                "ml-1 rounded-full px-1.5 text-[10px] font-semibold",
+                overdue.length > 0
+                  ? "bg-destructive/15 text-destructive"
+                  : "bg-muted text-muted-foreground",
+              )}
+            >
+              {overdue.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="today" className="gap-1.5">
+            <Calendar className="h-3.5 w-3.5" />
+            Today
+            <span className="ml-1 rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground">
+              {today.length}
+            </span>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="overdue" className="mt-0">
+          <TaskList
+            tasks={overdue.slice(0, 10)}
+            isLoading={isLoading}
+            emptyMessage="Nothing overdue — nice work."
+            showClient
+          />
+        </TabsContent>
+        <TabsContent value="today" className="mt-0">
+          <TaskList
+            tasks={today.slice(0, 10)}
+            isLoading={isLoading}
+            emptyMessage="No tasks due today. Add one to bookmark a future action."
+            showClient
+          />
+        </TabsContent>
+      </Tabs>
 
       <TaskEditDialog open={newOpen} onOpenChange={setNewOpen} />
     </div>
