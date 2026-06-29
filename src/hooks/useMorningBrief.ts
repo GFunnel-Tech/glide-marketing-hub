@@ -6,11 +6,21 @@ import { toast } from "sonner";
 export type BriefSeverity = "info" | "warn" | "critical";
 export type BriefPriority = "low" | "normal" | "high";
 
+export type TaskCategory =
+  | "creative"
+  | "media_buying"
+  | "account_management"
+  | "client_outreach"
+  | "reporting"
+  | "tech"
+  | "general";
+
 export interface MorningBriefTask {
   title: string;
   priority: BriefPriority;
   client_id: number | null;
   reason: string;
+  category?: TaskCategory;
 }
 
 export interface MorningBriefHighlight {
@@ -103,10 +113,45 @@ export function useMorningBrief() {
       if (tasks.length > 0) {
         const now = new Date();
         const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+
+        // Auto-assign tasks to teammates based on their profile.position.
+        // We pull the workspace's members + their positions once, then route
+        // each task to the first member whose position matches the task's category.
+        const { data: members } = await db
+          .from("workspace_members")
+          .select("user_id")
+          .eq("workspace_id", brief.workspace_id);
+        const memberIds: string[] = (members ?? []).map((m: any) => m.user_id);
+        const { data: profiles } = memberIds.length
+          ? await db.from("profiles").select("id, position").in("id", memberIds)
+          : { data: [] as any[] };
+        const byPosition: { id: string; position: string }[] = (profiles ?? [])
+          .filter((p: any) => p?.position)
+          .map((p: any) => ({ id: p.id, position: String(p.position).toLowerCase() }));
+
+        const matchPosition = (cat?: string): string | null => {
+          if (!cat) return null;
+          const keywordMap: Record<string, string[]> = {
+            creative: ["content", "creative", "design", "video", "copywriter"],
+            media_buying: ["media buy", "media buyer", "buying", "paid", "ads specialist", "ppc"],
+            account_management: ["account manager", "account exec", "csm", "success", "operations"],
+            client_outreach: ["account manager", "csm", "success", "sales"],
+            reporting: ["analyst", "reporting", "data"],
+            tech: ["engineer", "developer", "tech", "integration"],
+          };
+          const kws = keywordMap[cat] ?? [];
+          for (const kw of kws) {
+            const hit = byPosition.find((p) => p.position.includes(kw));
+            if (hit) return hit.id;
+          }
+          return null;
+        };
+
         const rows = tasks.map((t) => ({
           workspace_id: brief.workspace_id,
           client_id: t.client_id ?? null,
           user_id: auth.user!.id,
+          assigned_to: matchPosition(t.category) ?? auth.user!.id,
           title: t.title,
           content: t.reason ?? "",
           kind: "task",
