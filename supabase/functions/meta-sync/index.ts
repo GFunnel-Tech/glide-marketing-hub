@@ -483,6 +483,7 @@ async function syncGranularInsights(
   const fields = [
     "campaign_id","campaign_name","adset_id","adset_name","ad_id","ad_name",
     "spend","impressions","clicks","actions",
+    "frequency","reach","cpm","ctr",
   ].join(",");
 
   let total = 0;
