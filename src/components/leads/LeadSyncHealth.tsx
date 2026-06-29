@@ -144,6 +144,21 @@ export function LeadSyncHealth() {
     onError: (e: any) => toast.error(e?.message || "Backfill failed"),
   });
 
+  const retryAll = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.functions.invoke("meta-lead-reconcile", {
+        body: { workspaceId: wsId, retryFailed: true },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Retrying all failed leads — they'll be pushed to GHL now");
+      qc.invalidateQueries({ queryKey: ["lead-sync-counts", wsId] });
+      qc.invalidateQueries({ queryKey: ["lead-sync-failed", wsId] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Retry-all failed"),
+  });
+
   const tiles = useMemo(
     () => [
       { key: "synced", label: "Synced", value: counts?.synced ?? 0, icon: CheckCircle2, tone: "text-success" },
