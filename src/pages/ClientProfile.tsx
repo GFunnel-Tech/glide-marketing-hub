@@ -14,6 +14,7 @@ import { AiRulesPanel } from "@/components/ai/AiRulesPanel";
 import { ClientContextPanel } from "@/components/ai/ClientContextPanel";
 import { KnowledgeBasePanel } from "@/components/ai/KnowledgeBasePanel";
 import { ClientEmbedsCard } from "@/components/client/ClientEmbedsCard";
+import { ClientTrendBriefSettings } from "@/components/client/ClientTrendBriefSettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1174,6 +1175,7 @@ function ClientProfileInner() {
                 <AiRulesPanel clientId={client.id} workspaceId={workspaceId} />
                 <KnowledgeBasePanel workspaceId={workspaceId} clientId={client.id} clientName={client.name} />
                 <ClientEmbedsCard clientId={client.id} workspaceId={workspaceId} />
+                <ClientTrendBriefSettings clientId={client.id} />
               </div>
             </div>
           ) : (

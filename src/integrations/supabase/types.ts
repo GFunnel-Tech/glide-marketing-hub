@@ -1630,6 +1630,97 @@ export type Database = {
           },
         ]
       }
+      client_trend_briefs: {
+        Row: {
+          approved_at: string | null
+          body_html: string | null
+          body_markdown: string
+          client_id: number
+          created_at: string
+          dedupe_key: string | null
+          error: string | null
+          id: string
+          metrics: Json
+          recipients: string[]
+          reviewer_id: string | null
+          reviewer_notes: string | null
+          seasonal_context: string | null
+          sent_at: string | null
+          severity: string
+          status: string
+          subject: string
+          trigger_kind: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          body_html?: string | null
+          body_markdown: string
+          client_id: number
+          created_at?: string
+          dedupe_key?: string | null
+          error?: string | null
+          id?: string
+          metrics?: Json
+          recipients?: string[]
+          reviewer_id?: string | null
+          reviewer_notes?: string | null
+          seasonal_context?: string | null
+          sent_at?: string | null
+          severity?: string
+          status?: string
+          subject: string
+          trigger_kind: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          body_html?: string | null
+          body_markdown?: string
+          client_id?: number
+          created_at?: string
+          dedupe_key?: string | null
+          error?: string | null
+          id?: string
+          metrics?: Json
+          recipients?: string[]
+          reviewer_id?: string | null
+          reviewer_notes?: string | null
+          seasonal_context?: string | null
+          sent_at?: string | null
+          severity?: string
+          status?: string
+          subject?: string
+          trigger_kind?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_trend_briefs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_trend_briefs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_trend_briefs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_wallets: {
         Row: {
           auto_topup_enabled: boolean
@@ -1688,6 +1779,9 @@ export type Database = {
           bm_id: string | null
           bm_type: Database["public"]["Enums"]["bm_type"]
           brand: string
+          brief_enabled: boolean
+          brief_recipients: string[]
+          brief_seasonal_context: string | null
           clickup_list_id: string | null
           cpl: number
           cpm: number
@@ -1723,6 +1817,9 @@ export type Database = {
           bm_id?: string | null
           bm_type?: Database["public"]["Enums"]["bm_type"]
           brand: string
+          brief_enabled?: boolean
+          brief_recipients?: string[]
+          brief_seasonal_context?: string | null
           clickup_list_id?: string | null
           cpl?: number
           cpm?: number
@@ -1758,6 +1855,9 @@ export type Database = {
           bm_id?: string | null
           bm_type?: Database["public"]["Enums"]["bm_type"]
           brand?: string
+          brief_enabled?: boolean
+          brief_recipients?: string[]
+          brief_seasonal_context?: string | null
           clickup_list_id?: string | null
           cpl?: number
           cpm?: number
@@ -5579,6 +5679,11 @@ export type Database = {
       }
       workspace_kpi_settings: {
         Row: {
+          brief_auto_detect_enabled: boolean
+          brief_cpl_spike_pct: number
+          brief_cpm_spike_pct: number
+          brief_leads_drop_pct: number
+          brief_weekly_digest_enabled: boolean
           created_at: string
           default_window_days: number
           green_score_min: number
@@ -5590,6 +5695,11 @@ export type Database = {
           yellow_score_min: number
         }
         Insert: {
+          brief_auto_detect_enabled?: boolean
+          brief_cpl_spike_pct?: number
+          brief_cpm_spike_pct?: number
+          brief_leads_drop_pct?: number
+          brief_weekly_digest_enabled?: boolean
           created_at?: string
           default_window_days?: number
           green_score_min?: number
@@ -5601,6 +5711,11 @@ export type Database = {
           yellow_score_min?: number
         }
         Update: {
+          brief_auto_detect_enabled?: boolean
+          brief_cpl_spike_pct?: number
+          brief_cpm_spike_pct?: number
+          brief_leads_drop_pct?: number
+          brief_weekly_digest_enabled?: boolean
           created_at?: string
           default_window_days?: number
           green_score_min?: number
