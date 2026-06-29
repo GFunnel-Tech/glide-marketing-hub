@@ -134,6 +134,17 @@ async function processWorkspace(admin: ReturnType<typeof createClient>, workspac
     if (p?.position) positions.set(p.id, String(p.position));
   }
 
+  // Admin-defined per-category routing overrides.
+  const { data: routingRows } = await admin
+    .from("task_routing_rules")
+    .select("category, assigned_user_id")
+    .eq("workspace_id", workspaceId);
+  const overrides = new Map<string, string>();
+  for (const r of (routingRows ?? []) as any[]) {
+    if (r?.category && r?.assigned_user_id) overrides.set(r.category, r.assigned_user_id);
+  }
+
+
   const endOfToday = new Date();
   endOfToday.setHours(23, 59, 59, 0);
   const dueIso = endOfToday.toISOString();
