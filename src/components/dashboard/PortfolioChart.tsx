@@ -36,9 +36,24 @@ const METRICS: { key: MetricKey; label: string; format: (v: number) => string; i
   { key: "clicks", label: "Clicks", format: (v) => v.toLocaleString() },
 ];
 
+const COUNTRIES = [
+  { value: "all", label: "All regions" },
+  { value: "US", label: "United States" },
+  { value: "Canada", label: "Canada" },
+];
+const VERTICALS = [
+  { value: "all", label: "All verticals" },
+  { value: "home_buyer", label: "Home Buyer" },
+  { value: "investor", label: "Investor" },
+  { value: "refinance", label: "Refinance" },
+  { value: "reverse_mortgage", label: "Reverse Mortgage" },
+];
+
 export function PortfolioChart() {
   const [metric, setMetric] = useState<MetricKey>("cpl_compare");
-  const { data: trend = [], isFetching } = usePortfolioTrend();
+  const [country, setCountry] = useState<string>("all");
+  const [vertical, setVertical] = useState<string>("all");
+  const { data: trend = [], isFetching } = usePortfolioTrend({ country, vertical });
   const { data: rangeMetrics = {} } = useClientsRangeMetrics();
   const { label } = useDateRange();
 
@@ -64,23 +79,46 @@ export function PortfolioChart() {
     return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v);
   };
 
+  const scopeLabel = [
+    country === "all" ? null : COUNTRIES.find((c) => c.value === country)?.label,
+    vertical === "all" ? null : VERTICALS.find((v) => v.value === vertical)?.label,
+  ].filter(Boolean).join(" · ") || "Active clients";
+
   return (
     <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-foreground">Portfolio Trend</h3>
-          <p className="text-xs text-muted-foreground">{label}{isFetching && " · updating…"}</p>
+          <p className="text-xs text-muted-foreground">
+            {scopeLabel} · {label}{isFetching && " · updating…"}
+          </p>
         </div>
-        <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
-          <SelectTrigger className="h-8 w-[210px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {METRICS.map((m) => (
-              <SelectItem key={m.key} value={m.key} className="text-xs">{m.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={country} onValueChange={setCountry}>
+            <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {COUNTRIES.map((c) => (
+                <SelectItem key={c.value} value={c.value} className="text-xs">{c.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={vertical} onValueChange={setVertical}>
+            <SelectTrigger className="h-8 w-[170px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {VERTICALS.map((v) => (
+                <SelectItem key={v.value} value={v.value} className="text-xs">{v.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
+            <SelectTrigger className="h-8 w-[210px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {METRICS.map((m) => (
+                <SelectItem key={m.key} value={m.key} className="text-xs">{m.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
