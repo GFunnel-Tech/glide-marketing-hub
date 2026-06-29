@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
-export type CalendarSource = "ghl" | "task" | "google";
+export type CalendarSource = "sales" | "client" | "internal" | "google";
 
 export type CalendarEvent = {
   id: string;
@@ -49,7 +49,7 @@ export function useCalendarEvents(rangeStart: Date, rangeEnd: Date) {
       for (const a of appts.data ?? []) {
         events.push({
           id: `ghl-${a.id}`,
-          source: "ghl",
+          source: a.client_id ? "client" : "sales",
           title: a.title || "Appointment",
           start: a.start_time,
           end: a.end_time,
@@ -63,7 +63,7 @@ export function useCalendarEvents(rangeStart: Date, rangeEnd: Date) {
         if (!start) continue;
         events.push({
           id: `task-${t.id}`,
-          source: "task",
+          source: "internal",
           title: t.title || (t.content?.slice(0, 60) ?? "Task"),
           start,
           end: null,

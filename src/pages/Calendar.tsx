@@ -19,16 +19,17 @@ import { useQueryClient } from "@tanstack/react-query";
 type View = "month" | "week" | "day";
 
 const SOURCE_STYLES: Record<CalendarSource, { label: string; dot: string; chip: string; icon: any }> = {
-  ghl: { label: "Sales / GHL", dot: "bg-emerald-500", chip: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30", icon: Briefcase },
-  task: { label: "Internal Tasks", dot: "bg-blue-500", chip: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30", icon: CheckSquare },
-  google: { label: "Google Calendar", dot: "bg-amber-500", chip: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30", icon: Users },
+  sales: { label: "Sales", dot: "bg-emerald-500", chip: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30", icon: Briefcase },
+  client: { label: "Client", dot: "bg-violet-500", chip: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30", icon: Users },
+  internal: { label: "Internal", dot: "bg-blue-500", chip: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30", icon: CheckSquare },
+  google: { label: "Google Calendar", dot: "bg-amber-500", chip: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30", icon: CalendarIcon },
 };
 
 export default function CalendarPage() {
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState<Date>(new Date());
   const [sources, setSources] = useState<Record<CalendarSource, boolean>>({
-    ghl: true, task: true, google: true,
+    sales: true, client: true, internal: true, google: true,
   });
   const [syncing, setSyncing] = useState(false);
   const { currentWorkspace } = useWorkspace();
