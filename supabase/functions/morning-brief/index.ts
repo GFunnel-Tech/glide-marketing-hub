@@ -63,6 +63,7 @@ Rules:
 - 0-6 highlights, ordered most-to-least urgent. Skip if nothing notable.
 - 0-8 suggested_tasks, each genuinely actionable today. Prefer the highest-leverage work (critical insights, high churn risk, pending approvals, overdue tasks).
 - Only use client_id values that appear in the snapshot's clients list; otherwise use null.
+- CRITICAL: Whenever you mention a client in headline, summary, highlights, or task titles, ALWAYS use the client's actual name or brand (as provided in the snapshot). NEVER write phrases like "Client #105", "Client 135", "client id 42", or any numeric placeholder. If you don't know a client's name, omit the reference entirely.
 - Set category by the type of work required so the task can be auto-routed to the right teammate:
   * "creative" — ad copy, creative refresh, design, video, thumbnails, hooks
   * "media_buying" — budget changes, bid/targeting/audience tweaks, KPI audits, pausing/launching ads
