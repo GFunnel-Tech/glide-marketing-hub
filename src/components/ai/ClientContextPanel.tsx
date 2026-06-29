@@ -129,35 +129,37 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label className="text-xs space-y-1">
               <span className="text-muted-foreground flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> Country
+                <MapPin className="h-3 w-3" /> Country / Region
               </span>
-              <Select
-                value={form.country || "__none"}
-                onValueChange={(v) => setForm((f) => ({ ...f, country: v === "__none" ? "" : v }))}
-              >
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {COUNTRY_OPTS.map((c) => (
-                    <SelectItem key={c.value || "__none"} value={c.value || "__none"} className="text-xs">{c.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                list="client-country-suggestions"
+                value={form.country}
+                onChange={(e) => setForm((f) => ({ ...f, country: e.target.value.slice(0, 80) }))}
+                placeholder="e.g. US, Canada, UK, Australia…"
+                className="h-8 text-xs"
+              />
+              <datalist id="client-country-suggestions">
+                {COUNTRY_OPTS.filter((c) => c.value).map((c) => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </datalist>
             </label>
             <label className="text-xs space-y-1">
               <span className="text-muted-foreground flex items-center gap-1">
-                <Tag className="h-3 w-3" /> Vertical
+                <Tag className="h-3 w-3" /> Vertical / Niche
               </span>
-              <Select
-                value={form.vertical || "__none"}
-                onValueChange={(v) => setForm((f) => ({ ...f, vertical: v === "__none" ? "" : v }))}
-              >
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {VERTICAL_OPTS.map((v) => (
-                    <SelectItem key={v.value || "__none"} value={v.value || "__none"} className="text-xs">{v.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                list="client-vertical-suggestions"
+                value={form.vertical}
+                onChange={(e) => setForm((f) => ({ ...f, vertical: e.target.value.slice(0, 80) }))}
+                placeholder="e.g. Home Buyer, Solar, Med Spa, SaaS…"
+                className="h-8 text-xs"
+              />
+              <datalist id="client-vertical-suggestions">
+                {VERTICAL_OPTS.filter((v) => v.value).map((v) => (
+                  <option key={v.value} value={v.value}>{v.label}</option>
+                ))}
+              </datalist>
             </label>
           </div>
 
