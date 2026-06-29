@@ -168,11 +168,6 @@ async function processWorkspace(admin: ReturnType<typeof createClient>, workspac
       priority: "high",
       due_at: dueIso,
       next_due_at: dueIso,
-      signals: {
-        category: "client_outreach",
-        source: "dark_accounts_cron",
-        dark_outreach_key: `dark::${c.id}::${today}`,
-      },
     };
   });
 
