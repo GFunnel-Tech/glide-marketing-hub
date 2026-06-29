@@ -61,12 +61,56 @@ const VERTICALS = [
 ];
 
 export function PortfolioChart() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
   const [metric, setMetric] = useState<MetricKey>("cpl_compare");
   const [country, setCountry] = useState<string>("all");
   const [vertical, setVertical] = useState<string>("all");
   const { data: trend = [], isFetching } = usePortfolioTrend({ country, vertical });
   const { data: rangeMetrics = {} } = useClientsRangeMetrics();
   const { label } = useDateRange();
+
+  // Dynamically pull every country/vertical actually in use, so any custom
+  // niche the user types on a client profile shows up here automatically.
+  const { data: facets } = useQuery({
+    queryKey: ["portfolio-facets", wsId],
+    enabled: !!wsId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("clients")
+        .select("country, vertical, status, archived_at")
+        .eq("workspace_id", wsId)
+        .is("archived_at", null);
+      if (error) throw error;
+      const hidden = new Set(["PAUSED", "CANCELLED", "PENDING_CANCELLATION"]);
+      const countries = new Set<string>();
+      const verticals = new Set<string>();
+      for (const row of (data ?? []) as any[]) {
+        if (hidden.has(row.status)) continue;
+        if (row.country) countries.add(String(row.country).trim());
+        if (row.vertical) verticals.add(String(row.vertical).trim());
+      }
+      return {
+        countries: Array.from(countries).filter(Boolean).sort(),
+        verticals: Array.from(verticals).filter(Boolean).sort(),
+      };
+    },
+  });
+
+  const COUNTRIES = useMemo(
+    () => [
+      { value: "all", label: "All regions" },
+      ...((facets?.countries ?? []).map((v) => ({ value: v, label: humanize(v) }))),
+    ],
+    [facets?.countries],
+  );
+  const VERTICALS = useMemo(
+    () => [
+      { value: "all", label: "All verticals" },
+      ...((facets?.verticals ?? []).map((v) => ({ value: v, label: humanize(v) }))),
+    ],
+    [facets?.verticals],
+  );
 
   const dc = useMemo(() => {
     const flagged = Object.values(rangeMetrics).filter((m) => m.doubleCount);
