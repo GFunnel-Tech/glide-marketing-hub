@@ -174,9 +174,11 @@ export default function Settings() {
           </Tabs>
         </TabsContent>
 
-        <TabsContent value="team">
+        <TabsContent value="team" className="space-y-6">
           <TeamMembersPanel />
+          <TaskRoutingPanel />
         </TabsContent>
+
 
         <TabsContent value="notifications">
           <Tabs
