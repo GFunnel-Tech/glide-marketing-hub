@@ -126,6 +126,41 @@ export function ClientContextPanel({ clientId }: { clientId: number }) {
             </label>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="text-xs space-y-1">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> Country
+              </span>
+              <Select
+                value={form.country || "__none"}
+                onValueChange={(v) => setForm((f) => ({ ...f, country: v === "__none" ? "" : v }))}
+              >
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {COUNTRY_OPTS.map((c) => (
+                    <SelectItem key={c.value || "__none"} value={c.value || "__none"} className="text-xs">{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="text-xs space-y-1">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Tag className="h-3 w-3" /> Vertical
+              </span>
+              <Select
+                value={form.vertical || "__none"}
+                onValueChange={(v) => setForm((f) => ({ ...f, vertical: v === "__none" ? "" : v }))}
+              >
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {VERTICAL_OPTS.map((v) => (
+                    <SelectItem key={v.value || "__none"} value={v.value || "__none"} className="text-xs">{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+          </div>
+
           <div className="space-y-1">
             <span className="text-[11px] text-muted-foreground">AI context (free-form)</span>
             <Textarea
