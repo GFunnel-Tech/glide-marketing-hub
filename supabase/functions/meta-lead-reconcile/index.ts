@@ -137,6 +137,19 @@ Deno.serve(async (req) => {
         const nextAttempt = (lead.sync_attempts ?? 0) + 1;
         const pushResult = await upsertGhlContact(ghlKey, client?.ghl_location_id, lead);
 
+        // Rate-limited responses are transient — defer without burning an attempt.
+        if (!pushResult.ok && /GHL 429/.test(pushResult.error || "")) {
+          await admin.from("meta_leads").update({
+            sync_status: "missing",
+            ghl_check_status: "missing",
+            ghl_checked_at: new Date().toISOString(),
+            last_sync_error: pushResult.error,
+            next_check_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+          }).eq("id", lead.id);
+          stats.missing++;
+          continue;
+        }
+
         if (pushResult.ok) {
           await admin.from("meta_leads").update({
             sync_status: "recovered",
