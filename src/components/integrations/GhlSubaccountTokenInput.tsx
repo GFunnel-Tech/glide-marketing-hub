@@ -122,11 +122,22 @@ export function GhlSubaccountTokenInput({ locationId }: Props) {
         </Button>
       </div>
 
+      <a
+        href={`https://app.gohighlevel.com/v2/location/${locationId}/settings/private-integrations`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/15"
+      >
+        <ExternalLink className="h-3 w-3" />
+        Open this sub-account's Private Integrations
+      </a>
+
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Create one in GHL → Sub-account → <em>Settings → Private Integrations → Create</em>.
-        Grant <span className="font-mono">contacts.readonly</span>, <span className="font-mono">contacts.write</span>,
+        In GHL, click <em>Create New Integration</em> and grant{" "}
+        <span className="font-mono">contacts.readonly</span>, <span className="font-mono">contacts.write</span>,
         and <span className="font-mono">calendars.readonly</span> scopes (add{" "}
-        <span className="font-mono">opportunities.readonly</span> for pipeline sync).
+        <span className="font-mono">opportunities.readonly</span> for pipeline sync). Copy the{" "}
+        <span className="font-mono">pit-…</span> token and paste it above.
       </p>
     </div>
   );
