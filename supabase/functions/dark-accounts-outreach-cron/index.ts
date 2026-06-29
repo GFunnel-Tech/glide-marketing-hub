@@ -151,7 +151,7 @@ async function processWorkspace(admin: ReturnType<typeof createClient>, workspac
   const endOfToday = new Date();
   endOfToday.setHours(23, 59, 59, 0);
   const dueIso = endOfToday.toISOString();
-  const today = new Date().toISOString().slice(0, 10);
+  
 
   const rows = dark.map((c: any) => {
     const display = c.brand || c.name || `Client ${c.id}`;
