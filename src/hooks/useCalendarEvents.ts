@@ -49,7 +49,7 @@ export function useCalendarEvents(rangeStart: Date, rangeEnd: Date) {
       for (const a of appts.data ?? []) {
         events.push({
           id: `ghl-${a.id}`,
-          source: "ghl",
+          source: a.client_id ? "client" : "sales",
           title: a.title || "Appointment",
           start: a.start_time,
           end: a.end_time,
