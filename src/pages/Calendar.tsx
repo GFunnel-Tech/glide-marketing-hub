@@ -3,7 +3,8 @@ import {
   addDays, addMonths, addWeeks, endOfDay, endOfMonth, endOfWeek, format,
   isSameDay, isSameMonth, startOfDay, startOfMonth, startOfWeek, subMonths, subWeeks,
 } from "date-fns";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Briefcase, CheckSquare, Users } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Briefcase, CheckSquare, Users, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +12,9 @@ import { Toggle } from "@/components/ui/toggle";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useCalendarEvents, CalendarEvent, CalendarSource } from "@/hooks/useCalendarEvents";
+import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 type View = "month" | "week" | "day";
 
@@ -26,6 +30,32 @@ export default function CalendarPage() {
   const [sources, setSources] = useState<Record<CalendarSource, boolean>>({
     ghl: true, task: true, google: true,
   });
+  const [syncing, setSyncing] = useState(false);
+  const { currentWorkspace } = useWorkspace();
+  const qc = useQueryClient();
+
+  async function syncGhl() {
+    if (!currentWorkspace) return;
+    setSyncing(true);
+    const toastId = toast.loading("Syncing GHL appointments…");
+    try {
+      const { data, error } = await supabase.functions.invoke("ghl-appointments-sync", {
+        body: { workspaceId: currentWorkspace.id, daysBack: 30, daysForward: 90 },
+      });
+      if (error) throw error;
+      const r = data as any;
+      toast.success(
+        `Synced ${r?.events_upserted ?? 0} appointment${(r?.events_upserted ?? 0) === 1 ? "" : "s"} across ${r?.clients_processed ?? 0} clients`,
+        { id: toastId },
+      );
+      await qc.invalidateQueries({ queryKey: ["calendar-events"] });
+    } catch (e: any) {
+      console.error("[calendar] ghl sync failed", e);
+      toast.error(e?.message ?? "GHL sync failed", { id: toastId });
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const { rangeStart, rangeEnd } = useMemo(() => {
     if (view === "month") {
@@ -80,6 +110,10 @@ export default function CalendarPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={syncGhl} disabled={syncing} className="gap-2">
+            <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
+            {syncing ? "Syncing…" : "Sync GHL"}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setCursor(new Date())}>Today</Button>
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Previous">
             <ChevronLeft className="h-4 w-4" />
