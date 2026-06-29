@@ -63,7 +63,7 @@ export function useCalendarEvents(rangeStart: Date, rangeEnd: Date) {
         if (!start) continue;
         events.push({
           id: `task-${t.id}`,
-          source: "task",
+          source: "internal",
           title: t.title || (t.content?.slice(0, 60) ?? "Task"),
           start,
           end: null,
