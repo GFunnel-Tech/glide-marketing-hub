@@ -243,6 +243,7 @@ function buildFallback(signals: any): {
       priority: "high",
       client_id: c.client_id ?? null,
       reason: c.body ?? "Critical AI insight open.",
+      category: "media_buying",
     });
   for (const c of highChurn.slice(0, 3))
     suggested.push({
@@ -250,6 +251,7 @@ function buildFallback(signals: any): {
       priority: "high",
       client_id: c.client_id ?? null,
       reason: c.summary ?? `High churn risk (score ${c.score}).`,
+      category: "client_outreach",
     });
   if (pending.length)
     suggested.push({
@@ -257,6 +259,7 @@ function buildFallback(signals: any): {
       priority: "normal",
       client_id: null,
       reason: "AI actions are queued and waiting on your approval.",
+      category: "account_management",
     });
   if (tasks.overdue_count)
     suggested.push({
@@ -264,6 +267,7 @@ function buildFallback(signals: any): {
       priority: "normal",
       client_id: null,
       reason: "These were due before today.",
+      category: "general",
     });
 
   return {
