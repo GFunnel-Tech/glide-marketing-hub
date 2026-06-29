@@ -4,14 +4,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, FileText, Globe, Building2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Save, FileText, Globe, Building2, MapPin, Tag } from "lucide-react";
 import { toast } from "sonner";
 
 type Identity = {
   ai_context: string;
   website: string;
   bio: string;
+  country: string;
+  vertical: string;
 };
+
+const COUNTRY_OPTS = [
+  { value: "", label: "—" },
+  { value: "US", label: "United States" },
+  { value: "Canada", label: "Canada" },
+];
+const VERTICAL_OPTS = [
+  { value: "", label: "—" },
+  { value: "home_buyer", label: "Home Buyer" },
+  { value: "investor", label: "Investor" },
+  { value: "refinance", label: "Refinance" },
+  { value: "reverse_mortgage", label: "Reverse Mortgage" },
+];
 
 export function ClientContextPanel({ clientId }: { clientId: number }) {
   const qc = useQueryClient();
