@@ -77,7 +77,8 @@ Deno.serve(async (req) => {
       .eq("workspace_id", wsId)
       .maybeSingle();
 
-    if (!cfg?.ghl_api_key) continue;
+    const locKeyMap = await fetchLocationKeyMap(admin, wsId);
+    if (!cfg?.ghl_api_key && locKeyMap.size === 0) continue;
 
     const clientIds = Array.from(new Set(wsLeads.map(l => l.client_id).filter(Boolean)));
     const { data: clientRows } = await admin
@@ -91,8 +92,10 @@ Deno.serve(async (req) => {
       try {
         const client = lead.client_id ? clientMap.get(lead.client_id) : null;
         const locationId = client?.ghl_location_id;
+        const ghlKey = resolveGhlKey(locKeyMap, locationId, cfg?.ghl_api_key);
+        if (!ghlKey) continue;
 
-        const found = await searchGhlContact(cfg.ghl_api_key, locationId, lead.email, lead.phone);
+        const found = await searchGhlContact(ghlKey, locationId, lead.email, lead.phone);
 
         if (found) {
           // Recovery: was flagged, now found → mark recovered + notify so the
