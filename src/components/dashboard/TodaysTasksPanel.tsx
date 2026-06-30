@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ListChecks, Plus, ArrowRight, AlertCircle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,11 +6,20 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useTasks } from "@/hooks/useTasks";
 import { TaskList } from "@/components/tasks/TaskList";
 import { TaskEditDialog } from "@/components/tasks/TaskEditDialog";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 export function TodaysTasksPanel() {
-  const { items: today, isLoading } = useTasks({ view: "today" });
-  const { items: overdue } = useTasks({ view: "overdue" });
+  const { currentWorkspace } = useWorkspace();
+  const isMember = currentWorkspace?.role === "member" || currentWorkspace?.role === "viewer";
+  const [meId, setMeId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setMeId(data.user?.id ?? null));
+  }, []);
+  const assigneeId = isMember && meId ? meId : undefined;
+  const { items: today, isLoading } = useTasks({ view: "today", assigneeId });
+  const { items: overdue } = useTasks({ view: "overdue", assigneeId });
   const [newOpen, setNewOpen] = useState(false);
   const [tab, setTab] = useState<"overdue" | "today">(overdue.length > 0 ? "overdue" : "today");
 
