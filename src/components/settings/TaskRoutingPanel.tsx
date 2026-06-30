@@ -115,6 +115,16 @@ export function TaskRoutingPanel() {
     );
   }
 
+  const canManage = currentWorkspace?.role === "owner" || currentWorkspace?.role === "admin";
+  if (!canManage) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+        Only workspace owners or admins can edit task routing. Tasks routed to your position will
+        appear in your <span className="font-medium text-foreground">Today's Tasks</span> automatically.
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-border bg-card p-5">
       <div className="mb-4 flex items-start gap-3">
