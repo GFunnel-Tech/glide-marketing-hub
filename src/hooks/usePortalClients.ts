@@ -30,6 +30,34 @@ export type PortalClient = {
 };
 
 const ACTIVE_CLIENT_KEY = "portal:activeClientId";
+const VIEW_AS_KEY = "portal:viewAsClientId";
+
+export function getViewAsClientId(): number | null {
+  if (typeof window === "undefined") return null;
+  const v = window.localStorage.getItem(VIEW_AS_KEY);
+  return v ? Number(v) : null;
+}
+
+export function setViewAsClientId(id: number | null) {
+  if (typeof window === "undefined") return;
+  if (id === null) window.localStorage.removeItem(VIEW_AS_KEY);
+  else window.localStorage.setItem(VIEW_AS_KEY, String(id));
+  window.dispatchEvent(new Event("portal:viewAsChanged"));
+}
+
+export function useViewAsClientId(): number | null {
+  const [v, setV] = useState<number | null>(getViewAsClientId());
+  useEffect(() => {
+    const refresh = () => setV(getViewAsClientId());
+    window.addEventListener("portal:viewAsChanged", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("portal:viewAsChanged", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+  return v;
+}
 
 export function usePortalMappings() {
   const { user } = useAuth();
@@ -74,16 +102,18 @@ export function useActiveClientId(mappings: PortalMapping[] | undefined): [numbe
 export function usePortalClient() {
   const mappingsQ = usePortalMappings();
   const [activeId, setActiveId] = useActiveClientId(mappingsQ.data);
-  const mapping = mappingsQ.data?.find((m) => m.client_id === activeId) ?? null;
+  const viewAsId = useViewAsClientId();
+  const effectiveId = viewAsId ?? activeId;
+  const mapping = mappingsQ.data?.find((m) => m.client_id === effectiveId) ?? null;
 
   const clientQ = useQuery({
-    queryKey: ["portal-client", activeId],
-    enabled: activeId !== null && mapping?.status === "active",
+    queryKey: ["portal-client", effectiveId],
+    enabled: effectiveId !== null && (!!viewAsId || mapping?.status === "active"),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
         .select("*")
-        .eq("id", activeId!)
+        .eq("id", effectiveId!)
         .maybeSingle();
       if (error) throw error;
       return data as unknown as PortalClient | null;
@@ -92,12 +122,13 @@ export function usePortalClient() {
 
   return {
     mappings: mappingsQ.data ?? [],
-    activeClientId: activeId,
+    activeClientId: effectiveId,
     setActiveClientId: setActiveId,
     activeMapping: mapping,
     client: clientQ.data ?? null,
     isLoading: mappingsQ.isLoading || clientQ.isLoading,
     hasAnyMapping: (mappingsQ.data?.length ?? 0) > 0,
+    viewAsClientId: viewAsId,
   };
 }
 
