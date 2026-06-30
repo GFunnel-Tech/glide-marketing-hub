@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { LogIn, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
