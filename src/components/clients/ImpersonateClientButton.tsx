@@ -16,7 +16,7 @@ type Profile = { id: string; email: string | null; display_name: string | null }
 export function ImpersonateClientButton({ clientId, clientName }: { clientId: number; clientName: string }) {
   const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
-  const { isSuperAdmin } = useSuperAdmin();
+  const { isSuperAdmin } = useIsSuperAdmin();
   const [users, setUsers] = useState<PortalUser[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [busy, setBusy] = useState(false);
