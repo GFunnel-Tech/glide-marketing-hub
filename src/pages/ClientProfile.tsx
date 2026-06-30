@@ -53,6 +53,7 @@ import { GhlSubaccountTokenInput } from "@/components/integrations/GhlSubaccount
 import { MetaAccountsForClient } from "@/components/integrations/MetaAccountsForClient";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
+import { ImpersonateClientButton } from "@/components/clients/ImpersonateClientButton";
 import { ClientTasksTab } from "@/components/clients/ClientTasksTab";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { TrackingPanel } from "@/components/tracking/TrackingPanel";
@@ -439,6 +440,7 @@ function ClientProfileInner() {
                   </h1>
                 )}
                 <StatusBadge status={client.status} />
+                <ImpersonateClientButton clientId={client.id} clientName={client.name} />
                 {isSyncing && (
                   <span
                     className="inline-flex items-center gap-1 rounded-full bg-warning/10 border border-warning/30 text-warning px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
