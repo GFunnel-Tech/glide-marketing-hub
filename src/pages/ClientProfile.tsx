@@ -440,6 +440,7 @@ function ClientProfileInner() {
                   </h1>
                 )}
                 <StatusBadge status={client.status} />
+                <ImpersonateClientButton clientId={client.id} clientName={client.name} />
                 {isSyncing && (
                   <span
                     className="inline-flex items-center gap-1 rounded-full bg-warning/10 border border-warning/30 text-warning px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
