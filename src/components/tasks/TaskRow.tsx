@@ -63,7 +63,18 @@ export function TaskRow({
 
   return (
     <>
-      <div className="group flex items-start gap-3 rounded-lg border border-border bg-card px-3 py-2.5 hover:border-primary/40 hover:bg-accent/30 transition-colors">
+      <div className={cn(
+        "group flex items-start gap-3 rounded-lg border border-border bg-card px-3 py-2.5 hover:border-primary/40 hover:bg-accent/30 transition-colors",
+        selected && "border-primary/60 bg-primary/5"
+      )}>
+        {selectable && (
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => onToggleSelect?.(task.id)}
+            className="mt-0.5"
+            aria-label="Select task"
+          />
+        )}
         <Checkbox
           checked={task.done}
           onCheckedChange={() => toggle.mutate(task)}
