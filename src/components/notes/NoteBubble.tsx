@@ -253,6 +253,36 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
     },
     onSuccess: () => qc.invalidateQueries({ queryKey }),
   });
+  const updateMut = useMutation({
+    mutationFn: async () => {
+      if (!editingNote) throw new Error("No note");
+      let dueAt: string | null = null;
+      if (editDate) {
+        const [hh, mm] = editTime.split(":").map(Number);
+        const dt = new Date(editDate);
+        dt.setHours(hh || 0, mm || 0, 0, 0);
+        dueAt = dt.toISOString();
+      }
+      const { error } = await supabase
+        .from("client_notes")
+        .update({
+          content: editContent.trim(),
+          due_at: dueAt,
+          assigned_to: editAssigneeIds[0] ?? null,
+          assigned_to_ids: editAssigneeIds,
+          visible_to_client: editShare && !!clientId,
+        })
+        .eq("id", editingNote.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setEditingNote(null);
+      qc.invalidateQueries({ queryKey });
+      toast.success("Task updated");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not update task"),
+  });
+
 
   const Trigger =
     variant === "button" ? (
