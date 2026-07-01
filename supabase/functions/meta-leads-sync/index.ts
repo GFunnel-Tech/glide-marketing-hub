@@ -216,6 +216,7 @@ Deno.serve(async (req) => {
 
         const formMap = new Map<string, {
           name: string | null;
+          page_id: string | null;
           ads: { id: string; name: string | null; adset_id: string | null; adset_name: string | null; campaign_id: string | null; campaign_name: string | null }[];
         }>();
 
@@ -223,7 +224,11 @@ Deno.serve(async (req) => {
           const forms = extractLeadForms(ad);
           for (const f of forms) {
             if (!f.id) continue;
-            if (!formMap.has(f.id)) formMap.set(f.id, { name: f.name ?? null, ads: [] });
+            if (!formMap.has(f.id)) {
+              formMap.set(f.id, { name: f.name ?? null, page_id: f.page_id ?? null, ads: [] });
+            } else if (f.page_id && !formMap.get(f.id)!.page_id) {
+              formMap.get(f.id)!.page_id = f.page_id;
+            }
             formMap.get(f.id)!.ads.push({
               id: ad.id,
               name: ad.name ?? null,
