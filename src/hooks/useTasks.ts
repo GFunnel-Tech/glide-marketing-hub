@@ -224,7 +224,70 @@ export function useTasks(opts: UseTasksOptions = {}) {
         .eq("id", t.id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks", wsId] as any }),
+    onMutate: async (t: TaskRow) => {
+      await qc.cancelQueries({ queryKey: ["tasks", wsId] as any });
+      const snapshots: Array<[readonly unknown[], unknown]> = [];
+      qc.getQueriesData({ queryKey: ["tasks", wsId] as any }).forEach(([key, data]) => {
+        snapshots.push([key, data]);
+        if (Array.isArray(data)) {
+          qc.setQueryData(key, (data as any[]).map((r: any) =>
+            r.id === t.id ? { ...r, done: !t.done, completed_at: !t.done ? new Date().toISOString() : null } : r
+          ));
+        }
+      });
+      return { snapshots };
+    },
+    onError: (_e, _v, ctx) => {
+      ctx?.snapshots.forEach(([key, data]) => qc.setQueryData(key, data));
+      toast.error("Could not update task");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["tasks", wsId] as any }),
+  });
+
+  const bulkToggle = useMutation({
+    mutationFn: async ({ ids, done }: { ids: string[]; done: boolean }) => {
+      if (ids.length === 0) return;
+      const { error } = await supabase
+        .from("client_notes")
+        .update({ done, completed_at: done ? new Date().toISOString() : null })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["tasks", wsId] as any });
+      toast.success(`${v.ids.length} task${v.ids.length === 1 ? "" : "s"} ${v.done ? "completed" : "reopened"}`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Bulk update failed"),
+  });
+
+  const bulkAssign = useMutation({
+    mutationFn: async ({ ids, assigneeIds }: { ids: string[]; assigneeIds: string[] }) => {
+      if (ids.length === 0) return;
+      const clean = assigneeIds.filter(Boolean);
+      const { error } = await supabase
+        .from("client_notes")
+        .update({ assigned_to_ids: clean, assigned_to: clean[0] ?? null })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["tasks", wsId] as any });
+      toast.success(`Assigned ${v.ids.length} task${v.ids.length === 1 ? "" : "s"}`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Bulk assign failed"),
+  });
+
+  const bulkRemove = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const { error } = await supabase.from("client_notes").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, ids) => {
+      qc.invalidateQueries({ queryKey: ["tasks", wsId] as any });
+      toast.success(`Deleted ${ids.length} task${ids.length === 1 ? "" : "s"}`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Bulk delete failed"),
   });
 
   const snooze = useMutation({
