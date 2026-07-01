@@ -261,6 +261,50 @@ export function ClientTable() {
     }
   };
 
+  const handleExportCSV = () => {
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    const cols = visibleColumns.filter((c) => c.key !== "rank");
+    const headers = ["#", ...cols.map((c) => c.label)];
+    const escape = (v: any) => {
+      const s = v == null ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rowValue = (c: any, key: string): any => {
+      switch (key) {
+        case "name": return `${c.name}${c.brand ? ` (${c.brand})` : ""}`;
+        case "status": return c.status;
+        case "bmType": return c.bmType ?? "";
+        case "cpl": return Number(c.cpl ?? 0).toFixed(2);
+        case "cpm": return Number(c.cpm ?? 0).toFixed(2);
+        case "leads": return c.leads ?? 0;
+        case "spend": return Number(c.spend ?? 0).toFixed(2);
+        case "formCvr": return Number(c.formCvr ?? 0).toFixed(2);
+        case "frequency": return Number(c.frequency ?? 0).toFixed(2);
+        default:
+          if (key.startsWith("custom:")) {
+            const id = key.slice("custom:".length);
+            const v = c._custom?.[id];
+            return v == null ? "" : String(v);
+          }
+          return (c as any)[key] ?? "";
+      }
+    };
+    const lines = [headers.map(escape).join(",")];
+    for (const c of filtered) {
+      lines.push([c._rank, ...cols.map((col) => rowValue(c, col.key))].map(escape).join(","));
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clients_${fmt(rangeFrom)}_to_${fmt(rangeTo)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${filtered.length} client${filtered.length === 1 ? "" : "s"}`);
+  };
+
   // Lookup for custom KPI values: { kpiId: { clientId|"_global": value } }
   const evalMap = useMemo(() => {
     const m = new Map<string, Map<string, number | null>>();
