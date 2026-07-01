@@ -101,12 +101,12 @@ export function TaskRow({
                 {format(dueDate, "MMM d, h:mm a")}
               </span>
             )}
-            {assignee && (
-              <span className="inline-flex items-center gap-1">
+            {assignees.map((a) => (
+              <span key={a.id} className="inline-flex items-center gap-1">
                 <User className="h-3 w-3" />
-                {assignee.display_name || assignee.email}
+                {a.display_name || a.email}
               </span>
-            )}
+            ))}
             {showClient && client && clientHref && (
               <Link
                 to={clientHref}
