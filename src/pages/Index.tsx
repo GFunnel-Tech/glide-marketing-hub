@@ -38,49 +38,68 @@ function csvEscape(v: any) {
 
 function ExportOverviewButton() {
   const clients = useVisibleClients();
-  const { data: metrics = {} } = useClientsRangeMetrics();
+  const { data: metrics, isLoading, isFetching, refetch } = useClientsRangeMetrics();
   const { from, to } = useDateRange();
+  const [exporting, setExporting] = useState(false);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!clients.length) {
       toast.error("No clients to export");
       return;
     }
-    const headers = [
-      "Client", "Status", "Brand", "Currency",
-      "Spend", "Impressions", "Clicks", "CTR %",
-      "Reported Leads", "True Leads", "CPL", "True CPL",
-      "CPM", "Form CVR %", "Frequency", "Above 640 %",
-    ];
-    const rows = clients.map((c: any) => {
-      const m: any = (metrics as any)[c.id] || {};
-      const ctr = m.impressions ? (m.clicks / m.impressions) * 100 : 0;
-      return [
-        c.name, c.status, c.brand || "", m.currency || "",
-        (m.spend ?? 0).toFixed(2),
-        m.impressions ?? 0, m.clicks ?? 0, ctr.toFixed(2),
-        m.reportedLeads ?? 0, m.trueLeads ?? 0,
-        (m.cpl ?? 0).toFixed(2), (m.trueCpl ?? 0).toFixed(2),
-        (m.cpm ?? 0).toFixed(2),
-        ((m.formCvr ?? 0) * 100).toFixed(2),
-        (m.frequency ?? 0).toFixed(2),
-        m.above640Pct == null ? "" : m.above640Pct.toFixed(1),
-      ].map(csvEscape).join(",");
-    });
-    const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `overview_${fmtDate(from)}_to_${fmtDate(to)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`Exported ${clients.length} clients`);
+    setExporting(true);
+    try {
+      // Always fetch fresh data at click time so the export reflects the
+      // current date range even if the cached query hasn't resolved yet.
+      let data = metrics;
+      if (!data || Object.keys(data).length === 0) {
+        const res = await refetch();
+        data = res.data ?? {};
+      }
+      const m0: Record<number, any> = (data as any) || {};
+
+      const headers = [
+        "Client", "Status", "Brand", "Currency",
+        "Spend", "Impressions", "Clicks", "CTR %",
+        "Reported Leads", "True Leads", "CPL", "True CPL",
+        "CPM", "Form CVR %", "Frequency", "Above 640 %",
+      ];
+      const rows = clients.map((c: any) => {
+        const m: any = m0[c.id] || {};
+        const ctr = m.impressions ? (m.clicks / m.impressions) * 100 : 0;
+        return [
+          c.name, c.status, c.brand || "", m.currency || "",
+          (m.spend ?? 0).toFixed(2),
+          m.impressions ?? 0, m.clicks ?? 0, ctr.toFixed(2),
+          m.reportedLeads ?? 0, m.trueLeads ?? 0,
+          (m.cpl ?? 0).toFixed(2), (m.trueCpl ?? 0).toFixed(2),
+          (m.cpm ?? 0).toFixed(2),
+          (m.formCvr ?? 0).toFixed(2),
+          (m.frequency ?? 0).toFixed(2),
+          m.above640Pct == null ? "" : m.above640Pct.toFixed(1),
+        ].map(csvEscape).join(",");
+      });
+      const csv = [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `overview_${fmtDate(from)}_to_${fmtDate(to)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      const withData = clients.filter((c: any) => m0[c.id]).length;
+      toast.success(`Exported ${clients.length} clients (${withData} with metrics)`);
+    } catch (e: any) {
+      toast.error(e?.message || "Export failed");
+    } finally {
+      setExporting(false);
+    }
   };
 
+  const busy = exporting || isLoading || isFetching;
   return (
-    <Button variant="outline" size="sm" onClick={handleExport}>
-      <Download className="h-4 w-4 mr-1.5" /> Export
+    <Button variant="outline" size="sm" onClick={handleExport} disabled={busy}>
+      <Download className="h-4 w-4 mr-1.5" /> {busy ? "Preparing…" : "Export"}
     </Button>
   );
 }
