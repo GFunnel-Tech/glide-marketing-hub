@@ -376,7 +376,13 @@ async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise
     const ins = insightsByCampaign.get(c.id) ?? {};
     const leads = extractLeads(ins.actions);
     const spend = Number(ins.spend ?? 0);
-    const status = (c.effective_status === "ACTIVE" || c.status === "ACTIVE") ? "active" : "paused";
+    // Meta's effective_status is the source of truth for whether delivery is
+    // actually running. Anything other than "ACTIVE" (PAUSED, CAMPAIGN_PAUSED,
+    // ADSET_PAUSED, ARCHIVED, DELETED, DISAPPROVED, WITH_ISSUES, IN_PROCESS,
+    // PENDING_REVIEW, PENDING_BILLING_INFO) means the campaign is NOT active.
+    // Only fall back to configured `status` when effective_status is missing.
+    const effective = c.effective_status ?? c.status ?? null;
+    const status = effective === "ACTIVE" ? "active" : "paused";
     const ISSUE_STATUSES = new Set([
       "DISAPPROVED",
       "WITH_ISSUES",
