@@ -324,11 +324,15 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   size="sm"
                   className={cn(
                     "h-7 flex-1 justify-start gap-1.5 text-xs font-normal",
-                    !assigneeId && "text-muted-foreground",
+                    assigneeIds.length === 0 && "text-muted-foreground",
                   )}
                 >
                   <User className="h-3 w-3" />
-                  {assigneeId ? memberLabel(assigneeId) : "Assign to…"}
+                  {assigneeIds.length === 0
+                    ? "Assign to…"
+                    : assigneeIds.length === 1
+                    ? memberLabel(assigneeIds[0])
+                    : `${assigneeIds.length} assignees`}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[240px] p-0" align="start">
@@ -337,35 +341,37 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   <CommandList>
                     <CommandEmpty>No teammates.</CommandEmpty>
                     <CommandGroup>
-                      <CommandItem
-                        onSelect={() => { setAssigneeId(null); setAssigneeOpen(false); }}
-                        className="text-xs"
-                      >
-                        <Check className={cn("mr-2 h-3.5 w-3.5", !assigneeId ? "opacity-100" : "opacity-0")} />
-                        Unassigned
-                      </CommandItem>
-                      {members.map((m) => (
-                        <CommandItem
-                          key={m.id}
-                          onSelect={() => { setAssigneeId(m.id); setAssigneeOpen(false); }}
-                          className="text-xs"
-                        >
-                          <Check className={cn("mr-2 h-3.5 w-3.5", assigneeId === m.id ? "opacity-100" : "opacity-0")} />
-                          <div className="flex flex-col">
-                            <span className="font-medium">{m.display_name || m.email}</span>
-                            {m.display_name && m.email && (
-                              <span className="text-[10px] text-muted-foreground">{m.email}</span>
-                            )}
-                          </div>
-                        </CommandItem>
-                      ))}
+                      {members.map((m) => {
+                        const selected = assigneeIds.includes(m.id);
+                        return (
+                          <CommandItem
+                            key={m.id}
+                            onSelect={() => {
+                              setAssigneeIds((prev) =>
+                                prev.includes(m.id)
+                                  ? prev.filter((x) => x !== m.id)
+                                  : [...prev, m.id],
+                              );
+                            }}
+                            className="text-xs"
+                          >
+                            <Check className={cn("mr-2 h-3.5 w-3.5", selected ? "opacity-100" : "opacity-0")} />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{m.display_name || m.email}</span>
+                              {m.display_name && m.email && (
+                                <span className="text-[10px] text-muted-foreground">{m.email}</span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
                     </CommandGroup>
                   </CommandList>
                 </Command>
               </PopoverContent>
             </Popover>
-            {assigneeId && (
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setAssigneeId(null)}>
+            {assigneeIds.length > 0 && (
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setAssigneeIds([])}>
                 Clear
               </Button>
             )}
