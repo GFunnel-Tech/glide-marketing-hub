@@ -9,6 +9,7 @@ import { useChannelLeads, useUpdateLead, type LeadChannel, type LeadStage, type 
 import { useClients } from "@/hooks/useDatabase";
 import { LeadDetailDrawer } from "./LeadDetailDrawer";
 import { ManualLeadImport } from "./ManualLeadImport";
+import { MetaLeadImport } from "./MetaLeadImport";
 
 const CHANNELS: { value: LeadChannel; label: string }[] = [
   { value: "meta", label: "Meta" },
