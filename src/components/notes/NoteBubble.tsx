@@ -47,7 +47,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   const [draftDate, setDraftDate] = useState<Date | undefined>(undefined);
   const [draftTime, setDraftTime] = useState<string>("09:00");
   const [calOpen, setCalOpen] = useState(false);
-  const [assigneeId, setAssigneeId] = useState<string | null>(null);
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [shareWithClient, setShareWithClient] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
