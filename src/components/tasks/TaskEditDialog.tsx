@@ -244,18 +244,65 @@ export function TaskEditDialog({ open, onOpenChange, task, defaultClientId = nul
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Assignee</Label>
-              <Select value={assignee} onValueChange={setAssignee}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {members.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.display_name || m.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">Assignees</Label>
+              <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 font-normal h-auto min-h-10 flex-wrap py-1.5"
+                  >
+                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {assignees.length === 0 ? (
+                      <span className="text-muted-foreground">Unassigned</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {assignees.map((id) => {
+                          const m = members.find((x) => x.id === id);
+                          return (
+                            <Badge key={id} variant="secondary" className="text-[11px]">
+                              {m?.display_name || m?.email || "User"}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search members…" />
+                    <CommandList>
+                      <CommandEmpty>No members found.</CommandEmpty>
+                      <CommandGroup>
+                        {members.map((m) => {
+                          const selected = assignees.includes(m.id);
+                          return (
+                            <CommandItem
+                              key={m.id}
+                              value={(m.display_name || m.email || m.id) ?? m.id}
+                              onSelect={() => {
+                                setAssignees((prev) =>
+                                  prev.includes(m.id)
+                                    ? prev.filter((x) => x !== m.id)
+                                    : [...prev, m.id],
+                                );
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selected ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              {m.display_name || m.email}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label className="text-xs">Client</Label>
