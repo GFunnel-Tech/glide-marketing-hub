@@ -54,6 +54,7 @@ import { MetaAccountsForClient } from "@/components/integrations/MetaAccountsFor
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
 import { ImpersonateClientButton } from "@/components/clients/ImpersonateClientButton";
+import { ClientRequestsPanel } from "@/components/client/ClientRequestsPanel";
 import { ClientTasksTab } from "@/components/clients/ClientTasksTab";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { TrackingPanel } from "@/components/tracking/TrackingPanel";
