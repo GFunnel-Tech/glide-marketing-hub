@@ -595,6 +595,7 @@ export function ClientTable() {
           </Select>
 
           <Popover>
+
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
