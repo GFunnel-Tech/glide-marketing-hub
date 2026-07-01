@@ -122,7 +122,8 @@ export function TaskEditDialog({ open, onOpenChange, task, defaultClientId = nul
       kind,
       priority,
       dueAt,
-      assignedTo: assignee === "unassigned" ? null : assignee,
+      assignedToIds: assignees,
+      assignedTo: assignees[0] ?? null,
       clientId: clientId === "none" ? null : Number(clientId),
       recurrence,
     };
