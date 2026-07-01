@@ -6,7 +6,7 @@ import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { StatusBadge } from "./StatusBadge";
 import { ClientDrawer } from "./ClientDrawer";
 import { cn } from "@/lib/utils";
-import { ArrowUpDown, Building2, User, Search, SlidersHorizontal, Plus, ExternalLink, Download, ChevronDown, Loader2, Check, RefreshCw, Sparkles, MoveRight } from "lucide-react";
+import { ArrowUpDown, Building2, User, Search, SlidersHorizontal, Plus, ExternalLink, Download, ChevronDown, Loader2, Check, RefreshCw, Sparkles, MoveRight, FileDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -154,7 +154,7 @@ function loadVisible(defaultIds: string[]): string[] {
 export function ClientTable() {
   const { data: baseClients = [], isLoading } = useClients();
   const { data: rangeMetrics = {}, isFetching: rangeLoading } = useClientsRangeMetrics();
-  const { label: rangeLabel } = useDateRange();
+  const { label: rangeLabel, from: rangeFrom, to: rangeTo } = useDateRange();
   const { data: customKpis = [] } = useCustomKpis();
   const activeKpis = useMemo(() => customKpis.filter((k) => k.enabled), [customKpis]);
   const { data: evaluations = [] } = useLatestKpiEvaluations(activeKpis.map((k) => k.id));
@@ -259,6 +259,50 @@ export function ClientTable() {
     } finally {
       setBulkUpdating(false);
     }
+  };
+
+  const handleExportCSV = () => {
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    const cols = visibleColumns.filter((c) => c.key !== "rank");
+    const headers = ["#", ...cols.map((c) => c.label)];
+    const escape = (v: any) => {
+      const s = v == null ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rowValue = (c: any, key: string): any => {
+      switch (key) {
+        case "name": return `${c.name}${c.brand ? ` (${c.brand})` : ""}`;
+        case "status": return c.status;
+        case "bmType": return c.bmType ?? "";
+        case "cpl": return Number(c.cpl ?? 0).toFixed(2);
+        case "cpm": return Number(c.cpm ?? 0).toFixed(2);
+        case "leads": return c.leads ?? 0;
+        case "spend": return Number(c.spend ?? 0).toFixed(2);
+        case "formCvr": return Number(c.formCvr ?? 0).toFixed(2);
+        case "frequency": return Number(c.frequency ?? 0).toFixed(2);
+        default:
+          if (key.startsWith("custom:")) {
+            const id = key.slice("custom:".length);
+            const v = c._custom?.[id];
+            return v == null ? "" : String(v);
+          }
+          return (c as any)[key] ?? "";
+      }
+    };
+    const lines = [headers.map(escape).join(",")];
+    for (const c of filtered) {
+      lines.push([c._rank, ...cols.map((col) => rowValue(c, col.key))].map(escape).join(","));
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clients_${fmt(rangeFrom)}_to_${fmt(rangeTo)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${filtered.length} client${filtered.length === 1 ? "" : "s"}`);
   };
 
   // Lookup for custom KPI values: { kpiId: { clientId|"_global": value } }
@@ -550,8 +594,21 @@ export function ClientTable() {
             </SelectContent>
           </Select>
 
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={handleExportCSV}
+            title={`Export ${filtered.length} rows for ${rangeLabel}`}
+          >
+            <FileDown className="h-3.5 w-3.5" />
+            Export
+          </Button>
+
           <Popover>
+
             <PopoverTrigger asChild>
+
               <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 Columns
