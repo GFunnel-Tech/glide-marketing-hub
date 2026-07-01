@@ -261,20 +261,57 @@ Deno.serve(async (req) => {
           }
           if (state) retriedForms++;
 
-          let url: string | null =
+          // Pick the best token for this form:
+          //  1) known Page token via form's page_id
+          //  2) probe form -> page id via any Page token we have (some pages
+          //     let the form be introspected with their token)
+          //  3) fall back to user token (works for own pages)
+          let tokenForForm = conn.access_token;
+          if (info.page_id && pageTokens.has(info.page_id)) {
+            tokenForForm = pageTokens.get(info.page_id)!;
+          }
+
+          const buildUrl = (tok: string) =>
             `https://graph.facebook.com/v21.0/${formId}/leads` +
             `?fields=id,created_time,field_data,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,form_id` +
             sinceParam +
-            `&limit=200&access_token=${encodeURIComponent(conn.access_token)}`;
+            `&limit=200&access_token=${encodeURIComponent(tok)}`;
+
+          let url: string | null = buildUrl(tokenForForm);
           let pages = 0;
           let formError: { code: string | null; message: string } | null = null;
           let formLeadCount = 0;
+          let retriedWithPageToken = false;
           const adById = new Map(info.ads.map((a) => [a.id, a]));
           while (url && pages < 50) {
             const leadsRes = await fetch(url);
             const leadsJson = await leadsRes.json();
             if (!leadsRes.ok) {
               const e = leadsJson?.error ?? {};
+              // On error 100 (missing perms), attempt to resolve a Page token
+              // by probing the form with each Page token we hold. First hit wins.
+              if (!retriedWithPageToken && (e.code === 100 || e.code === 200) && pageTokens.size) {
+                retriedWithPageToken = true;
+                let resolved: string | null = null;
+                for (const [pid, ptok] of pageTokens.entries()) {
+                  const probe = await fetch(
+                    `https://graph.facebook.com/v21.0/${formId}?fields=id,name,page{id}&access_token=${encodeURIComponent(ptok)}`,
+                  );
+                  const probeJson = await probe.json();
+                  if (probe.ok && probeJson?.page?.id) {
+                    const owningPage = String(probeJson.page.id);
+                    const owningToken = pageTokens.get(owningPage) ?? ptok;
+                    resolved = owningToken;
+                    // Update in-memory cache so subsequent forms benefit
+                    if (!info.page_id) info.page_id = owningPage;
+                    break;
+                  }
+                }
+                if (resolved) {
+                  url = buildUrl(resolved);
+                  continue; // retry loop iteration
+                }
+              }
               formError = {
                 code: e.code != null ? String(e.code) : String(leadsRes.status),
                 message: e.message ?? JSON.stringify(leadsJson).slice(0, 500),
