@@ -544,14 +544,16 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   className="mt-0.5"
                 />
                 <div className="min-w-0 flex-1">
-                  <p
+                  <button
+                    type="button"
+                    onClick={() => openEdit(n)}
                     className={cn(
-                      "text-xs whitespace-pre-wrap break-words",
+                      "text-xs whitespace-pre-wrap break-words text-left hover:underline",
                       n.done && "text-muted-foreground",
                     )}
                   >
                     {n.content}
-                  </p>
+                  </button>
                   {(() => {
                     const ids = (n.assigned_to_ids && n.assigned_to_ids.length > 0)
                       ? n.assigned_to_ids
