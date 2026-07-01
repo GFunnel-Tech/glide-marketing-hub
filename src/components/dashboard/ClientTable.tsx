@@ -6,7 +6,7 @@ import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { StatusBadge } from "./StatusBadge";
 import { ClientDrawer } from "./ClientDrawer";
 import { cn } from "@/lib/utils";
-import { ArrowUpDown, Building2, User, Search, SlidersHorizontal, Plus, ExternalLink, Download, ChevronDown, Loader2, Check, RefreshCw, Sparkles, MoveRight } from "lucide-react";
+import { ArrowUpDown, Building2, User, Search, SlidersHorizontal, Plus, ExternalLink, Download, ChevronDown, Loader2, Check, RefreshCw, Sparkles, MoveRight, FileDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
