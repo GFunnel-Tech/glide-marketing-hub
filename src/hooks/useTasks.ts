@@ -162,11 +162,15 @@ export function useTasks(opts: UseTasksOptions = {}) {
       if (!wsId) throw new Error("No workspace");
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
+      const assignedIds = (payload.assignedToIds && payload.assignedToIds.length > 0)
+        ? payload.assignedToIds
+        : (payload.assignedTo ? [payload.assignedTo] : []);
       const insert = {
         workspace_id: wsId,
         client_id: payload.clientId ?? null,
         user_id: u.user.id,
-        assigned_to: payload.assignedTo ?? null,
+        assigned_to: assignedIds[0] ?? null,
+        assigned_to_ids: assignedIds,
         title: payload.title ?? null,
         content: payload.content ?? "",
         kind: payload.kind ?? "task",
