@@ -15,6 +15,7 @@ export function AtRiskClientsCard() {
   const clients = useVisibleClients();
   const run = useRunChurnRiskScan();
   const clientPath = useClientPath();
+  const [open, setOpen] = useState(false);
 
   const clientNames = useMemo(() => {
     const m = new Map<number, string>();
@@ -33,20 +34,29 @@ export function AtRiskClientsCard() {
   const lastComputed = risks[0]?.computed_at;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <Collapsible open={open} onOpenChange={setOpen} className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-destructive/10 text-destructive">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex flex-1 items-start gap-3 text-left"
+            aria-expanded={open}
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-destructive/10 text-destructive">
               <AlertTriangle className="h-4 w-4" />
             </span>
-            At-Risk Clients
-          </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            AI-detected churn likelihood across performance, spend, engagement, and billing.
-            {lastComputed && ` · Updated ${formatDistanceToNow(new Date(lastComputed), { addSuffix: true })}`}
-          </p>
-        </div>
+            <div className="flex-1">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                At-Risk Clients
+                <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                AI-detected churn likelihood across performance, spend, engagement, and billing.
+                {lastComputed && ` · Updated ${formatDistanceToNow(new Date(lastComputed), { addSuffix: true })}`}
+              </p>
+            </div>
+          </button>
+        </CollapsibleTrigger>
         <Button
           size="sm"
           variant="outline"
@@ -58,35 +68,37 @@ export function AtRiskClientsCard() {
         </Button>
       </div>
 
-      <div className="mt-4 space-y-2">
-        {isLoading && <p className="text-xs text-muted-foreground">Loading…</p>}
-        {!isLoading && ranked.length === 0 && (
-          <p className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-4 text-center text-xs text-muted-foreground">
-            No at-risk clients yet. Run a scan to get started.
-          </p>
-        )}
-        {ranked.map((r) => {
-          const name = clientNames.get(r.client_id) ?? `Client #${r.client_id}`;
-          return (
-            <Link
-              key={r.client_id}
-              to={clientPath(r.client_id)}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40 hover:bg-accent"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <ChurnRiskBadge level={r.risk_level} score={r.score} />
-                  <span className="truncate text-sm font-medium text-foreground">{name}</span>
+      <CollapsibleContent>
+        <div className="mt-4 space-y-2">
+          {isLoading && <p className="text-xs text-muted-foreground">Loading…</p>}
+          {!isLoading && ranked.length === 0 && (
+            <p className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-4 text-center text-xs text-muted-foreground">
+              No at-risk clients yet. Run a scan to get started.
+            </p>
+          )}
+          {ranked.map((r) => {
+            const name = clientNames.get(r.client_id) ?? `Client #${r.client_id}`;
+            return (
+              <Link
+                key={r.client_id}
+                to={clientPath(r.client_id)}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-primary/40 hover:bg-accent"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <ChurnRiskBadge level={r.risk_level} score={r.score} />
+                    <span className="truncate text-sm font-medium text-foreground">{name}</span>
+                  </div>
+                  {r.summary && (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{r.summary}</p>
+                  )}
                 </div>
-                {r.summary && (
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{r.summary}</p>
-                )}
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </Link>
+            );
+          })}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
