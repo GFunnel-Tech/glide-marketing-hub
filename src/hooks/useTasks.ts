@@ -16,6 +16,7 @@ export type TaskRow = {
   clientId: number | null;
   userId: string;
   assignedTo: string | null;
+  assignedToIds: string[];
   title: string | null;
   content: string;
   kind: "note" | "task";
@@ -43,6 +44,11 @@ const adapt = (r: any): TaskRow => ({
   clientId: r.client_id ?? null,
   userId: r.user_id,
   assignedTo: r.assigned_to ?? null,
+  assignedToIds: Array.isArray(r.assigned_to_ids)
+    ? (r.assigned_to_ids as string[]).filter(Boolean)
+    : r.assigned_to
+    ? [r.assigned_to as string]
+    : [],
   title: r.title ?? null,
   content: r.content ?? "",
   kind: (r.kind ?? "note") as "note" | "task",
