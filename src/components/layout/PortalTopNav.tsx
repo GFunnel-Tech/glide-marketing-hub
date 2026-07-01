@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import {
   Home, BarChart3, Users, CheckSquare, Image as ImageIcon,
   FileText, CreditCard, LifeBuoy, Settings as SettingsIcon, Bot, LogOut,
+  Sparkles, Plug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +13,9 @@ const nav = [
   { to: "/portal", end: true, icon: Home, label: "Dashboard" },
   { to: "/portal/performance", icon: BarChart3, label: "Performance" },
   { to: "/portal/leads", icon: Users, label: "Leads" },
+  { to: "/portal/requests", icon: Sparkles, label: "Requests" },
+  { to: "/portal/reports", icon: FileText, label: "Reports" },
+  { to: "/portal/integrations", icon: Plug, label: "Integrations" },
   { to: "/portal/approvals", icon: CheckSquare, label: "Approvals" },
   { to: "/portal/creative", icon: ImageIcon, label: "Creative" },
   { to: "/portal/documents", icon: FileText, label: "Documents" },
