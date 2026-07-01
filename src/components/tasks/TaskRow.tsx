@@ -40,7 +40,12 @@ export function TaskRow({
   const overdue = !!dueDate && !task.done && isPast(dueDate) && !isToday(dueDate);
   const today = !!dueDate && isToday(dueDate);
 
-  const assignee = members.find((m) => m.id === task.assignedTo);
+  const assigneeIds = task.assignedToIds && task.assignedToIds.length > 0
+    ? task.assignedToIds
+    : (task.assignedTo ? [task.assignedTo] : []);
+  const assignees = assigneeIds
+    .map((id) => members.find((m) => m.id === id))
+    .filter(Boolean) as { id: string; display_name: string | null; email: string | null }[];
   const client = clients.find((c) => c.id === task.clientId);
 
   const clientHref =
