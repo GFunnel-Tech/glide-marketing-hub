@@ -25,9 +25,15 @@ const priorityDot: Record<string, string> = {
 export function TaskRow({
   task,
   showClient = true,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
 }: {
   task: TaskRowT;
   showClient?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }) {
   const { toggle, snooze, remove } = useTasks({ clientId: "any" });
   const { data: members = [] } = useWorkspaceMembersForTasks();
