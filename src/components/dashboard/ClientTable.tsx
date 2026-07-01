@@ -154,7 +154,7 @@ function loadVisible(defaultIds: string[]): string[] {
 export function ClientTable() {
   const { data: baseClients = [], isLoading } = useClients();
   const { data: rangeMetrics = {}, isFetching: rangeLoading } = useClientsRangeMetrics();
-  const { label: rangeLabel } = useDateRange();
+  const { label: rangeLabel, from: rangeFrom, to: rangeTo } = useDateRange();
   const { data: customKpis = [] } = useCustomKpis();
   const activeKpis = useMemo(() => customKpis.filter((k) => k.enabled), [customKpis]);
   const { data: evaluations = [] } = useLatestKpiEvaluations(activeKpis.map((k) => k.id));
