@@ -176,7 +176,8 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
         user_id: u.user.id,
         content: draft.trim(),
         due_at: dueAt,
-        assigned_to: assigneeId,
+        assigned_to: assigneeIds[0] ?? null,
+        assigned_to_ids: assigneeIds,
         visible_to_client: shareWithClient && !!clientId,
       });
       if (error) throw error;
@@ -185,7 +186,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
       setDraft("");
       setDraftDate(undefined);
       setDraftTime("09:00");
-      setAssigneeId(null);
+      setAssigneeIds([]);
       setShareWithClient(false);
       qc.invalidateQueries({ queryKey });
     },
