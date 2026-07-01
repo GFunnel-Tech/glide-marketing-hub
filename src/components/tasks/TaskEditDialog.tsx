@@ -101,7 +101,7 @@ export function TaskEditDialog({ open, onOpenChange, task, defaultClientId = nul
       setPriority("normal");
       setDate(undefined);
       setTime("09:00");
-      setAssignee("unassigned");
+      setAssignees([]);
       setClientId(defaultClientId != null ? String(defaultClientId) : "none");
       setRecurFreq("none");
       setRecurInterval(1);
