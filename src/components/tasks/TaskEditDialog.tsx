@@ -88,7 +88,9 @@ export function TaskEditDialog({ open, onOpenChange, task, defaultClientId = nul
         setDate(undefined);
         setTime("09:00");
       }
-      setAssignee(task.assignedTo ?? "unassigned");
+      setAssignees(task.assignedToIds && task.assignedToIds.length > 0
+        ? task.assignedToIds
+        : (task.assignedTo ? [task.assignedTo] : []));
       setClientId(task.clientId != null ? String(task.clientId) : "none");
       setRecurFreq((task.recurrence?.freq as any) ?? "none");
       setRecurInterval(task.recurrence?.interval ?? 1);
