@@ -22,6 +22,7 @@ type Note = {
   due_at: string | null;
   reminded_at: string | null;
   assigned_to: string | null;
+  assigned_to_ids: string[] | null;
   created_at: string;
   user_id: string;
   visible_to_client: boolean;
