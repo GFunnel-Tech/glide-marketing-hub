@@ -115,6 +115,7 @@ export function useClientsRangeMetrics() {
           const { data: g, error: gErr } = await (supabase as any)
             .from("meta_insights_granular_daily")
             .select("ad_account_id, date, object_id, spend, impressions, clicks, leads, raw")
+            .eq("workspace_id", wsId)
             .eq("level", "campaign")
             .in("object_id", chunk)
             .gte("date", fromStr)
