@@ -597,6 +597,13 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   {n.visible_to_client ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                 </button>
                 <button
+                  onClick={() => openEdit(n)}
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
+                  title="Edit"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+                <button
                   onClick={() => delMut.mutate(n.id)}
                   className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                   title="Delete"
@@ -608,6 +615,117 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
           })}
         </div>
       </PopoverContent>
+
+      <Dialog open={!!editingNote} onOpenChange={(o) => !o && setEditingNote(null)}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>Edit task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Task</Label>
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                rows={3}
+                className="mt-1 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Popover open={editCalOpen} onOpenChange={setEditCalOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 flex-1 justify-start gap-1.5 text-xs font-normal">
+                    <CalendarIcon className="h-3 w-3" />
+                    {editDate ? format(editDate, "MMM d, yyyy") : "No due date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={editDate} onSelect={(d) => { setEditDate(d ?? undefined); setEditCalOpen(false); }} initialFocus />
+                </PopoverContent>
+              </Popover>
+              <Input
+                type="time"
+                value={editTime}
+                onChange={(e) => setEditTime(e.target.value)}
+                className="h-8 w-[110px] text-xs"
+                disabled={!editDate}
+              />
+              {editDate && (
+                <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => setEditDate(undefined)}>Clear</Button>
+              )}
+            </div>
+            <div>
+              <Label className="text-xs">Assignees</Label>
+              <div className="mt-1 flex items-center gap-1.5">
+                <Popover open={editAssigneeOpen} onOpenChange={setEditAssigneeOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn("h-8 flex-1 justify-start gap-1.5 text-xs font-normal", editAssigneeIds.length === 0 && "text-muted-foreground")}>
+                      <User className="h-3 w-3" />
+                      {editAssigneeIds.length === 0
+                        ? "Assign to…"
+                        : editAssigneeIds.length === 1
+                        ? memberLabel(editAssigneeIds[0])
+                        : `${editAssigneeIds.length} assignees`}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[240px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search teammate…" className="text-xs" />
+                      <CommandList>
+                        <CommandEmpty>No teammates.</CommandEmpty>
+                        <CommandGroup>
+                          {members.map((m) => {
+                            const selected = editAssigneeIds.includes(m.id);
+                            return (
+                              <CommandItem
+                                key={m.id}
+                                onSelect={() => {
+                                  setEditAssigneeIds((prev) =>
+                                    prev.includes(m.id) ? prev.filter((x) => x !== m.id) : [...prev, m.id],
+                                  );
+                                }}
+                                className="text-xs"
+                              >
+                                <Check className={cn("mr-2 h-3.5 w-3.5", selected ? "opacity-100" : "opacity-0")} />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{m.display_name || m.email}</span>
+                                  {m.display_name && m.email && (
+                                    <span className="text-[10px] text-muted-foreground">{m.email}</span>
+                                  )}
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {editAssigneeIds.length > 0 && (
+                  <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => setEditAssigneeIds([])}>Clear</Button>
+                )}
+              </div>
+            </div>
+            {!!clientId && (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Checkbox checked={editShare} onCheckedChange={(v) => setEditShare(!!v)} />
+                Visible to client
+              </label>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditingNote(null)}>Cancel</Button>
+            <Button
+              size="sm"
+              disabled={!editContent.trim() || updateMut.isPending}
+              onClick={() => updateMut.mutate()}
+            >
+              {updateMut.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Popover>
   );
 }
