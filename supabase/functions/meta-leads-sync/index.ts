@@ -190,8 +190,8 @@ Deno.serve(async (req) => {
           "campaign_id",
           "campaign{name}",
           "adset{name}",
-          "leadgen_form{id,name}",
-          "creative{id,object_story_spec}",
+          "leadgen_form{id,name,page{id}}",
+          "creative{id,object_story_spec,effective_object_story_id}",
         ].join(",");
 
         const ads: any[] = [];
