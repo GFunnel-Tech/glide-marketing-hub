@@ -678,6 +678,69 @@ export type Database = {
           },
         ]
       }
+      campaign_requests: {
+        Row: {
+          agency_response: string | null
+          budget: number | null
+          client_id: number
+          created_at: string
+          creative_notes: string | null
+          id: string
+          objective: string | null
+          requested_by: string | null
+          status: string
+          target_audience: string | null
+          type: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          agency_response?: string | null
+          budget?: number | null
+          client_id: number
+          created_at?: string
+          creative_notes?: string | null
+          id?: string
+          objective?: string | null
+          requested_by?: string | null
+          status?: string
+          target_audience?: string | null
+          type?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          agency_response?: string | null
+          budget?: number | null
+          client_id?: number
+          created_at?: string
+          creative_notes?: string | null
+          id?: string
+          objective?: string | null
+          requested_by?: string | null
+          status?: string
+          target_audience?: string | null
+          type?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           ad_account_id: string | null
@@ -1800,6 +1863,7 @@ export type Database = {
           leads: number
           name: string
           plai_connected: boolean
+          portal_slug: string | null
           reported_leads: number
           spend: number
           status: Database["public"]["Enums"]["client_status"]
@@ -1840,6 +1904,7 @@ export type Database = {
           leads?: number
           name: string
           plai_connected?: boolean
+          portal_slug?: string | null
           reported_leads?: number
           spend?: number
           status?: Database["public"]["Enums"]["client_status"]
@@ -1880,6 +1945,7 @@ export type Database = {
           leads?: number
           name?: string
           plai_connected?: boolean
+          portal_slug?: string | null
           reported_leads?: number
           spend?: number
           status?: Database["public"]["Enums"]["client_status"]
@@ -2805,6 +2871,60 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: []
+      }
+      integration_requests: {
+        Row: {
+          agency_response: string | null
+          client_id: number
+          created_at: string
+          credentials_note: string | null
+          id: string
+          provider: string
+          requested_by: string | null
+          status: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          agency_response?: string | null
+          client_id: number
+          created_at?: string
+          credentials_note?: string | null
+          id?: string
+          provider: string
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          agency_response?: string | null
+          client_id?: number
+          created_at?: string
+          credentials_note?: string | null
+          id?: string
+          provider?: string
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+        ]
       }
       kpi_threshold_presets: {
         Row: {
@@ -4698,6 +4818,63 @@ export type Database = {
         }
         Relationships: []
       }
+      report_requests: {
+        Row: {
+          client_id: number
+          created_at: string
+          file_url: string | null
+          format: string
+          id: string
+          period_end: string | null
+          period_start: string | null
+          requested_by: string | null
+          status: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          file_url?: string | null
+          format?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          file_url?: string | null
+          format?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       report_templates: {
         Row: {
           branding: Json
@@ -6007,6 +6184,10 @@ export type Database = {
       bulk_update_client_status: {
         Args: { _client_ids: number[]; _status: string; _workspace_id: string }
         Returns: number
+      }
+      can_access_client: {
+        Args: { _client_id: number; _user_id: string }
+        Returns: boolean
       }
       can_write_workspace: {
         Args: { _user_id: string; _workspace_id: string }
