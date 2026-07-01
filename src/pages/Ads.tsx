@@ -138,9 +138,10 @@ function MetaAdsTable() {
 
 function Row({ ad }: { ad: MetaAd }) {
   const status = ad.effective_status ?? "UNKNOWN";
+  const isPausedLike = /PAUSED|ARCHIVED|DELETED/.test(status);
   const tone =
     status === "ACTIVE" ? "bg-success/15 text-success" :
-    status === "PAUSED" ? "bg-muted text-muted-foreground" : "bg-warning/15 text-warning";
+    isPausedLike ? "bg-muted text-muted-foreground" : "bg-warning/15 text-warning";
   return (
     <tr className="border-t border-border hover:bg-accent/30">
       <td className="px-3 py-2">
