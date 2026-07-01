@@ -560,6 +560,9 @@ function ClientProfileInner() {
           <TabsTrigger value="tasks" className="gap-1.5">
             <CheckSquare className="h-3.5 w-3.5" /> Tasks & Notes
           </TabsTrigger>
+          <TabsTrigger value="requests" className="gap-1.5">
+            <Inbox className="h-3.5 w-3.5" /> Requests
+          </TabsTrigger>
           <TabsTrigger value="activity" className="gap-1.5">
             <ActivityIcon className="h-3.5 w-3.5" /> Activity
           </TabsTrigger>
@@ -567,6 +570,10 @@ function ClientProfileInner() {
             <Sparkles className="h-3.5 w-3.5" /> AI Agent
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="requests" className="mt-5">
+          <ClientRequestsPanel clientId={Number(id)} />
+        </TabsContent>
 
         {/* OVERVIEW */}
         <TabsContent value="overview" className="mt-5">
