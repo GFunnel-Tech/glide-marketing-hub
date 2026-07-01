@@ -56,6 +56,35 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   type SortKey = "newest" | "oldest" | "az" | "za" | "due_soonest" | "due_latest";
   const [sortKey, setSortKey] = useState<SortKey>("newest");
 
+  // Edit dialog state
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [editDate, setEditDate] = useState<Date | undefined>(undefined);
+  const [editTime, setEditTime] = useState<string>("09:00");
+  const [editCalOpen, setEditCalOpen] = useState(false);
+  const [editAssigneeIds, setEditAssigneeIds] = useState<string[]>([]);
+  const [editAssigneeOpen, setEditAssigneeOpen] = useState(false);
+  const [editShare, setEditShare] = useState(false);
+
+  function openEdit(n: Note) {
+    setEditingNote(n);
+    setEditContent(n.content);
+    if (n.due_at) {
+      const d = new Date(n.due_at);
+      setEditDate(d);
+      setEditTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+    } else {
+      setEditDate(undefined);
+      setEditTime("09:00");
+    }
+    const ids = (n.assigned_to_ids && n.assigned_to_ids.length > 0)
+      ? n.assigned_to_ids
+      : (n.assigned_to ? [n.assigned_to] : []);
+    setEditAssigneeIds(ids);
+    setEditShare(!!n.visible_to_client);
+  }
+
+
   const { data: members = [] } = useQuery<Member[]>({
     queryKey: ["ws-members-for-notes", wsId],
     enabled: !!wsId && open,
