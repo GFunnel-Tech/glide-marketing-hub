@@ -73,6 +73,29 @@ Deno.serve(async (req) => {
       .eq("connection_id", conn.id)
       .eq("is_active", true);
 
+    // Build a Page-id -> Page access token map for this connection ONCE.
+    // Meta's /{form_id}/leads endpoint frequently rejects user tokens with
+    // error 100 ("does not exist / missing permissions") even when the user
+    // has leads_retrieval. Using a Page access token is the reliable path.
+    const pageTokens = new Map<string, string>();
+    try {
+      let pgUrl: string | null =
+        `https://graph.facebook.com/v21.0/me/accounts?fields=id,access_token&limit=200&access_token=${encodeURIComponent(conn.access_token)}`;
+      let pgPages = 0;
+      while (pgUrl && pgPages < 20) {
+        const r = await fetch(pgUrl);
+        const j = await r.json();
+        if (!r.ok) { errors.push({ scope: "me/accounts", error: j }); break; }
+        for (const p of j.data ?? []) {
+          if (p?.id && p?.access_token) pageTokens.set(String(p.id), String(p.access_token));
+        }
+        pgUrl = j.paging?.next ?? null;
+        pgPages++;
+      }
+    } catch (e) {
+      errors.push({ scope: "me/accounts", error: String(e) });
+    }
+
     for (const acc of accounts ?? []) {
       if (clientFilter != null) {
         if (acc.client_id !== clientFilter) {
@@ -167,8 +190,8 @@ Deno.serve(async (req) => {
           "campaign_id",
           "campaign{name}",
           "adset{name}",
-          "leadgen_form{id,name}",
-          "creative{id,object_story_spec}",
+          "leadgen_form{id,name,page{id}}",
+          "creative{id,object_story_spec,effective_object_story_id}",
         ].join(",");
 
         const ads: any[] = [];
@@ -193,6 +216,7 @@ Deno.serve(async (req) => {
 
         const formMap = new Map<string, {
           name: string | null;
+          page_id: string | null;
           ads: { id: string; name: string | null; adset_id: string | null; adset_name: string | null; campaign_id: string | null; campaign_name: string | null }[];
         }>();
 
@@ -200,7 +224,11 @@ Deno.serve(async (req) => {
           const forms = extractLeadForms(ad);
           for (const f of forms) {
             if (!f.id) continue;
-            if (!formMap.has(f.id)) formMap.set(f.id, { name: f.name ?? null, ads: [] });
+            if (!formMap.has(f.id)) {
+              formMap.set(f.id, { name: f.name ?? null, page_id: f.page_id ?? null, ads: [] });
+            } else if (f.page_id && !formMap.get(f.id)!.page_id) {
+              formMap.get(f.id)!.page_id = f.page_id;
+            }
             formMap.get(f.id)!.ads.push({
               id: ad.id,
               name: ad.name ?? null,
@@ -233,20 +261,57 @@ Deno.serve(async (req) => {
           }
           if (state) retriedForms++;
 
-          let url: string | null =
+          // Pick the best token for this form:
+          //  1) known Page token via form's page_id
+          //  2) probe form -> page id via any Page token we have (some pages
+          //     let the form be introspected with their token)
+          //  3) fall back to user token (works for own pages)
+          let tokenForForm = conn.access_token;
+          if (info.page_id && pageTokens.has(info.page_id)) {
+            tokenForForm = pageTokens.get(info.page_id)!;
+          }
+
+          const buildUrl = (tok: string) =>
             `https://graph.facebook.com/v21.0/${formId}/leads` +
             `?fields=id,created_time,field_data,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,form_id` +
             sinceParam +
-            `&limit=200&access_token=${encodeURIComponent(conn.access_token)}`;
+            `&limit=200&access_token=${encodeURIComponent(tok)}`;
+
+          let url: string | null = buildUrl(tokenForForm);
           let pages = 0;
           let formError: { code: string | null; message: string } | null = null;
           let formLeadCount = 0;
+          let retriedWithPageToken = false;
           const adById = new Map(info.ads.map((a) => [a.id, a]));
           while (url && pages < 50) {
             const leadsRes = await fetch(url);
             const leadsJson = await leadsRes.json();
             if (!leadsRes.ok) {
               const e = leadsJson?.error ?? {};
+              // On error 100 (missing perms), attempt to resolve a Page token
+              // by probing the form with each Page token we hold. First hit wins.
+              if (!retriedWithPageToken && (e.code === 100 || e.code === 200) && pageTokens.size) {
+                retriedWithPageToken = true;
+                let resolved: string | null = null;
+                for (const [pid, ptok] of pageTokens.entries()) {
+                  const probe = await fetch(
+                    `https://graph.facebook.com/v21.0/${formId}?fields=id,name,page{id}&access_token=${encodeURIComponent(ptok)}`,
+                  );
+                  const probeJson = await probe.json();
+                  if (probe.ok && probeJson?.page?.id) {
+                    const owningPage = String(probeJson.page.id);
+                    const owningToken = pageTokens.get(owningPage) ?? ptok;
+                    resolved = owningToken;
+                    // Update in-memory cache so subsequent forms benefit
+                    if (!info.page_id) info.page_id = owningPage;
+                    break;
+                  }
+                }
+                if (resolved) {
+                  url = buildUrl(resolved);
+                  continue; // retry loop iteration
+                }
+              }
               formError = {
                 code: e.code != null ? String(e.code) : String(leadsRes.status),
                 message: e.message ?? JSON.stringify(leadsJson).slice(0, 500),
@@ -453,10 +518,22 @@ async function upsertLeadRows(admin: any, rows: any[], errors: any[], context: R
   return rows.length;
 }
 
-function extractLeadForms(ad: any): { id: string; name: string | null }[] {
-  const forms = new Map<string, string | null>();
-  const add = (id: unknown, name: unknown = null) => {
-    if (typeof id === "string" && id) forms.set(id, typeof name === "string" ? name : null);
+function extractLeadForms(ad: any): { id: string; name: string | null; page_id: string | null }[] {
+  const forms = new Map<string, { name: string | null; page_id: string | null }>();
+  // Prefer the page id declared on the ad's leadgen_form; fall back to the
+  // creative's own page reference so form-only ads still resolve.
+  const adPageId: string | null =
+    (typeof ad?.leadgen_form?.page?.id === "string" && ad.leadgen_form.page.id) ||
+    (typeof ad?.creative?.object_story_spec?.page_id === "string" && ad.creative.object_story_spec.page_id) ||
+    null;
+  const add = (id: unknown, name: unknown = null, pageId: string | null = adPageId) => {
+    if (typeof id === "string" && id) {
+      const prev = forms.get(id);
+      forms.set(id, {
+        name: prev?.name ?? (typeof name === "string" ? name : null),
+        page_id: prev?.page_id ?? pageId ?? null,
+      });
+    }
   };
 
   add(ad.leadgen_form?.id, ad.leadgen_form?.name);
@@ -467,7 +544,7 @@ function extractLeadForms(ad: any): { id: string; name: string | null }[] {
     add(block?.call_to_action?.value?.lead_gen_form_id);
   }
 
-  return Array.from(forms.entries()).map(([id, name]) => ({ id, name }));
+  return Array.from(forms.entries()).map(([id, v]) => ({ id, name: v.name, page_id: v.page_id }));
 }
 
 function json(body: unknown, status = 200) {
