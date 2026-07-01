@@ -14,10 +14,76 @@ import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { useClientSegments } from "@/hooks/useClientSegments";
 import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
-import { ChevronDown, Zap } from "lucide-react";
+import { ChevronDown, Zap, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useDateRange } from "@/hooks/useDateRange";
+import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
+import { toast } from "sonner";
+
+function fmtDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function csvEscape(v: any) {
+  if (v == null) return "";
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function ExportOverviewButton() {
+  const clients = useVisibleClients();
+  const { data: metrics = {} } = useClientsRangeMetrics();
+  const { from, to } = useDateRange();
+
+  const handleExport = () => {
+    if (!clients.length) {
+      toast.error("No clients to export");
+      return;
+    }
+    const headers = [
+      "Client", "Status", "Brand", "Currency",
+      "Spend", "Impressions", "Clicks", "CTR %",
+      "Reported Leads", "True Leads", "CPL", "True CPL",
+      "CPM", "Form CVR %", "Frequency", "Above 640 %",
+    ];
+    const rows = clients.map((c: any) => {
+      const m: any = (metrics as any)[c.id] || {};
+      const ctr = m.impressions ? (m.clicks / m.impressions) * 100 : 0;
+      return [
+        c.name, c.status, c.brand || "", m.currency || "",
+        (m.spend ?? 0).toFixed(2),
+        m.impressions ?? 0, m.clicks ?? 0, ctr.toFixed(2),
+        m.reportedLeads ?? 0, m.trueLeads ?? 0,
+        (m.cpl ?? 0).toFixed(2), (m.trueCpl ?? 0).toFixed(2),
+        (m.cpm ?? 0).toFixed(2),
+        ((m.formCvr ?? 0) * 100).toFixed(2),
+        (m.frequency ?? 0).toFixed(2),
+        m.above640Pct == null ? "" : m.above640Pct.toFixed(1),
+      ].map(csvEscape).join(",");
+    });
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `overview_${fmtDate(from)}_to_${fmtDate(to)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${clients.length} clients`);
+  };
+
+  return (
+    <Button variant="outline" size="sm" onClick={handleExport}>
+      <Download className="h-4 w-4 mr-1.5" /> Export
+    </Button>
+  );
+}
 
 function PortfolioHealthCard() {
   const clients = useVisibleClients();
@@ -87,6 +153,7 @@ const Index = () => {
         </div>
         <div className="flex items-center gap-2">
           <MorningBriefDialog />
+          <ExportOverviewButton />
           <DateRangePicker />
         </div>
       </div>
