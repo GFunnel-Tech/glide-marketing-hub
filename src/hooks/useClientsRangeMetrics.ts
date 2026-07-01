@@ -115,11 +115,19 @@ export function useClientsRangeMetrics() {
           const { data: g, error: gErr } = await (supabase as any)
             .from("meta_insights_granular_daily")
             .select("ad_account_id, date, object_id, spend, impressions, clicks, leads, raw")
+            .eq("workspace_id", wsId)
             .eq("level", "campaign")
             .in("object_id", chunk)
             .gte("date", fromStr)
             .lte("date", toStr);
-          if (gErr) throw gErr;
+          // If the granular campaign table is temporarily slow, do not zero the
+          // whole dashboard. Account-level daily insights below are still the
+          // source of truth for portfolio totals, so use them as a safe fallback.
+          if (gErr) {
+            console.warn("clients-range-metrics granular fallback", gErr);
+            granular = [];
+            break;
+          }
           granular = granular.concat(g || []);
         }
       }
@@ -147,7 +155,7 @@ export function useClientsRangeMetrics() {
         .eq("workspace_id", wsId)
         .gte("created_time", fromISO)
         .lte("created_time", toISO);
-      if (lErr) throw lErr;
+      if (lErr) console.warn("clients-range-metrics lead dedupe fallback", lErr);
 
       const agg: Record<number, {
         spend: number;
@@ -254,7 +262,7 @@ export function useClientsRangeMetrics() {
         .gte("created_time", fromISO)
         .lte("created_time", toISO);
 
-      for (const row of leads || []) {
+      for (const row of (lErr ? [] : leads) || []) {
         if (!row.client_id) continue;
         const b = bucket(row.client_id);
         const email = (row.email || "").toString().trim().toLowerCase();

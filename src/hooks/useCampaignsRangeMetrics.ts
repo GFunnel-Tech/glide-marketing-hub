@@ -98,6 +98,7 @@ export function useCampaignsRangeMetrics() {
         const { data: campaignData, error: campaignErr } = await db
           .from<InsightRow>("meta_insights_granular_daily")
           .select("level, object_id, object_name, parent_campaign_id, parent_adset_id, date, spend, impressions, clicks, leads, raw")
+          .eq("workspace_id", wsId)
           .eq("level", "campaign")
           .in("object_id", chunk)
           .gte("date", fromStr)
@@ -108,6 +109,7 @@ export function useCampaignsRangeMetrics() {
         const { data: childData, error: childErr } = await db
           .from<InsightRow>("meta_insights_granular_daily")
           .select("level, object_id, object_name, parent_campaign_id, parent_adset_id, date, spend, impressions, clicks, leads, raw")
+          .eq("workspace_id", wsId)
           .in("level", ["adset", "ad"])
           .in("parent_campaign_id", chunk)
           .gte("date", fromStr)
