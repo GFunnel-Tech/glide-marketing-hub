@@ -518,10 +518,22 @@ async function upsertLeadRows(admin: any, rows: any[], errors: any[], context: R
   return rows.length;
 }
 
-function extractLeadForms(ad: any): { id: string; name: string | null }[] {
-  const forms = new Map<string, string | null>();
-  const add = (id: unknown, name: unknown = null) => {
-    if (typeof id === "string" && id) forms.set(id, typeof name === "string" ? name : null);
+function extractLeadForms(ad: any): { id: string; name: string | null; page_id: string | null }[] {
+  const forms = new Map<string, { name: string | null; page_id: string | null }>();
+  // Prefer the page id declared on the ad's leadgen_form; fall back to the
+  // creative's own page reference so form-only ads still resolve.
+  const adPageId: string | null =
+    (typeof ad?.leadgen_form?.page?.id === "string" && ad.leadgen_form.page.id) ||
+    (typeof ad?.creative?.object_story_spec?.page_id === "string" && ad.creative.object_story_spec.page_id) ||
+    null;
+  const add = (id: unknown, name: unknown = null, pageId: string | null = adPageId) => {
+    if (typeof id === "string" && id) {
+      const prev = forms.get(id);
+      forms.set(id, {
+        name: prev?.name ?? (typeof name === "string" ? name : null),
+        page_id: prev?.page_id ?? pageId ?? null,
+      });
+    }
   };
 
   add(ad.leadgen_form?.id, ad.leadgen_form?.name);
@@ -532,7 +544,7 @@ function extractLeadForms(ad: any): { id: string; name: string | null }[] {
     add(block?.call_to_action?.value?.lead_gen_form_id);
   }
 
-  return Array.from(forms.entries()).map(([id, name]) => ({ id, name }));
+  return Array.from(forms.entries()).map(([id, v]) => ({ id, name: v.name, page_id: v.page_id }));
 }
 
 function json(body: unknown, status = 200) {
