@@ -198,7 +198,14 @@ export function useTasks(opts: UseTasksOptions = {}) {
         dbPatch.next_due_at = patch.dueAt;
         dbPatch.reminded_at = null;
       }
-      if ("assignedTo" in patch) dbPatch.assigned_to = patch.assignedTo;
+      if ("assignedToIds" in patch) {
+        const ids = (patch.assignedToIds ?? []).filter(Boolean);
+        dbPatch.assigned_to_ids = ids;
+        dbPatch.assigned_to = ids[0] ?? null;
+      } else if ("assignedTo" in patch) {
+        dbPatch.assigned_to = patch.assignedTo;
+        dbPatch.assigned_to_ids = patch.assignedTo ? [patch.assignedTo] : [];
+      }
       if ("clientId" in patch) dbPatch.client_id = patch.clientId;
       if ("recurrence" in patch) dbPatch.recurrence = patch.recurrence as any;
       if ("done" in patch) dbPatch.done = patch.done;
