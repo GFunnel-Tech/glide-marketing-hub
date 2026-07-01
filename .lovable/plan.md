@@ -1,60 +1,80 @@
-# Client Portal — Top-Nav Tabs with Custom Embeds
+## Goal
 
-Turn `/client-portal/:id` into a tabbed surface. The first tab is the existing dashboard. Additional tabs are **custom embeds** the agency configures at the workspace level (e.g. "Term Sheet" → eem-termsheet.lovable.app, future "Offers" → offers.gfunnel.com, etc.). Each tab iframes a per-client URL.
+Make each client's portal feel like a client-facing mirror of the internal Client Profile card — same KPI tiles, status pill, tabs — while giving the client self-service tools (request a campaign, download reports, connect integrations). Every new client automatically gets their own password-protected portal.
 
-## What the agency sees
+## 1. Portal redesign (mirror the Client Profile)
 
-- A new **Workspace Settings → Embed Tabs** page lists every custom tab. Each tab has: label, icon, provider key (`connectwise_terms`, `custom`, …), URL template (with `{client_id}` and `{token}` placeholders), enabled toggle, sort order.
-- On a client's profile, an **"Embeds"** section lets the agency paste the per-client URL/token for each enabled tab (e.g. paste the `https://eem-termsheet.lovable.app/q/<token>` link for that client). If left blank, that tab is hidden on the portal for this client.
+Rework `src/pages/portal/PortalDashboard.tsx` + `PortalLayout.tsx` to reuse the same visual language as `ClientProfile.tsx`:
 
-## What the client sees on `/client-portal/:id`
+- **Header card**: client name + colored status pill (GREEN/YELLOW/RED/LEARNING/NEW), business name + brand, "Last synced" timestamp, right-aligned Month-to-date range picker.
+- **KPI row (6 tiles, identical to profile)**: CPL, Leads MTD, Spend, CPM, Form CVR, Frequency — each with target line and a red/amber/green health dot. Extract the tile from `ClientProfile.tsx` into a shared `ClientKpiTile.tsx` so both views stay in sync.
+- **Tabs** (client-safe subset): Overview · Campaigns · Leads · Reports · Requests · Integrations · Documents · Support.
+- **Right rail**: "Quick Actions" card matching the profile — buttons become client-appropriate: *Request a Campaign*, *Request a Report*, *Book a Call*. Plus an "External Links" card (GHL, Terms, any `client_embeds`).
+- Keep the top-nav-only shell (per iframe constraint) — no branding/search/profile chrome.
 
-- Top nav with tabs: **Dashboard** | **Term Sheet** | (other tabs the agency enabled). Active tab is underlined, matches the existing portal aesthetic — no branding changes.
-- Dashboard tab = current ClientPortal content unchanged.
-- Embed tab = full-bleed iframe of the configured URL, with the GFunnel header still on top.
+## 2. Auto-provision portal on client creation
 
-## Database
+When a client row is inserted:
 
-Two new tables — both scoped through `clients.workspace_id` for RLS.
+- DB trigger `on_client_created_provision_portal()` creates a `portal_users` row linked to the client with a generated temporary password and `must_reset_password = true`.
+- Edge function `portal-provision` (called from the trigger via `pg_net` or from the client-create UI) invites the primary contact email via Supabase Auth `inviteUserByEmail`, storing the mapping in `portal_users(client_id, user_id, status='invited')`.
+- If no email exists yet, the invite is queued and surfaced in the Client Profile → Access tab as "Send portal invite".
+- Add `portal_slug` to `clients` so each portal has a stable URL: `/portal/<slug>`. `PortalRoute.tsx` resolves slug → client_id.
 
-1. `workspace_embed_tabs` (one row per tab the agency defines):
-   - `workspace_id`, `label`, `provider`, `icon` (lucide name), `url_template`, `sort_order`, `enabled`
-2. `client_embeds` (per-client filled-in URL for a given tab):
-   - `client_id`, `tab_id` → `workspace_embed_tabs.id`, `embed_url`, `public_token` (nullable), `status` (`pending|accepted|declined`), `last_event_at`
-   - Unique on `(client_id, tab_id)`
+## 3. Password protection + first-login flow
 
-RLS:
-- Agency members (`can_write_workspace`) can read/write both tables for clients in their workspace.
-- Portal users (`is_portal_user_for_client`) can `SELECT` only their own `client_embeds` rows and the matching `workspace_embed_tabs` rows.
+- Reuse existing Supabase Auth. Invite email → magic link → forced password set on first login (`/portal/set-password`).
+- Session gated by `portal_users.status = 'active'`. RLS: portal user can only read their own client's data.
+- Agency staff impersonation (already built) continues to work via `admin-impersonate`.
 
-## Frontend
+## 4. Self-service features
 
-- **`src/components/portal/PortalTabs.tsx`** — top-nav tabs reading the enabled embeds for the resolved client.
-- **`src/components/portal/EmbedFrame.tsx`** — iframe + postMessage listener with origin allowlist derived from `embed_url`. Updates `client_embeds.status` when it receives `{ source: "ct-terms", type: "decision" }`. Falls back to a fixed height when no resize message arrives (handles the un-instrumented CT app).
-- **`src/pages/ClientPortal.tsx`** — replace top of body with `<PortalTabs>`; render Dashboard when `tab === "dashboard"`, otherwise render `<EmbedFrame>` for the active tab. Also switch from mock data to the real client (looked up by `:id`).
-- **`src/pages/settings/EmbedTabsSettings.tsx`** — agency UI to CRUD `workspace_embed_tabs`. Add link in existing workspace settings nav.
-- **Client profile (`src/pages/ClientProfile.tsx` or equivalent)** — new "Embeds" card listing enabled tabs with an input per tab to paste the per-client URL; saves to `client_embeds`.
+New tables (all with GRANTs + RLS scoped to `client_id` the portal user owns):
 
-## Realtime
+- `campaign_requests(id, client_id, requested_by, type, objective, budget, target_audience, creative_notes, status, created_at)` — statuses: `new → in_review → scheduled → launched → declined`. Shows up in agency Tasks feed and routes to `media_buying` position.
+- `report_requests(id, client_id, requested_by, period_start, period_end, format, status, file_url)` — "Download Full Report PDF" button generates on demand via `report-generate` edge function.
+- `integration_requests(id, client_id, provider, credentials_note, status)` — for clients to ask the agency to connect GHL, Meta, GA4, Stripe, etc.
 
-Subscribe to `postgres_changes` on `client_embeds` filtered by `client_id` from both:
-- the agency client-profile view (to see status flip when client accepts in portal),
-- the portal view (so agency can update the URL and the client tab refreshes without reload).
+Portal pages:
 
-## Out of scope this step
+- **Requests tab**: form to submit a new campaign request + list of prior requests with status timeline.
+- **Reports tab**: list of generated monthly/weekly reports with download links + "Generate new report" button.
+- **Integrations tab**: read-only list of connected platforms (Meta, GHL, GA4, Stripe) with green/gray dots + "Request an integration" CTA.
 
-- Auto-creating a ConnectWise Terms quote from GFunnel (you said unsure — keep manual paste for now).
-- The CSP / postMessage edits on the ConnectWise Terms project (status updates will be no-ops until those land; everything else works).
-- Per-tab permissions (e.g. hiding a tab once accepted). Easy follow-up.
+## 5. Agency-side surfacing
 
-## Files touched
+- New "Requests" panel on `ClientProfile.tsx` and a global `Requests` inbox at `/requests` for staff.
+- Notifications: new campaign/report/integration request creates a task assigned by `task_routing_rules` (existing) and pings the assignee.
 
-```text
-supabase migration: workspace_embed_tabs, client_embeds (+ RLS, realtime publication)
-src/pages/ClientPortal.tsx                  edit
-src/components/portal/PortalTabs.tsx        new
-src/components/portal/EmbedFrame.tsx        new
-src/pages/settings/EmbedTabsSettings.tsx    new
-src/pages/ClientProfile.tsx                 edit (add Embeds card)
-src/App.tsx                                 add settings route
-```
+## Technical section
+
+**DB migration (single migration, in order):**
+1. `ALTER TABLE clients ADD COLUMN portal_slug text UNIQUE` (backfill from name).
+2. `CREATE TABLE public.campaign_requests`, `report_requests`, `integration_requests` — each with `GRANT SELECT, INSERT, UPDATE ON ... TO authenticated`, `GRANT ALL ... TO service_role`, then `ENABLE ROW LEVEL SECURITY` + policies:
+   - portal user: `client_id IN (SELECT client_id FROM portal_users WHERE user_id = auth.uid() AND status='active')`
+   - agency staff: `workspace_id` membership via existing helper.
+3. Trigger `on_client_insert_provision_portal` → `net.http_post` to `portal-provision` edge function.
+
+**Edge functions:**
+- `portal-provision` — invite email, create `portal_users` row, set temp password.
+- `report-generate` — assembles PDF for a period (reuses existing KPI rollup RPC), stores in `reports` bucket, updates `report_requests.file_url`.
+
+**Frontend files touched/added:**
+- `src/components/client/ClientKpiTile.tsx` (extracted, shared).
+- `src/pages/portal/PortalDashboard.tsx` — rebuilt to match profile layout.
+- `src/pages/portal/PortalRequests.tsx`, `PortalReports.tsx`, `PortalIntegrations.tsx` (new).
+- `src/components/portal/RequestCampaignDialog.tsx` (new).
+- `src/pages/ClientProfile.tsx` — add "Requests" panel.
+- `src/pages/portal/PortalLayout.tsx` — add Requests/Reports/Integrations tabs.
+- `src/hooks/useClientRequests.ts` (new).
+
+**Security notes:**
+- Portal auth is standard Supabase email/password + magic-link invite; no client-side role checks.
+- All request tables enforce `client_id` scoping via RLS.
+- Temp passwords never returned to the browser; user always sets their own on first login.
+
+## Out of scope (ask before adding)
+
+- White-labeled per-client domains for the portal.
+- Client-initiated billing / plan changes.
+- Full custom-report designer (v1 uses a fixed monthly template).
