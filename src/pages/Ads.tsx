@@ -78,8 +78,12 @@ function MetaAdsTable() {
   const rows = useMemo(() => {
     return ads.filter((a) => {
       if (clientF !== "all" && String(a.client_id) !== clientF) return false;
-      if (statusF === "active" && a.effective_status !== "ACTIVE") return false;
-      if (statusF === "paused" && a.effective_status !== "PAUSED") return false;
+      // Meta returns compound effective_status values (ADSET_PAUSED,
+      // CAMPAIGN_PAUSED, ARCHIVED, DELETED, DISAPPROVED, ...) when a parent
+      // pauses or the ad is otherwise not delivering. Only "ACTIVE" means live.
+      const isActive = a.effective_status === "ACTIVE";
+      if (statusF === "active" && !isActive) return false;
+      if (statusF === "paused" && isActive) return false;
       if (q && !`${a.name ?? ""} ${a.campaign_name ?? ""}`.toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     });
@@ -134,9 +138,10 @@ function MetaAdsTable() {
 
 function Row({ ad }: { ad: MetaAd }) {
   const status = ad.effective_status ?? "UNKNOWN";
+  const isPausedLike = /PAUSED|ARCHIVED|DELETED/.test(status);
   const tone =
     status === "ACTIVE" ? "bg-success/15 text-success" :
-    status === "PAUSED" ? "bg-muted text-muted-foreground" : "bg-warning/15 text-warning";
+    isPausedLike ? "bg-muted text-muted-foreground" : "bg-warning/15 text-warning";
   return (
     <tr className="border-t border-border hover:bg-accent/30">
       <td className="px-3 py-2">
