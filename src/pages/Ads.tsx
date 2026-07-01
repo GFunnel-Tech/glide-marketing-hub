@@ -78,8 +78,12 @@ function MetaAdsTable() {
   const rows = useMemo(() => {
     return ads.filter((a) => {
       if (clientF !== "all" && String(a.client_id) !== clientF) return false;
-      if (statusF === "active" && a.effective_status !== "ACTIVE") return false;
-      if (statusF === "paused" && a.effective_status !== "PAUSED") return false;
+      // Meta returns compound effective_status values (ADSET_PAUSED,
+      // CAMPAIGN_PAUSED, ARCHIVED, DELETED, DISAPPROVED, ...) when a parent
+      // pauses or the ad is otherwise not delivering. Only "ACTIVE" means live.
+      const isActive = a.effective_status === "ACTIVE";
+      if (statusF === "active" && !isActive) return false;
+      if (statusF === "paused" && isActive) return false;
       if (q && !`${a.name ?? ""} ${a.campaign_name ?? ""}`.toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     });
