@@ -6,9 +6,20 @@ interface Props {
   isLoading?: boolean;
   showClient?: boolean;
   emptyMessage?: string;
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function TaskList({ tasks, isLoading, showClient = true, emptyMessage = "Nothing here." }: Props) {
+export function TaskList({
+  tasks,
+  isLoading,
+  showClient = true,
+  emptyMessage = "Nothing here.",
+  selectable,
+  selectedIds,
+  onToggleSelect,
+}: Props) {
   if (isLoading) {
     return <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>;
   }
@@ -18,7 +29,14 @@ export function TaskList({ tasks, isLoading, showClient = true, emptyMessage = "
   return (
     <div className="space-y-2">
       {tasks.map((t) => (
-        <TaskRow key={t.id} task={t} showClient={showClient} />
+        <TaskRow
+          key={t.id}
+          task={t}
+          showClient={showClient}
+          selectable={selectable}
+          selected={selectedIds?.has(t.id) ?? false}
+          onToggleSelect={onToggleSelect}
+        />
       ))}
     </div>
   );
