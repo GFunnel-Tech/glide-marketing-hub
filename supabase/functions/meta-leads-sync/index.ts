@@ -73,6 +73,29 @@ Deno.serve(async (req) => {
       .eq("connection_id", conn.id)
       .eq("is_active", true);
 
+    // Build a Page-id -> Page access token map for this connection ONCE.
+    // Meta's /{form_id}/leads endpoint frequently rejects user tokens with
+    // error 100 ("does not exist / missing permissions") even when the user
+    // has leads_retrieval. Using a Page access token is the reliable path.
+    const pageTokens = new Map<string, string>();
+    try {
+      let pgUrl: string | null =
+        `https://graph.facebook.com/v21.0/me/accounts?fields=id,access_token&limit=200&access_token=${encodeURIComponent(conn.access_token)}`;
+      let pgPages = 0;
+      while (pgUrl && pgPages < 20) {
+        const r = await fetch(pgUrl);
+        const j = await r.json();
+        if (!r.ok) { errors.push({ scope: "me/accounts", error: j }); break; }
+        for (const p of j.data ?? []) {
+          if (p?.id && p?.access_token) pageTokens.set(String(p.id), String(p.access_token));
+        }
+        pgUrl = j.paging?.next ?? null;
+        pgPages++;
+      }
+    } catch (e) {
+      errors.push({ scope: "me/accounts", error: String(e) });
+    }
+
     for (const acc of accounts ?? []) {
       if (clientFilter != null) {
         if (acc.client_id !== clientFilter) {
