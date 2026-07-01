@@ -22,6 +22,7 @@ type Note = {
   due_at: string | null;
   reminded_at: string | null;
   assigned_to: string | null;
+  assigned_to_ids: string[] | null;
   created_at: string;
   user_id: string;
   visible_to_client: boolean;
@@ -46,7 +47,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
   const [draftDate, setDraftDate] = useState<Date | undefined>(undefined);
   const [draftTime, setDraftTime] = useState<string>("09:00");
   const [calOpen, setCalOpen] = useState(false);
-  const [assigneeId, setAssigneeId] = useState<string | null>(null);
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [shareWithClient, setShareWithClient] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
@@ -175,7 +176,8 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
         user_id: u.user.id,
         content: draft.trim(),
         due_at: dueAt,
-        assigned_to: assigneeId,
+        assigned_to: assigneeIds[0] ?? null,
+        assigned_to_ids: assigneeIds,
         visible_to_client: shareWithClient && !!clientId,
       });
       if (error) throw error;
@@ -184,7 +186,7 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
       setDraft("");
       setDraftDate(undefined);
       setDraftTime("09:00");
-      setAssigneeId(null);
+      setAssigneeIds([]);
       setShareWithClient(false);
       qc.invalidateQueries({ queryKey });
     },
@@ -322,11 +324,15 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   size="sm"
                   className={cn(
                     "h-7 flex-1 justify-start gap-1.5 text-xs font-normal",
-                    !assigneeId && "text-muted-foreground",
+                    assigneeIds.length === 0 && "text-muted-foreground",
                   )}
                 >
                   <User className="h-3 w-3" />
-                  {assigneeId ? memberLabel(assigneeId) : "Assign to…"}
+                  {assigneeIds.length === 0
+                    ? "Assign to…"
+                    : assigneeIds.length === 1
+                    ? memberLabel(assigneeIds[0])
+                    : `${assigneeIds.length} assignees`}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[240px] p-0" align="start">
@@ -335,35 +341,37 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   <CommandList>
                     <CommandEmpty>No teammates.</CommandEmpty>
                     <CommandGroup>
-                      <CommandItem
-                        onSelect={() => { setAssigneeId(null); setAssigneeOpen(false); }}
-                        className="text-xs"
-                      >
-                        <Check className={cn("mr-2 h-3.5 w-3.5", !assigneeId ? "opacity-100" : "opacity-0")} />
-                        Unassigned
-                      </CommandItem>
-                      {members.map((m) => (
-                        <CommandItem
-                          key={m.id}
-                          onSelect={() => { setAssigneeId(m.id); setAssigneeOpen(false); }}
-                          className="text-xs"
-                        >
-                          <Check className={cn("mr-2 h-3.5 w-3.5", assigneeId === m.id ? "opacity-100" : "opacity-0")} />
-                          <div className="flex flex-col">
-                            <span className="font-medium">{m.display_name || m.email}</span>
-                            {m.display_name && m.email && (
-                              <span className="text-[10px] text-muted-foreground">{m.email}</span>
-                            )}
-                          </div>
-                        </CommandItem>
-                      ))}
+                      {members.map((m) => {
+                        const selected = assigneeIds.includes(m.id);
+                        return (
+                          <CommandItem
+                            key={m.id}
+                            onSelect={() => {
+                              setAssigneeIds((prev) =>
+                                prev.includes(m.id)
+                                  ? prev.filter((x) => x !== m.id)
+                                  : [...prev, m.id],
+                              );
+                            }}
+                            className="text-xs"
+                          >
+                            <Check className={cn("mr-2 h-3.5 w-3.5", selected ? "opacity-100" : "opacity-0")} />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{m.display_name || m.email}</span>
+                              {m.display_name && m.email && (
+                                <span className="text-[10px] text-muted-foreground">{m.email}</span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
                     </CommandGroup>
                   </CommandList>
                 </Command>
               </PopoverContent>
             </Popover>
-            {assigneeId && (
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setAssigneeId(null)}>
+            {assigneeIds.length > 0 && (
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setAssigneeIds([])}>
                 Clear
               </Button>
             )}
@@ -483,26 +491,35 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   >
                     {n.content}
                   </p>
-                  {(n.due_at || n.assigned_to) && (
-                    <div className="mt-0.5 flex items-center gap-2 text-[10px]">
-                      {n.due_at && (
-                        <span className={cn(
-                          "inline-flex items-center gap-1",
-                          overdue ? "text-destructive font-medium" : "text-muted-foreground",
-                        )}>
-                          <CalendarIcon className="h-2.5 w-2.5" />
-                          {format(new Date(n.due_at), "MMM d, h:mm a")}
-                          {n.reminded_at && <span className="ml-1">· sent</span>}
-                        </span>
-                      )}
-                      {n.assigned_to && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-primary font-medium">
-                          <User className="h-2.5 w-2.5" />
-                          {memberLabel(n.assigned_to)}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {(() => {
+                    const ids = (n.assigned_to_ids && n.assigned_to_ids.length > 0)
+                      ? n.assigned_to_ids
+                      : (n.assigned_to ? [n.assigned_to] : []);
+                    if (!n.due_at && ids.length === 0) return null;
+                    return (
+                      <div className="mt-0.5 flex items-center gap-2 flex-wrap text-[10px]">
+                        {n.due_at && (
+                          <span className={cn(
+                            "inline-flex items-center gap-1",
+                            overdue ? "text-destructive font-medium" : "text-muted-foreground",
+                          )}>
+                            <CalendarIcon className="h-2.5 w-2.5" />
+                            {format(new Date(n.due_at), "MMM d, h:mm a")}
+                            {n.reminded_at && <span className="ml-1">· sent</span>}
+                          </span>
+                        )}
+                        {ids.map((uid) => (
+                          <span
+                            key={uid}
+                            className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-primary font-medium"
+                          >
+                            <User className="h-2.5 w-2.5" />
+                            {memberLabel(uid)}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <button
                   onClick={() => visibilityMut.mutate(n)}

@@ -16,6 +16,7 @@ export type TaskRow = {
   clientId: number | null;
   userId: string;
   assignedTo: string | null;
+  assignedToIds: string[];
   title: string | null;
   content: string;
   kind: "note" | "task";
@@ -43,6 +44,11 @@ const adapt = (r: any): TaskRow => ({
   clientId: r.client_id ?? null,
   userId: r.user_id,
   assignedTo: r.assigned_to ?? null,
+  assignedToIds: Array.isArray(r.assigned_to_ids)
+    ? (r.assigned_to_ids as string[]).filter(Boolean)
+    : r.assigned_to
+    ? [r.assigned_to as string]
+    : [],
   title: r.title ?? null,
   content: r.content ?? "",
   kind: (r.kind ?? "note") as "note" | "task",
@@ -94,7 +100,7 @@ export function useTasks(opts: UseTasksOptions = {}) {
       if (clientId === null || scope === "global-notes") q = q.is("client_id", null);
       else if (typeof clientId === "number") q = q.eq("client_id", clientId);
 
-      if (assigneeId) q = q.eq("assigned_to", assigneeId);
+      if (assigneeId) q = q.contains("assigned_to_ids", [assigneeId]);
 
       const { data, error } = await q.limit(500);
       if (error) throw error;
@@ -156,11 +162,15 @@ export function useTasks(opts: UseTasksOptions = {}) {
       if (!wsId) throw new Error("No workspace");
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
+      const assignedIds = (payload.assignedToIds && payload.assignedToIds.length > 0)
+        ? payload.assignedToIds
+        : (payload.assignedTo ? [payload.assignedTo] : []);
       const insert = {
         workspace_id: wsId,
         client_id: payload.clientId ?? null,
         user_id: u.user.id,
-        assigned_to: payload.assignedTo ?? null,
+        assigned_to: assignedIds[0] ?? null,
+        assigned_to_ids: assignedIds,
         title: payload.title ?? null,
         content: payload.content ?? "",
         kind: payload.kind ?? "task",
@@ -188,7 +198,14 @@ export function useTasks(opts: UseTasksOptions = {}) {
         dbPatch.next_due_at = patch.dueAt;
         dbPatch.reminded_at = null;
       }
-      if ("assignedTo" in patch) dbPatch.assigned_to = patch.assignedTo;
+      if ("assignedToIds" in patch) {
+        const ids = (patch.assignedToIds ?? []).filter(Boolean);
+        dbPatch.assigned_to_ids = ids;
+        dbPatch.assigned_to = ids[0] ?? null;
+      } else if ("assignedTo" in patch) {
+        dbPatch.assigned_to = patch.assignedTo;
+        dbPatch.assigned_to_ids = patch.assignedTo ? [patch.assignedTo] : [];
+      }
       if ("clientId" in patch) dbPatch.client_id = patch.clientId;
       if ("recurrence" in patch) dbPatch.recurrence = patch.recurrence as any;
       if ("done" in patch) dbPatch.done = patch.done;

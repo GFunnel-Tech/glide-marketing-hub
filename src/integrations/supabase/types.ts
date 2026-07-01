@@ -1177,6 +1177,7 @@ export type Database = {
       client_notes: {
         Row: {
           assigned_to: string | null
+          assigned_to_ids: string[]
           client_id: number | null
           completed_at: string | null
           content: string
@@ -1197,6 +1198,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          assigned_to_ids?: string[]
           client_id?: number | null
           completed_at?: string | null
           content: string
@@ -1217,6 +1219,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          assigned_to_ids?: string[]
           client_id?: number | null
           completed_at?: string | null
           content?: string

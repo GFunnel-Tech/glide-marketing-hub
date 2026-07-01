@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Check, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -57,7 +66,8 @@ export function TaskEditDialog({ open, onOpenChange, task, defaultClientId = nul
   const [date, setDate] = useState<Date | undefined>();
   const [time, setTime] = useState("09:00");
   const [calOpen, setCalOpen] = useState(false);
-  const [assignee, setAssignee] = useState<string>("unassigned");
+  const [assignees, setAssignees] = useState<string[]>([]);
+  const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [clientId, setClientId] = useState<string>("none");
   const [recurFreq, setRecurFreq] = useState<"none" | "daily" | "weekly" | "monthly">("none");
   const [recurInterval, setRecurInterval] = useState(1);
@@ -78,7 +88,9 @@ export function TaskEditDialog({ open, onOpenChange, task, defaultClientId = nul
         setDate(undefined);
         setTime("09:00");
       }
-      setAssignee(task.assignedTo ?? "unassigned");
+      setAssignees(task.assignedToIds && task.assignedToIds.length > 0
+        ? task.assignedToIds
+        : (task.assignedTo ? [task.assignedTo] : []));
       setClientId(task.clientId != null ? String(task.clientId) : "none");
       setRecurFreq((task.recurrence?.freq as any) ?? "none");
       setRecurInterval(task.recurrence?.interval ?? 1);
@@ -89,7 +101,7 @@ export function TaskEditDialog({ open, onOpenChange, task, defaultClientId = nul
       setPriority("normal");
       setDate(undefined);
       setTime("09:00");
-      setAssignee("unassigned");
+      setAssignees([]);
       setClientId(defaultClientId != null ? String(defaultClientId) : "none");
       setRecurFreq("none");
       setRecurInterval(1);
@@ -110,7 +122,8 @@ export function TaskEditDialog({ open, onOpenChange, task, defaultClientId = nul
       kind,
       priority,
       dueAt,
-      assignedTo: assignee === "unassigned" ? null : assignee,
+      assignedToIds: assignees,
+      assignedTo: assignees[0] ?? null,
       clientId: clientId === "none" ? null : Number(clientId),
       recurrence,
     };
@@ -231,18 +244,65 @@ export function TaskEditDialog({ open, onOpenChange, task, defaultClientId = nul
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Assignee</Label>
-              <Select value={assignee} onValueChange={setAssignee}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {members.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.display_name || m.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">Assignees</Label>
+              <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2 font-normal h-auto min-h-10 flex-wrap py-1.5"
+                  >
+                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {assignees.length === 0 ? (
+                      <span className="text-muted-foreground">Unassigned</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {assignees.map((id) => {
+                          const m = members.find((x) => x.id === id);
+                          return (
+                            <Badge key={id} variant="secondary" className="text-[11px]">
+                              {m?.display_name || m?.email || "User"}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search members…" />
+                    <CommandList>
+                      <CommandEmpty>No members found.</CommandEmpty>
+                      <CommandGroup>
+                        {members.map((m) => {
+                          const selected = assignees.includes(m.id);
+                          return (
+                            <CommandItem
+                              key={m.id}
+                              value={(m.display_name || m.email || m.id) ?? m.id}
+                              onSelect={() => {
+                                setAssignees((prev) =>
+                                  prev.includes(m.id)
+                                    ? prev.filter((x) => x !== m.id)
+                                    : [...prev, m.id],
+                                );
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selected ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                              {m.display_name || m.email}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label className="text-xs">Client</Label>
