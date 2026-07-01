@@ -175,6 +175,9 @@ const App = () => (
                   <Route index element={<PortalDashboard />} />
                   <Route path="performance" element={<PortalPerformance />} />
                   <Route path="leads" element={<PortalLeads />} />
+                  <Route path="requests" element={<PortalRequests />} />
+                  <Route path="reports" element={<PortalReports />} />
+                  <Route path="integrations" element={<PortalIntegrations />} />
                   <Route path="approvals" element={<PortalApprovals />} />
                   <Route path="creative" element={<PortalCreative />} />
                   <Route path="documents" element={<PortalDocuments />} />
