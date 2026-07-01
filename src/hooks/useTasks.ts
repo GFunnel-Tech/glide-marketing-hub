@@ -313,7 +313,7 @@ export function useTasks(opts: UseTasksOptions = {}) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks", wsId] as any }),
   });
 
-  return { items: filtered, allItems: items, isLoading, create, update, toggle, snooze, remove };
+  return { items: filtered, allItems: items, isLoading, create, update, toggle, snooze, remove, bulkToggle, bulkAssign, bulkRemove };
 }
 
 export function useWorkspaceMembersForTasks() {
