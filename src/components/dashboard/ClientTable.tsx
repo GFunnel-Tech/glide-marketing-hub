@@ -555,6 +555,17 @@ export function ClientTable() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={handleExportCSV}
+            title={`Export ${filtered.length} rows for ${rangeLabel}`}
+          >
+            <FileDown className="h-3.5 w-3.5" />
+            Export
+          </Button>
+
           {newCount > 0 && (
             <Button
               size="sm"
@@ -594,21 +605,8 @@ export function ClientTable() {
             </SelectContent>
           </Select>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={handleExportCSV}
-            title={`Export ${filtered.length} rows for ${rangeLabel}`}
-          >
-            <FileDown className="h-3.5 w-3.5" />
-            Export
-          </Button>
-
           <Popover>
-
             <PopoverTrigger asChild>
-
               <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 Columns
