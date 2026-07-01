@@ -2,11 +2,13 @@ import { useChurnRisks, useRunChurnRiskScan } from "@/hooks/useChurnRisk";
 import { ChurnRiskBadge } from "./ChurnRiskBadge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { AlertTriangle, RefreshCw, ChevronRight } from "lucide-react";
+import { AlertTriangle, RefreshCw, ChevronRight, ChevronDown } from "lucide-react";
 import { useClientPath } from "@/lib/clientPath";
 import { useVisibleClients } from "@/hooks/useVisibleClients";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 export function AtRiskClientsCard() {
   const { data: risks = [], isLoading } = useChurnRisks();
