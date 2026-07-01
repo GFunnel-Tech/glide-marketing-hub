@@ -9,6 +9,7 @@ import { useChannelLeads, useUpdateLead, type LeadChannel, type LeadStage, type 
 import { useClients } from "@/hooks/useDatabase";
 import { LeadDetailDrawer } from "./LeadDetailDrawer";
 import { ManualLeadImport } from "./ManualLeadImport";
+import { MetaLeadImport } from "./MetaLeadImport";
 
 const CHANNELS: { value: LeadChannel; label: string }[] = [
   { value: "meta", label: "Meta" },
@@ -230,6 +231,7 @@ function ChannelPanel({ channel, clientId }: { channel: LeadChannel; clientId?: 
           <Download className="h-3.5 w-3.5 mr-1.5" /> Export
         </Button>
         {channel === "manual" && <ManualLeadImport />}
+        {channel === "meta" && <MetaLeadImport />}
       </div>
 
       <div className="rounded-lg border border-border overflow-hidden">
