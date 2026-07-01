@@ -100,7 +100,7 @@ export function useTasks(opts: UseTasksOptions = {}) {
       if (clientId === null || scope === "global-notes") q = q.is("client_id", null);
       else if (typeof clientId === "number") q = q.eq("client_id", clientId);
 
-      if (assigneeId) q = q.eq("assigned_to", assigneeId);
+      if (assigneeId) q = q.contains("assigned_to_ids", [assigneeId]);
 
       const { data, error } = await q.limit(500);
       if (error) throw error;
