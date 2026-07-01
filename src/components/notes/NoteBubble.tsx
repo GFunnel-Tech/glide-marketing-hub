@@ -491,26 +491,35 @@ export function NoteBubble({ clientId = null, variant = "icon", label, align = "
                   >
                     {n.content}
                   </p>
-                  {(n.due_at || n.assigned_to) && (
-                    <div className="mt-0.5 flex items-center gap-2 text-[10px]">
-                      {n.due_at && (
-                        <span className={cn(
-                          "inline-flex items-center gap-1",
-                          overdue ? "text-destructive font-medium" : "text-muted-foreground",
-                        )}>
-                          <CalendarIcon className="h-2.5 w-2.5" />
-                          {format(new Date(n.due_at), "MMM d, h:mm a")}
-                          {n.reminded_at && <span className="ml-1">· sent</span>}
-                        </span>
-                      )}
-                      {n.assigned_to && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-primary font-medium">
-                          <User className="h-2.5 w-2.5" />
-                          {memberLabel(n.assigned_to)}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {(() => {
+                    const ids = (n.assigned_to_ids && n.assigned_to_ids.length > 0)
+                      ? n.assigned_to_ids
+                      : (n.assigned_to ? [n.assigned_to] : []);
+                    if (!n.due_at && ids.length === 0) return null;
+                    return (
+                      <div className="mt-0.5 flex items-center gap-2 flex-wrap text-[10px]">
+                        {n.due_at && (
+                          <span className={cn(
+                            "inline-flex items-center gap-1",
+                            overdue ? "text-destructive font-medium" : "text-muted-foreground",
+                          )}>
+                            <CalendarIcon className="h-2.5 w-2.5" />
+                            {format(new Date(n.due_at), "MMM d, h:mm a")}
+                            {n.reminded_at && <span className="ml-1">· sent</span>}
+                          </span>
+                        )}
+                        {ids.map((uid) => (
+                          <span
+                            key={uid}
+                            className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-primary font-medium"
+                          >
+                            <User className="h-2.5 w-2.5" />
+                            {memberLabel(uid)}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <button
                   onClick={() => visibilityMut.mutate(n)}
