@@ -11,6 +11,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { AdAccountProvider } from "@/contexts/AdAccountContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { FinanceRoute } from "@/components/auth/FinanceRoute";
+
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ClientPortal from "./pages/ClientPortal";
