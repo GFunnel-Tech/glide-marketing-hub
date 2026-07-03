@@ -19,7 +19,7 @@ export function BuilderHeader({ saving, saved, onSave, onReview }: Props) {
   const [val, setVal] = useState(draftName);
 
   return (
-    <header className="h-14 border-b border-border bg-card flex items-center px-4 gap-3 sticky top-0 z-30">
+    <header className="h-14 flex-shrink-0 border-b border-border bg-card flex items-center px-4 gap-3 relative z-30">
       <button
         onClick={() => navigate("/ads")}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
