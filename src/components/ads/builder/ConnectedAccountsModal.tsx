@@ -370,7 +370,7 @@ export function ConnectedAccountsModal({ open, onOpenChange }: Props) {
                 {" "}from <strong>{selectedAcct.account_name || selectedAcct.act_id}</strong>
               </span>
             ) : (
-              <span>Pick a Page and Ad Account to continue.</span>
+              <span>Pick an Ad Account, then a Page to continue.</span>
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
