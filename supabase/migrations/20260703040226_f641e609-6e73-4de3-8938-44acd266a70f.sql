@@ -1,0 +1,1 @@
+UPDATE public.clients SET currency_code = 'USD' WHERE currency_code IS NULL;
