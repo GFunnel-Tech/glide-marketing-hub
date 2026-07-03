@@ -1853,6 +1853,7 @@ export type Database = {
           cpl: number
           cpm: number
           created_at: string
+          currency_code: string | null
           double_count: boolean
           form_cvr: number
           frequency: number
@@ -1894,6 +1895,7 @@ export type Database = {
           cpl?: number
           cpm?: number
           created_at?: string
+          currency_code?: string | null
           double_count?: boolean
           form_cvr?: number
           frequency?: number
@@ -1935,6 +1937,7 @@ export type Database = {
           cpl?: number
           cpm?: number
           created_at?: string
+          currency_code?: string | null
           double_count?: boolean
           form_cvr?: number
           frequency?: number
