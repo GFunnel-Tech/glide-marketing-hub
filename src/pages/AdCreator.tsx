@@ -125,7 +125,7 @@ export default function AdCreator() {
               </button>
               <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-md px-2.5 py-1 text-xs font-medium">
                 <Flame className="h-3.5 w-3.5" /> {state.objective.charAt(0).toUpperCase() + state.objective.slice(1)}
-                {state.specialAdCategory && <span className="ml-1 bg-white/20 rounded px-1.5 py-0.5 text-[10px] capitalize">Special: {state.specialAdCategory}</span>}
+                {state.specialAdCategory.length > 0 && <span className="ml-1 bg-white/20 rounded px-1.5 py-0.5 text-[10px] capitalize">Special: {state.specialAdCategory.join(", ")}</span>}
               </div>
             </div>
             <p className="text-xs opacity-80 mt-2">
