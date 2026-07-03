@@ -77,13 +77,9 @@ export default function BillingDashboard() {
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Auto-prompt to connect the agency Stripe if not connected
-  useEffect(() => {
-    if (statusLoading) return;
-    if (agencyStatus && !agencyStatus.connected) {
-      setAgencyModalOpen(true);
-    }
-  }, [statusLoading, agencyStatus]);
+  // Note: Auto-prompt disabled — users can open the connect modal manually
+  // via the "Connect Stripe" button when they're ready.
+
 
   const handleSyncAgency = async () => {
     if (syncAgency.isPending) return;
