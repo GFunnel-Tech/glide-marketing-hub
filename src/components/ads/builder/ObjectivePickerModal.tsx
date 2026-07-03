@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Magnet, Phone, MessageCircle, Globe, Megaphone, Home, DollarSign, Briefcase, X } from "lucide-react";
-import type { Objective, SpecialAdCategory } from "./types";
+import type { Objective, SpecialAdCategory, SpecialAdCategoryValue } from "./types";
 import { useAdDraftStore } from "@/stores/adDraftStore";
 
 interface Props {
