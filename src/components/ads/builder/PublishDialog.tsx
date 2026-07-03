@@ -118,7 +118,7 @@ export function PublishDialog({ open, onOpenChange, onMissingIdentity }: Props) 
               <h3 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Summary</h3>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                 <SummaryRow label="Objective" value={state.objective} cap />
-                {state.specialAdCategory && <SummaryRow label="Special category" value={state.specialAdCategory} cap />}
+                {state.specialAdCategory.length > 0 && <SummaryRow label="Special category" value={state.specialAdCategory.join(", ")} cap />}
                 <SummaryRow label="Campaign" value={state.campaignName || "Untitled"} />
                 <SummaryRow label="Page" value={state.pageName ?? "—"} />
                 {state.igUsername && <SummaryRow label="Instagram" value={`@${state.igUsername}`} />}
