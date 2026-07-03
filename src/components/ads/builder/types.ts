@@ -1,6 +1,7 @@
 // Shared types for the ad builder
 export type Objective = "leads" | "website" | "awareness" | "messages";
-export type SpecialAdCategory = "housing" | "credit" | "employment" | null;
+export type SpecialAdCategoryValue = "housing" | "credit" | "employment";
+export type SpecialAdCategory = SpecialAdCategoryValue[];
 export type BuilderMode = "generate" | "template" | "manual";
 export type CreativeType = "dynamic" | "standard" | "carousel";
 export type BudgetType = "daily" | "lifetime";
