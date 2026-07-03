@@ -148,6 +148,7 @@ export interface AdBuilderState {
   updateProductGroup: boolean;
   savePrompt: boolean;
   saveAsTemplate: boolean;
+  activateOnPublish: boolean;
   campaignName: string;
   utmParameters: string;
 
