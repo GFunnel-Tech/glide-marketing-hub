@@ -90,7 +90,7 @@ export function validateForPublish(state: AdBuilderState): PublishIssue[] {
   if (!state.countries || state.countries.length === 0) {
     issues.push({ field: "countries", message: "Select at least one country", severity: "error", section: "targeting" });
   }
-  if (!state.specialAdCategory) {
+  if (state.specialAdCategory.length === 0) {
     if (state.ageMin < 13 || state.ageMax > 65 || state.ageMin > state.ageMax) {
       issues.push({ field: "age", message: "Age range must be between 13–65 with min ≤ max", severity: "error", section: "targeting" });
     }
