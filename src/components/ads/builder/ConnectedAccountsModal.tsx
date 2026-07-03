@@ -156,7 +156,7 @@ export function ConnectedAccountsModal({ open, onOpenChange }: Props) {
             <Plug className="h-4 w-4 text-primary" /> Connected Accounts
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Choose the Facebook Page, Instagram account, and Ad Account this campaign will publish from.
+            First pick the Ad Account that will be billed, then the Facebook Page (and optional Instagram) this campaign publishes as.
           </DialogDescription>
         </DialogHeader>
 
