@@ -239,10 +239,14 @@ Deno.serve(async (req) => {
       }, token, "Creating campaign");
 
       // 2. Ad Set
+      const optimizeForMe = !!state.optimizeForMe;
       const targeting: any = {
         geo_locations: { countries: state.countries },
-        publisher_platforms: ["facebook", "instagram"],
       };
+      // Advantage+ Placements: omit publisher_platforms so Meta chooses; Manual: pin FB+IG
+      if (!optimizeForMe && state.placements !== "advantage_plus") {
+        targeting.publisher_platforms = ["facebook", "instagram"];
+      }
       if (specialCategories.length === 0) {
         targeting.age_min = state.ageMin;
         targeting.age_max = state.ageMax;
@@ -253,7 +257,7 @@ Deno.serve(async (req) => {
       if (state.interests?.length) {
         targeting.flexible_spec = [{ interests: state.interests.map((i: any) => ({ id: i.id, name: i.name })) }];
       }
-      if (state.placements === "advantage_plus") {
+      if (optimizeForMe || state.placements === "advantage_plus") {
         targeting.targeting_automation = { advantage_audience: 1 };
       }
 
@@ -291,7 +295,8 @@ Deno.serve(async (req) => {
 
       // For Leads objective: create (or reuse) a leadgen form and build a link_data creative
       // attached to that form. asset_feed_spec doesn't support lead_gen_form_id reliably.
-      let creativeBody: any;
+      const createdAdIds: string[] = [];
+      let creative: any = null;
       let leadFormId: string | null = null;
 
       if (state.objective === "leads") {
@@ -302,24 +307,41 @@ Deno.serve(async (req) => {
           leadFormId = await createLeadGenForm(pageId, pageToken, state.leadForm);
         }
 
-        creativeBody = {
-          name: `${state.campaignName || "Creative"} – ${Date.now()}`,
-          object_story_spec: {
-            page_id: pageId,
-            instagram_actor_id: state.igAccountId || undefined,
-            link_data: {
-              image_hash: imageHashes[0],
-              link: `https://fb.me/${leadFormId}`,
-              message: allTexts[0] || "Learn more about our offer.",
-              name: allHeadlines[0] || undefined,
-              description: state.description || undefined,
-              call_to_action: {
-                type: state.cta || "SIGN_UP",
-                value: { lead_gen_form_id: leadFormId },
+        // When Optimize For Me is on, rotate creatives: one ad per (image × text) combo (cap 5).
+        const rotate = optimizeForMe;
+        const imgList = rotate ? imageHashes.slice(0, 5) : imageHashes.slice(0, 1);
+        const textList = rotate && allTexts.length > 1 ? allTexts.slice(0, 5) : [allTexts[0] || "Learn more about our offer."];
+
+        for (let i = 0; i < imgList.length; i++) {
+          const message = textList[i % textList.length];
+          const cBody = {
+            name: `${state.campaignName || "Creative"} – v${i + 1} – ${Date.now()}`,
+            object_story_spec: {
+              page_id: pageId,
+              instagram_actor_id: state.igAccountId || undefined,
+              link_data: {
+                image_hash: imgList[i],
+                link: `https://fb.me/${leadFormId}`,
+                message,
+                name: allHeadlines[i % Math.max(1, allHeadlines.length)] || undefined,
+                description: state.description || undefined,
+                call_to_action: {
+                  type: state.cta || "SIGN_UP",
+                  value: { lead_gen_form_id: leadFormId },
+                },
               },
             },
-          },
-        };
+          };
+          const c = await metaPost(`${actId}/adcreatives`, cBody, token, "Creating ad creative");
+          const a = await metaPost(`${actId}/ads`, {
+            name: `${state.campaignName || "Ad"} – v${i + 1}`,
+            adset_id: adset.id,
+            creative: { creative_id: c.id },
+            status: "PAUSED",
+          }, token, "Creating ad");
+          createdAdIds.push(a.id);
+          if (!creative) creative = c;
+        }
       } else {
         const asset_feed_spec: any = {
           images: imageHashes.map((h) => ({ hash: h })),
@@ -330,21 +352,21 @@ Deno.serve(async (req) => {
           call_to_action_types: [state.cta || "LEARN_MORE"],
           ad_formats: ["SINGLE_IMAGE"],
         };
-        creativeBody = {
+        const creativeBody = {
           name: `${state.campaignName || "Creative"} – ${Date.now()}`,
           object_story_spec: { page_id: pageId, instagram_actor_id: state.igAccountId || undefined },
           asset_feed_spec,
         };
+        creative = await metaPost(`${actId}/adcreatives`, creativeBody, token, "Creating ad creative");
+        const a = await metaPost(`${actId}/ads`, {
+          name: `${state.campaignName || "Ad"} – Ad 1`,
+          adset_id: adset.id,
+          creative: { creative_id: creative.id },
+          status: "PAUSED",
+        }, token, "Creating ad");
+        createdAdIds.push(a.id);
       }
-      const creative = await metaPost(`${actId}/adcreatives`, creativeBody, token, "Creating ad creative");
-
-      // 4. Ad
-      const ad = await metaPost(`${actId}/ads`, {
-        name: `${state.campaignName || "Ad"} – Ad 1`,
-        adset_id: adset.id,
-        creative: { creative_id: creative.id },
-        status: "PAUSED",
-      }, token, "Creating ad");
+      const primaryAdId = createdAdIds[0];
 
       // Update draft
       if (draftId) {
@@ -352,16 +374,16 @@ Deno.serve(async (req) => {
           status: "launched",
           meta_campaign_id: campaign.id,
           meta_adset_id: adset.id,
-          meta_ad_id: ad.id,
+          meta_ad_id: primaryAdId,
         }).eq("id", draftId);
       }
 
       await admin.from("ad_action_log").update({
-        status: "success", result_object_id: ad.id,
-        meta: { campaign_id: campaign.id, adset_id: adset.id, creative_id: creative.id, ad_id: ad.id, lead_form_id: leadFormId },
+        status: "success", result_object_id: primaryAdId,
+        meta: { campaign_id: campaign.id, adset_id: adset.id, creative_id: creative?.id, ad_ids: createdAdIds, lead_form_id: leadFormId, optimize_for_me: optimizeForMe },
       }).eq("id", log.data!.id);
 
-      return json({ ok: true, campaignId: campaign.id, adsetId: adset.id, adId: ad.id, leadFormId });
+      return json({ ok: true, campaignId: campaign.id, adsetId: adset.id, adId: primaryAdId, adIds: createdAdIds, leadFormId });
     } catch (e: any) {
       if (draftId) await admin.from("ad_drafts").update({ status: "failed", launch_error: e.message }).eq("id", draftId);
       await admin.from("ad_action_log").update({ status: "failed", error_message: e.message }).eq("id", log.data!.id);

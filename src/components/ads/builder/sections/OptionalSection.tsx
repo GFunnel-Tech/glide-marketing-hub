@@ -14,7 +14,7 @@ export function OptionalSection() {
 
   return (
     <Section title="Optional" icon={<Settings2 className="h-4 w-4 text-primary" />} defaultOpen={false}>
-      <Toggle label="Optimize For Me" value={state.optimizeForMe} onChange={(v) => patch("optimizeForMe", v)} info="Let AI continuously test creatives and pause low performers." />
+      <Toggle label="Optimize For Me" value={state.optimizeForMe} onChange={(v) => patch("optimizeForMe", v)} info="Enables Meta Advantage+ audience & placements and rotates up to 5 image/copy variants from your Creative Bank as separate ads." />
 
       {state.optimizeForMe && (
         <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-3">
