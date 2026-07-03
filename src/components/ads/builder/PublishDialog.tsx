@@ -25,6 +25,7 @@ export function PublishDialog({ open, onOpenChange, onMissingIdentity }: Props) 
   const navigate = useNavigate();
   const { currentWorkspace } = useWorkspace();
   const state = useAdDraftStore((s) => s.state);
+  const patch = useAdDraftStore((s) => s.patch);
   const draftId = useAdDraftStore((s) => s.draftId);
   const setDraftId = useAdDraftStore((s) => s.setDraftId);
   const dirty = useAdDraftStore((s) => s.dirty);
@@ -69,7 +70,23 @@ export function PublishDialog({ open, onOpenChange, onMissingIdentity }: Props) 
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Campaign published (PAUSED). Review and activate it in Meta Ads Manager.");
+
+      const campaignId = data?.campaignId || data?.campaign_id;
+      if (state.activateOnPublish && campaignId) {
+        try {
+          const { data: statusData, error: statusErr } = await supabase.functions.invoke("meta-ad-status", {
+            body: { workspaceId: currentWorkspace.id, adIds: [campaignId], status: "ACTIVE" },
+          });
+          if (statusErr) throw statusErr;
+          const failed = (statusData?.results ?? []).filter((r: any) => !r.ok);
+          if (failed.length) throw new Error(failed[0]?.error || "Activation failed");
+          toast.success("Campaign published and activated. It's now live on Meta.");
+        } catch (e: any) {
+          toast.warning(`Published (PAUSED) but activation failed: ${e.message}. Activate manually.`);
+        }
+      } else {
+        toast.success("Campaign published (PAUSED). Review and activate it in Meta Ads Manager.");
+      }
       onOpenChange(false);
       navigate("/ads");
     } catch (e: any) {
@@ -151,18 +168,35 @@ export function PublishDialog({ open, onOpenChange, onMissingIdentity }: Props) 
           </div>
         </ScrollArea>
 
+        <div className="px-5 py-3 border-t border-border bg-muted/10">
+          <label className="flex items-start gap-2 text-xs cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-3.5 w-3.5 accent-primary"
+              checked={state.activateOnPublish}
+              onChange={(e) => patch("activateOnPublish", e.target.checked)}
+              disabled={publishing}
+            />
+            <span>
+              <span className="font-medium">Activate immediately</span>
+              <span className="text-muted-foreground ml-1">— skip Meta Ads Manager review and go live right after publish.</span>
+            </span>
+          </label>
+        </div>
+
         <DialogFooter className="p-4 border-t border-border bg-muted/20">
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={publishing}>
             Cancel
           </Button>
-          <Button size="sm" onClick={publish} disabled={publishing || errors.length > 0} className="min-w-[140px]">
+          <Button size="sm" onClick={publish} disabled={publishing || errors.length > 0} className="min-w-[160px]">
             {publishing ? (
               <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Publishing…</>
             ) : (
-              <><Rocket className="h-3.5 w-3.5 mr-1.5" /> Publish (paused)</>
+              <><Rocket className="h-3.5 w-3.5 mr-1.5" /> {state.activateOnPublish ? "Publish & activate" : "Publish (paused)"}</>
             )}
           </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );

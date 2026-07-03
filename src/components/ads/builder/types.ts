@@ -148,6 +148,7 @@ export interface AdBuilderState {
   updateProductGroup: boolean;
   savePrompt: boolean;
   saveAsTemplate: boolean;
+  activateOnPublish: boolean;
   campaignName: string;
   utmParameters: string;
 
@@ -247,6 +248,7 @@ export function makeInitialState(
     updateProductGroup: true,
     savePrompt: true,
     saveAsTemplate: false,
+    activateOnPublish: false,
     campaignName: "",
     utmParameters: DEFAULT_UTM,
     pageId: null,
