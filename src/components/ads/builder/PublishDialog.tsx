@@ -168,18 +168,35 @@ export function PublishDialog({ open, onOpenChange, onMissingIdentity }: Props) 
           </div>
         </ScrollArea>
 
+        <div className="px-5 py-3 border-t border-border bg-muted/10">
+          <label className="flex items-start gap-2 text-xs cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-3.5 w-3.5 accent-primary"
+              checked={state.activateOnPublish}
+              onChange={(e) => patch("activateOnPublish", e.target.checked)}
+              disabled={publishing}
+            />
+            <span>
+              <span className="font-medium">Activate immediately</span>
+              <span className="text-muted-foreground ml-1">— skip Meta Ads Manager review and go live right after publish.</span>
+            </span>
+          </label>
+        </div>
+
         <DialogFooter className="p-4 border-t border-border bg-muted/20">
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={publishing}>
             Cancel
           </Button>
-          <Button size="sm" onClick={publish} disabled={publishing || errors.length > 0} className="min-w-[140px]">
+          <Button size="sm" onClick={publish} disabled={publishing || errors.length > 0} className="min-w-[160px]">
             {publishing ? (
               <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Publishing…</>
             ) : (
-              <><Rocket className="h-3.5 w-3.5 mr-1.5" /> Publish (paused)</>
+              <><Rocket className="h-3.5 w-3.5 mr-1.5" /> {state.activateOnPublish ? "Publish & activate" : "Publish (paused)"}</>
             )}
           </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
