@@ -156,7 +156,7 @@ export function ConnectedAccountsModal({ open, onOpenChange }: Props) {
             <Plug className="h-4 w-4 text-primary" /> Connected Accounts
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Choose the Facebook Page, Instagram account, and Ad Account this campaign will publish from.
+            First pick the Ad Account that will be billed, then the Facebook Page (and optional Instagram) this campaign publishes as.
           </DialogDescription>
         </DialogHeader>
 
@@ -206,96 +206,14 @@ export function ConnectedAccountsModal({ open, onOpenChange }: Props) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 max-h-[60vh]">
-          {/* Pages + IG */}
+          {/* Ad Accounts — step 1 */}
           <div className="border-r border-border flex flex-col">
             <div className="p-4 pb-2">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold flex items-center gap-1.5"><Facebook className="h-3.5 w-3.5 text-[#1877F2]" /> Facebook Page</h3>
-                <span className="text-[10px] text-muted-foreground">{pages.length} available</span>
-              </div>
-              <div className="relative">
-                <Search className="h-3 w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input value={pageQuery} onChange={(e) => setPageQuery(e.target.value)} placeholder="Search pages…" className="h-8 pl-7 text-xs" />
-              </div>
-            </div>
-            <ScrollArea className="flex-1 px-3 pb-3">
-              {hasConnection && filteredPages.length === 0 && (
-                <p className="text-xs text-muted-foreground p-3 text-center">No pages match.</p>
-              )}
-              <div className="space-y-1.5">
-                {filteredPages.map((p) => {
-                  const active = draftPageId === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => { setDraftPageId(p.id); setDraftIgId(p.instagram?.id ?? null); }}
-                      disabled={!p.canAdvertise}
-                      className={cn(
-                        "w-full text-left rounded-lg border px-3 py-2 flex items-center gap-3 transition-all",
-                        active ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/40 hover:bg-muted/40",
-                        !p.canAdvertise && "opacity-50 cursor-not-allowed",
-                      )}
-                    >
-                      <div className="h-9 w-9 rounded-full bg-muted shrink-0 overflow-hidden flex items-center justify-center">
-                        {p.avatar ? <img src={p.avatar} alt="" className="h-full w-full object-cover" /> : <Facebook className="h-4 w-4 text-muted-foreground" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium truncate">{p.name}</div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {p.instagram ? (
-                            <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
-                              <Instagram className="h-3 w-3" /> @{p.instagram.username}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground">No linked Instagram</span>
-                          )}
-                          {!p.canAdvertise && <span className="text-[10px] text-destructive">No ads access</span>}
-                        </div>
-                      </div>
-                      {active && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-
-            {/* Instagram override */}
-            {selectedPage && (
-              <div className="border-t border-border p-3 bg-muted/20">
-                <div className="flex items-center justify-between mb-1.5">
-                  <h4 className="text-xs font-semibold flex items-center gap-1.5"><Instagram className="h-3 w-3 text-pink-500" /> Instagram identity</h4>
-                </div>
-                {selectedPage.instagram ? (
-                  <button
-                    type="button"
-                    onClick={() => setDraftIgId(draftIgId === selectedPage.instagram!.id ? null : selectedPage.instagram!.id)}
-                    className={cn(
-                      "w-full rounded-md border px-2.5 py-1.5 flex items-center gap-2 transition-all",
-                      draftIgId === selectedPage.instagram.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
-                    )}
-                  >
-                    <div className="h-6 w-6 rounded-full bg-muted overflow-hidden shrink-0">
-                      {selectedPage.instagram.avatar && <img src={selectedPage.instagram.avatar} alt="" className="h-full w-full object-cover" />}
-                    </div>
-                    <div className="text-xs font-medium">@{selectedPage.instagram.username}</div>
-                    {draftIgId === selectedPage.instagram.id && <CheckCircle2 className="h-3.5 w-3.5 text-primary ml-auto" />}
-                  </button>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground">
-                    No Instagram business account linked to this Page. The ad will run on Facebook only unless you{" "}
-                    <a href={`https://www.facebook.com/${selectedPage.id}/settings/?tab=instagram_management`} target="_blank" rel="noreferrer" className="underline">link an Instagram account</a>.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Ad Accounts */}
-          <div className="flex flex-col">
-            <div className="p-4 pb-2">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-emerald-500" /> Ad Account</h3>
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">1</span>
+                  <Wallet className="h-3.5 w-3.5 text-emerald-500" /> Ad Account
+                </h3>
                 <span className="text-[10px] text-muted-foreground">{adAccounts.length} available</span>
               </div>
               <div className="relative">
@@ -343,7 +261,105 @@ export function ConnectedAccountsModal({ open, onOpenChange }: Props) {
               </div>
             </ScrollArea>
           </div>
+
+          {/* Pages + IG — step 2 */}
+          <div className="flex flex-col">
+            <div className="p-4 pb-2">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  <span className={cn("inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold", draftAcctId ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>2</span>
+                  <Facebook className="h-3.5 w-3.5 text-[#1877F2]" /> Facebook Page
+                </h3>
+                <span className="text-[10px] text-muted-foreground">{pages.length} available</span>
+              </div>
+              <div className="relative">
+                <Search className="h-3 w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input value={pageQuery} onChange={(e) => setPageQuery(e.target.value)} placeholder="Search pages…" className="h-8 pl-7 text-xs" disabled={!draftAcctId} />
+              </div>
+            </div>
+            <ScrollArea className="flex-1 px-3 pb-3">
+              {!draftAcctId ? (
+                <div className="text-center p-6">
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">Pick an Ad Account first. The page you publish as must have advertising access to the selected account.</p>
+                </div>
+              ) : (
+                <>
+                  {hasConnection && filteredPages.length === 0 && (
+                    <p className="text-xs text-muted-foreground p-3 text-center">No pages match.</p>
+                  )}
+                  <div className="space-y-1.5">
+                    {filteredPages.map((p) => {
+                      const active = draftPageId === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => { setDraftPageId(p.id); setDraftIgId(p.instagram?.id ?? null); }}
+                          disabled={!p.canAdvertise}
+                          className={cn(
+                            "w-full text-left rounded-lg border px-3 py-2 flex items-center gap-3 transition-all",
+                            active ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/40 hover:bg-muted/40",
+                            !p.canAdvertise && "opacity-50 cursor-not-allowed",
+                          )}
+                        >
+                          <div className="h-9 w-9 rounded-full bg-muted shrink-0 overflow-hidden flex items-center justify-center">
+                            {p.avatar ? <img src={p.avatar} alt="" className="h-full w-full object-cover" /> : <Facebook className="h-4 w-4 text-muted-foreground" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium truncate">{p.name}</div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {p.instagram ? (
+                                <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                                  <Instagram className="h-3 w-3" /> @{p.instagram.username}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-muted-foreground">No linked Instagram</span>
+                              )}
+                              {!p.canAdvertise && <span className="text-[10px] text-destructive">No ads access</span>}
+                            </div>
+                          </div>
+                          {active && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </ScrollArea>
+
+            {/* Instagram override */}
+            {selectedPage && draftAcctId && (
+              <div className="border-t border-border p-3 bg-muted/20">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h4 className="text-xs font-semibold flex items-center gap-1.5"><Instagram className="h-3 w-3 text-pink-500" /> Instagram identity</h4>
+                </div>
+                {selectedPage.instagram ? (
+                  <button
+                    type="button"
+                    onClick={() => setDraftIgId(draftIgId === selectedPage.instagram!.id ? null : selectedPage.instagram!.id)}
+                    className={cn(
+                      "w-full rounded-md border px-2.5 py-1.5 flex items-center gap-2 transition-all",
+                      draftIgId === selectedPage.instagram.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+                    )}
+                  >
+                    <div className="h-6 w-6 rounded-full bg-muted overflow-hidden shrink-0">
+                      {selectedPage.instagram.avatar && <img src={selectedPage.instagram.avatar} alt="" className="h-full w-full object-cover" />}
+                    </div>
+                    <div className="text-xs font-medium">@{selectedPage.instagram.username}</div>
+                    {draftIgId === selectedPage.instagram.id && <CheckCircle2 className="h-3.5 w-3.5 text-primary ml-auto" />}
+                  </button>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    No Instagram business account linked to this Page. The ad will run on Facebook only unless you{" "}
+                    <a href={`https://www.facebook.com/${selectedPage.id}/settings/?tab=instagram_management`} target="_blank" rel="noreferrer" className="underline">link an Instagram account</a>.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+
 
         <DialogFooter className="p-4 border-t border-border bg-muted/20">
           <div className="flex-1 text-[11px] text-muted-foreground">
@@ -354,7 +370,7 @@ export function ConnectedAccountsModal({ open, onOpenChange }: Props) {
                 {" "}from <strong>{selectedAcct.account_name || selectedAcct.act_id}</strong>
               </span>
             ) : (
-              <span>Pick a Page and Ad Account to continue.</span>
+              <span>Pick an Ad Account, then a Page to continue.</span>
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
