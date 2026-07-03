@@ -43,7 +43,7 @@ const navItems: NavEntry[] = [
     icon: CreditCard, label: "Finance", children: [
       { icon: CreditCard, label: "Billing", path: "/billing" },
       { icon: Receipt, label: "Rebilling", path: "/rebilling" },
-      { icon: Coins, label: "Affiliate", path: "/affiliate" },
+      { icon: Coins, label: "Affiliates", path: "/affiliate" },
       { icon: TrendingUp, label: "Forecast", path: "/forecast" },
     ]
   },
