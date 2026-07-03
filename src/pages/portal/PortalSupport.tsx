@@ -44,8 +44,8 @@ export default function PortalSupport() {
           <div className="flex-1">
             <h3 className="font-semibold">Your AI Account Assistant</h3>
             <p className="mt-1 text-sm text-white/80">Ask anything about your campaigns, leads, performance, or billing.</p>
-            <Button asChild className="mt-3 bg-white text-[hsl(var(--primary))] hover:bg-white/90">
-              <a href="https://agents.gfunnel.com" target="_blank" rel="noreferrer">Start conversation</a>
+            <Button className="mt-3 bg-white text-[hsl(var(--primary))] hover:bg-white/90" disabled>
+              Start conversation
             </Button>
           </div>
         </div>
