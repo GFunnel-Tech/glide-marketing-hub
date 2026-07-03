@@ -248,6 +248,7 @@ export function makeInitialState(
     updateProductGroup: true,
     savePrompt: true,
     saveAsTemplate: false,
+    activateOnPublish: false,
     campaignName: "",
     utmParameters: DEFAULT_UTM,
     pageId: null,
