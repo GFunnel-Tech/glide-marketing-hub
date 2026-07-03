@@ -1,6 +1,7 @@
 // Shared types for the ad builder
 export type Objective = "leads" | "website" | "awareness" | "messages";
-export type SpecialAdCategory = "housing" | "credit" | "employment" | null;
+export type SpecialAdCategoryValue = "housing" | "credit" | "employment";
+export type SpecialAdCategory = SpecialAdCategoryValue[];
 export type BuilderMode = "generate" | "template" | "manual";
 export type CreativeType = "dynamic" | "standard" | "carousel";
 export type BudgetType = "daily" | "lifetime";
@@ -202,7 +203,7 @@ export function makeAdSet(name = "Ad Set 1", cta: CTA = "LEARN_MORE"): AdSetSnap
 
 export function makeInitialState(
   objective: Objective,
-  specialAdCategory: SpecialAdCategory = null,
+  specialAdCategory: SpecialAdCategory = [],
   countries: string[] = ["US"],
 ): AdBuilderState {
   const cta: CTA = objective === "leads" ? "APPLY_NOW" : "LEARN_MORE";

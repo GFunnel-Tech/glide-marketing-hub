@@ -22,12 +22,11 @@ function objectiveMap(obj: string): { objective: string; optimization_goal: stri
   }
 }
 
-function specialCategoryMap(cat: string | null): string[] {
+function specialCategoryMap(cat: string | string[] | null | undefined): string[] {
   if (!cat) return [];
-  if (cat === "housing") return ["HOUSING"];
-  if (cat === "credit") return ["CREDIT"];
-  if (cat === "employment") return ["EMPLOYMENT"];
-  return [];
+  const arr = Array.isArray(cat) ? cat : String(cat).split(",");
+  const map: Record<string, string> = { housing: "HOUSING", credit: "CREDIT", employment: "EMPLOYMENT" };
+  return arr.map((c) => map[String(c).trim().toLowerCase()]).filter(Boolean);
 }
 
 // ---- Error humanization + retry ----------------------------------------

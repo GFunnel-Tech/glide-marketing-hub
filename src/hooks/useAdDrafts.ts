@@ -50,7 +50,7 @@ export function useSaveAdDraft() {
         created_by: user.id,
         channel: "meta",
         objective: args.state.objective,
-        special_ad_category: args.state.specialAdCategory,
+        special_ad_category: args.state.specialAdCategory.length ? args.state.specialAdCategory.join(",") : null,
         countries: args.state.countries,
         client_id: args.state.clientId,
         state: args.state as any,

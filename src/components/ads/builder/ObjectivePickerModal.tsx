@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Magnet, Phone, MessageCircle, Globe, Megaphone, Home, DollarSign, Briefcase, X } from "lucide-react";
-import type { Objective, SpecialAdCategory } from "./types";
+import type { Objective, SpecialAdCategory, SpecialAdCategoryValue } from "./types";
 import { useAdDraftStore } from "@/stores/adDraftStore";
 
 interface Props {
@@ -26,7 +26,7 @@ const LEAD_SUB = [
   { id: "message", label: "Lead Message", desc: "Collect leads through chat", icon: MessageCircle, available: false },
 ];
 
-const SPECIAL_CATS: { id: NonNullable<SpecialAdCategory>; label: string; icon: any; desc: string }[] = [
+const SPECIAL_CATS: { id: SpecialAdCategoryValue; label: string; icon: any; desc: string }[] = [
   { id: "housing", label: "Housing", icon: Home, desc: "Real estate listings, mortgage loans" },
   { id: "credit", label: "Financial Products and Services", icon: DollarSign, desc: "Credit cards, auto loans, financing" },
   { id: "employment", label: "Employment", icon: Briefcase, desc: "Job offers, internships, certifications" },
@@ -38,14 +38,17 @@ export function ObjectivePickerModal({ open, onOpenChange }: Props) {
   const [objective, setObjective] = useState<Objective>("leads");
   const [leadType] = useState("form");
   const [specialOn, setSpecialOn] = useState(false);
-  const [specialCat, setSpecialCat] = useState<NonNullable<SpecialAdCategory>>("housing");
+  const [specialCats, setSpecialCats] = useState<SpecialAdCategoryValue[]>([]);
   const [countries] = useState<string[]>(["US"]);
 
+  const toggleCat = (id: SpecialAdCategoryValue) =>
+    setSpecialCats((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+
   const handleCreate = () => {
-    const sac = specialOn ? specialCat : null;
+    const sac: SpecialAdCategory = specialOn ? specialCats : [];
     init(objective, sac, countries);
     onOpenChange(false);
-    navigate(`/ads/new?objective=${objective}${sac ? `&special=${sac}` : ""}`);
+    navigate(`/ads/new?objective=${objective}${sac.length ? `&special=${sac.join(",")}` : ""}`);
   };
 
   return (
@@ -133,14 +136,17 @@ export function ObjectivePickerModal({ open, onOpenChange }: Props) {
               <Switch checked={specialOn} onCheckedChange={setSpecialOn} />
             </div>
             {specialOn && (
-              <div className="grid grid-cols-3 gap-3 mt-3">
+              <>
+              <div className="text-[11px] text-muted-foreground mb-2">Select all that apply — you can pick more than one.</div>
+              <div className="grid grid-cols-3 gap-3 mt-1">
+
                 {SPECIAL_CATS.map((c) => {
                   const Icon = c.icon;
-                  const active = specialCat === c.id;
+                  const active = specialCats.includes(c.id);
                   return (
                     <button
                       key={c.id}
-                      onClick={() => setSpecialCat(c.id)}
+                      onClick={() => toggleCat(c.id)}
                       className={cn(
                         "rounded-lg border-2 p-3 text-center transition-all",
                         active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
@@ -153,6 +159,7 @@ export function ObjectivePickerModal({ open, onOpenChange }: Props) {
                   );
                 })}
               </div>
+              </>
             )}
           </div>
 
