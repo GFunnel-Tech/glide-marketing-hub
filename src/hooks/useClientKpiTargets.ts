@@ -94,7 +94,7 @@ export function useClientKpiTargets(clientId: number | null | undefined) {
         cpm: num("cpm"),
         leads: num("leads"),
         frequency: num("frequency"),
-        form_cvr: num("lead_quality"), // presets currently don't carry form_cvr — closest signal
+        form_cvr: num("form_cvr"),
       };
     },
   });
