@@ -136,7 +136,10 @@ export function ObjectivePickerModal({ open, onOpenChange }: Props) {
               <Switch checked={specialOn} onCheckedChange={setSpecialOn} />
             </div>
             {specialOn && (
-              <div className="grid grid-cols-3 gap-3 mt-3">
+              <>
+              <div className="text-[11px] text-muted-foreground mb-2">Select all that apply — you can pick more than one.</div>
+              <div className="grid grid-cols-3 gap-3 mt-1">
+
                 {SPECIAL_CATS.map((c) => {
                   const Icon = c.icon;
                   const active = specialCats.includes(c.id);
