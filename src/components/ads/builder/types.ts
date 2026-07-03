@@ -203,7 +203,7 @@ export function makeAdSet(name = "Ad Set 1", cta: CTA = "LEARN_MORE"): AdSetSnap
 
 export function makeInitialState(
   objective: Objective,
-  specialAdCategory: SpecialAdCategory = null,
+  specialAdCategory: SpecialAdCategory = [],
   countries: string[] = ["US"],
 ): AdBuilderState {
   const cta: CTA = objective === "leads" ? "APPLY_NOW" : "LEARN_MORE";
