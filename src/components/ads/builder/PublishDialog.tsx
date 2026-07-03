@@ -25,6 +25,7 @@ export function PublishDialog({ open, onOpenChange, onMissingIdentity }: Props) 
   const navigate = useNavigate();
   const { currentWorkspace } = useWorkspace();
   const state = useAdDraftStore((s) => s.state);
+  const patch = useAdDraftStore((s) => s.patch);
   const draftId = useAdDraftStore((s) => s.draftId);
   const setDraftId = useAdDraftStore((s) => s.setDraftId);
   const dirty = useAdDraftStore((s) => s.dirty);
