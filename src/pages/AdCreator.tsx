@@ -39,7 +39,10 @@ export default function AdCreator() {
   useEffect(() => {
     const obj = params.get("objective") as Objective | null;
     if (obj && state.objective !== obj) {
-      const sac = (params.get("special") as SpecialAdCategory) || null;
+      const specialParam = params.get("special");
+      const sac: SpecialAdCategory = specialParam
+        ? (specialParam.split(",").filter((v) => ["housing", "credit", "employment"].includes(v)) as SpecialAdCategory)
+        : [];
       init(obj, sac, ["US"]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
