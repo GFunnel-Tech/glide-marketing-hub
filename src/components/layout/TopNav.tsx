@@ -67,9 +67,16 @@ export function TopNav() {
   const { data: unreadMessages = 0 } = useUnreadMessageCount();
   const { data: isSuperAdmin } = useIsSuperAdmin();
   const [connecting, setConnecting] = useState(false);
+  const isWorkspaceAdmin =
+    currentWorkspace?.role === "owner" || currentWorkspace?.role === "admin";
+  const canSeeFinance = isSuperAdmin || isWorkspaceAdmin;
+  const filtered = canSeeFinance
+    ? navItems
+    : navItems.filter((e) => !(isGroup(e) && e.label === "Finance"));
   const items: NavEntry[] = isSuperAdmin
-    ? [...navItems, { icon: Shield, label: "Admin", path: "/admin" }]
-    : navItems;
+    ? [...filtered, { icon: Shield, label: "Admin", path: "/admin" }]
+    : filtered;
+
 
   const connectMeta = async () => {
     if (!currentWorkspace) return;
