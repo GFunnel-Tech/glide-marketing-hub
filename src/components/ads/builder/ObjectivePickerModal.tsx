@@ -38,14 +38,17 @@ export function ObjectivePickerModal({ open, onOpenChange }: Props) {
   const [objective, setObjective] = useState<Objective>("leads");
   const [leadType] = useState("form");
   const [specialOn, setSpecialOn] = useState(false);
-  const [specialCat, setSpecialCat] = useState<NonNullable<SpecialAdCategory>>("housing");
+  const [specialCats, setSpecialCats] = useState<SpecialAdCategoryValue[]>([]);
   const [countries] = useState<string[]>(["US"]);
 
+  const toggleCat = (id: SpecialAdCategoryValue) =>
+    setSpecialCats((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+
   const handleCreate = () => {
-    const sac = specialOn ? specialCat : null;
+    const sac: SpecialAdCategory = specialOn ? specialCats : [];
     init(objective, sac, countries);
     onOpenChange(false);
-    navigate(`/ads/new?objective=${objective}${sac ? `&special=${sac}` : ""}`);
+    navigate(`/ads/new?objective=${objective}${sac.length ? `&special=${sac.join(",")}` : ""}`);
   };
 
   return (
