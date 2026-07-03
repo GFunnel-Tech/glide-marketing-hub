@@ -139,11 +139,11 @@ export function ObjectivePickerModal({ open, onOpenChange }: Props) {
               <div className="grid grid-cols-3 gap-3 mt-3">
                 {SPECIAL_CATS.map((c) => {
                   const Icon = c.icon;
-                  const active = specialCat === c.id;
+                  const active = specialCats.includes(c.id);
                   return (
                     <button
                       key={c.id}
-                      onClick={() => setSpecialCat(c.id)}
+                      onClick={() => toggleCat(c.id)}
                       className={cn(
                         "rounded-lg border-2 p-3 text-center transition-all",
                         active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
