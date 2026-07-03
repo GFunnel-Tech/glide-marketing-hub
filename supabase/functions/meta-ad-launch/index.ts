@@ -239,10 +239,14 @@ Deno.serve(async (req) => {
       }, token, "Creating campaign");
 
       // 2. Ad Set
+      const optimizeForMe = !!state.optimizeForMe;
       const targeting: any = {
         geo_locations: { countries: state.countries },
-        publisher_platforms: ["facebook", "instagram"],
       };
+      // Advantage+ Placements: omit publisher_platforms so Meta chooses; Manual: pin FB+IG
+      if (!optimizeForMe && state.placements !== "advantage_plus") {
+        targeting.publisher_platforms = ["facebook", "instagram"];
+      }
       if (specialCategories.length === 0) {
         targeting.age_min = state.ageMin;
         targeting.age_max = state.ageMax;
@@ -253,7 +257,7 @@ Deno.serve(async (req) => {
       if (state.interests?.length) {
         targeting.flexible_spec = [{ interests: state.interests.map((i: any) => ({ id: i.id, name: i.name })) }];
       }
-      if (state.placements === "advantage_plus") {
+      if (optimizeForMe || state.placements === "advantage_plus") {
         targeting.targeting_automation = { advantage_audience: 1 };
       }
 
