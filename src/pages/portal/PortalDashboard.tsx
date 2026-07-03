@@ -1,10 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { usePortalClient } from "@/hooks/usePortalClient";
 import { ClientKpiTile } from "@/components/client/ClientKpiTile";
-import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { PortalTasksCard } from "@/components/portal/PortalTasksCard";
 import { RequestCampaignDialog } from "@/components/portal/RequestCampaignDialog";
+import { useClientKpiTargets } from "@/hooks/useClientKpiTargets";
+import { formatMoney, formatMoneyInt } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import {
@@ -13,16 +12,6 @@ import {
   Sparkles, Mail, Users, ListChecks,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-function cplTone(cpl: number) {
-  if (cpl < 30) return "text-success";
-  if (cpl <= 60) return "text-warning";
-  return "text-destructive";
-}
-function statusOf(v: number, good: number, watch: number, higherBetter = false): "Good" | "Watch" | "Fix" {
-  if (higherBetter) return v >= good ? "Good" : v >= watch ? "Watch" : "Fix";
-  return v <= good ? "Good" : v <= watch ? "Watch" : "Fix";
-}
 
 const departments = [
   { label: "Performance", sub: "KPIs, spend, leads", Icon: Target, tint: "bg-primary/10 text-primary", to: "/portal/performance" },
@@ -35,26 +24,42 @@ const departments = [
 
 export default function PortalDashboard() {
   const { clientId, client } = usePortalClient();
-
-  const monthLeads = useQuery({
-    queryKey: ["portal-month-leads", clientId],
-    enabled: !!clientId,
-    queryFn: async () => {
-      const since = new Date(); since.setDate(1);
-      const { count } = await supabase.from("meta_leads").select("id", { count: "exact", head: true })
-        .eq("client_id", clientId!).gte("created_time", since.toISOString());
-      return count ?? 0;
-    },
-  });
+  const targetsQ = useClientKpiTargets(clientId);
 
   if (!client) return <div className="p-8 text-muted-foreground">Loading…</div>;
 
-  const cpl = client.true_cpl ?? client.cpl ?? 0;
-  const cpm = client.cpm ?? 0;
-  const spend = client.spend ?? 0;
-  const leads = monthLeads.data ?? client.leads ?? 0;
-  const freq = client.frequency ?? 0;
-  const cvr = client.form_cvr ?? 0;
+  // ---- Metric values ---------------------------------------------------
+  // Unify the Leads tile with the same source that drives CPL and the
+  // Activity snapshot. Previously the tile ran its own meta_leads count
+  // that missed non-Meta and un-timestamped leads, producing 0 while CPL
+  // was clearly computed against a non-zero denominator.
+  const trueLeads = (client as any).true_leads ?? 0;
+  const reportedLeads = (client as any).reported_leads ?? 0;
+  const leads = trueLeads || reportedLeads || (client as any).leads || 0;
+  const cpl = (client as any).true_cpl ?? (client as any).cpl ?? 0;
+  const cpm = (client as any).cpm ?? 0;
+  const spend = (client as any).spend ?? 0;
+  const freq = (client as any).frequency ?? 0;
+
+  // Form CVR is stored as a percent (e.g. 18.50 = 18.5%). The previous
+  // multiplication by 100 produced impossible values like "1083.0%".
+  const cvrRaw = (client as any).form_cvr ?? 0;
+  const cvrValid = typeof cvrRaw === "number" && cvrRaw >= 0 && cvrRaw <= 100;
+
+  // ---- Currency --------------------------------------------------------
+  const currency: string | null = (client as any).currency_code ?? null;
+  const spendFmt = formatMoneyInt(spend, currency);
+  const cplFmt = formatMoney(cpl, currency);
+  const cpmFmt = formatMoney(cpm, currency);
+  const currencyNote = currency ? undefined : "Currency not configured for this account — value shown without symbol.";
+
+  // ---- Targets (per-account config) -----------------------------------
+  const t = targetsQ.data;
+  const tgtCpl = t?.cpl != null ? `< ${formatMoney(t.cpl, currency).text}` : undefined;
+  const tgtCpm = t?.cpm != null ? `< ${formatMoney(t.cpm, currency).text}` : undefined;
+  const tgtLeads = t?.leads != null ? `${t.leads}+` : undefined;
+  const tgtFreq = t?.frequency != null ? `< ${t.frequency.toFixed(1)}` : undefined;
+
   const initial = (client.name ?? "?").trim().charAt(0).toUpperCase();
 
   return (
@@ -71,7 +76,7 @@ export default function PortalDashboard() {
             <div className="pt-10 px-4 pb-4">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-lg font-bold text-foreground truncate">{client.name}</h1>
-                <StatusBadge status={client.status as any} />
+                {/* Internal status pill intentionally hidden from client role. */}
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 truncate">{client.brand || "Client workspace"}</p>
 
@@ -141,12 +146,17 @@ export default function PortalDashboard() {
               </Button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              <ClientKpiTile label="CPL" value={`$${cpl.toFixed(2)}`} benchmark="< $30" status={statusOf(cpl, 30, 60)} tone={cplTone(cpl)} />
-              <ClientKpiTile label="Leads MTD" value={String(leads)} benchmark="50+" status={statusOf(leads, 50, 20, true)} />
-              <ClientKpiTile label="Spend" value={`$${spend.toLocaleString()}`} />
-              <ClientKpiTile label="CPM" value={`$${cpm.toFixed(2)}`} benchmark="< $120" status={statusOf(cpm, 120, 200)} />
-              <ClientKpiTile label="Form CVR" value={`${(cvr * 100).toFixed(1)}%`} benchmark="> 15%" status={statusOf(cvr * 100, 15, 8, true)} />
-              <ClientKpiTile label="Frequency" value={freq.toFixed(2)} benchmark="< 3.0" status={statusOf(freq, 3, 4)} />
+              <ClientKpiTile label="Cost per lead" value={cplFmt.text} benchmark={tgtCpl} valueTitle={currencyNote} />
+              <ClientKpiTile label="Leads this month" value={String(leads)} benchmark={tgtLeads} />
+              <ClientKpiTile label="Spend" value={spendFmt.text} valueTitle={currencyNote} />
+              <ClientKpiTile label="CPM" value={cpmFmt.text} benchmark={tgtCpm} valueTitle={currencyNote} />
+              <ClientKpiTile
+                label="Form conversion rate"
+                value={cvrValid ? `${cvrRaw.toFixed(1)}%` : "—"}
+                benchmark={cvrValid ? undefined : "not available"}
+                valueTitle={cvrValid ? undefined : "Not enough view data to compute a real rate for this account."}
+              />
+              <ClientKpiTile label="Ad frequency" value={freq.toFixed(2)} benchmark={tgtFreq} />
             </div>
           </section>
 
@@ -179,10 +189,10 @@ export default function PortalDashboard() {
           <section className="rounded-xl border border-border bg-card p-5">
             <h3 className="text-sm font-semibold text-foreground mb-3">Activity snapshot</h3>
             <dl className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <div className="rounded-lg bg-muted/30 px-3 py-2"><dt className="text-[11px] text-muted-foreground uppercase tracking-wide">Reported leads</dt><dd className="tabular-nums font-medium text-foreground mt-1">{client.reported_leads ?? 0}</dd></div>
-              <div className="rounded-lg bg-muted/30 px-3 py-2"><dt className="text-[11px] text-muted-foreground uppercase tracking-wide">True leads</dt><dd className="tabular-nums font-medium text-foreground mt-1">{client.true_leads ?? 0}</dd></div>
-              <div className="rounded-lg bg-muted/30 px-3 py-2"><dt className="text-[11px] text-muted-foreground uppercase tracking-wide">Spend</dt><dd className="tabular-nums font-medium text-foreground mt-1">${spend.toLocaleString()}</dd></div>
-              <div className="rounded-lg bg-muted/30 px-3 py-2"><dt className="text-[11px] text-muted-foreground uppercase tracking-wide">Cost / lead</dt><dd className={cn("tabular-nums font-medium mt-1", cplTone(cpl))}>${cpl.toFixed(2)}</dd></div>
+              <div className="rounded-lg bg-muted/30 px-3 py-2"><dt className="text-[11px] text-muted-foreground uppercase tracking-wide">Reported leads</dt><dd className="tabular-nums font-medium text-foreground mt-1">{reportedLeads}</dd></div>
+              <div className="rounded-lg bg-muted/30 px-3 py-2"><dt className="text-[11px] text-muted-foreground uppercase tracking-wide">True leads</dt><dd className="tabular-nums font-medium text-foreground mt-1">{trueLeads}</dd></div>
+              <div className="rounded-lg bg-muted/30 px-3 py-2"><dt className="text-[11px] text-muted-foreground uppercase tracking-wide">Spend</dt><dd className="tabular-nums font-medium text-foreground mt-1" title={currencyNote}>{spendFmt.text}</dd></div>
+              <div className="rounded-lg bg-muted/30 px-3 py-2"><dt className="text-[11px] text-muted-foreground uppercase tracking-wide">Cost / lead</dt><dd className="tabular-nums font-medium mt-1 text-foreground" title={currencyNote}>{cplFmt.text}</dd></div>
             </dl>
           </section>
         </main>
@@ -220,10 +230,9 @@ export default function PortalDashboard() {
             </div>
             <ul className="space-y-1.5 text-sm">
               <li>
-                <a href="https://agents.gfunnel.com" target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-accent">
+                <Link to="/portal/support" className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-accent">
                   <span className="flex items-center gap-2"><Bot className="h-4 w-4 text-primary" /> AI Assistant</span>
-                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                </a>
+                </Link>
               </li>
               <li>
                 <Link to="/portal/documents" className="flex items-center justify-between rounded-md px-2 py-2 hover:bg-accent">
