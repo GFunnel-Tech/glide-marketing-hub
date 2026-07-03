@@ -26,7 +26,7 @@ const LEAD_SUB = [
   { id: "message", label: "Lead Message", desc: "Collect leads through chat", icon: MessageCircle, available: false },
 ];
 
-const SPECIAL_CATS: { id: NonNullable<SpecialAdCategory>; label: string; icon: any; desc: string }[] = [
+const SPECIAL_CATS: { id: SpecialAdCategoryValue; label: string; icon: any; desc: string }[] = [
   { id: "housing", label: "Housing", icon: Home, desc: "Real estate listings, mortgage loans" },
   { id: "credit", label: "Financial Products and Services", icon: DollarSign, desc: "Credit cards, auto loans, financing" },
   { id: "employment", label: "Employment", icon: Briefcase, desc: "Job offers, internships, certifications" },
