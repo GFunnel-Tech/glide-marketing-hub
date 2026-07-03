@@ -8,7 +8,7 @@ import { Slider } from "@/components/ui/slider";
 export function TargetingSection() {
   const state = useAdDraftStore((s) => s.state);
   const patch = useAdDraftStore((s) => s.patch);
-  const specialOn = !!state.specialAdCategory;
+  const specialOn = state.specialAdCategory.length > 0;
 
   return (
     <Section title="Targeting" icon={<Target className="h-4 w-4 text-primary" />}>
@@ -16,7 +16,7 @@ export function TargetingSection() {
         <div className="rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-foreground flex items-start gap-2">
           <Info className="h-3.5 w-3.5 text-warning mt-0.5 flex-shrink-0" />
           <div>
-            <span className="font-medium capitalize">{state.specialAdCategory}</span> Special Ad Category detected. Age, gender & detailed location targeting are restricted by Meta.
+            <span className="font-medium capitalize">{state.specialAdCategory.join(", ")}</span> Special Ad {state.specialAdCategory.length > 1 ? "Categories" : "Category"} detected. Age, gender & detailed location targeting are restricted by Meta.
           </div>
         </div>
       )}
