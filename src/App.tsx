@@ -11,6 +11,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { AdAccountProvider } from "@/contexts/AdAccountContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { FinanceRoute } from "@/components/auth/FinanceRoute";
+
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ClientPortal from "./pages/ClientPortal";
@@ -204,9 +206,9 @@ const App = () => (
                   <Route path="ads/new" element={<AdCreator />} />
                   <Route path="leads" element={<Leads />} />
                   <Route path="reports" element={<Reports />} />
-                  <Route path="billing" element={<BillingPage />} />
-                  <Route path="affiliate" element={<AffiliatePage />} />
-                  <Route path="forecast" element={<ForecastPage />} />
+                  <Route path="billing" element={<FinanceRoute><BillingPage /></FinanceRoute>} />
+                  <Route path="affiliate" element={<FinanceRoute><AffiliatePage /></FinanceRoute>} />
+                  <Route path="forecast" element={<FinanceRoute><ForecastPage /></FinanceRoute>} />
                   <Route path="tracking" element={<Tracking />} />
                   <Route path="tasks" element={<Tasks />} />
                   <Route path="calendar" element={<CalendarPage />} />
@@ -216,7 +218,8 @@ const App = () => (
                   <Route path="onboarding" element={<Onboarding />} />
                   <Route path="onboarding/wizard" element={<OnboardingWizardPage />} />
                   <Route path="onboarding/assets" element={<OnboardingAssetsPage />} />
-                  <Route path="rebilling" element={<Rebilling />} />
+                  <Route path="rebilling" element={<FinanceRoute><Rebilling /></FinanceRoute>} />
+
                   <Route path="ai" element={<AiAssistant />} />
                   <Route path="notifications" element={<Notifications />} />
                   <Route path="messages" element={<Messages />} />
