@@ -1,12 +1,12 @@
 import { useMemo } from "react";
-import { Users, Clock, CheckCircle2, Wallet, TrendingUp } from "lucide-react";
+import { Users, Clock, CheckCircle2, Wallet, TrendingUp, type LucideIcon } from "lucide-react";
 import {
   useAffiliateSummary, useCommissions, usePartners, useReferrals,
 } from "@/hooks/useAffiliates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge, EmptyState, fmtMoney, fmtDate } from "./shared";
 
-function Stat({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub?: string }) {
+function Stat({ icon: Icon, label, value, sub }: { icon: LucideIcon; label: string; value: string; sub?: string }) {
   return (
     <Card>
       <CardContent className="pt-5 pb-4">
