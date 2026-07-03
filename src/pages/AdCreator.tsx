@@ -88,7 +88,7 @@ export default function AdCreator() {
     : "from-primary to-primary/70";
 
   return (
-    <div className="min-h-screen bg-background -mt-6 -mx-6 flex flex-col">
+    <div className="min-h-screen bg-background -mx-6 -my-6 flex flex-col">
       <BuilderHeader
         saving={savingNow}
         saved={!dirty && !!draftId}
@@ -102,33 +102,44 @@ export default function AdCreator() {
 
         {/* Middle: builder */}
         <div className="flex-1 min-w-0 border-r border-border bg-card/30 overflow-y-auto">
-          <div className={cn("bg-gradient-to-r p-4 text-white", headerColor)}>
+          <div className={cn("bg-gradient-to-r px-4 py-3 text-white space-y-2", headerColor)}>
+            {/* Row 1: mode tabs + objective + connected accounts */}
             <div className="flex items-center gap-2 flex-wrap">
-              <ModeBtn label="Generate" icon={<Lightbulb className="h-3.5 w-3.5" />} active={mode === "generate"} onClick={() => setMode("generate")} />
-              <ModeBtn label="Template" icon={<Lightbulb className="h-3.5 w-3.5" />} active={mode === "template"} onClick={() => setMode("template")} />
-              <ModeBtn label="Manual" icon={<Edit3 className="h-3.5 w-3.5" />} active={mode === "manual"} onClick={() => setMode("manual")} />
+              <div className="inline-flex items-center gap-1 bg-white/10 rounded-md p-0.5">
+                <ModeBtn label="Generate" icon={<Lightbulb className="h-3.5 w-3.5" />} active={mode === "generate"} onClick={() => setMode("generate")} />
+                <ModeBtn label="Template" icon={<Lightbulb className="h-3.5 w-3.5" />} active={mode === "template"} onClick={() => setMode("template")} />
+                <ModeBtn label="Manual" icon={<Edit3 className="h-3.5 w-3.5" />} active={mode === "manual"} onClick={() => setMode("manual")} />
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-md px-2.5 py-1 text-xs font-medium">
+                <Flame className="h-3.5 w-3.5" /> {state.objective.charAt(0).toUpperCase() + state.objective.slice(1)}
+                {state.specialAdCategory.length > 0 && (
+                  <span className="ml-1 bg-white/20 rounded px-1.5 py-0.5 text-[10px] capitalize">
+                    Special: {state.specialAdCategory.join(", ")}
+                  </span>
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={() => setAccountsOpen(true)}
-                className="ml-auto inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-md px-2.5 py-1 text-xs font-medium transition-colors"
+                className="ml-auto inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 rounded-md px-2.5 py-1 text-xs font-medium transition-colors max-w-[260px]"
                 title="Connected accounts"
               >
-                <Plug className="h-3.5 w-3.5" />
+                <Plug className="h-3.5 w-3.5 flex-shrink-0" />
                 {state.pageName ? (
-                  <>
-                    <span className="max-w-[120px] truncate">{state.pageName}</span>
-                    {state.igUsername && <span className="opacity-80">/ @{state.igUsername}</span>}
-                  </>
+                  <span className="truncate">
+                    {state.pageName}
+                    {state.igUsername && <span className="opacity-80"> / @{state.igUsername}</span>}
+                  </span>
                 ) : (
-                  "Connect accounts"
+                  <span className="truncate">Connect accounts</span>
                 )}
               </button>
-              <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-md px-2.5 py-1 text-xs font-medium">
-                <Flame className="h-3.5 w-3.5" /> {state.objective.charAt(0).toUpperCase() + state.objective.slice(1)}
-                {state.specialAdCategory.length > 0 && <span className="ml-1 bg-white/20 rounded px-1.5 py-0.5 text-[10px] capitalize">Special: {state.specialAdCategory.join(", ")}</span>}
-              </div>
             </div>
-            <p className="text-xs opacity-80 mt-2">
+
+            {/* Row 2: context sub-text */}
+            <p className="text-xs opacity-80">
               Editing <span className="font-semibold">{currentSelectionLabel(state)}</span> ·{" "}
               {mode === "generate" && "Fill in these steps and we'll create creatives + targeting with AI."}
               {mode === "template" && "Pick a saved template to start from."}
@@ -148,6 +159,7 @@ export default function AdCreator() {
           <PreviewPane />
         </div>
       </div>
+
 
       {/* Sticky publish bar */}
       <div className="sticky bottom-0 left-0 right-0 bg-card border-t border-border p-3 z-40">
