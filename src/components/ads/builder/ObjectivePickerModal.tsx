@@ -159,6 +159,7 @@ export function ObjectivePickerModal({ open, onOpenChange }: Props) {
                   );
                 })}
               </div>
+              </>
             )}
           </div>
 
