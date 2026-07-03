@@ -69,7 +69,23 @@ export function PublishDialog({ open, onOpenChange, onMissingIdentity }: Props) 
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Campaign published (PAUSED). Review and activate it in Meta Ads Manager.");
+
+      const campaignId = data?.campaignId || data?.campaign_id;
+      if (state.activateOnPublish && campaignId) {
+        try {
+          const { data: statusData, error: statusErr } = await supabase.functions.invoke("meta-ad-status", {
+            body: { workspaceId: currentWorkspace.id, adIds: [campaignId], status: "ACTIVE" },
+          });
+          if (statusErr) throw statusErr;
+          const failed = (statusData?.results ?? []).filter((r: any) => !r.ok);
+          if (failed.length) throw new Error(failed[0]?.error || "Activation failed");
+          toast.success("Campaign published and activated. It's now live on Meta.");
+        } catch (e: any) {
+          toast.warning(`Published (PAUSED) but activation failed: ${e.message}. Activate manually.`);
+        }
+      } else {
+        toast.success("Campaign published (PAUSED). Review and activate it in Meta Ads Manager.");
+      }
       onOpenChange(false);
       navigate("/ads");
     } catch (e: any) {
