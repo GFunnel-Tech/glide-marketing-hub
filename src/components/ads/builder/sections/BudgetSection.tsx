@@ -15,7 +15,7 @@ export function BudgetSection() {
     const mult = forecastTab === "daily" ? 1 : forecastTab === "weekly" ? 7 : 30;
     const spendLo = state.budgetAmount * 0.95 * mult;
     const spendHi = state.budgetAmount * 1.05 * mult;
-    const cpc = state.specialAdCategory === "housing" ? 1.8 : 1.2;
+    const cpc = state.specialAdCategory.includes("housing") ? 1.8 : 1.2;
     const clicksLo = Math.floor(spendLo / (cpc * 1.5));
     const clicksHi = Math.floor(spendHi / cpc);
     const reachLo = Math.floor(spendLo * 40);
