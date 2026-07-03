@@ -88,7 +88,7 @@ export default function AdCreator() {
     : "from-primary to-primary/70";
 
   return (
-    <div className="min-h-screen bg-background -mx-6 -my-6 flex flex-col">
+    <div className="h-full -m-6 flex flex-col bg-background overflow-hidden">
       <BuilderHeader
         saving={savingNow}
         saved={!dirty && !!draftId}
