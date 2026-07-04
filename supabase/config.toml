@@ -46,3 +46,16 @@ verify_jwt = false
 # carries no Supabase session. Secured by the single-use state nonce.
 [functions.stripe-client-oauth-callback]
 verify_jwt = false
+
+# Public Affiliate/Partner API — third parties (Partnero, Rewardful, Zapier,
+# custom scripts) send no Supabase JWT; the function authenticates via
+# workspace-scoped API keys (hashed in affiliate_api_keys) and, for inbound
+# provider webhooks, the per-integration webhook token + optional HMAC secret.
+[functions.affiliate-api]
+verify_jwt = false
+
+# Affiliate integration manager (API key minting, provider test/sync) —
+# requires a valid Supabase JWT; the function then enforces workspace
+# owner/admin before touching credentials.
+[functions.affiliate-sync]
+verify_jwt = true
