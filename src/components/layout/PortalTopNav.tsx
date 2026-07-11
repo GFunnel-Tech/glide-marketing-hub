@@ -24,13 +24,6 @@ const nav = [
   { to: "/portal/settings", icon: SettingsIcon, label: "Settings" },
 ];
 
-const statusStyles: Record<string, string> = {
-  GREEN: "bg-[hsl(var(--success))]/15 text-[hsl(var(--success))] border-[hsl(var(--success))]/30",
-  YELLOW: "bg-[hsl(var(--warning))]/15 text-[hsl(var(--warning))] border-[hsl(var(--warning))]/30",
-  RED: "bg-destructive/15 text-destructive border-destructive/30",
-  BLOCKED: "bg-muted text-muted-foreground border-border",
-};
-
 export function PortalTopNav() {
   const navigate = useNavigate();
   const { client, isLoading } = usePortalClient();
@@ -49,14 +42,6 @@ export function PortalTopNav() {
             <p className="text-sm font-semibold truncate">
               {isLoading ? "Loading…" : client?.name ?? "Your account"}
             </p>
-            {client && (
-              <span className={cn(
-                "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                statusStyles[client.status as keyof typeof statusStyles] ?? statusStyles.BLOCKED,
-              )}>
-                {client.status}
-              </span>
-            )}
           </div>
           <div className="hidden md:block w-56 ml-2">
             <PortalClientSwitcher />
@@ -64,14 +49,12 @@ export function PortalTopNav() {
         </div>
 
         <div className="flex items-center gap-2">
-          <a
-            href="https://agents.gfunnel.com"
-            target="_blank"
-            rel="noreferrer"
+          <NavLink
+            to="/portal/support"
             className="hidden sm:flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             <Bot className="h-4 w-4" /> AI Assistant
-          </a>
+          </NavLink>
           <button
             onClick={handleLogout}
             className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"

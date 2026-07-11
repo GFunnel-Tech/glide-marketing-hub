@@ -75,10 +75,8 @@ export default function ClientPortal() {
 
   const getFieldValue = (leadName: string, field: string, original: string) => leadOverrides[leadName]?.[field] || original;
 
-  // Determine status
-  const status = d.performance.cpl < d.performance.cplTarget ? "GREEN" : "YELLOW";
-  const statusText = status === "GREEN" ? "performing well" : "needs attention";
-  const statusColor = status === "GREEN" ? "text-success" : "text-warning";
+  // Status signaling removed from client-facing view; the page still shows
+  // raw KPI values below. Internal / ops surfaces continue to use RAG.
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,7 +88,6 @@ export default function ClientPortal() {
             <span className="text-sm font-semibold text-foreground">{brandLabel}</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-muted-foreground">Powered by GFunnel</span>
             <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
               <LogOut className="h-4 w-4" /> Logout
             </button>
@@ -138,10 +135,6 @@ export default function ClientPortal() {
         {/* Hero */}
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Good morning, {d.clientName.split(" ")[0]}! 👋</h1>
-          <p className="mt-1">
-            <span className="text-muted-foreground">Your campaigns are </span>
-            <span className={cn("font-semibold", statusColor)}>{statusText}</span>
-          </p>
           <p className="text-muted-foreground text-sm mt-0.5">{d.month}</p>
         </div>
 
@@ -151,7 +144,7 @@ export default function ClientPortal() {
             const Icon = kpiIcons[key];
             const isAppointments = key === "appointmentsSet";
             return (
-              <div key={key} className={cn("rounded-lg border border-border bg-card p-5", key === "closedDeals" && "bg-success/10 border-success/30")}>
+              <div key={key} className="rounded-lg border border-border bg-card p-5">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Icon className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase tracking-wider">{kpiLabels[key]}</span>
@@ -203,10 +196,10 @@ export default function ClientPortal() {
         <div className="grid grid-cols-3 gap-4">
           <div className="rounded-lg border border-border bg-card p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Cost Per Lead</p>
-            <p className={cn("text-2xl font-bold tabular-nums mt-1", d.performance.cpl < d.performance.cplTarget ? "text-success" : "text-destructive")}>${d.performance.cpl.toFixed(2)}</p>
+            <p className="text-2xl font-bold tabular-nums text-foreground mt-1">${d.performance.cpl.toFixed(2)}</p>
             <p className="text-xs text-muted-foreground mt-1">Target: below ${d.performance.cplTarget}</p>
             <div className="mt-2 h-2 w-full rounded-full bg-accent overflow-hidden">
-              <div className={cn("h-full rounded-full", d.performance.cpl < d.performance.cplTarget ? "bg-success" : "bg-destructive")} style={{ width: `${Math.min((d.performance.cplTarget / d.performance.cpl) * 100, 100)}%` }} />
+              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min((d.performance.cplTarget / d.performance.cpl) * 100, 100)}%` }} />
             </div>
           </div>
           <div className="rounded-lg border border-border bg-card p-5">
