@@ -102,3 +102,41 @@ async function getToken(admin: any, workspaceId: string): Promise<string | null>
   if (data.token_expires_at && new Date(data.token_expires_at) < new Date()) return null;
   return data.access_token;
 }
+
+async function metaPost(id: string, token: string, status: "PAUSED" | "ACTIVE") {
+  const r = await fetch(`https://graph.facebook.com/v21.0/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `status=${status}&access_token=${encodeURIComponent(token)}`,
+  });
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    throw new Error(j?.error?.message || `Failed to pause ${id}`);
+  }
+}
+
+async function cascadePauseFromAdset(token: string, adsetId: string) {
+  // Look up the parent campaign for this ad set
+  const r = await fetch(`https://graph.facebook.com/v21.0/${adsetId}?fields=campaign_id&access_token=${encodeURIComponent(token)}`);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j?.error?.message || "Failed to read ad set campaign");
+  const campaignId: string | undefined = j.campaign_id;
+  if (!campaignId) throw new Error("Ad set has no parent campaign");
+
+  // Fetch all ad sets and ads under the campaign
+  const [adsetsRes, adsRes] = await Promise.all([
+    fetch(`https://graph.facebook.com/v21.0/${campaignId}/adsets?fields=id&limit=200&access_token=${encodeURIComponent(token)}`),
+    fetch(`https://graph.facebook.com/v21.0/${campaignId}/ads?fields=id&limit=500&access_token=${encodeURIComponent(token)}`),
+  ]);
+  const adsetsJ = await adsetsRes.json();
+  const adsJ = await adsRes.json();
+  const adsetIds: string[] = (adsetsJ?.data ?? []).map((x: any) => x.id);
+  const adIds: string[] = (adsJ?.data ?? []).map((x: any) => x.id);
+
+  // Pause ads first, then ad sets, then the campaign so nothing keeps delivering
+  await Promise.allSettled(adIds.map((id) => metaPost(id, token, "PAUSED")));
+  await Promise.allSettled(adsetIds.map((id) => metaPost(id, token, "PAUSED")));
+  await metaPost(campaignId, token, "PAUSED");
+
+  return { campaignId, adsetIds, adIds };
+}
