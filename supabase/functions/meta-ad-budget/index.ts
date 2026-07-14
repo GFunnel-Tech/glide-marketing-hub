@@ -61,7 +61,30 @@ Deno.serve(async (req) => {
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error?.message || "Meta error");
       await admin.from("ad_action_log").update({ status: "success", result_object_id: adsetId }).eq("id", log.data!.id);
-      return json({ ok: true, adsetId, newDaily, newLifetime });
+
+      // Auto-pause cascade: if budget was zeroed out, pause the parent campaign,
+      // all its ad sets, and all its ads so nothing keeps delivering.
+      let autoPaused: { campaignId?: string; adsetIds: string[]; adIds: string[] } | null = null;
+      const zeroed = (newDaily === 0) && (newLifetime == null || newLifetime === 0)
+        || (newLifetime === 0 && (newDaily == null || newDaily === 0));
+      if (zeroed) {
+        try {
+          autoPaused = await cascadePauseFromAdset(token, adsetId);
+          await admin.from("ad_action_log").insert({
+            workspace_id: workspaceId, channel: "meta", action: "auto_pause_zero_budget",
+            source_object_id: adsetId, performed_by: userData.user.id, status: "success",
+            meta: autoPaused,
+          });
+        } catch (cascadeErr: any) {
+          await admin.from("ad_action_log").insert({
+            workspace_id: workspaceId, channel: "meta", action: "auto_pause_zero_budget",
+            source_object_id: adsetId, performed_by: userData.user.id, status: "failed",
+            error_message: cascadeErr?.message || String(cascadeErr),
+          });
+        }
+      }
+
+      return json({ ok: true, adsetId, newDaily, newLifetime, autoPaused });
     } catch (e: any) {
       await admin.from("ad_action_log").update({ status: "failed", error_message: e.message }).eq("id", log.data!.id);
       return json({ error: e.message }, 400);
