@@ -61,7 +61,30 @@ Deno.serve(async (req) => {
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error?.message || "Meta error");
       await admin.from("ad_action_log").update({ status: "success", result_object_id: adsetId }).eq("id", log.data!.id);
-      return json({ ok: true, adsetId, newDaily, newLifetime });
+
+      // Auto-pause cascade: if budget was zeroed out, pause the parent campaign,
+      // all its ad sets, and all its ads so nothing keeps delivering.
+      let autoPaused: { campaignId?: string; adsetIds: string[]; adIds: string[] } | null = null;
+      const zeroed = (newDaily === 0) && (newLifetime == null || newLifetime === 0)
+        || (newLifetime === 0 && (newDaily == null || newDaily === 0));
+      if (zeroed) {
+        try {
+          autoPaused = await cascadePauseFromAdset(token, adsetId);
+          await admin.from("ad_action_log").insert({
+            workspace_id: workspaceId, channel: "meta", action: "auto_pause_zero_budget",
+            source_object_id: adsetId, performed_by: userData.user.id, status: "success",
+            meta: autoPaused,
+          });
+        } catch (cascadeErr: any) {
+          await admin.from("ad_action_log").insert({
+            workspace_id: workspaceId, channel: "meta", action: "auto_pause_zero_budget",
+            source_object_id: adsetId, performed_by: userData.user.id, status: "failed",
+            error_message: cascadeErr?.message || String(cascadeErr),
+          });
+        }
+      }
+
+      return json({ ok: true, adsetId, newDaily, newLifetime, autoPaused });
     } catch (e: any) {
       await admin.from("ad_action_log").update({ status: "failed", error_message: e.message }).eq("id", log.data!.id);
       return json({ error: e.message }, 400);
@@ -78,4 +101,42 @@ async function getToken(admin: any, workspaceId: string): Promise<string | null>
   if (!data) return null;
   if (data.token_expires_at && new Date(data.token_expires_at) < new Date()) return null;
   return data.access_token;
+}
+
+async function metaPost(id: string, token: string, status: "PAUSED" | "ACTIVE") {
+  const r = await fetch(`https://graph.facebook.com/v21.0/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `status=${status}&access_token=${encodeURIComponent(token)}`,
+  });
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    throw new Error(j?.error?.message || `Failed to pause ${id}`);
+  }
+}
+
+async function cascadePauseFromAdset(token: string, adsetId: string) {
+  // Look up the parent campaign for this ad set
+  const r = await fetch(`https://graph.facebook.com/v21.0/${adsetId}?fields=campaign_id&access_token=${encodeURIComponent(token)}`);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j?.error?.message || "Failed to read ad set campaign");
+  const campaignId: string | undefined = j.campaign_id;
+  if (!campaignId) throw new Error("Ad set has no parent campaign");
+
+  // Fetch all ad sets and ads under the campaign
+  const [adsetsRes, adsRes] = await Promise.all([
+    fetch(`https://graph.facebook.com/v21.0/${campaignId}/adsets?fields=id&limit=200&access_token=${encodeURIComponent(token)}`),
+    fetch(`https://graph.facebook.com/v21.0/${campaignId}/ads?fields=id&limit=500&access_token=${encodeURIComponent(token)}`),
+  ]);
+  const adsetsJ = await adsetsRes.json();
+  const adsJ = await adsRes.json();
+  const adsetIds: string[] = (adsetsJ?.data ?? []).map((x: any) => x.id);
+  const adIds: string[] = (adsJ?.data ?? []).map((x: any) => x.id);
+
+  // Pause ads first, then ad sets, then the campaign so nothing keeps delivering
+  await Promise.allSettled(adIds.map((id) => metaPost(id, token, "PAUSED")));
+  await Promise.allSettled(adsetIds.map((id) => metaPost(id, token, "PAUSED")));
+  await metaPost(campaignId, token, "PAUSED");
+
+  return { campaignId, adsetIds, adIds };
 }
