@@ -1423,7 +1423,7 @@ export type Database = {
           next_run_at: string
           recipients: Json
           send_hour: number
-          template_id: string
+          template_id: string | null
           timezone: string
           updated_at: string
           workspace_id: string
@@ -1442,7 +1442,7 @@ export type Database = {
           next_run_at?: string
           recipients?: Json
           send_hour?: number
-          template_id: string
+          template_id?: string | null
           timezone?: string
           updated_at?: string
           workspace_id: string
@@ -1461,7 +1461,7 @@ export type Database = {
           next_run_at?: string
           recipients?: Json
           send_hour?: number
-          template_id?: string
+          template_id?: string | null
           timezone?: string
           updated_at?: string
           workspace_id?: string
