@@ -59,6 +59,7 @@ import PortalRequests from "./pages/portal/PortalRequests";
 import PortalReports from "./pages/portal/PortalReports";
 import PortalIntegrations from "./pages/portal/PortalIntegrations";
 import PortalOnboarding from "./pages/portal/PortalOnboarding";
+import PublicReport from "./pages/PublicReport";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
 import { useConversationsRealtime } from "@/hooks/useMessages";
