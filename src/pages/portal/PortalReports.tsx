@@ -275,6 +275,7 @@ function ScheduleDialog({
       .eq("id", clientId)
       .maybeSingle();
 
+    const { data: userRes } = await supabase.auth.getUser();
     const payload = {
       client_id: clientId,
       workspace_id: (client as any)?.workspace_id ?? null,
@@ -285,6 +286,7 @@ function ScheduleDialog({
       recipients: recips,
       active,
       next_run_at: next.toISOString(),
+      created_by: userRes.user?.id as string,
     };
 
     const { error } = initial?.id
