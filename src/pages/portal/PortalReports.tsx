@@ -291,7 +291,7 @@ function ScheduleDialog({
 
     const { error } = initial?.id
       ? await supabase.from("client_report_schedules").update(payload).eq("id", initial.id)
-      : await supabase.from("client_report_schedules").insert(payload);
+      : await supabase.from("client_report_schedules").insert([payload]);
 
     if (error) {
       toast.error(error.message);
