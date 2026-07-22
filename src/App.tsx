@@ -59,6 +59,7 @@ import PortalRequests from "./pages/portal/PortalRequests";
 import PortalReports from "./pages/portal/PortalReports";
 import PortalIntegrations from "./pages/portal/PortalIntegrations";
 import PortalOnboarding from "./pages/portal/PortalOnboarding";
+import PublicReport from "./pages/PublicReport";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useNotificationsRealtime } from "@/hooks/useNotificationsRealtime";
 import { useConversationsRealtime } from "@/hooks/useMessages";
@@ -154,6 +155,7 @@ const App = () => (
                 <Route path="/auth/meta/callback" element={<MetaCallback />} />
                 <Route path="/client-portal/:id" element={<ClientPortal />} />
                 <Route path="/demo/gfunnel" element={<DemoGfunnel />} />
+                <Route path="/r/:token" element={<PublicReport />} />
 
                 {/* Client Portal */}
                 <Route path="/portal/login" element={<PortalAuth />} />

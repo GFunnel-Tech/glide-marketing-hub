@@ -1423,7 +1423,7 @@ export type Database = {
           next_run_at: string
           recipients: Json
           send_hour: number
-          template_id: string
+          template_id: string | null
           timezone: string
           updated_at: string
           workspace_id: string
@@ -1442,7 +1442,7 @@ export type Database = {
           next_run_at?: string
           recipients?: Json
           send_hour?: number
-          template_id: string
+          template_id?: string | null
           timezone?: string
           updated_at?: string
           workspace_id: string
@@ -1461,7 +1461,7 @@ export type Database = {
           next_run_at?: string
           recipients?: Json
           send_hour?: number
-          template_id?: string
+          template_id?: string | null
           timezone?: string
           updated_at?: string
           workspace_id?: string
@@ -6204,6 +6204,38 @@ export type Database = {
       detect_client_anomalies: { Args: { _client_id: number }; Returns: Json }
       fire_due_client_notes: { Args: never; Returns: number }
       forecast_client_eom: { Args: { _client_id: number }; Returns: Json }
+      get_report_by_token: {
+        Args: { _token: string }
+        Returns: {
+          client_id: number
+          commentary: string | null
+          created_at: string
+          email_message_ids: Json
+          error_message: string | null
+          generated_at: string | null
+          id: string
+          payload: Json
+          pdf_url: string | null
+          period_end: string
+          period_start: string
+          recipients: Json
+          schedule_id: string | null
+          sent_at: string | null
+          share_token: string
+          status: string
+          template_id: string | null
+          trigger_type: string
+          triggered_by: string | null
+          updated_at: string
+          workspace_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "client_reports"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_workspace_stripe_status: {
         Args: { _workspace_id: string }
         Returns: Json
