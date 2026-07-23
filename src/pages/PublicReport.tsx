@@ -29,14 +29,19 @@ export default function PublicReport() {
   const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency }).format(n || 0);
 
   return (
-    <div className="min-h-screen bg-background py-10 px-4">
+    <div className="min-h-screen bg-background py-10 px-4 print:py-4">
       <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex items-center gap-3">
-          <FileText className="h-6 w-6 text-primary" />
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">{p.client?.brand || p.client?.name} — Performance report</h1>
-            <p className="text-sm text-muted-foreground">{p.period?.start} → {p.period?.end}</p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <FileText className="h-6 w-6 text-primary" />
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">{p.client?.brand || p.client?.name} — Performance report</h1>
+              <p className="text-sm text-muted-foreground">{p.period?.start} → {p.period?.end}</p>
+            </div>
           </div>
+          <Button size="sm" variant="outline" onClick={() => window.print()} className="print:hidden">
+            <Download className="h-4 w-4 mr-1.5" /> Download PDF
+          </Button>
         </div>
 
         {report.commentary && (
