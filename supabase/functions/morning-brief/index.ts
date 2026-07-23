@@ -127,7 +127,7 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(30),
-    admin.from("clients").select("id,name,brand,status,website,bio").eq("workspace_id", workspaceId),
+    admin.from("clients").select("id,name,brand,status,website,bio").eq("workspace_id", workspaceId).not("status", "in", "(CANCELLED,PENDING_CANCELLATION,BLOCKED,PAUSED)"),
   ]);
 
   const clients = (clientsRes.data ?? []) as { id: number; name: string; brand: string | null; status: string; website: string | null; bio: string | null }[];
