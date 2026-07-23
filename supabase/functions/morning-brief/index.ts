@@ -60,13 +60,18 @@ Return ONLY a JSON object, no prose around it, with this exact shape:
 }
 
 Rules:
-- 0-6 highlights, ordered most-to-least urgent. Skip if nothing notable.
-- 0-8 suggested_tasks, each genuinely actionable today. Prefer the highest-leverage work (critical insights, high churn risk, pending approvals, overdue tasks).
+- 0-5 highlights, ordered most-to-least urgent. Skip if nothing notable. Each highlight is a CONCERN that needs awareness — it explains WHAT is wrong.
+- 0-5 suggested_tasks, each genuinely actionable today. A task is the concrete WORK that fixes a concern.
+- DO NOT DUPLICATE between highlights and tasks. If a concern is a call to action ("Review X", "Fix Y"), put it ONLY in suggested_tasks. If it's an observation ("CPL up 40%"), put it ONLY in highlights. Never restate the same thing in both sections.
+- DO NOT create two tasks for the same client + same problem — pick the single best action.
+- CPL breaches are HIGH priority. If a client's CPL is above target, the CPL fix task must have priority "high" and appear first.
+- Task titles must be specific and actionable: start with a verb, name the client + metric + concrete next step (e.g. "Cut CPL for Acme — pause worst 2 ad sets, launch new hook creative"). Never write vague tasks like "Review client", "Check performance", "Look at metrics".
+- The "reason" field must cite the specific number that triggered the task (CPL value, spend drop %, churn score, etc.).
 - Only use client_id values that appear in the snapshot's clients list; otherwise use null.
 - CRITICAL: Whenever you mention a client in headline, summary, highlights, or task titles, ALWAYS use the client's actual name or brand (as provided in the snapshot). NEVER write phrases like "Client #105", "Client 135", "client id 42", or any numeric placeholder. If you don't know a client's name, omit the reference entirely.
 - Set category by the type of work required so the task can be auto-routed to the right teammate:
   * "creative" — ad copy, creative refresh, design, video, thumbnails, hooks
-  * "media_buying" — budget changes, bid/targeting/audience tweaks, KPI audits, pausing/launching ads
+  * "media_buying" — budget changes, bid/targeting/audience tweaks, KPI audits, pausing/launching ads, CPL/CPM fixes
   * "account_management" — onboarding, contract, billing, internal coordination
   * "client_outreach" — calling/emailing/messaging a client (dark accounts, check-ins, status updates)
   * "reporting" — building reports, dashboards, monthly recaps
@@ -127,7 +132,7 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
       .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(30),
-    admin.from("clients").select("id,name,brand,status,website,bio").eq("workspace_id", workspaceId),
+    admin.from("clients").select("id,name,brand,status,website,bio").eq("workspace_id", workspaceId).not("status", "in", "(CANCELLED,PENDING_CANCELLATION,BLOCKED,PAUSED)"),
   ]);
 
   const clients = (clientsRes.data ?? []) as { id: number; name: string; brand: string | null; status: string; website: string | null; bio: string | null }[];
@@ -137,6 +142,10 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
   for (const arr of [insightsRes.data, churnRes.data, pendingRes.data, tasksRes.data] as any[]) {
     for (const row of (arr ?? [])) if (row?.client_id != null) referencedIds.add(Number(row.client_id));
   }
+  // Exclude cancelled/paused clients from ALL brief data so they don't
+  // resurface as concerns, churn risks, or suggested tasks.
+  const EXCLUDED_STATUSES = new Set(["CANCELLED", "PENDING_CANCELLATION", "BLOCKED", "PAUSED"]);
+  const activeClientIds = new Set(clients.map((c) => Number(c.id)));
   const missingIds = [...referencedIds].filter((id) => !clients.find((c) => Number(c.id) === id));
   if (missingIds.length) {
     const { data: extra } = await admin
@@ -144,9 +153,20 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
       .select("id,name,brand,status,website,bio")
       .in("id", missingIds);
     for (const e of (extra ?? []) as any[]) {
-      if (!clients.find((c) => Number(c.id) === Number(e.id))) clients.push(e);
+      if (EXCLUDED_STATUSES.has(String(e.status))) continue;
+      if (!clients.find((c) => Number(c.id) === Number(e.id))) {
+        clients.push(e);
+        activeClientIds.add(Number(e.id));
+      }
     }
   }
+  // Filter insights/churn/pending/tasks to active clients only.
+  const keepActive = <T extends { client_id?: number | null }>(rows: T[] | null | undefined): T[] =>
+    (rows ?? []).filter((r) => r.client_id == null || activeClientIds.has(Number(r.client_id)));
+  insightsRes.data = keepActive(insightsRes.data as any[]);
+  churnRes.data = keepActive(churnRes.data as any[]);
+  pendingRes.data = keepActive(pendingRes.data as any[]);
+  tasksRes.data = keepActive(tasksRes.data as any[]);
   const displayName = (c: { name: string; brand: string | null } | undefined) =>
     c ? (c.brand && c.brand.trim().length > 0 ? c.brand : c.name) : null;
   const nameOf = (id: number | null | undefined) => {
@@ -361,7 +381,7 @@ function sanitize(parsed: any, signals: any) {
   const highlights: Highlight[] = Array.isArray(parsed?.highlights)
     ? parsed.highlights
         .filter((h: any) => h && (h.label || h.detail))
-        .slice(0, 6)
+        .slice(0, 5)
         .map((h: any) => ({
           label: scrub(String(h.label ?? "")).slice(0, 160),
           detail: scrub(String(h.detail ?? "")).slice(0, 400),
@@ -380,21 +400,62 @@ function sanitize(parsed: any, signals: any) {
   ]);
   const cat = (c: any): TaskCategory => (validCats.has(c) ? c : "general");
 
-  const suggested_tasks: SuggestedTask[] = Array.isArray(parsed?.suggested_tasks)
+  // Normalize for dedupe: lowercase, strip verbs/punct, so "Review CPL for Acme"
+  // and "CPL for Acme" collapse to the same key.
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/^(review|check|fix|resolve|address|handle|look at|investigate)\s+/i, "")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const highlightKeys = new Set(highlights.map((h) => norm(h.label)));
+
+  const seenTaskKeys = new Set<string>();
+  const seenClientProblem = new Set<string>(); // clientId + first-3-words dedupe
+  const rawTasks: SuggestedTask[] = Array.isArray(parsed?.suggested_tasks)
     ? parsed.suggested_tasks
-        .filter((t: any) => t && t.title)
-        .slice(0, 8)
+        .filter((t: any) => t && typeof t.title === "string" && t.title.trim().length >= 8)
         .map((t: any) => {
           const cid = t.client_id != null && validIds.has(Number(t.client_id)) ? Number(t.client_id) : null;
+          let priority = pri(t.priority);
+          const title = scrub(String(t.title)).slice(0, 200);
+          const reason = scrub(String(t.reason ?? "")).slice(0, 400);
+          // Force CPL fixes to high priority — user rule.
+          if (/\bcpl\b/i.test(title) || /\bcpl\b/i.test(reason)) priority = "high";
           return {
-            title: scrub(String(t.title)).slice(0, 200),
-            priority: pri(t.priority),
+            title,
+            priority,
             client_id: cid,
-            reason: scrub(String(t.reason ?? "")).slice(0, 400),
+            reason,
             category: cat(t.category),
           };
         })
     : [];
+
+  // Drop tasks that just restate a highlight, and de-dupe near-identical tasks.
+  const suggested_tasks: SuggestedTask[] = [];
+  for (const t of rawTasks) {
+    const k = norm(t.title);
+    if (!k || seenTaskKeys.has(k)) continue;
+    if (highlightKeys.has(k)) continue; // pure duplicate of a concern
+    const cpKey = `${t.client_id ?? "x"}::${k.split(" ").slice(0, 3).join(" ")}`;
+    if (seenClientProblem.has(cpKey)) continue;
+    seenTaskKeys.add(k);
+    seenClientProblem.add(cpKey);
+    suggested_tasks.push(t);
+    if (suggested_tasks.length >= 5) break;
+  }
+
+  // Sort: CPL high-priority first, then other high, then normal, then low.
+  const prScore = (t: SuggestedTask) => {
+    const isCpl = /\bcpl\b/i.test(t.title) || /\bcpl\b/i.test(t.reason);
+    if (isCpl && t.priority === "high") return 0;
+    if (t.priority === "high") return 1;
+    if (t.priority === "normal") return 2;
+    return 3;
+  };
+  suggested_tasks.sort((a, b) => prScore(a) - prScore(b));
 
   return {
     headline: scrub(String(parsed?.headline ?? "")).slice(0, 200) || "Your morning brief",

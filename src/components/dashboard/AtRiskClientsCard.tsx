@@ -23,12 +23,15 @@ export function AtRiskClientsCard() {
     return m;
   }, [clients]);
 
+  // Only surface risks for clients that are still visible/active. This drops
+  // cancelled, paused, pending-cancellation, blocked, and archived clients.
   const ranked = useMemo(
     () =>
       risks
+        .filter((r) => clientNames.has(Number(r.client_id)))
         .filter((r) => r.risk_level === "high" || r.risk_level === "medium")
         .slice(0, 5),
-    [risks]
+    [risks, clientNames]
   );
 
   const lastComputed = risks[0]?.computed_at;
