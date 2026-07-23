@@ -60,13 +60,18 @@ Return ONLY a JSON object, no prose around it, with this exact shape:
 }
 
 Rules:
-- 0-6 highlights, ordered most-to-least urgent. Skip if nothing notable.
-- 0-8 suggested_tasks, each genuinely actionable today. Prefer the highest-leverage work (critical insights, high churn risk, pending approvals, overdue tasks).
+- 0-5 highlights, ordered most-to-least urgent. Skip if nothing notable. Each highlight is a CONCERN that needs awareness — it explains WHAT is wrong.
+- 0-5 suggested_tasks, each genuinely actionable today. A task is the concrete WORK that fixes a concern.
+- DO NOT DUPLICATE between highlights and tasks. If a concern is a call to action ("Review X", "Fix Y"), put it ONLY in suggested_tasks. If it's an observation ("CPL up 40%"), put it ONLY in highlights. Never restate the same thing in both sections.
+- DO NOT create two tasks for the same client + same problem — pick the single best action.
+- CPL breaches are HIGH priority. If a client's CPL is above target, the CPL fix task must have priority "high" and appear first.
+- Task titles must be specific and actionable: start with a verb, name the client + metric + concrete next step (e.g. "Cut CPL for Acme — pause worst 2 ad sets, launch new hook creative"). Never write vague tasks like "Review client", "Check performance", "Look at metrics".
+- The "reason" field must cite the specific number that triggered the task (CPL value, spend drop %, churn score, etc.).
 - Only use client_id values that appear in the snapshot's clients list; otherwise use null.
 - CRITICAL: Whenever you mention a client in headline, summary, highlights, or task titles, ALWAYS use the client's actual name or brand (as provided in the snapshot). NEVER write phrases like "Client #105", "Client 135", "client id 42", or any numeric placeholder. If you don't know a client's name, omit the reference entirely.
 - Set category by the type of work required so the task can be auto-routed to the right teammate:
   * "creative" — ad copy, creative refresh, design, video, thumbnails, hooks
-  * "media_buying" — budget changes, bid/targeting/audience tweaks, KPI audits, pausing/launching ads
+  * "media_buying" — budget changes, bid/targeting/audience tweaks, KPI audits, pausing/launching ads, CPL/CPM fixes
   * "account_management" — onboarding, contract, billing, internal coordination
   * "client_outreach" — calling/emailing/messaging a client (dark accounts, check-ins, status updates)
   * "reporting" — building reports, dashboards, monthly recaps
