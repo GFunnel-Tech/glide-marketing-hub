@@ -137,6 +137,10 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
   for (const arr of [insightsRes.data, churnRes.data, pendingRes.data, tasksRes.data] as any[]) {
     for (const row of (arr ?? [])) if (row?.client_id != null) referencedIds.add(Number(row.client_id));
   }
+  // Exclude cancelled/paused clients from ALL brief data so they don't
+  // resurface as concerns, churn risks, or suggested tasks.
+  const EXCLUDED_STATUSES = new Set(["CANCELLED", "PENDING_CANCELLATION", "BLOCKED", "PAUSED"]);
+  const activeClientIds = new Set(clients.map((c) => Number(c.id)));
   const missingIds = [...referencedIds].filter((id) => !clients.find((c) => Number(c.id) === id));
   if (missingIds.length) {
     const { data: extra } = await admin
@@ -144,9 +148,20 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
       .select("id,name,brand,status,website,bio")
       .in("id", missingIds);
     for (const e of (extra ?? []) as any[]) {
-      if (!clients.find((c) => Number(c.id) === Number(e.id))) clients.push(e);
+      if (EXCLUDED_STATUSES.has(String(e.status))) continue;
+      if (!clients.find((c) => Number(c.id) === Number(e.id))) {
+        clients.push(e);
+        activeClientIds.add(Number(e.id));
+      }
     }
   }
+  // Filter insights/churn/pending/tasks to active clients only.
+  const keepActive = <T extends { client_id?: number | null }>(rows: T[] | null | undefined): T[] =>
+    (rows ?? []).filter((r) => r.client_id == null || activeClientIds.has(Number(r.client_id)));
+  insightsRes.data = keepActive(insightsRes.data as any[]);
+  churnRes.data = keepActive(churnRes.data as any[]);
+  pendingRes.data = keepActive(pendingRes.data as any[]);
+  tasksRes.data = keepActive(tasksRes.data as any[]);
   const displayName = (c: { name: string; brand: string | null } | undefined) =>
     c ? (c.brand && c.brand.trim().length > 0 ? c.brand : c.name) : null;
   const nameOf = (id: number | null | undefined) => {
