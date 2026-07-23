@@ -89,15 +89,36 @@ Deno.serve(async (req) => {
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
-  // 1. Pull clients in scope
+  // 1. Pull clients in scope. Exclude terminal/off statuses — cancelled,
+  //    pending-cancellation, blocked, and paused clients are intentionally off
+  //    and shouldn't produce churn-risk noise.
+  const EXCLUDED_STATUSES = ["CANCELLED", "PENDING_CANCELLATION", "BLOCKED", "PAUSED"];
   let clientsQ = admin
     .from("clients")
     .select("id, name, status, launched_at, last_audit, cpl, cpm, leads, spend, frequency")
     .eq("workspace_id", workspaceId)
-    .is("archived_at", null);
+    .is("archived_at", null)
+    .not("status", "in", `(${EXCLUDED_STATUSES.join(",")})`);
   if (onlyClientId) clientsQ = clientsQ.eq("id", onlyClientId);
   const { data: clients, error: cErr } = await clientsQ;
   if (cErr) return json({ error: cErr.message }, 500);
+
+  // Sweep any stale churn rows for clients that have since been cancelled/paused.
+  await admin
+    .from("client_churn_risk")
+    .delete()
+    .eq("workspace_id", workspaceId)
+    .in(
+      "client_id",
+      (
+        await admin
+          .from("clients")
+          .select("id")
+          .eq("workspace_id", workspaceId)
+          .in("status", EXCLUDED_STATUSES)
+      ).data?.map((c: any) => c.id) ?? [-1],
+    );
+
   if (!clients || clients.length === 0) return json({ scanned: 0, results: [] });
 
   const clientIds = clients.map((c: any) => c.id);
