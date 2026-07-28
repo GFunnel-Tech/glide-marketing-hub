@@ -13,10 +13,10 @@ export function useMetaConnections() {
         .select("id,status")
         .eq("workspace_id", wsId);
       if (error) {
-        // Non-admins are blocked by RLS — treat as "unknown", not "none".
-        return [] as { id: string; status: string }[];
+        // RLS / transient failure — surface as "unknown", never as "none".
+        return { rows: [] as { id: string; status: string }[], errored: true };
       }
-      return (data ?? []) as { id: string; status: string }[];
+      return { rows: (data ?? []) as { id: string; status: string }[], errored: false };
     },
     enabled: !!wsId,
   });
@@ -24,8 +24,8 @@ export function useMetaConnections() {
 
 /**
  * Returns whether the workspace has an active Meta connection.
- * Non-admin members cannot read meta_connections directly (RLS), so we
- * also probe meta_ad_accounts as a proxy signal of an existing connection.
+ * The connect prompt should only ever appear when we are *certain* the
+ * workspace has no Meta data: no readable connection AND no ad accounts.
  */
 export function useHasActiveMetaConnection() {
   const { currentWorkspace } = useWorkspace();
@@ -35,28 +35,43 @@ export function useHasActiveMetaConnection() {
 
   const q = useMetaConnections();
 
+  // Probe ad accounts for everyone (admins included) — a workspace with
+  // synced ad accounts is definitively connected.
   const probe = useQuery({
     queryKey: ["meta_ad_accounts_probe", wsId],
-    enabled: !!wsId && !isAdmin,
+    enabled: !!wsId,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("meta_ad_accounts")
         .select("id")
         .eq("workspace_id", wsId)
         .limit(1);
-      if (error) return [] as any[];
-      return data ?? [];
+      if (error) return { rows: [] as any[], errored: true };
+      return { rows: data ?? [], errored: false };
     },
   });
 
-  const adminHas = (q.data ?? []).some(c => c.status === "active");
-  const memberHas = (probe.data ?? []).length > 0;
-  // For non-admins, assume the workspace is wired and never prompt to connect.
-  const hasConnection = isAdmin ? adminHas : (memberHas || true);
+  const rows = q.data?.rows ?? [];
+  const connErrored = q.data?.errored ?? false;
+  const hasConnectionRow = rows.length > 0;
+  const hasActiveRow = rows.some((c) => c.status === "active");
+  const hasAdAccounts = (probe.data?.rows ?? []).length > 0;
+  const probeErrored = probe.data?.errored ?? false;
+
+  const isLoading = q.isLoading || probe.isLoading;
+
+  const hasConnection =
+    hasActiveRow ||
+    hasConnectionRow ||
+    hasAdAccounts ||
+    connErrored ||
+    probeErrored ||
+    !isAdmin; // members never get prompted to connect
 
   return {
     ...q,
-    isLoading: q.isLoading || (!isAdmin && probe.isLoading),
+    data: rows,
+    isLoading,
     hasConnection,
     canManageConnection: isAdmin,
   };
