@@ -4,6 +4,7 @@ import { DailyFocus } from "@/components/dashboard/DailyFocus";
 import { TodaysTasksPanel } from "@/components/dashboard/TodaysTasksPanel";
 import { AtRiskClientsCard } from "@/components/dashboard/AtRiskClientsCard";
 import { MorningBriefDialog } from "@/components/dashboard/MorningBriefDialog";
+import { PaymentAlertBanner } from "@/components/billing/PaymentAlertBanner";
 
 import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
 import { QuickActionBar } from "@/components/dashboard/QuickActionBar";
