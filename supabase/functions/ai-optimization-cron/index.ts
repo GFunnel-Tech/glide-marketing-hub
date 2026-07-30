@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     if (!schedules.length) return json({ ran: 0, skipped_inactive: due.length });
 
     const results: any[] = [];
-    for (const s of due) {
+    for (const s of schedules) {
       const prompt = s.prompt_override?.trim()
         || "Run the scheduled optimization. Pull current ad performance, apply the saved optimization rules for this client, and propose or execute pause / resume / budget changes to lower CPM and improve CPL. Be conservative; explain your reasoning.";
 
