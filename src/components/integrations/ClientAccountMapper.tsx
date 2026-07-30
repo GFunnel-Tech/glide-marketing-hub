@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Building2, Facebook, Link2, Loader2, Plug, Plus, Sparkles, Unlink, X, ArrowRight, AlertTriangle, CheckCircle2,
+  ExternalLink, Copy,
 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 type Client = {
@@ -434,10 +436,12 @@ export function ClientAccountMapper() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-foreground truncate">{g.name || "Unnamed"}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">
-                    {g.business_name || g.location_id}
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <span className="truncate">{g.business_name || "—"}</span>
+                    <LocationIdChip locationId={g.location_id} />
                   </div>
                 </div>
+
                 {linkedClient ? (
                   <Badge variant="outline" className="text-[9px] border-success/40 text-success shrink-0">
                     {linkedClient.name}
@@ -564,11 +568,15 @@ export function ClientAccountMapper() {
                     {c.is_agency_account && <Building2 className="h-3 w-3 text-primary shrink-0" />}
                     {c.name}
                   </div>
-                  <div className="text-[10px] text-muted-foreground truncate">
-                    {ghl ? `GHL: ${ghl.name || ghl.location_id}` : "GHL not synced"}
-                    {" · "}
-                    {metas.length ? `${metas.length} Meta` : "Meta not synced"}
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <span className="truncate">
+                      {ghl ? `GHL: ${ghl.name || ghl.location_id}` : "GHL not synced"}
+                    </span>
+                    {c.ghl_location_id && <LocationIdChip locationId={c.ghl_location_id} />}
+                    <span>·</span>
+                    <span className="truncate">{metas.length ? `${metas.length} Meta` : "Meta not synced"}</span>
                   </div>
+
                 </div>
                 {isActive && selectedClient?.id === c.id && (
                   <label
@@ -800,5 +808,51 @@ function UnlinkBtn({
     >
       <Unlink className="h-3 w-3" />
     </button>
+  );
+}
+
+/**
+ * Shows a GHL sub-account Location ID next to the row subheading, with a
+ * copy button and a direct link into the GHL sub-account dashboard.
+ */
+function LocationIdChip({ locationId }: { locationId: string }) {
+  if (!locationId) return null;
+  const url = `https://app.gohighlevel.com/v2/location/${locationId}/`;
+  return (
+    <span
+      className="inline-flex items-center gap-1 shrink-0"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <code
+        className="rounded bg-muted px-1 py-px font-mono text-[9px] text-muted-foreground"
+        title={locationId}
+      >
+        {locationId}
+      </code>
+      <button
+        type="button"
+        aria-label="Copy Location ID"
+        title="Copy Location ID"
+        className="rounded p-px text-muted-foreground hover:text-foreground"
+        onClick={(e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(locationId);
+          toast.success("Location ID copied");
+        }}
+      >
+        <Copy className="h-2.5 w-2.5" />
+      </button>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Open sub-account in GoHighLevel"
+        title="Open sub-account in GoHighLevel"
+        className="rounded p-px text-muted-foreground hover:text-primary"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ExternalLink className="h-2.5 w-2.5" />
+      </a>
+    </span>
   );
 }
