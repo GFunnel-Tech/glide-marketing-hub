@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Building2, Facebook, Link2, Loader2, Plug, Plus, Sparkles, Unlink, X, ArrowRight, AlertTriangle, CheckCircle2,
+  ExternalLink, Copy,
 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 type Client = {
