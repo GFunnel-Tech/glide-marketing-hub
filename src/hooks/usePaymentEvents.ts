@@ -10,7 +10,16 @@ export interface PaymentEvent {
   stripe_user_id: string | null;
   stripe_charge_id: string | null;
   customer_email: string | null;
-  event_type: "charge_failed" | "charge_refunded" | "charge_disputed" | "invoice_payment_failed";
+  event_type:
+    | "charge_failed"
+    | "charge_refunded"
+    | "charge_disputed"
+    | "invoice_payment_failed"
+    | "ad_account_disabled"
+    | "ad_account_unsettled"
+    | "ad_account_risk_review"
+    | "ad_account_pending_settlement"
+    | "ad_account_grace_period";
   severity: "warn" | "critical";
   status: "open" | "acknowledged" | "resolved";
   amount: number;

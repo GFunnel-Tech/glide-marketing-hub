@@ -4,11 +4,16 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { usePaymentEvents, usePaymentEventStats, useUpdatePaymentEvent, type PaymentEvent } from "@/hooks/usePaymentEvents";
 
-const TYPE_LABEL: Record<PaymentEvent["event_type"], string> = {
+const TYPE_LABEL: Record<string, string> = {
   charge_failed: "Charge failed",
   invoice_payment_failed: "Invoice failed",
   charge_disputed: "Disputed",
   charge_refunded: "Refunded",
+  ad_account_disabled: "Ad account disabled",
+  ad_account_unsettled: "Unpaid ad balance",
+  ad_account_risk_review: "Risk review",
+  ad_account_pending_settlement: "Pending settlement",
+  ad_account_grace_period: "Payment overdue",
 };
 
 function timeAgo(iso: string): string {
