@@ -124,11 +124,38 @@ async function runSync(
       // Meta flagged the account inactive at some point.
       acctQ = acctQ.or("is_active.eq.true,client_id.not.is.null");
     }
-    const { data: accounts } = await acctQ;
+    const { data: accountsRaw } = await acctQ;
+
+    // Never burn Meta API quota on accounts belonging to off/terminal clients.
+    // (Explicit single-account syncs are still honoured.)
+    const DEAD_STATUSES = new Set([
+      "CANCELLED", "PENDING_CANCELLATION", "BLOCKED", "PAUSED",
+    ]);
+    const statusByClient = new Map<number, string>();
+    const clientIds = Array.from(
+      new Set((accountsRaw ?? []).map((a: any) => a.client_id).filter(Boolean)),
+    );
+    if (clientIds.length) {
+      const { data: cs } = await admin
+        .from("clients").select("id, status").in("id", clientIds);
+      for (const c of cs ?? []) statusByClient.set(c.id, String(c.status));
+    }
+
+    let skippedInactiveClient = 0;
+    const accounts = adAccountFilter
+      ? (accountsRaw ?? [])
+      : (accountsRaw ?? []).filter((a: any) => {
+          const st = a.client_id ? statusByClient.get(a.client_id) : null;
+          if (st && DEAD_STATUSES.has(st)) { skippedInactiveClient++; return false; }
+          return true;
+        });
+    if (skippedInactiveClient > 0) {
+      console.log(`meta-sync: skipped ${skippedInactiveClient} account(s) on paused/cancelled clients`);
+    }
 
     // Shuffle so the same accounts aren't always processed last (and starved
     // if the function hits its execution-time limit before reaching them).
-    const shuffled = [...(accounts ?? [])].sort(() => Math.random() - 0.5);
+    const shuffled = [...accounts].sort(() => Math.random() - 0.5);
 
     const CONCURRENCY = 6;
     const syncOneAccount = async (acc: any) => {
@@ -143,9 +170,8 @@ async function runSync(
       if (tier === "hot") {
         let isHot = false;
         if (acc.client_id) {
-          const { data: c } = await admin
-            .from("clients").select("status").eq("id", acc.client_id).maybeSingle();
-          if (c?.status && HOT_STATUSES.has(String(c.status))) isHot = true;
+          const st = statusByClient.get(acc.client_id);
+          if (st && HOT_STATUSES.has(st)) isHot = true;
         }
         if (!isHot) {
           const today = new Date().toISOString().slice(0, 10);
@@ -161,6 +187,7 @@ async function runSync(
         }
         if (!isHot) { skippedColdHot++; return; }
       }
+
 
       const log = await admin.from("meta_sync_log").insert({
         workspace_id: acc.workspace_id,
