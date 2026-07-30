@@ -64,60 +64,105 @@ export function AuditExportPanel() {
       return;
     }
     setLoading(true);
-    setProgress("Gathering data from server…");
+    setProgress("Reading workspace…");
     try {
-      const { data, error } = await supabase.functions.invoke<AuditResponse>("workspace-audit-export", {
-        body: { workspaceId: currentWorkspace.id, daysWindow: 90 },
+      // 1) Manifest: workspace + clients + which tables to pull.
+      const { data: head, error: headErr } = await supabase.functions.invoke<any>("workspace-audit-export", {
+        body: { workspaceId: currentWorkspace.id, daysWindow: 90, mode: "manifest" },
       });
-      if (error) throw error;
-      if (!data) throw new Error("Empty response");
+      if (headErr) throw headErr;
+      if (!head) throw new Error("Empty response");
+      if (head.error) throw new Error(head.error);
 
-      setProgress("Building ZIP…");
       const zip = new JSZip();
-
-      // Top-level summary
-      const manifest = {
-        workspace: data.workspace,
-        exported_at: data.exported_at,
-        exported_by: data.exported_by,
-        scope: data.scope,
-        counts: data.counts,
-        client_index: data.clients.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
-      };
-      zip.file("manifest.json", jsonBlob(manifest));
-      zip.file("README.md", new Blob([readme(data)], { type: "text/markdown" }));
-
-      // Tables
       const tablesFolder = zip.folder("tables")!;
-      for (const [t, rows] of Object.entries(data.tables)) {
-        tablesFolder.file(`${t}.json`, jsonBlob(rows));
-      }
-
-      // Per-client folders
       const clientsFolder = zip.folder("clients")!;
-      const usedSlugs = new Map<string, number>();
-      for (const c of data.clients) {
-        let slug = c.slug || `client-${c.id}`;
-        const seen = usedSlugs.get(slug) ?? 0;
-        usedSlugs.set(slug, seen + 1);
-        if (seen > 0) slug = `${slug}-${c.id}`;
-        const folder = clientsFolder.folder(slug)!;
+
+      const clientRows: any[] = head.clients ?? [];
+      const slugFor = (() => {
+        const used = new Map<string, number>();
+        return (c: any) => {
+          let slug =
+            String(c.name ?? `client-${c.id}`)
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-+|-+$/g, "")
+              .slice(0, 60) || `client-${c.id}`;
+          const seen = used.get(slug) ?? 0;
+          used.set(slug, seen + 1);
+          if (seen > 0) slug = `${slug}-${c.id}`;
+          return slug;
+        };
+      })();
+      const clientMeta = clientRows.map((c) => ({ id: c.id, name: c.name, slug: slugFor(c), record: c }));
+      const folderById = new Map<number, JSZip>();
+      for (const c of clientMeta) {
+        const folder = clientsFolder.folder(c.slug)!;
         folder.file("client.json", jsonBlob(c.record));
-        for (const [t, rows] of Object.entries(c.data)) {
-          if (!rows || !rows.length) continue;
-          folder.file(`${t}.json`, jsonBlob(rows));
+        folderById.set(c.id, folder);
+      }
+      tablesFolder.file("clients.json", jsonBlob(clientRows));
+
+      // 2) Pull the remaining tables in small batches so no single response is huge.
+      const allTables: string[] = [...(head.plan?.workspace_tables ?? []), ...(head.plan?.client_tables ?? [])];
+      const counts: Record<string, number> = { clients: clientRows.length };
+      const BATCH = 4;
+      for (let i = 0; i < allTables.length; i += BATCH) {
+        const slice = allTables.slice(i, i + BATCH);
+        setProgress(`Fetching data… ${Math.min(i + BATCH, allTables.length)}/${allTables.length} tables`);
+        const { data: part, error: partErr } = await supabase.functions.invoke<any>("workspace-audit-export", {
+          body: { workspaceId: currentWorkspace.id, daysWindow: 90, mode: "tables", tables: slice },
+        });
+        if (partErr) throw partErr;
+        if (part?.error) throw new Error(part.error);
+        for (const [t, rows] of Object.entries((part?.tables ?? {}) as Record<string, any[]>)) {
+          counts[t] = rows.length;
+          tablesFolder.file(`${t}.json`, jsonBlob(rows));
+          if (!rows.length || !("client_id" in rows[0])) continue;
+          const grouped = new Map<number, any[]>();
+          for (const row of rows) {
+            const cid = (row as any).client_id;
+            if (!cid || !folderById.has(cid)) continue;
+            const arr = grouped.get(cid) ?? [];
+            arr.push(row);
+            grouped.set(cid, arr);
+          }
+          for (const [cid, arr] of grouped) folderById.get(cid)!.file(`${t}.json`, jsonBlob(arr));
         }
       }
+
+      const summary: AuditResponse = {
+        workspace: head.workspace,
+        exported_at: head.exported_at,
+        exported_by: head.exported_by,
+        scope: head.scope,
+        counts,
+        tables: {},
+        clients: clientMeta.map((c) => ({ id: c.id, name: c.name, slug: c.slug, record: c.record, data: {} })),
+      };
+      zip.file(
+        "manifest.json",
+        jsonBlob({
+          workspace: head.workspace,
+          exported_at: head.exported_at,
+          exported_by: head.exported_by,
+          scope: head.scope,
+          counts,
+          client_index: clientMeta.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
+        }),
+      );
+      zip.file("README.md", new Blob([readme(summary)], { type: "text/markdown" }));
 
       setProgress("Compressing…");
       const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
       const wsSlug =
-        (data.workspace?.name ?? "workspace")
+        (head.workspace?.name ?? "workspace")
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-+|-+$/g, "") || "workspace";
       const stamp = new Date().toISOString().slice(0, 10);
       saveAs(blob, `audit-${wsSlug}-${stamp}.zip`);
+
       toast.success("Audit export downloaded");
     } catch (e: any) {
       console.error("[audit-export]", e);

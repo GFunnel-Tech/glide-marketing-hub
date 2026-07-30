@@ -187,6 +187,9 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const workspaceId: string | undefined = body?.workspaceId;
     const daysWindow: number = Math.min(Math.max(Number(body?.daysWindow ?? 90), 1), 730);
+    // "manifest" = workspace + clients + the table plan; "tables" = a slice of tables.
+    const mode: string = body?.mode === "tables" ? "tables" : "manifest";
+    const requested: string[] = Array.isArray(body?.tables) ? body.tables : [];
     if (!workspaceId) return json({ error: "workspaceId required" }, 400);
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -206,96 +209,76 @@ Deno.serve(async (req) => {
     const sinceIso = new Date(Date.now() - daysWindow * 86400_000).toISOString();
     const sinceDate = sinceIso.slice(0, 10);
 
-    const tables: Record<string, any[]> = {};
-    const counts: Record<string, number> = {};
+    const windowed = (t: string, q: any) => {
+      const col = WINDOWED_COLUMNS[t];
+      if (!col) return q;
+      return q.gte(col, col === "date" ? sinceDate : sinceIso);
+    };
 
-    // 1) Pull all workspace-scoped tables in parallel batches.
-    const wsResults = await Promise.all(
-      WORKSPACE_TABLES.map(async (t) => {
-        const rows = await fetchAll(admin, t, (q) => {
-          let qq = t === "workspaces" ? q.eq("id", workspaceId) : q.eq("workspace_id", workspaceId);
-          const col = WINDOWED_COLUMNS[t];
-          if (col) {
-            const cutoff = col === "date" ? sinceDate : sinceIso;
-            qq = qq.gte(col, cutoff);
-          }
-          return qq;
-        });
-        return [t, rows] as const;
-      }),
-    );
-    for (const [t, rows] of wsResults) {
-      tables[t] = rows;
-      counts[t] = rows.length;
+    if (mode === "manifest") {
+      const [wsRows, clientRows] = await Promise.all([
+        fetchAll(admin, "workspaces", (q) => q.eq("id", workspaceId)),
+        fetchAll(admin, "clients", (q) => q.eq("workspace_id", workspaceId)),
+      ]);
+      return json({
+        workspace: wsRows[0] ?? null,
+        exported_at: new Date().toISOString(),
+        exported_by: userId,
+        scope: { days_window: daysWindow, since: sinceIso },
+        clients: clientRows,
+        plan: {
+          workspace_tables: WORKSPACE_TABLES.filter((t) => t !== "workspaces" && t !== "clients"),
+          client_tables: BY_CLIENT_TABLES,
+        },
+      });
     }
 
-    const clientIds: number[] = (tables["clients"] ?? []).map((c: any) => c.id);
+    // mode === "tables": return only the requested slice, keeps each response small.
+    const wsSet = new Set(WORKSPACE_TABLES);
+    const clientSet = new Set(BY_CLIENT_TABLES);
+    const valid = requested.filter((t) => wsSet.has(t) || clientSet.has(t));
+    if (!valid.length) return json({ tables: {}, counts: {} });
 
-    // 2) Pull client-scoped tables (paginate by chunks of 200 ids to stay under .in() limits).
+    let clientIds: number[] = [];
+    if (valid.some((t) => clientSet.has(t))) {
+      const rows = await fetchAll(admin, "clients", (q) => q.eq("workspace_id", workspaceId));
+      clientIds = rows.map((c: any) => c.id);
+    }
     const chunked = <T,>(arr: T[], n: number) => {
       const o: T[][] = [];
       for (let i = 0; i < arr.length; i += n) o.push(arr.slice(i, i + n));
       return o;
     };
     const idChunks = chunked(clientIds, 200);
-    await Promise.all(
-      BY_CLIENT_TABLES.map(async (t) => {
-        const col = WINDOWED_COLUMNS[t];
-        const all: any[] = [];
+
+    const tables: Record<string, any[]> = {};
+    const counts: Record<string, number> = {};
+    // Hard cap per response so a huge time-series table can never blow the worker.
+    const MAX_ROWS_PER_RESPONSE = 15000;
+    const truncated: Record<string, boolean> = {};
+
+    for (const t of valid) {
+      let rows: any[] = [];
+      if (wsSet.has(t)) {
+        rows = await fetchAll(admin, t, (q) =>
+          windowed(t, t === "workspaces" ? q.eq("id", workspaceId) : q.eq("workspace_id", workspaceId)),
+        );
+      } else {
         for (const chunk of idChunks) {
-          const rows = await fetchAll(admin, t, (q) => {
-            let qq = q.in("client_id", chunk);
-            if (col) {
-              const cutoff = col === "date" ? sinceDate : sinceIso;
-              qq = qq.gte(col, cutoff);
-            }
-            return qq;
-          });
-          all.push(...rows);
-        }
-        tables[t] = all;
-        counts[t] = all.length;
-      }),
-    );
-
-    // 3) Workspace meta + scope.
-    const workspaceRow = (tables["workspaces"] ?? [])[0] ?? null;
-
-    // 4) Build per-client folders by indexing rows that carry client_id.
-    const byClient: Record<number, Record<string, any[]>> = {};
-    for (const id of clientIds) byClient[id] = {};
-    for (const [tname, rows] of Object.entries(tables)) {
-      if (tname === "clients" || tname === "workspaces") continue;
-      const sample = rows[0];
-      if (!sample || !("client_id" in sample)) continue;
-      for (const row of rows) {
-        const cid = (row as any).client_id;
-        if (cid && byClient[cid]) {
-          (byClient[cid][tname] ||= []).push(row);
+          const part = await fetchAll(admin, t, (q) => windowed(t, q.in("client_id", chunk)));
+          rows.push(...part);
+          if (rows.length >= MAX_ROWS_PER_RESPONSE) break;
         }
       }
+      if (rows.length > MAX_ROWS_PER_RESPONSE) {
+        rows = rows.slice(0, MAX_ROWS_PER_RESPONSE);
+        truncated[t] = true;
+      }
+      tables[t] = rows;
+      counts[t] = rows.length;
     }
-    const clients = (tables["clients"] ?? []).map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      slug: String(c.name ?? `client-${c.id}`)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 60) || `client-${c.id}`,
-      record: c,
-      data: byClient[c.id] ?? {},
-    }));
 
-    return json({
-      workspace: workspaceRow,
-      exported_at: new Date().toISOString(),
-      exported_by: userId,
-      scope: { days_window: daysWindow, since: sinceIso },
-      counts,
-      tables,
-      clients,
-    });
+    return json({ tables, counts, truncated });
   } catch (e) {
     console.error("[workspace-audit-export] fatal", e);
     return json({ error: String((e as Error).message || e) }, 500);
