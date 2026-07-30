@@ -14,10 +14,13 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getAdapter, type AdChannel } from "@/lib/adChannels";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { metaAdsManagerUrl } from "@/lib/metaAdsLink";
 
 interface AdLike {
   id: string;
   name?: string | null;
+  ad_account_id?: string | null;
+  campaign_id?: string | null;
   adset_id?: string | null;
   effective_status?: string | null;
   title?: string | null;
