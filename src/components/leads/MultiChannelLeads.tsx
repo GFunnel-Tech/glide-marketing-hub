@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, Eye, Inbox, Search, Copy, Users } from "lucide-react";
 import { useChannelLeads, useUpdateLead, type LeadChannel, type LeadStage, type ChannelLead } from "@/hooks/useChannelLeads";
 import { useClients } from "@/hooks/useDatabase";
+import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { LeadDetailDrawer } from "./LeadDetailDrawer";
 import { ManualLeadImport } from "./ManualLeadImport";
 import { MetaLeadImport } from "./MetaLeadImport";
@@ -81,7 +82,7 @@ function exportCSV(leads: ChannelLead[], channel: LeadChannel, clientName: (id: 
 
 function ChannelPanel({ channel, clientId }: { channel: LeadChannel; clientId?: number }) {
   const { data: leads = [], isLoading } = useChannelLeads(channel, clientId);
-  const { data: clients = [] } = useClients();
+  const clients = useVisibleClients();
   const update = useUpdateLead(channel);
   const [stage, setStage] = useState<LeadStage | "all">("all");
   const [search, setSearch] = useState("");

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useReports, useClients } from "@/hooks/useDatabase";
+import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { cplTrendData } from "@/data/mockData";
 import { cn } from "@/lib/utils";
 import { Download, Send, Eye, Loader2, CheckCircle, Clock, X } from "lucide-react";
@@ -16,7 +17,7 @@ const statusConfig = {
 
 export default function Reports() {
   const { data: monthlyReports = [], isLoading } = useReports();
-  const { data: clients = [] } = useClients();
+  const clients = useVisibleClients();
   const [loading, setLoading] = useState<string | null>(null);
   const [previewReport, setPreviewReport] = useState<typeof monthlyReports[0] | null>(null);
   const [genClient, setGenClient] = useState("");

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMetaAds, type MetaAd } from "@/hooks/useMetaAds";
 import { useClients } from "@/hooks/useDatabase";
+import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { ConnectMetaPrompt } from "@/components/dashboard/ConnectMetaPrompt";
 import { AdActionsMenu } from "@/components/ads/AdActionsMenu";
@@ -70,7 +71,7 @@ function ComingSoon({ channel }: { channel: AdChannel }) {
 
 function MetaAdsTable() {
   const { data: ads = [], isLoading } = useMetaAds();
-  const { data: clients = [] } = useClients();
+  const clients = useVisibleClients();
   const [q, setQ] = useState("");
   const [statusF, setStatusF] = useState<"all" | "active" | "paused">("all");
   const [clientF, setClientF] = useState("all");

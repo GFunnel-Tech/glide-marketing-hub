@@ -18,6 +18,7 @@ import {
   type CustomKpi, type CustomKpiAlert,
 } from "@/hooks/useCustomKpis";
 import { useClients } from "@/hooks/useDatabase";
+import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { describeFormula, formatKpiValue, type FormulaNode } from "@/lib/kpiFormula";
 import { toast } from "sonner";
@@ -39,7 +40,7 @@ export function CustomKpisPanel() {
   const { currentWorkspace } = useWorkspace();
   const { data: kpis = [] } = useCustomKpis();
   const { data: alerts = [] } = useCustomKpiAlerts();
-  const { data: clients = [] } = useClients();
+  const clients = useVisibleClients();
   const { data: evals = [] } = useLatestKpiEvaluations(kpis.map((k) => k.id));
   const [editing, setEditing] = useState<Partial<CustomKpi> | null>(null);
   const [evaluating, setEvaluating] = useState(false);

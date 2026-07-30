@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useClients } from "@/hooks/useDatabase";
+import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { toast } from "sonner";
 
 // Minimal CSV parser: comma-separated, supports quoted fields with commas.
@@ -45,7 +46,7 @@ const pick = (r: Record<string, string>, keys: string[]) => {
 export function MetaLeadImport() {
   const qc = useQueryClient();
   const { currentWorkspace } = useWorkspace();
-  const { data: clients = [] } = useClients();
+  const clients = useVisibleClients();
   const [open, setOpen] = useState(false);
   const [parsed, setParsed] = useState<{ headers: string[]; rows: Record<string, string>[] }>({ headers: [], rows: [] });
   const [clientId, setClientId] = useState<string>("auto");
