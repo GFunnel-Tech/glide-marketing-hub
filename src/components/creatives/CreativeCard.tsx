@@ -1,6 +1,7 @@
 import { MetaAd, AdClass } from "@/hooks/useMetaAds";
-import { Image as ImageIcon, Sparkles, AlertTriangle, Loader2, Play, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Globe } from "lucide-react";
+import { Image as ImageIcon, Sparkles, AlertTriangle, Loader2, Play, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Globe, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { metaAdsManagerUrl } from "@/lib/metaAdsLink";
 
 const STATUS: Record<AdClass, { label: string; cls: string; Icon: any }> = {
   best: { label: "Best", cls: "bg-success/15 text-success border-success/30", Icon: Sparkles },
@@ -46,6 +47,7 @@ export function CreativeCard({
   const isVideo = ad.media_type === "video" || !!ad.video_id;
   const hostname = hostnameOf(ad.link_url);
   const cpl = ad.cpl > 0 ? `$${ad.cpl.toFixed(2)}` : "—";
+  const adsManagerUrl = metaAdsManagerUrl({ adAccountId: ad.ad_account_id, adId: ad.id });
 
   return (
     <div
@@ -159,6 +161,21 @@ export function CreativeCard({
         <Stat label="CPL" value={cpl} />
         <Stat label="CTR" value={`${ad.ctr.toFixed(2)}%`} />
       </div>
+      {adsManagerUrl && (
+        <div className="px-3 pb-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(adsManagerUrl, "_blank", "noopener,noreferrer");
+            }}
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+          >
+            <ExternalLink className="h-3 w-3" /> Open in Meta Ads
+          </button>
+        </div>
+      )}
+
       {clientName && (
         <div className="px-3 pb-2 -mt-1">
           <span className="text-[10px] font-medium text-primary uppercase tracking-wider">{clientName}</span>

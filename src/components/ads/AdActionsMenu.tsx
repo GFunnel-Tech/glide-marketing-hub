@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MoreHorizontal, Copy, Pause, Play, Pencil, TrendingUp, Loader2 } from "lucide-react";
+import { MoreHorizontal, Copy, Pause, Play, Pencil, TrendingUp, Loader2, ExternalLink } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -14,10 +14,13 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getAdapter, type AdChannel } from "@/lib/adChannels";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { metaAdsManagerUrl } from "@/lib/metaAdsLink";
 
 interface AdLike {
   id: string;
   name?: string | null;
+  ad_account_id?: string | null;
+  campaign_id?: string | null;
   adset_id?: string | null;
   effective_status?: string | null;
   title?: string | null;
@@ -79,7 +82,22 @@ export function AdActionsMenu({ ad, channel }: { ad: AdLike; channel: AdChannel 
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
+          {channel === "meta" && (
+            <>
+              <DropdownMenuItem
+                disabled={!metaAdsManagerUrl({ adAccountId: ad.ad_account_id, adId: ad.id })}
+                onClick={() => {
+                  const url = metaAdsManagerUrl({ adAccountId: ad.ad_account_id, adId: ad.id });
+                  if (url) window.open(url, "_blank", "noopener,noreferrer");
+                }}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" /> Open in Meta Ads
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem onClick={() => setDupOpen(true)} disabled={!adapter.supports.duplicate}>
+
             <Copy className="h-4 w-4 mr-2" /> Duplicate ad
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setEditOpen(true)} disabled={!adapter.supports.updateCreative}>
