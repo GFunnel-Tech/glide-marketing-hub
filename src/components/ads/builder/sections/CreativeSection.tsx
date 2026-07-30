@@ -1,13 +1,16 @@
+import { useState } from "react";
 import { useAdDraftStore } from "@/stores/adDraftStore";
 import { Section } from "../shared/Section";
 import { MediaUploader } from "../shared/MediaUploader";
-import { Palette, Plus, X } from "lucide-react";
+import { AiCreativeStudio } from "../shared/AiCreativeStudio";
+import { Palette, Plus, X, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CTA_OPTIONS, type CreativeType } from "../types";
+
 
 const TYPES: { id: CreativeType; label: string; available: boolean }[] = [
   { id: "dynamic", label: "Dynamic Ad", available: true },
@@ -18,6 +21,7 @@ const TYPES: { id: CreativeType; label: string; available: boolean }[] = [
 export function CreativeSection() {
   const state = useAdDraftStore((s) => s.state);
   const patch = useAdDraftStore((s) => s.patch);
+  const [studioOpen, setStudioOpen] = useState(false);
 
   return (
     <Section title="Creative" icon={<Palette className="h-4 w-4 text-primary" />}>
@@ -38,9 +42,29 @@ export function CreativeSection() {
         ))}
       </div>
 
-      <div className="text-xs text-muted-foreground">{state.media.length} / 10 images and videos. {state.creativeType === "dynamic" && "We'll rotate & learn."}</div>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="text-xs text-muted-foreground">{state.media.length} / 10 images and videos. {state.creativeType === "dynamic" && "We'll rotate & learn."}</div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs"
+          onClick={() => setStudioOpen(true)}
+          disabled={state.media.length >= 10}
+        >
+          <Sparkles className="h-3 w-3 mr-1.5 text-primary" /> Generate with AI
+        </Button>
+      </div>
 
       <MediaUploader value={state.media} onChange={(v) => patch("media", v)} max={10} accept="both" label="Add" />
+
+      <AiCreativeStudio
+        open={studioOpen}
+        onOpenChange={setStudioOpen}
+        remaining={Math.max(10 - state.media.length, 0)}
+        onAdd={(assets) => patch("media", [...state.media, ...assets].slice(0, 10))}
+      />
+
 
       {/* Caption (above media) */}
       <div>
