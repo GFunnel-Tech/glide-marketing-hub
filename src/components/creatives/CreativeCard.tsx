@@ -47,6 +47,7 @@ export function CreativeCard({
   const isVideo = ad.media_type === "video" || !!ad.video_id;
   const hostname = hostnameOf(ad.link_url);
   const cpl = ad.cpl > 0 ? `$${ad.cpl.toFixed(2)}` : "—";
+  const adsManagerUrl = metaAdsManagerUrl({ adAccountId: ad.ad_account_id, adId: ad.id });
 
   return (
     <div
