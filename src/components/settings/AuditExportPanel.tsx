@@ -106,7 +106,7 @@ export function AuditExportPanel() {
       // 2) Pull the remaining tables in small batches so no single response is huge.
       const allTables: string[] = [...(head.plan?.workspace_tables ?? []), ...(head.plan?.client_tables ?? [])];
       const counts: Record<string, number> = { clients: clientRows.length };
-      const BATCH = 6;
+      const BATCH = 4;
       for (let i = 0; i < allTables.length; i += BATCH) {
         const slice = allTables.slice(i, i + BATCH);
         setProgress(`Fetching data… ${Math.min(i + BATCH, allTables.length)}/${allTables.length} tables`);
