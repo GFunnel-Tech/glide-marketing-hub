@@ -6271,6 +6271,10 @@ export type Database = {
         Args: { _event_type: string; _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      purge_inactive_client_signals: {
+        Args: { _client_id: number }
+        Returns: undefined
+      }
       recompute_all_client_statuses: {
         Args: { _workspace_id: string }
         Returns: number
