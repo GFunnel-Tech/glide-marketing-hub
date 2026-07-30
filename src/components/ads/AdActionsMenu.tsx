@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MoreHorizontal, Copy, Pause, Play, Pencil, TrendingUp, Loader2 } from "lucide-react";
+import { MoreHorizontal, Copy, Pause, Play, Pencil, TrendingUp, Loader2, ExternalLink } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
