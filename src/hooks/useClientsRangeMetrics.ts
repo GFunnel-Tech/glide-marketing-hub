@@ -273,24 +273,14 @@ export function useClientsRangeMetrics() {
 
       for (const row of scoredRaw || []) {
         if (!row.client_id) continue;
-        const fields = Array.isArray(row.field_data) ? row.field_data : [];
-        let hasScore = false;
-        let isAbove = false;
-        for (const f of fields) {
-          const name = String(f?.name || "").toLowerCase();
-          if (!name.includes("credit_score") && !name.includes("credit score")) continue;
-          const val = String(f?.values?.[0] ?? "").toLowerCase();
-          if (!val) continue;
-          hasScore = true;
-          if (val.startsWith("above")) isAbove = true;
-          break;
-        }
+        const { hasScore, isAbove } = readCreditScore(row.field_data);
         if (hasScore) {
           const b = bucket(row.client_id);
           b.scoredLeads += 1;
           if (isAbove) b.above640 += 1;
         }
       }
+
 
       const out: Record<number, ClientRangeMetrics> = {};
       for (const [cidStr, b] of Object.entries(agg)) {
