@@ -1,13 +1,16 @@
+import { useState } from "react";
 import { useAdDraftStore } from "@/stores/adDraftStore";
 import { Section } from "../shared/Section";
 import { MediaUploader } from "../shared/MediaUploader";
-import { Palette, Plus, X } from "lucide-react";
+import { AiCreativeStudio } from "../shared/AiCreativeStudio";
+import { Palette, Plus, X, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CTA_OPTIONS, type CreativeType } from "../types";
+
 
 const TYPES: { id: CreativeType; label: string; available: boolean }[] = [
   { id: "dynamic", label: "Dynamic Ad", available: true },
