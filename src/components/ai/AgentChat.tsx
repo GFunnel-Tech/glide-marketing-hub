@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { Send, Bot, User, Loader2, Check, Zap, AlertCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { ThreadHistoryMenu } from "./ThreadHistoryMenu";
+import { useAiThreadMutations, type AiThread } from "@/hooks/useAiThreads";
 
 interface ToolEvent {
   tool: string;
