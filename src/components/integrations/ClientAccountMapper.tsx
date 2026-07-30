@@ -249,7 +249,12 @@ export function ClientAccountMapper() {
     if (!newId) return;
     if (selectedGhl) await linkGhlToClient(newId, selectedGhl.location_id);
     if (selectedMeta && selectedMeta.client_id == null) await linkMetaToClient(selectedMeta.id, newId);
+    // Clear the picker so the next account can be mapped right away
+    setSelectedClientId(null);
+    setSelectedGhlId(null);
+    setSelectedMetaId(null);
   };
+
 
   const toggleAgency = async (value: boolean) => {
     if (!selectedClient || !wsId) return;
@@ -337,8 +342,13 @@ export function ClientAccountMapper() {
         if (error) throw error;
       }
       toast.success("Mapping saved");
+      // Reset the picker so the next account can be linked immediately
+      setSelectedClientId(null);
+      setSelectedGhlId(null);
+      setSelectedMetaId(null);
       await load();
       invalidateDashboard();
+
     } catch (e: any) {
       toast.error(e.message ?? "Failed to save mapping");
     } finally {
