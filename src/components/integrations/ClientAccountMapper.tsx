@@ -436,10 +436,12 @@ export function ClientAccountMapper() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-foreground truncate">{g.name || "Unnamed"}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">
-                    {g.business_name || g.location_id}
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <span className="truncate">{g.business_name || "—"}</span>
+                    <LocationIdChip locationId={g.location_id} />
                   </div>
                 </div>
+
                 {linkedClient ? (
                   <Badge variant="outline" className="text-[9px] border-success/40 text-success shrink-0">
                     {linkedClient.name}
