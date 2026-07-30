@@ -804,3 +804,49 @@ function UnlinkBtn({
     </button>
   );
 }
+
+/**
+ * Shows a GHL sub-account Location ID next to the row subheading, with a
+ * copy button and a direct link into the GHL sub-account dashboard.
+ */
+function LocationIdChip({ locationId }: { locationId: string }) {
+  if (!locationId) return null;
+  const url = `https://app.gohighlevel.com/v2/location/${locationId}/`;
+  return (
+    <span
+      className="inline-flex items-center gap-1 shrink-0"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <code
+        className="rounded bg-muted px-1 py-px font-mono text-[9px] text-muted-foreground"
+        title={locationId}
+      >
+        {locationId}
+      </code>
+      <button
+        type="button"
+        aria-label="Copy Location ID"
+        title="Copy Location ID"
+        className="rounded p-px text-muted-foreground hover:text-foreground"
+        onClick={(e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(locationId);
+          toast.success("Location ID copied");
+        }}
+      >
+        <Copy className="h-2.5 w-2.5" />
+      </button>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Open sub-account in GoHighLevel"
+        title="Open sub-account in GoHighLevel"
+        className="rounded p-px text-muted-foreground hover:text-primary"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ExternalLink className="h-2.5 w-2.5" />
+      </a>
+    </span>
+  );
+}
