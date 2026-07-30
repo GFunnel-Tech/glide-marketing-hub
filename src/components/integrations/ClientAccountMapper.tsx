@@ -568,11 +568,15 @@ export function ClientAccountMapper() {
                     {c.is_agency_account && <Building2 className="h-3 w-3 text-primary shrink-0" />}
                     {c.name}
                   </div>
-                  <div className="text-[10px] text-muted-foreground truncate">
-                    {ghl ? `GHL: ${ghl.name || ghl.location_id}` : "GHL not synced"}
-                    {" · "}
-                    {metas.length ? `${metas.length} Meta` : "Meta not synced"}
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <span className="truncate">
+                      {ghl ? `GHL: ${ghl.name || ghl.location_id}` : "GHL not synced"}
+                    </span>
+                    {c.ghl_location_id && <LocationIdChip locationId={c.ghl_location_id} />}
+                    <span>·</span>
+                    <span className="truncate">{metas.length ? `${metas.length} Meta` : "Meta not synced"}</span>
                   </div>
+
                 </div>
                 {isActive && selectedClient?.id === c.id && (
                   <label
