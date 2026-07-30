@@ -213,6 +213,8 @@ const Index = () => {
         )}
       </div>
 
+      <PaymentAlertBanner />
+
       <KPIStrip />
 
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
