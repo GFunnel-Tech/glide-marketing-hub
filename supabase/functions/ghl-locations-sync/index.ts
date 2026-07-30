@@ -189,7 +189,29 @@ Deno.serve(async (req) => {
     }));
     if (rows.length) {
       await supabase.from("ghl_locations").upsert(rows, { onConflict: "workspace_id,location_id" });
+
+      // Prune cached sub-accounts that no longer exist in GHL (deleted/recreated
+      // locations otherwise linger and show up as duplicate names).
+      const liveIds = rows.map((r) => r.location_id).filter(Boolean);
+      const { data: cached } = await supabase
+        .from("ghl_locations").select("location_id").eq("workspace_id", workspace_id);
+      const stale = (cached ?? [])
+        .map((c: any) => c.location_id)
+        .filter((id: string) => !liveIds.includes(id));
+      if (stale.length) {
+        // Don't orphan a client that's still linked to a stale location.
+        const { data: linked } = await supabase
+          .from("clients").select("ghl_location_id")
+          .eq("workspace_id", workspace_id).in("ghl_location_id", stale);
+        const keep = new Set((linked ?? []).map((c: any) => c.ghl_location_id));
+        const removable = stale.filter((id: string) => !keep.has(id));
+        if (removable.length) {
+          await supabase.from("ghl_locations").delete()
+            .eq("workspace_id", workspace_id).in("location_id", removable);
+        }
+      }
     }
+
 
     // Auto-link strong matches + queue medium-confidence suggestions
     let linked = 0;
