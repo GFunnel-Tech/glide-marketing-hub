@@ -83,9 +83,10 @@ Deno.serve(async (req) => {
     const clientIds = Array.from(new Set(wsLeads.map(l => l.client_id).filter(Boolean)));
     const { data: clientRows } = await admin
       .from("clients")
-      .select("id, name, brand, ghl_location_id, clickup_list_id")
+      .select("id, name, brand, status, ghl_location_id, clickup_list_id")
       .in("id", clientIds.length ? clientIds : [-1]);
     const clientMap = new Map((clientRows ?? []).map(c => [c.id, c]));
+    const INACTIVE = new Set(["CANCELLED", "PENDING_CANCELLATION", "BLOCKED", "PAUSED"]);
 
     for (const lead of wsLeads) {
       stats.checked++;
