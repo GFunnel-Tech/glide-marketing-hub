@@ -67,11 +67,31 @@ Deno.serve(async (req) => {
   for (const conn of connections ?? []) {
     if (conn.token_expires_at && new Date(conn.token_expires_at) < new Date()) continue;
 
-    const { data: accounts } = await admin
+    const { data: accountsRaw } = await admin
       .from("meta_ad_accounts")
       .select("id, act_id, workspace_id, client_id")
       .eq("connection_id", conn.id)
       .eq("is_active", true);
+
+    // Don't spend Meta lead-retrieval quota on paused/cancelled clients.
+    const DEAD_STATUSES = new Set([
+      "CANCELLED", "PENDING_CANCELLATION", "BLOCKED", "PAUSED",
+    ]);
+    const deadClients = new Set<number>();
+    const leadClientIds = Array.from(
+      new Set((accountsRaw ?? []).map((a: any) => a.client_id).filter(Boolean)),
+    );
+    if (leadClientIds.length) {
+      const { data: cs } = await admin
+        .from("clients").select("id, status").in("id", leadClientIds);
+      for (const c of cs ?? []) {
+        if (DEAD_STATUSES.has(String(c.status))) deadClients.add(c.id);
+      }
+    }
+    const accounts = (accountsRaw ?? []).filter(
+      (a: any) => !(a.client_id && deadClients.has(a.client_id)),
+    );
+
 
     // Build a Page-id -> Page access token map for this connection ONCE.
     // Meta's /{form_id}/leads endpoint frequently rejects user tokens with
