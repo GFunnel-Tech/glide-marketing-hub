@@ -18,6 +18,8 @@ export interface ChurnRisk {
   computed_at: string;
 }
 
+const INACTIVE_STATUSES = ["CANCELLED", "PENDING_CANCELLATION", "BLOCKED", "PAUSED"];
+
 export function useChurnRisks() {
   const { currentWorkspace } = useWorkspace();
   return useQuery({
@@ -30,10 +32,21 @@ export function useChurnRisks() {
         .eq("workspace_id", currentWorkspace!.id)
         .order("score", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as ChurnRisk[];
+      const rows = (data ?? []) as ChurnRisk[];
+      if (!rows.length) return rows;
+
+      // Never surface risk for off/terminal accounts (cancelled, paused, blocked).
+      const { data: live } = await (supabase as any)
+        .from("clients")
+        .select("id")
+        .in("id", rows.map((r) => r.client_id))
+        .not("status", "in", `(${INACTIVE_STATUSES.join(",")})`);
+      const liveIds = new Set((live ?? []).map((c: any) => c.id));
+      return rows.filter((r) => liveIds.has(r.client_id));
     },
   });
 }
+
 
 export function useChurnRiskForClient(clientId: number | null | undefined) {
   return useQuery({
