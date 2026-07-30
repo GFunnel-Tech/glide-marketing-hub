@@ -61,9 +61,10 @@ Return ONLY a JSON object, no prose around it, with this exact shape:
 
 Rules:
 - 0-5 highlights, ordered most-to-least urgent. Skip if nothing notable. Each highlight is a CONCERN that needs awareness — it explains WHAT is wrong.
-- 0-5 suggested_tasks, each genuinely actionable today. A task is the concrete WORK that fixes a concern.
+- 0-4 suggested_tasks MAX, each genuinely actionable today. A task is the concrete WORK that fixes a concern. Fewer, sharper tasks beat a long list.
 - DO NOT DUPLICATE between highlights and tasks. If a concern is a call to action ("Review X", "Fix Y"), put it ONLY in suggested_tasks. If it's an observation ("CPL up 40%"), put it ONLY in highlights. Never restate the same thing in both sections.
-- DO NOT create two tasks for the same client + same problem — pick the single best action.
+- MAXIMUM ONE task per client. If a client has several problems, combine them into a single task with the highest-impact action first.
+- Never propose a task that already exists in tasks.existing_open (same client, same work) — even if worded differently. Those are already on the board.
 - CPL breaches are HIGH priority. If a client's CPL is above target, the CPL fix task must have priority "high" and appear first.
 - Task titles must be specific and actionable: start with a verb, name the client + metric + concrete next step (e.g. "Cut CPL for Acme — pause worst 2 ad sets, launch new hook creative"). Never write vague tasks like "Review client", "Check performance", "Look at metrics".
 - The "reason" field must cite the specific number that triggered the task (CPL value, spend drop %, churn score, etc.).
@@ -225,6 +226,13 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
       due_today_count: dueToday.length,
       overdue: overdue.slice(0, 15).map(summarizeTask),
       due_today: dueToday.slice(0, 15).map(summarizeTask),
+      // Full list of already-open tasks so the model (and the sanitizer) never
+      // proposes work that's already on the board.
+      existing_open: tasks.slice(0, 200).map((t: any) => ({
+        client_id: t.client_id ?? null,
+        client: nameOf(t.client_id),
+        title: t.title || (t.content ?? "").slice(0, 120),
+      })),
     },
     clients: clients.map((c) => ({
       id: c.id,
@@ -433,18 +441,48 @@ function sanitize(parsed: any, signals: any) {
         })
     : [];
 
-  // Drop tasks that just restate a highlight, and de-dupe near-identical tasks.
+  // Token-overlap similarity — catches reworded duplicates like
+  // "Cut CPL for Acme by pausing ad sets" vs "Lower Acme CPL — pause ad sets".
+  const STOP = new Set(["the","a","an","for","to","and","or","of","on","in","with","by","at","from","new","launch","this","that","its","their"]);
+  const tokens = (s: string) => new Set(norm(s).split(" ").filter((w) => w.length > 2 && !STOP.has(w)));
+  const similar = (a: Set<string>, b: Set<string>) => {
+    if (!a.size || !b.size) return false;
+    let inter = 0;
+    for (const w of a) if (b.has(w)) inter++;
+    return inter / Math.min(a.size, b.size) >= 0.6;
+  };
+
+  // Tasks that already exist and are still open — never suggest them again.
+  const existingOpen: { client_id: number | null; tokens: Set<string> }[] = (
+    Array.isArray(signals?.tasks?.existing_open) ? signals.tasks.existing_open : []
+  ).map((t: any) => ({
+    client_id: t?.client_id == null ? null : Number(t.client_id),
+    tokens: tokens(String(t?.title ?? "")),
+  }));
+
+  // Drop tasks that restate a highlight, duplicate each other, or duplicate an
+  // already-open task. Also cap at one task per client so the list stays short.
   const suggested_tasks: SuggestedTask[] = [];
+  const accepted: { client_id: number | null; tokens: Set<string> }[] = [];
+  const clientCount = new Map<string, number>();
   for (const t of rawTasks) {
     const k = norm(t.title);
     if (!k || seenTaskKeys.has(k)) continue;
     if (highlightKeys.has(k)) continue; // pure duplicate of a concern
     const cpKey = `${t.client_id ?? "x"}::${k.split(" ").slice(0, 3).join(" ")}`;
     if (seenClientProblem.has(cpKey)) continue;
+    const tk = tokens(t.title);
+    // Same client (or global) + near-identical wording => duplicate.
+    if (accepted.some((a) => (a.client_id === t.client_id || a.client_id == null || t.client_id == null) && similar(a.tokens, tk))) continue;
+    if (existingOpen.some((a) => a.client_id === t.client_id && similar(a.tokens, tk))) continue;
+    const ck = String(t.client_id ?? "x");
+    if ((clientCount.get(ck) ?? 0) >= 1) continue; // one action per client per day
     seenTaskKeys.add(k);
     seenClientProblem.add(cpKey);
+    clientCount.set(ck, (clientCount.get(ck) ?? 0) + 1);
+    accepted.push({ client_id: t.client_id, tokens: tk });
     suggested_tasks.push(t);
-    if (suggested_tasks.length >= 5) break;
+    if (suggested_tasks.length >= 4) break;
   }
 
   // Sort: CPL high-priority first, then other high, then normal, then low.
