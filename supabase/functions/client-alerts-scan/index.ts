@@ -56,10 +56,13 @@ Deno.serve(async (req) => {
       if (memberIds.length === 0) continue;
 
       // ===================== KPI RED status alerts =====================
+      // Never alert on off/terminal accounts (cancelled, pending cancellation,
+      // blocked, paused) — they're intentionally inactive.
       const { data: clients } = await admin
         .from("clients")
         .select("id, name, status, last_alert_status")
-        .eq("workspace_id", ws.id);
+        .eq("workspace_id", ws.id)
+        .not("status", "in", "(CANCELLED,PENDING_CANCELLATION,BLOCKED,PAUSED)");
 
       for (const c of clients ?? []) {
         try {
