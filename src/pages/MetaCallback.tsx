@@ -133,15 +133,60 @@ export default function MetaCallback() {
   }
 
   if (phase === "error") {
+    const isPermissionIssue = /public_profile|permission|not granted|ads_/i.test(errorMsg ?? "");
     return (
       <Shell>
         <XCircle className="h-10 w-10 text-destructive mx-auto" />
         <h1 className="text-lg font-semibold text-foreground">Connection Failed</h1>
         <p className="text-sm text-muted-foreground">{errorMsg}</p>
+
+        {isPermissionIssue && (
+          <div className="text-left rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+            <p className="text-xs font-semibold text-foreground">How to fix this (one-time, per person)</p>
+            <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal ml-4">
+              <li>
+                An app admin opens{" "}
+                <a
+                  href="https://developers.facebook.com/apps/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  developers.facebook.com/apps
+                </a>{" "}
+                → your app → <strong>App roles → Roles</strong>.
+              </li>
+              <li>Click <strong>Add People</strong>, choose <strong>Tester</strong> (or Developer), and invite this Facebook user.</li>
+              <li>
+                The invited person accepts at{" "}
+                <a
+                  href="https://www.facebook.com/settings?tab=applications&ref=settings"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  Facebook Settings → Apps and Websites
+                </a>{" "}
+                → <strong>Requests</strong>.
+              </li>
+              <li>Come back here and reconnect — approve <em>every</em> permission on the consent screen.</li>
+            </ol>
+            <p className="text-[11px] text-muted-foreground pt-1 border-t border-border">
+              While the Meta app is in <strong>Development mode</strong>, only people with an app role can grant ads
+              permissions. Submitting the app for <strong>App Review</strong> (Advanced Access for
+              <code className="mx-1">ads_management</code>,<code className="mx-1">ads_read</code>,
+              <code className="mx-1">leads_retrieval</code>) and switching it to <strong>Live</strong> removes this step
+              for everyone.
+            </p>
+          </div>
+        )}
+
         <Button variant="outline" size="sm" onClick={() => window.close()}>Close</Button>
       </Shell>
     );
   }
+
+
 
   if (!result) return null;
 
