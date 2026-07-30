@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { Send, Bot, User, Loader2, Check, Zap, AlertCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { ThreadHistoryMenu } from "./ThreadHistoryMenu";
+import { useAiThreadMutations, type AiThread } from "@/hooks/useAiThreads";
 
 interface ToolEvent {
   tool: string;
@@ -61,11 +63,43 @@ export function AgentChat({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [threadId, setThreadId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { saveThread } = useAiThreadMutations(workspaceId);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const persist = async (all: Message[], activeClientId: number | null) => {
+    if (!workspaceId || all.length === 0) return;
+    const firstUser = all.find((m) => m.role === "user")?.content ?? "Conversation";
+    const title = `${contextLabel ? `${contextLabel} — ` : ""}${firstUser}`.slice(0, 120);
+    try {
+      const id = await saveThread.mutateAsync({
+        id: threadId,
+        clientId: activeClientId,
+        endpoint,
+        title,
+        messages: all,
+      });
+      if (id && id !== threadId) setThreadId(id as string);
+    } catch {
+      /* history saving must never break the chat */
+    }
+  };
+
+  const startNewThread = () => {
+    setThreadId(null);
+    setMessages([]);
+    setInput("");
+  };
+
+  const openThread = (t: AiThread) => {
+    setThreadId(t.id);
+    setMessages((t.messages as Message[]) ?? []);
+    if (t.client_id && t.client_id !== clientId) onClientDetected?.(t.client_id);
+  };
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || !workspaceId || loading) return;
@@ -93,10 +127,12 @@ export function AgentChat({
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       const reply = (data as any).reply || "(no reply)";
-      setMessages((prev) => [
-        ...prev,
+      const withReply: Message[] = [
+        ...nextMessages,
         { id: crypto.randomUUID(), role: "assistant", content: reply, toolEvents: (data as any).toolEvents ?? [] },
-      ]);
+      ];
+      setMessages(withReply);
+      void persist(withReply, effectiveClientId);
       qc.invalidateQueries({ queryKey: ["ai-pending"] });
       qc.invalidateQueries({ queryKey: ["reports"] });
     } catch (e: any) {
@@ -119,6 +155,17 @@ export function AgentChat({
 
   return (
     <div className={cn("flex flex-col rounded-lg border border-border bg-card overflow-hidden", className)}>
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">
+        <span className="text-[11px] text-muted-foreground truncate">
+          {threadId ? "Saved thread" : messages.length ? "Unsaved conversation" : "New conversation"}
+        </span>
+        <ThreadHistoryMenu
+          workspaceId={workspaceId}
+          activeThreadId={threadId}
+          onSelect={openThread}
+          onNew={startNewThread}
+        />
+      </div>
       <div className="flex-1 overflow-auto p-5">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full">

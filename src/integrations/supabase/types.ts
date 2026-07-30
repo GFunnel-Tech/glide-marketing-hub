@@ -462,6 +462,50 @@ export type Database = {
           },
         ]
       }
+      ai_chat_threads: {
+        Row: {
+          client_id: number | null
+          created_at: string
+          endpoint: string
+          id: string
+          messages: Json
+          title: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          created_at?: string
+          endpoint?: string
+          id?: string
+          messages?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          created_at?: string
+          endpoint?: string
+          id?: string
+          messages?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_threads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_insights: {
         Row: {
           body: string | null
