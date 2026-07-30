@@ -20,10 +20,10 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const CURRENCIES = [
-  "USD - US Dollar ($)", "EUR - Euro (€)", "GBP - British Pound (£)",
-  "CAD - Canadian Dollar ($)", "AUD - Australian Dollar ($)", "INR - Indian Rupee (₹)",
-];
+// USD-only: the platform operates exclusively on US accounts, so no other
+// currency is selectable (prevents mixed-currency rollups in KPI tiles).
+const CURRENCIES = ["USD - US Dollar ($)"];
+
 const BUSINESS_TYPES = [
   "Sole Proprietorship", "Partnership", "LLC", "Corporation",
   "Non-Profit", "Government", "Other",
