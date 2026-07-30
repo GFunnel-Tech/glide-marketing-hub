@@ -1,6 +1,7 @@
 import { MetaAd, AdClass } from "@/hooks/useMetaAds";
-import { Image as ImageIcon, Sparkles, AlertTriangle, Loader2, Play, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Globe } from "lucide-react";
+import { Image as ImageIcon, Sparkles, AlertTriangle, Loader2, Play, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Globe, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { metaAdsManagerUrl } from "@/lib/metaAdsLink";
 
 const STATUS: Record<AdClass, { label: string; cls: string; Icon: any }> = {
   best: { label: "Best", cls: "bg-success/15 text-success border-success/30", Icon: Sparkles },
