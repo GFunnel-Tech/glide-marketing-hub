@@ -253,6 +253,9 @@ Deno.serve(async (req) => {
 
     const tables: Record<string, any[]> = {};
     const counts: Record<string, number> = {};
+    // Hard cap per response so a huge time-series table can never blow the worker.
+    const MAX_ROWS_PER_RESPONSE = 15000;
+    const truncated: Record<string, boolean> = {};
 
     for (const t of valid) {
       let rows: any[] = [];
@@ -264,13 +267,18 @@ Deno.serve(async (req) => {
         for (const chunk of idChunks) {
           const part = await fetchAll(admin, t, (q) => windowed(t, q.in("client_id", chunk)));
           rows.push(...part);
+          if (rows.length >= MAX_ROWS_PER_RESPONSE) break;
         }
+      }
+      if (rows.length > MAX_ROWS_PER_RESPONSE) {
+        rows = rows.slice(0, MAX_ROWS_PER_RESPONSE);
+        truncated[t] = true;
       }
       tables[t] = rows;
       counts[t] = rows.length;
     }
 
-    return json({ tables, counts });
+    return json({ tables, counts, truncated });
   } catch (e) {
     console.error("[workspace-audit-export] fatal", e);
     return json({ error: String((e as Error).message || e) }, 500);
