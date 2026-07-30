@@ -127,8 +127,15 @@ interface ClientRow {
   frequency_7d: number | null;
 }
 
+// Cancelled / pending-cancellation / blocked / paused clients are off the board:
+// they must never produce insights, tasks or alerts.
+const INACTIVE_STATUSES = ["CANCELLED", "PENDING_CANCELLATION", "BLOCKED", "PAUSED"];
+
 async function scanWorkspace(admin: ReturnType<typeof createClient>, workspaceId?: string) {
-  let q = admin.from("v_client_kpi_snapshot").select("*");
+  let q = admin
+    .from("v_client_kpi_snapshot")
+    .select("*")
+    .not("status", "in", `(${INACTIVE_STATUSES.join(",")})`);
   if (workspaceId) q = q.eq("workspace_id", workspaceId);
   const { data: clients, error } = await q;
   if (error) throw new Error(error.message);
