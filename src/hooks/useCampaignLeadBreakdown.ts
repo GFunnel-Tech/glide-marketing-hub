@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useDateRange } from "@/hooks/useDateRange";
+import { readCreditScore } from "@/lib/leadCreditScore";
+
 
 export interface LeadBreakdown {
   scored: number;
