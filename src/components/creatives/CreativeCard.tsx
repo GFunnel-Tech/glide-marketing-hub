@@ -159,6 +159,21 @@ export function CreativeCard({
         <Stat label="CPL" value={cpl} />
         <Stat label="CTR" value={`${ad.ctr.toFixed(2)}%`} />
       </div>
+      {adsManagerUrl && (
+        <div className="px-3 pb-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(adsManagerUrl, "_blank", "noopener,noreferrer");
+            }}
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+          >
+            <ExternalLink className="h-3 w-3" /> Open in Meta Ads
+          </button>
+        </div>
+      )}
+
       {clientName && (
         <div className="px-3 pb-2 -mt-1">
           <span className="text-[10px] font-medium text-primary uppercase tracking-wider">{clientName}</span>
