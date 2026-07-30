@@ -26,11 +26,12 @@ async function buildSnapshots(admin: any, workspaceId: string, windowDays = 7): 
   const periodStartStr = periodStart.toISOString().slice(0, 10);
   const periodEndStr = periodEnd.toISOString().slice(0, 10);
 
-  // Get clients in workspace
+  // Get clients in workspace (skip cancelled/paused/blocked accounts)
   const { data: clients } = await admin
     .from("clients")
     .select("id, double_count, reported_leads, true_leads")
-    .eq("workspace_id", workspaceId);
+    .eq("workspace_id", workspaceId)
+    .not("status", "in", "(CANCELLED,PENDING_CANCELLATION,BLOCKED,PAUSED)");
 
   if (!clients?.length) return [];
 
