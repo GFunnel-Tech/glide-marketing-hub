@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useClients } from "@/hooks/useDatabase";
+import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useClientPath } from "@/lib/clientPath";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,7 +44,8 @@ export default function AiAssistant() {
   const { currentWorkspace } = useWorkspace();
   const clientPath = useClientPath();
   const workspaceId = currentWorkspace?.id;
-  const { data: clients = [], isLoading: clientsLoading } = useClients();
+  const { isLoading: clientsLoading } = useClients();
+  const clients = useVisibleClients();
   const qc = useQueryClient();
 
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);

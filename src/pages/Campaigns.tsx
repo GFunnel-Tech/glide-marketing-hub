@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useClients, useCampaigns } from "@/hooks/useDatabase";
+import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Search, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,7 @@ function isRejected(c: { issuesStatus?: string | null }) {
 }
 
 export default function Campaigns() {
-  const { data: clients = [] } = useClients();
+  const clients = useVisibleClients();
   const { data: campaignData = [], isLoading } = useCampaigns();
   const [searchParams] = useSearchParams();
   const initialFilter: StatusFilter =

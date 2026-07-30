@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMetaAds, classifyAd, type AdClass, type MetaAd } from "@/hooks/useMetaAds";
 import { useClients } from "@/hooks/useDatabase";
+import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { useCreativeRules } from "@/hooks/useCreativeRules";
 import { ConnectMetaPrompt } from "@/components/dashboard/ConnectMetaPrompt";
@@ -18,7 +19,7 @@ type StatusFilter = "all" | "best" | "worst" | "learning";
 
 export default function Creatives() {
   const { hasConnection, isLoading: connLoading } = useHasActiveMetaConnection();
-  const { data: clients = [] } = useClients();
+  const clients = useVisibleClients();
   const { data: ads = [], isLoading } = useMetaAds();
   const { rules, setRules, reset } = useCreativeRules();
   const [clientFilter, setClientFilter] = useState<string>("all");

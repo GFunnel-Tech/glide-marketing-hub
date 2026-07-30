@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useClients, useCampaigns, useClientsWithMetaAccount } from "@/hooks/useDatabase";
+import { useVisibleClients } from "@/hooks/useVisibleClients";
 import { useClientsRangeMetrics } from "@/hooks/useClientsRangeMetrics";
 import { EMPTY_CAMPAIGNS_RANGE_METRICS, useCampaignsRangeMetrics } from "@/hooks/useCampaignsRangeMetrics";
 import { useMetaAds, type MetaAd } from "@/hooks/useMetaAds";
@@ -182,7 +183,8 @@ type StatusFilter = "All" | "Active" | "Paused" | "Issues";
 export function ClientHierarchyTable() {
   const navigate = useNavigate();
   const clientPath = useClientPath();
-  const { data: clients = [], isLoading: clientsLoading } = useClients();
+  const { isLoading: clientsLoading } = useClients();
+  const clients = useVisibleClients();
   const { data: allCampaigns = [], isLoading: campLoading } = useCampaigns();
   const { data: allAds = [] } = useMetaAds();
   const { data: clientsWithMetaAcct = new Set<number>() } = useClientsWithMetaAccount();
