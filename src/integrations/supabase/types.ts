@@ -6264,6 +6264,8 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      lead_credit_answer: { Args: { _field_data: Json }; Returns: boolean }
+      lead_credit_scored: { Args: { _field_data: Json }; Returns: boolean }
       lookup_client_invite: { Args: { _code_or_token: string }; Returns: Json }
       notif_pref_enabled: {
         Args: { _event_type: string; _user_id: string; _workspace_id: string }
