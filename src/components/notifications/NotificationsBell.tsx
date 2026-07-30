@@ -23,7 +23,10 @@ export function NotificationsBell() {
   const markAll = useMarkAllNotificationsRead();
   const navigate = useNavigate();
   const unread = notifications.filter((n) => !n.read_at).length;
-  const recent = notifications.slice(0, 8);
+  // Payment issues are top priority: unread billing alerts always float to the top.
+  const rank = (n: any) => (n.type === "payment_failed" && !n.read_at ? 0 : 1);
+  const recent = [...notifications].sort((a, b) => rank(a) - rank(b)).slice(0, 8);
+  const criticalUnread = notifications.filter((n) => n.type === "payment_failed" && !n.read_at).length;
 
   return (
     <DropdownMenu>
@@ -34,7 +37,10 @@ export function NotificationsBell() {
         >
           <Bell className="h-4 w-4" />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+            <span className={cn(
+              "absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center",
+              criticalUnread > 0 ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
+            )}>
               {unread > 99 ? "99+" : unread}
             </span>
           )}
@@ -68,10 +74,14 @@ export function NotificationsBell() {
                 }}
                 className={cn(
                   "w-full text-left px-3 py-2.5 border-b border-border hover:bg-accent/50 transition-colors flex gap-2",
-                  !n.read_at && "bg-primary/5"
+                  !n.read_at && "bg-primary/5",
+                  n.type === "payment_failed" && !n.read_at && "bg-destructive/5"
                 )}
               >
-                <span className={cn("mt-1.5 h-2 w-2 rounded-full shrink-0", !n.read_at ? "bg-primary" : "bg-transparent")} />
+                <span className={cn(
+                  "mt-1.5 h-2 w-2 rounded-full shrink-0",
+                  !n.read_at ? (n.type === "payment_failed" ? "bg-destructive" : "bg-primary") : "bg-transparent"
+                )} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{n.title}</p>
                   {n.body && <p className="text-xs text-muted-foreground line-clamp-2">{n.body}</p>}
