@@ -61,9 +61,10 @@ Return ONLY a JSON object, no prose around it, with this exact shape:
 
 Rules:
 - 0-5 highlights, ordered most-to-least urgent. Skip if nothing notable. Each highlight is a CONCERN that needs awareness — it explains WHAT is wrong.
-- 0-5 suggested_tasks, each genuinely actionable today. A task is the concrete WORK that fixes a concern.
+- 0-4 suggested_tasks MAX, each genuinely actionable today. A task is the concrete WORK that fixes a concern. Fewer, sharper tasks beat a long list.
 - DO NOT DUPLICATE between highlights and tasks. If a concern is a call to action ("Review X", "Fix Y"), put it ONLY in suggested_tasks. If it's an observation ("CPL up 40%"), put it ONLY in highlights. Never restate the same thing in both sections.
-- DO NOT create two tasks for the same client + same problem — pick the single best action.
+- MAXIMUM ONE task per client. If a client has several problems, combine them into a single task with the highest-impact action first.
+- Never propose a task that already exists in tasks.existing_open (same client, same work) — even if worded differently. Those are already on the board.
 - CPL breaches are HIGH priority. If a client's CPL is above target, the CPL fix task must have priority "high" and appear first.
 - Task titles must be specific and actionable: start with a verb, name the client + metric + concrete next step (e.g. "Cut CPL for Acme — pause worst 2 ad sets, launch new hook creative"). Never write vague tasks like "Review client", "Check performance", "Look at metrics".
 - The "reason" field must cite the specific number that triggered the task (CPL value, spend drop %, churn score, etc.).
