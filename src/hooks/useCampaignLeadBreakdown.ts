@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useDateRange } from "@/hooks/useDateRange";
+import { readCreditScore } from "@/lib/leadCreditScore";
+
 
 export interface LeadBreakdown {
   scored: number;
@@ -59,23 +61,13 @@ export function useCampaignLeadBreakdown() {
       const ad: Record<string, { scored: number; above640: number }> = {};
 
       for (const row of data ?? []) {
-        const fields = Array.isArray(row.field_data) ? row.field_data : [];
-        let hasScore = false;
-        let isAbove = false;
-        for (const f of fields) {
-          const name = String(f?.name ?? "").toLowerCase();
-          if (!name.includes("credit_score") && !name.includes("credit score")) continue;
-          const val = String(f?.values?.[0] ?? "").toLowerCase();
-          if (!val) continue;
-          hasScore = true;
-          if (val.startsWith("above")) isAbove = true;
-          break;
-        }
+        const { hasScore, isAbove } = readCreditScore(row.field_data);
         if (!hasScore) continue;
         inc(camp, row.campaign_id, isAbove);
         inc(adset, row.adset_id, isAbove);
         inc(ad, row.ad_id, isAbove);
       }
+
 
       const finalize = (b: Record<string, { scored: number; above640: number }>) => {
         const out: Record<string, LeadBreakdown> = {};
