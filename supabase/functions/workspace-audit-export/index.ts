@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
 
     let clientIds: number[] = [];
     if (valid.some((t) => clientSet.has(t))) {
-      const rows = await fetchAll(admin, "clients", (q) => q.eq("workspace_id", workspaceId).select("id"));
+      const rows = await fetchAll(admin, "clients", (q) => q.eq("workspace_id", workspaceId));
       clientIds = rows.map((c: any) => c.id);
     }
     const chunked = <T,>(arr: T[], n: number) => {
