@@ -225,6 +225,13 @@ async function gatherSignals(admin: ReturnType<typeof createClient>, workspaceId
       due_today_count: dueToday.length,
       overdue: overdue.slice(0, 15).map(summarizeTask),
       due_today: dueToday.slice(0, 15).map(summarizeTask),
+      // Full list of already-open tasks so the model (and the sanitizer) never
+      // proposes work that's already on the board.
+      existing_open: tasks.slice(0, 200).map((t: any) => ({
+        client_id: t.client_id ?? null,
+        client: nameOf(t.client_id),
+        title: t.title || (t.content ?? "").slice(0, 120),
+      })),
     },
     clients: clients.map((c) => ({
       id: c.id,
