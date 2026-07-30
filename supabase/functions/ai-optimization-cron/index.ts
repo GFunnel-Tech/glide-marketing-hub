@@ -54,6 +54,16 @@ Deno.serve(async (req) => {
     if (error) return json({ error: error.message }, 500);
     if (!due?.length) return json({ ran: 0 });
 
+    // Never run scheduled optimizations for off/terminal clients.
+    const { data: liveClients } = await admin
+      .from("clients")
+      .select("id")
+      .in("id", due.map((d: any) => d.client_id).filter(Boolean))
+      .not("status", "in", "(CANCELLED,PENDING_CANCELLATION,BLOCKED,PAUSED)");
+    const liveIds = new Set((liveClients ?? []).map((c: any) => c.id));
+    const schedules = due.filter((s: any) => !s.client_id || liveIds.has(s.client_id));
+    if (!schedules.length) return json({ ran: 0, skipped_inactive: due.length });
+
     const results: any[] = [];
     for (const s of due) {
       const prompt = s.prompt_override?.trim()
