@@ -3,6 +3,7 @@
 // customer email to a client in the workspace, upserts into stripe_charges,
 // and records payment_events for failures/refunds/disputes.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { recordPaymentEvent } from "../_shared/paymentEvents.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -199,11 +200,23 @@ Deno.serve(async (req) => {
       starting_after = data[data.length - 1].id;
     }
 
-    // Insert payment events (ignore conflicts on stripe_charge_id+event_type if unique)
-    if (paymentEvents.length > 0) {
-      await admin
-        .from("payment_events")
-        .upsert(paymentEvents, { onConflict: "stripe_charge_id,event_type", ignoreDuplicates: true });
+    // Record payment events through the shared helper so each one also fans
+    // out a high-priority notification to the workspace.
+    for (const ev of paymentEvents) {
+      await recordPaymentEvent(admin, {
+        workspaceId: ev.workspace_id,
+        clientId: ev.client_id ?? null,
+        stripeUserId: ev.stripe_user_id ?? null,
+        stripeChargeId: ev.stripe_charge_id ?? null,
+        customerEmail: ev.customer_email ?? null,
+        eventType: ev.event_type,
+        amount: ev.amount,
+        currency: ev.currency,
+        failureCode: ev.failure_code ?? null,
+        failureMessage: ev.failure_message ?? null,
+        raw: ev.raw,
+        createdAt: ev.created_at,
+      });
     }
 
     await admin

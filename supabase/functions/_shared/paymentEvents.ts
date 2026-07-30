@@ -104,15 +104,10 @@ export async function recordPaymentEvent(admin: any, input: RecordPaymentEventIn
     input.customerEmail,
   ].filter(Boolean).join(" · ").slice(0, 200);
 
+  // Payment problems are the highest-priority signal in the product:
+  // they are always delivered, regardless of notification preferences.
   const rows: any[] = [];
   for (const m of members ?? []) {
-    // Check pref inline via RPC
-    const { data: enabled } = await admin.rpc("notif_pref_enabled", {
-      _user_id: m.user_id,
-      _workspace_id: input.workspaceId,
-      _event_type: "payment_failed",
-    });
-    if (enabled === false) continue;
     rows.push({
       user_id: m.user_id,
       workspace_id: input.workspaceId,
@@ -128,6 +123,7 @@ export async function recordPaymentEvent(admin: any, input: RecordPaymentEventIn
         amount: input.amount,
         currency: input.currency,
         failure_code: input.failureCode,
+        priority: "critical",
       },
     });
   }
