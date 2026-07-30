@@ -337,8 +337,13 @@ export function ClientAccountMapper() {
         if (error) throw error;
       }
       toast.success("Mapping saved");
+      // Reset the picker so the next account can be linked immediately
+      setSelectedClientId(null);
+      setSelectedGhlId(null);
+      setSelectedMetaId(null);
       await load();
       invalidateDashboard();
+
     } catch (e: any) {
       toast.error(e.message ?? "Failed to save mapping");
     } finally {
