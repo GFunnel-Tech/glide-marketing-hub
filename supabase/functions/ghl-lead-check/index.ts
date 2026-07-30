@@ -92,6 +92,8 @@ Deno.serve(async (req) => {
       stats.checked++;
       try {
         const client = lead.client_id ? clientMap.get(lead.client_id) : null;
+        // Skip cancelled/paused/blocked accounts entirely — no checks, no alerts.
+        if (client && INACTIVE.has(String((client as any).status))) continue;
         const locationId = client?.ghl_location_id;
         const ghlKey = resolveGhlKey(locKeyMap, locationId, cfg?.ghl_api_key);
         if (!ghlKey) continue;
