@@ -159,14 +159,30 @@ export function MetaAccountsForClient({ clientId }: { clientId: number }) {
     if (!acct) return;
     setBusy(true);
     try {
-      if (acct.client_id == null) {
-        // Unowned → set direct ownership
-        const { error } = await (supabase as any)
+      if (acct.client_id == null || acct.client_id === clientId) {
+        // Unowned (or already ours) → set direct ownership
+        const { data, error } = await (supabase as any)
           .from("meta_ad_accounts")
           .update({ client_id: clientId })
-          .eq("id", acct.id);
+          .eq("id", acct.id)
+          .select("id");
         if (error) throw error;
-      } else if (acct.client_id !== clientId) {
+        if (!data?.length) throw new Error("Update was blocked — you may not have permission to change this ad account.");
+      } else if (takeOwnership) {
+        // Move ownership away from the other client
+        const { data, error } = await (supabase as any)
+          .from("meta_ad_accounts")
+          .update({ client_id: clientId })
+          .eq("id", acct.id)
+          .select("id");
+        if (error) throw error;
+        if (!data?.length) throw new Error("Update was blocked — you may not have permission to change this ad account.");
+        await (supabase as any)
+          .from("meta_ad_account_clients")
+          .delete()
+          .eq("ad_account_id", acct.id)
+          .eq("client_id", clientId);
+      } else {
         // Already owned by another client → share it via membership table
         const { error } = await (supabase as any)
           .from("meta_ad_account_clients")
@@ -176,7 +192,7 @@ export function MetaAccountsForClient({ clientId }: { clientId: number }) {
           );
         if (error) throw error;
       }
-      toast.success("Meta ad account linked");
+      toast.success(takeOwnership ? "Meta ad account moved to this client" : "Meta ad account linked");
       setPickerValue("");
       await refresh();
     } catch (e: any) {
@@ -189,19 +205,32 @@ export function MetaAccountsForClient({ clientId }: { clientId: number }) {
   const unlinkAccount = async (acct: Row) => {
     setBusy(true);
     try {
+      let changed = false;
       if (acct.client_id === clientId) {
-        const { error } = await (supabase as any)
+        const { data, error } = await (supabase as any)
           .from("meta_ad_accounts")
           .update({ client_id: null })
-          .eq("id", acct.id);
+          .eq("id", acct.id)
+          .select("id");
         if (error) throw error;
+        if (!data?.length) {
+          throw new Error("Unlink was blocked — you may not have permission to change this ad account.");
+        }
+        changed = true;
       }
       // Always also clean the share row if present
-      await (supabase as any)
+      const { data: removedShares, error: shareErr } = await (supabase as any)
         .from("meta_ad_account_clients")
         .delete()
         .eq("ad_account_id", acct.id)
-        .eq("client_id", clientId);
+        .eq("client_id", clientId)
+        .select("ad_account_id");
+      if (shareErr) throw shareErr;
+      if (removedShares?.length) changed = true;
+
+      if (!changed) {
+        throw new Error("Nothing to unlink — this ad account is owned by a different client.");
+      }
       toast.success("Meta ad account unlinked");
       await refresh();
     } catch (e: any) {
@@ -210,6 +239,7 @@ export function MetaAccountsForClient({ clientId }: { clientId: number }) {
       setBusy(false);
     }
   };
+
 
   return (
     <TooltipProvider delayDuration={150}>
