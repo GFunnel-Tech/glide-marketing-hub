@@ -268,10 +268,26 @@ export function MetaAccountsForClient({ clientId }: { clientId: number }) {
 
             <Button size="sm" className="h-9 gap-1.5" onClick={linkAccount} disabled={!pickerValue || busy}>
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-              Link
+              {takeOwnership ? "Move" : "Link"}
             </Button>
           </div>
+          </div>
+          {pickerValue && (allAccounts ?? []).find((a) => a.id === pickerValue)?.client_id != null && (
+            <label className="flex items-start gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={takeOwnership}
+                onChange={(e) => setTakeOwnership(e.target.checked)}
+              />
+              <span>
+                This ad account is currently owned by another client. Check to <strong>move</strong> it to this
+                client (removes it from the other one); leave unchecked to share it across both.
+              </span>
+            </label>
+          )}
         </div>
+
 
         {isLoading ? (
           <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
