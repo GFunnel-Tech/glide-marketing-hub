@@ -159,6 +159,23 @@ export function ClientAccountMapper() {
     return m;
   }, [metaAccs]);
 
+  const selectGhlAccount = (account: GhlLoc) => {
+    if (selectedGhlId === account.id) {
+      setSelectedGhlId(null);
+      return;
+    }
+
+    setSelectedGhlId(account.id);
+    const linkedClient = clientByGhlLoc.get(account.location_id);
+    if (!linkedClient) return;
+
+    // A linked GHL row represents an existing mapping. Hydrate the complete
+    // mapping so the status bar never reports Meta as missing when it is saved.
+    setSelectedClientId(linkedClient.id);
+    const linkedMeta = metasByClientId.get(linkedClient.id)?.[0];
+    setSelectedMetaId(linkedMeta?.id ?? null);
+  };
+
   const ghlFiltered = useMemo(() => {
     const q = ghlSearch.trim().toLowerCase();
     if (!q) return ghlLocs;
@@ -451,7 +468,7 @@ export function ClientAccountMapper() {
                 key={g.id}
                 active={isActive}
                 conflict={conflict && isActive}
-                onClick={() => setSelectedGhlId(isActive ? null : g.id)}
+                onClick={() => selectGhlAccount(g)}
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-foreground truncate">{g.name || "Unnamed"}</div>
