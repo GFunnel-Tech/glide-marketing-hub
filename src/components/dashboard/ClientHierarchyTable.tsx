@@ -404,13 +404,18 @@ export function ClientHierarchyTable() {
         if (archivedSet.has(`ad:${ad.id}`)) continue;
         if (ad.adset_id && archivedSet.has(`adset:${ad.adset_id}`)) continue;
       }
+      // Match the campaign-level status filter so a filtered view never mixes
+      // active and paused children under the same row.
+      const adActive = (ad as any).effective_status === "ACTIVE";
+      if (statusFilter === "Active" && !adActive) continue;
+      if (statusFilter === "Paused" && adActive) continue;
       const keepForAgency = isAgencyCampaignId(ad.campaign_id);
       if (hideZero && !keepForAgency && !(rangedAd.impressions || 0) && !(rangedAd.spend || 0) && !(rangedAd.clicks || 0) && !(rangedAd.leads || 0)) continue;
       if (!byCamp.has(ad.campaign_id)) byCamp.set(ad.campaign_id, []);
       byCamp.get(ad.campaign_id)!.push(rangedAd);
     }
     return byCamp;
-  }, [allAds, campaignRangeMetrics, showArchived, archivedSet, hideZero, campaignToClientId, agencyClientIds]);
+  }, [allAds, campaignRangeMetrics, showArchived, archivedSet, hideZero, campaignToClientId, agencyClientIds, statusFilter]);
 
 
   // Compute which clients have ANY non-zero campaign activity (regardless of archive state)
