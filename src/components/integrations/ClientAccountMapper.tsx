@@ -220,10 +220,14 @@ export function ClientAccountMapper() {
 
   const linkMetaToClient = async (metaAccId: string, clientId: number | null) => {
     setBusy(true);
-    const { error } = await (supabase as any).from("meta_ad_accounts")
-      .update({ client_id: clientId }).eq("id", metaAccId);
+    const { data, error } = await (supabase as any).from("meta_ad_accounts")
+      .update({ client_id: clientId }).eq("id", metaAccId).select("id");
     setBusy(false);
     if (error) { toast.error(error.message); return; }
+    if (!data?.length) {
+      toast.error("Change was blocked — you may not have permission to edit this ad account.");
+      return;
+    }
     toast.success(clientId ? "Ad account linked" : "Ad account unlinked");
     await load();
     invalidateDashboard();
@@ -231,14 +235,19 @@ export function ClientAccountMapper() {
 
   const linkGhlToClient = async (clientId: number, locationId: string | null) => {
     setBusy(true);
-    const { error } = await (supabase as any).from("clients")
-      .update({ ghl_location_id: locationId }).eq("id", clientId);
+    const { data, error } = await (supabase as any).from("clients")
+      .update({ ghl_location_id: locationId }).eq("id", clientId).select("id");
     setBusy(false);
     if (error) { toast.error(error.message); return; }
+    if (!data?.length) {
+      toast.error("Change was blocked — you may not have permission to edit this client.");
+      return;
+    }
     toast.success(locationId ? "Sub-account linked" : "Sub-account unlinked");
     await load();
     invalidateDashboard();
   };
+
 
   const createClientFromSelection = async () => {
     const ghlName = selectedGhl ? (selectedGhl.name || selectedGhl.business_name || "").trim() : "";
