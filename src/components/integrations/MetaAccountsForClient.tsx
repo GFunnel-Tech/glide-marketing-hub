@@ -247,23 +247,25 @@ export function MetaAccountsForClient({ clientId }: { clientId: number }) {
     <TooltipProvider delayDuration={150}>
       <div className="space-y-3">
         {/* Picker */}
-        <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Link2 className="h-3.5 w-3.5" /> Link a Meta ad account
           </div>
           <div className="flex flex-1 items-center gap-2">
-            <Select value={pickerValue} onValueChange={setPickerValue} disabled={busy || !pickerOptions.length}>
+            <Select value={pickerValue} onValueChange={(v) => { setPickerValue(v); setTakeOwnership(false); }} disabled={busy || !pickerOptions.length}>
               <SelectTrigger className="h-9 flex-1 text-sm">
                 <SelectValue placeholder={pickerOptions.length ? "Select a Meta ad account…" : "All workspace accounts are already linked"} />
               </SelectTrigger>
               <SelectContent>
                 {pickerOptions.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {(a.account_name || a.act_id)}{a.currency ? ` · ${a.currency}` : ""}{a.client_id != null ? " · shared" : ""}
+                    {(a.account_name || a.act_id)}{a.currency ? ` · ${a.currency}` : ""}{a.client_id != null ? " · owned by another client" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
             <Button size="sm" className="h-9 gap-1.5" onClick={linkAccount} disabled={!pickerValue || busy}>
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
               Link
