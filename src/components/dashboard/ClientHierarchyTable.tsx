@@ -418,14 +418,18 @@ export function ClientHierarchyTable() {
   }, [allAds, campaignRangeMetrics, showArchived, archivedSet, hideZero, campaignToClientId, agencyClientIds, statusFilter]);
 
 
-  // Compute which clients have ANY non-zero campaign activity (regardless of archive state)
+  // Compute which clients have ANY non-zero campaign activity (regardless of archive state).
+  // A client that owns campaigns counts as active in the workflow even when the
+  // selected date range has no spend yet (paused week, sync lag, new launch) —
+  // otherwise real accounts silently vanish from "All Clients".
   const clientsWithActivity = useMemo(() => {
     const s = new Set<string>();
     for (const [cid, metric] of Object.entries(rangeMetrics as Record<string, any>)) {
       if ((metric?.spend || 0) > 0 && (metric?.impressions || 0) > 0) s.add(String(cid));
     }
+    for (const c of allCampaigns as any[]) s.add(String(c.clientId));
     return s;
-  }, [rangeMetrics]);
+  }, [rangeMetrics, allCampaigns]);
 
   // A client is considered "fully synced" when it is (1) linked to a GHL
   // sub-account and (2) has at least one Meta ad account mapped to it.
