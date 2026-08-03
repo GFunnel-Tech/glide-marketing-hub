@@ -404,13 +404,18 @@ export function ClientHierarchyTable() {
         if (archivedSet.has(`ad:${ad.id}`)) continue;
         if (ad.adset_id && archivedSet.has(`adset:${ad.adset_id}`)) continue;
       }
+      // Match the campaign-level status filter so a filtered view never mixes
+      // active and paused children under the same row.
+      const adActive = (ad as any).effective_status === "ACTIVE";
+      if (statusFilter === "Active" && !adActive) continue;
+      if (statusFilter === "Paused" && adActive) continue;
       const keepForAgency = isAgencyCampaignId(ad.campaign_id);
       if (hideZero && !keepForAgency && !(rangedAd.impressions || 0) && !(rangedAd.spend || 0) && !(rangedAd.clicks || 0) && !(rangedAd.leads || 0)) continue;
       if (!byCamp.has(ad.campaign_id)) byCamp.set(ad.campaign_id, []);
       byCamp.get(ad.campaign_id)!.push(rangedAd);
     }
     return byCamp;
-  }, [allAds, campaignRangeMetrics, showArchived, archivedSet, hideZero, campaignToClientId, agencyClientIds]);
+  }, [allAds, campaignRangeMetrics, showArchived, archivedSet, hideZero, campaignToClientId, agencyClientIds, statusFilter]);
 
 
   // Compute which clients have ANY non-zero campaign activity (regardless of archive state)
@@ -438,6 +443,9 @@ export function ClientHierarchyTable() {
         const hay = `${c.name ?? ""} ${c.brand ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
+      // Active / Paused / Issues are campaign-level filters: only clients that
+      // still have at least one matching campaign belong in the list.
+      if (statusFilter !== "All" && (campaignsByClient.get(String(c.id))?.length ?? 0) === 0) return false;
       if (c.isAgencyAccount) return true; // never hide the agency's own account
       const synced = isFullySynced(c);
       const hasActivity = clientsWithActivity.has(String(c.id));
@@ -456,7 +464,7 @@ export function ClientHierarchyTable() {
       return 2;
     };
     return [...filtered].sort((a, b) => rank(a) - rank(b));
-  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero, search]);
+  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero, search, statusFilter, campaignsByClient]);
 
   const handleQuickSync = async () => {
     setSyncing(true);
