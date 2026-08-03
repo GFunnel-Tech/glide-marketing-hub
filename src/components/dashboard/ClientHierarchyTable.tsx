@@ -438,6 +438,9 @@ export function ClientHierarchyTable() {
         const hay = `${c.name ?? ""} ${c.brand ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
+      // Active / Paused / Issues are campaign-level filters: only clients that
+      // still have at least one matching campaign belong in the list.
+      if (statusFilter !== "All" && (campaignsByClient.get(String(c.id))?.length ?? 0) === 0) return false;
       if (c.isAgencyAccount) return true; // never hide the agency's own account
       const synced = isFullySynced(c);
       const hasActivity = clientsWithActivity.has(String(c.id));
