@@ -29,6 +29,8 @@ export function MetaAccountsForClient({ clientId }: { clientId: number }) {
   const wsId = currentWorkspace?.id;
   const qc = useQueryClient();
   const [pickerValue, setPickerValue] = useState<string>("");
+  const [takeOwnership, setTakeOwnership] = useState(false);
+
   const [busy, setBusy] = useState(false);
   const [mapperAccount, setMapperAccount] = useState<Row | null>(null);
 
