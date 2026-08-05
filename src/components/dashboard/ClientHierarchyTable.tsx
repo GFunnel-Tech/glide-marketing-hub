@@ -366,9 +366,11 @@ export function ClientHierarchyTable() {
         return (
           c.name.toLowerCase().includes(s) ||
           (c.brand || "").toLowerCase().includes(s) ||
-          (cl?.name || "").toLowerCase().includes(s) ||
-          (cl?.brand || "").toLowerCase().includes(s)
+          `${(cl as any)?.name ?? ""} ${(cl as any)?.brand ?? ""} ${(cl as any)?.accountName ?? ""} ${(cl as any)?.ghlName ?? ""}`
+            .toLowerCase()
+            .includes(s)
         );
+
       });
     }
     return list;
