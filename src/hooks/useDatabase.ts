@@ -192,13 +192,48 @@ async function fetchScoped<T>(table: string, workspaceId: string | null): Promis
   return (data || []) as T[];
 }
 
+// Fetch the workspace's GHL sub-account names keyed by location id, so client
+// rows can display the GHL name while remaining searchable by their own name.
+async function fetchGhlNames(workspaceId: string | null): Promise<Record<string, string>> {
+  if (!workspaceId) return {};
+  const { data } = await (supabase as any)
+    .from("ghl_locations")
+    .select("location_id, name, business_name")
+    .eq("workspace_id", workspaceId);
+  const map: Record<string, string> = {};
+  for (const r of data || []) {
+    const n = String(r.name || r.business_name || "").trim();
+    if (n) map[r.location_id] = n;
+  }
+  return map;
+}
+
+/** Attach ghlName + a display name sourced from the linked GHL sub-account. */
+function withGhlName<T extends { ghlLocationId?: string | null; name: string }>(
+  c: T,
+  ghlNames: Record<string, string>
+) {
+  const ghlName = c.ghlLocationId ? ghlNames[c.ghlLocationId] ?? null : null;
+  return {
+    ...c,
+    ghlName,
+    accountName: c.name,
+    name: ghlName || c.name,
+  };
+}
+
 export function useClients() {
   const { currentWorkspace } = useWorkspace();
   const wsId = currentWorkspace?.id ?? null;
   return useQuery({
     queryKey: ["clients", wsId],
-    queryFn: () => fetchScoped<DbClient>("clients", wsId),
-    select: (data) => data.map(toClient),
+    queryFn: async () => {
+      const [rows, ghlNames] = await Promise.all([
+        fetchScoped<DbClient>("clients", wsId),
+        fetchGhlNames(wsId),
+      ]);
+      return rows.map((r) => withGhlName(toClient(r), ghlNames));
+    },
     enabled: !!wsId,
   });
 }
@@ -213,11 +248,13 @@ export function useClient(id: number) {
         .from("clients").select("*")
         .eq("id", id).eq("workspace_id", wsId).single();
       if (error) throw error;
-      return toClient(data as DbClient);
+      const ghlNames = await fetchGhlNames(wsId);
+      return withGhlName(toClient(data as DbClient), ghlNames);
     },
     enabled: !!id && !!wsId,
   });
 }
+
 
 export function useCampaigns() {
   const { currentWorkspace } = useWorkspace();
