@@ -446,7 +446,7 @@ export function ClientHierarchyTable() {
       const archived = archivedSet.has(`client:${c.id}`);
       if (archived) return false;
       if (q) {
-        const hay = `${c.name ?? ""} ${c.brand ?? ""}`.toLowerCase();
+        const hay = `${c.name ?? ""} ${c.brand ?? ""} ${(c as any).accountName ?? ""} ${(c as any).ghlName ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       // Active / Paused / Issues are campaign-level filters: only clients that
