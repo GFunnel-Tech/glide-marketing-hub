@@ -366,9 +366,11 @@ export function ClientHierarchyTable() {
         return (
           c.name.toLowerCase().includes(s) ||
           (c.brand || "").toLowerCase().includes(s) ||
-          (cl?.name || "").toLowerCase().includes(s) ||
-          (cl?.brand || "").toLowerCase().includes(s)
+          `${(cl as any)?.name ?? ""} ${(cl as any)?.brand ?? ""} ${(cl as any)?.accountName ?? ""} ${(cl as any)?.ghlName ?? ""}`
+            .toLowerCase()
+            .includes(s)
         );
+
       });
     }
     return list;
@@ -444,7 +446,7 @@ export function ClientHierarchyTable() {
       const archived = archivedSet.has(`client:${c.id}`);
       if (archived) return false;
       if (q) {
-        const hay = `${c.name ?? ""} ${c.brand ?? ""}`.toLowerCase();
+        const hay = `${c.name ?? ""} ${c.brand ?? ""} ${(c as any).accountName ?? ""} ${(c as any).ghlName ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       // Active / Paused / Issues are campaign-level filters: only clients that
