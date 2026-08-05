@@ -401,7 +401,13 @@ export function ClientTable() {
     } else {
       list = list.filter((c) => c.status === filter);
     }
-    if (search) list = list.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.brand.toLowerCase().includes(search.toLowerCase()));
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter((c: any) =>
+        `${c.name ?? ""} ${c.brand ?? ""} ${c.accountName ?? ""} ${c.ghlName ?? ""}`.toLowerCase().includes(s)
+      );
+    }
+
     const sorted = [...list].sort((a, b) => {
       if (sortKey === "status") {
         const diff = statusOrder[a.status] - statusOrder[b.status];
