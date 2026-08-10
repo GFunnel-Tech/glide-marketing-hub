@@ -1,7 +1,8 @@
-// Auto-pause clients that are not actively spending.
-// Any client currently in an "active" status (GREEN/YELLOW/RED/LEARNING/NEW/RELAUNCH/LAUNCHING)
-// whose Meta spend over the last 2 days is $0 gets flipped to PAUSED so the main list
-// stays focused on accounts that are actually delivering today.
+// Auto-pause clients that have gone dark after previously delivering.
+// Only long-running graded accounts (GREEN/YELLOW/RED/LEARNING) are eligible, they must
+// have at least one linked Meta ad account, and they must have had ZERO spend for the
+// last 14 days while having spent something in the 60 days before that.
+// New / launching / relaunching clients are never auto-paused.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -11,7 +12,9 @@ const corsHeaders = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const ACTIVE_STATUSES = ["NEW", "LAUNCHING", "LEARNING", "RELAUNCH", "GREEN", "YELLOW", "RED"];
+const ACTIVE_STATUSES = ["LEARNING", "GREEN", "YELLOW", "RED"];
+const DARK_DAYS = 14;
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
