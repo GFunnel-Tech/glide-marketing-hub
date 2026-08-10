@@ -41,9 +41,12 @@ Deno.serve(async (req) => {
     const { data: clients, error } = await q;
     if (error) throw error;
 
-    const since = new Date();
-    since.setUTCDate(since.getUTCDate() - 1); // yesterday + today
-    const sinceDate = since.toISOString().slice(0, 10);
+    const dark = new Date();
+    dark.setUTCDate(dark.getUTCDate() - DARK_DAYS);
+    const darkDate = dark.toISOString().slice(0, 10);
+    const prior = new Date();
+    prior.setUTCDate(prior.getUTCDate() - (DARK_DAYS + 60));
+    const priorDate = prior.toISOString().slice(0, 10);
 
     const paused: { id: number; name: string }[] = [];
     const kept: number[] = [];
@@ -59,23 +62,31 @@ Deno.serve(async (req) => {
           .eq("client_id", c.id);
         const accIds = (accs ?? []).map((a: any) => a.id);
         if (accIds.length === 0) {
-          // No Meta accounts linked: not "actively spending" — pause it
-          paused.push({ id: c.id, name: c.name });
+          // Never auto-pause clients that aren't wired to Meta yet — they're
+          // usually mid-setup and must stay visible on the dashboard.
+          kept.push(c.id);
           return;
         }
         const { data: rows } = await admin
           .from("meta_insights_daily")
-          .select("spend")
+          .select("spend,date")
           .in("ad_account_id", accIds)
-          .gte("date", sinceDate);
-        const spend = (rows ?? []).reduce((s: number, r: any) => s + Number(r.spend || 0), 0);
-        if (spend <= 0) {
+          .gte("date", priorDate);
+        const recent = (rows ?? [])
+          .filter((r: any) => r.date >= darkDate)
+          .reduce((s: number, r: any) => s + Number(r.spend || 0), 0);
+        const historical = (rows ?? [])
+          .filter((r: any) => r.date < darkDate)
+          .reduce((s: number, r: any) => s + Number(r.spend || 0), 0);
+        // Only pause accounts that used to spend and have been dark for 14+ days.
+        if (recent <= 0 && historical > 0) {
           paused.push({ id: c.id, name: c.name });
         } else {
           kept.push(c.id);
         }
       }));
     }
+
 
     if (!dryRun && paused.length > 0) {
       const ids = paused.map((p) => p.id);
