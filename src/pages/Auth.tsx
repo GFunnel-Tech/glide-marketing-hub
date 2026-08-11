@@ -85,15 +85,18 @@ export default function Auth() {
     setLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/auth`,
+        redirect_uri: window.location.origin,
       });
       if (result.error) throw result.error;
       if (result.redirected) return;
+      window.location.href = "/";
     } catch (err: any) {
-      toast.error(err.message || "Google sign-in failed");
+      console.error("Google sign-in error", err);
+      toast.error(err?.message || "Google sign-in failed");
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-subtle p-6">
