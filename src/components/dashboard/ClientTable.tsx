@@ -20,6 +20,8 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
 import { AdAccountSelector } from "./AdAccountSelector";
+import { NoMetaAccountWarning } from "./NoMetaAccountWarning";
+
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useClientPath } from "@/lib/clientPath";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,10 +96,14 @@ const BUILTIN_COLUMNS: ColDef[] = [
     key: "name", label: "Client", channel: "all", always: true, sortKey: "name", width: "w-48",
     render: (c) => (
       <div>
-        <p className="font-medium text-foreground">{c.name}</p>
+        <p className="flex items-center gap-1.5 font-medium text-foreground">
+          <span className="truncate">{c.name}</span>
+          <NoMetaAccountWarning clientId={c.id} />
+        </p>
         <p className="text-xs text-muted-foreground">{c.brand}</p>
       </div>
     ),
+
   },
   {
     key: "status", label: "Status", channel: "all", sortKey: "status", width: "w-24",
