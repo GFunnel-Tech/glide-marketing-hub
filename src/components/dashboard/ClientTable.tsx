@@ -20,6 +20,8 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { KpiLabel } from "@/components/kpi/KpiLabel";
 import { AdAccountSelector } from "./AdAccountSelector";
+import { NoMetaAccountWarning } from "./NoMetaAccountWarning";
+
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useClientPath } from "@/lib/clientPath";
 import { supabase } from "@/integrations/supabase/client";
