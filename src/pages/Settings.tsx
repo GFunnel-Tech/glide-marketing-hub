@@ -27,7 +27,15 @@ import { AuditExportPanel } from "@/components/settings/AuditExportPanel";
 import { NOTIFICATION_EVENTS, useNotificationPreferences, type NotificationEventType } from "@/hooks/useNotificationPreferences";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
-const integrations = [
+const integrations: Array<{
+  name: string;
+  type: string;
+  connected: boolean;
+  lastSync: string | null;
+  url?: string;
+  extra?: string;
+  docUrl?: string;
+}> = [
   { name: "Meta Ads API", type: "oauth", connected: true, lastSync: "2 min ago" },
   { name: "GoHighLevel", type: "apikey", connected: true, lastSync: "5 min ago" },
   { name: "ClickUp", type: "oauth", connected: false, lastSync: null },

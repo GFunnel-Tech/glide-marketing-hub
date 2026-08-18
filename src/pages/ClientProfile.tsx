@@ -733,11 +733,6 @@ function ClientProfileInner() {
                         : null,
                       hint: "Link a GHL sub-account first",
                     },
-                    {
-                      label: "View in Plai",
-                      url: client.plaiConnected ? "https://app.plai.io" : null,
-                      hint: "Not connected to Plai",
-                    },
                   ].map((l) =>
                     l.url ? (
                       <a
