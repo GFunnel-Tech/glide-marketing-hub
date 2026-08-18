@@ -155,12 +155,6 @@ export const KPI_GLOSSARY: Record<string, KpiDef> = {
     short: "BM Type",
     description: "Which Meta Business Manager owns this client's ad account — affects access, billing, and reporting.",
   },
-  plai: {
-    key: "plai",
-    name: "Plai Integration",
-    short: "Plai",
-    description: "Whether this client's ad account is connected to Plai for automated optimization.",
-  },
 };
 
 const NORMALIZE = (s: string) => s.toLowerCase().replace(/[\s_-]/g, "");
