@@ -1910,7 +1910,6 @@ export type Database = {
           launched_at: string | null
           leads: number
           name: string
-          plai_connected: boolean
           portal_slug: string | null
           reported_leads: number
           spend: number
@@ -1952,7 +1951,6 @@ export type Database = {
           launched_at?: string | null
           leads?: number
           name: string
-          plai_connected?: boolean
           portal_slug?: string | null
           reported_leads?: number
           spend?: number
@@ -1994,7 +1992,6 @@ export type Database = {
           launched_at?: string | null
           leads?: number
           name?: string
-          plai_connected?: boolean
           portal_slug?: string | null
           reported_leads?: number
           spend?: number
