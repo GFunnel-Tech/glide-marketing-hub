@@ -10,7 +10,6 @@ export interface Client {
   spend: number;
   formCvr: number;
   frequency: number;
-  plaiConnected: boolean;
   doubleCount: boolean;
   trueCpl: number;
   reportedLeads: number;
@@ -19,21 +18,21 @@ export interface Client {
 }
 
 export const clients: Client[] = [
-  { id: 1, name: "Joseph Bui", brand: "Open House Finance", status: "GREEN", bmType: "Own BM", cpl: 23.84, cpm: 142.36, leads: 210, spend: 5005, formCvr: 18.5, frequency: 1.87, plaiConnected: true, doubleCount: false, trueCpl: 23.84, reportedLeads: 210, trueLeads: 210, lastAudit: "Mar 20" },
-  { id: 2, name: "Matt Tixier", brand: "True Mortgage", status: "RED", bmType: "Agency BM", cpl: 57.00, cpm: 125.27, leads: 8, spend: 399, formCvr: 9.3, frequency: 1.25, plaiConnected: false, doubleCount: true, trueCpl: 83.70, reportedLeads: 8, trueLeads: 5, lastAudit: "Mar 25" },
-  { id: 3, name: "Richard Weinberg", brand: "Rich Capital", status: "RED", bmType: "Own BM", cpl: 50.07, cpm: 152.71, leads: 5, spend: 3532, formCvr: 3.92, frequency: 1.31, plaiConnected: true, doubleCount: true, trueCpl: 50.07, reportedLeads: 96, trueLeads: 67, lastAudit: "Mar 25" },
-  { id: 4, name: "John Flanders", brand: "Karpata Finance", status: "YELLOW", bmType: "Agency BM", cpl: 74.45, cpm: 172.95, leads: 11, spend: 819, formCvr: 9.23, frequency: 1.30, plaiConnected: false, doubleCount: true, trueCpl: 94.11, reportedLeads: 11, trueLeads: 9, lastAudit: "Mar 22" },
-  { id: 5, name: "Matthew Silva", brand: "Woodlands", status: "RED", bmType: "Agency BM", cpl: 35.63, cpm: 110.35, leads: 12, spend: 428, formCvr: 18.0, frequency: 1.21, plaiConnected: false, doubleCount: false, trueCpl: 35.63, reportedLeads: 12, trueLeads: 12, lastAudit: "Mar 18" },
-  { id: 6, name: "Derek Schaffer", brand: "Investor Capital Loans NJ", status: "YELLOW", bmType: "Own BM", cpl: 69.10, cpm: 140.62, leads: 48, spend: 3316, formCvr: 10.5, frequency: 1.31, plaiConnected: true, doubleCount: false, trueCpl: 69.10, reportedLeads: 48, trueLeads: 48, lastAudit: "Mar 20" },
-  { id: 7, name: "Paul Healey", brand: "Spectrum One Mortgage", status: "BLOCKED", bmType: "Agency BM", cpl: 152.78, cpm: 157.62, leads: 3, spend: 458, formCvr: 0, frequency: 1.27, plaiConnected: true, doubleCount: false, trueCpl: 152.78, reportedLeads: 3, trueLeads: 3, lastAudit: "Mar 15" },
-  { id: 8, name: "Jason Gilmore", brand: "James Paxton Mortgages", status: "GREEN", bmType: "Agency BM", cpl: 13.83, cpm: 55.07, leads: 112, spend: 1549, formCvr: 17.9, frequency: 2.17, plaiConnected: false, doubleCount: true, trueCpl: 32.05, reportedLeads: 112, trueLeads: 47, lastAudit: "Mar 25" },
-  { id: 9, name: "Dan Nguyen", brand: "Win Capital LLC", status: "GREEN", bmType: "Own BM", cpl: 8.10, cpm: 57.38, leads: 582, spend: 4713, formCvr: 25.77, frequency: 3.50, plaiConnected: true, doubleCount: false, trueCpl: 8.10, reportedLeads: 582, trueLeads: 582, lastAudit: "Mar 23" },
-  { id: 10, name: "Chad", brand: "Canada Mortgage Direct", status: "GREEN", bmType: "Own BM", cpl: 10.72, cpm: 17.32, leads: 812, spend: 8704, formCvr: 22.0, frequency: 4.47, plaiConnected: true, doubleCount: false, trueCpl: 10.72, reportedLeads: 812, trueLeads: 812, lastAudit: "Mar 22" },
-  { id: 11, name: "Kelto", brand: "Quebec Refinance", status: "GREEN", bmType: "Own BM", cpl: 10.02, cpm: 18.50, leads: 457, spend: 4577, formCvr: 20.5, frequency: 3.03, plaiConnected: true, doubleCount: false, trueCpl: 10.02, reportedLeads: 457, trueLeads: 457, lastAudit: "Mar 20" },
-  { id: 12, name: "Shaun Woods", brand: "Opus Grenero", status: "YELLOW", bmType: "Agency BM", cpl: 107.77, cpm: 173.46, leads: 4, spend: 431, formCvr: 2.70, frequency: 1.16, plaiConnected: false, doubleCount: false, trueCpl: 107.77, reportedLeads: 4, trueLeads: 4, lastAudit: "Mar 18" },
-  { id: 13, name: "Dean Onwumere", brand: "Part 2 Lending", status: "YELLOW", bmType: "Agency BM", cpl: 72.96, cpm: 150.05, leads: 9, spend: 657, formCvr: 2.04, frequency: 1.46, plaiConnected: false, doubleCount: false, trueCpl: 72.96, reportedLeads: 9, trueLeads: 9, lastAudit: "Mar 15" },
-  { id: 14, name: "Benjamin Gerritsen", brand: "Mortgage Miracles", status: "BLOCKED", bmType: "Agency BM", cpl: 56.35, cpm: 122.37, leads: 8, spend: 451, formCvr: 6.82, frequency: 1.79, plaiConnected: false, doubleCount: false, trueCpl: 56.35, reportedLeads: 8, trueLeads: 8, lastAudit: "Mar 12" },
-  { id: 15, name: "Natalie x Brian", brand: "NB Capital", status: "YELLOW", bmType: "Own BM", cpl: 325.38, cpm: 111.85, leads: 1, spend: 325, formCvr: 8.82, frequency: 1.24, plaiConnected: false, doubleCount: false, trueCpl: 325.38, reportedLeads: 1, trueLeads: 1, lastAudit: "Mar 10" },
+  { id: 1, name: "Joseph Bui", brand: "Open House Finance", status: "GREEN", bmType: "Own BM", cpl: 23.84, cpm: 142.36, leads: 210, spend: 5005, formCvr: 18.5, frequency: 1.87, doubleCount: false, trueCpl: 23.84, reportedLeads: 210, trueLeads: 210, lastAudit: "Mar 20" },
+  { id: 2, name: "Matt Tixier", brand: "True Mortgage", status: "RED", bmType: "Agency BM", cpl: 57.00, cpm: 125.27, leads: 8, spend: 399, formCvr: 9.3, frequency: 1.25, doubleCount: true, trueCpl: 83.70, reportedLeads: 8, trueLeads: 5, lastAudit: "Mar 25" },
+  { id: 3, name: "Richard Weinberg", brand: "Rich Capital", status: "RED", bmType: "Own BM", cpl: 50.07, cpm: 152.71, leads: 5, spend: 3532, formCvr: 3.92, frequency: 1.31, doubleCount: true, trueCpl: 50.07, reportedLeads: 96, trueLeads: 67, lastAudit: "Mar 25" },
+  { id: 4, name: "John Flanders", brand: "Karpata Finance", status: "YELLOW", bmType: "Agency BM", cpl: 74.45, cpm: 172.95, leads: 11, spend: 819, formCvr: 9.23, frequency: 1.30, doubleCount: true, trueCpl: 94.11, reportedLeads: 11, trueLeads: 9, lastAudit: "Mar 22" },
+  { id: 5, name: "Matthew Silva", brand: "Woodlands", status: "RED", bmType: "Agency BM", cpl: 35.63, cpm: 110.35, leads: 12, spend: 428, formCvr: 18.0, frequency: 1.21, doubleCount: false, trueCpl: 35.63, reportedLeads: 12, trueLeads: 12, lastAudit: "Mar 18" },
+  { id: 6, name: "Derek Schaffer", brand: "Investor Capital Loans NJ", status: "YELLOW", bmType: "Own BM", cpl: 69.10, cpm: 140.62, leads: 48, spend: 3316, formCvr: 10.5, frequency: 1.31, doubleCount: false, trueCpl: 69.10, reportedLeads: 48, trueLeads: 48, lastAudit: "Mar 20" },
+  { id: 7, name: "Paul Healey", brand: "Spectrum One Mortgage", status: "BLOCKED", bmType: "Agency BM", cpl: 152.78, cpm: 157.62, leads: 3, spend: 458, formCvr: 0, frequency: 1.27, doubleCount: false, trueCpl: 152.78, reportedLeads: 3, trueLeads: 3, lastAudit: "Mar 15" },
+  { id: 8, name: "Jason Gilmore", brand: "James Paxton Mortgages", status: "GREEN", bmType: "Agency BM", cpl: 13.83, cpm: 55.07, leads: 112, spend: 1549, formCvr: 17.9, frequency: 2.17, doubleCount: true, trueCpl: 32.05, reportedLeads: 112, trueLeads: 47, lastAudit: "Mar 25" },
+  { id: 9, name: "Dan Nguyen", brand: "Win Capital LLC", status: "GREEN", bmType: "Own BM", cpl: 8.10, cpm: 57.38, leads: 582, spend: 4713, formCvr: 25.77, frequency: 3.50, doubleCount: false, trueCpl: 8.10, reportedLeads: 582, trueLeads: 582, lastAudit: "Mar 23" },
+  { id: 10, name: "Chad", brand: "Canada Mortgage Direct", status: "GREEN", bmType: "Own BM", cpl: 10.72, cpm: 17.32, leads: 812, spend: 8704, formCvr: 22.0, frequency: 4.47, doubleCount: false, trueCpl: 10.72, reportedLeads: 812, trueLeads: 812, lastAudit: "Mar 22" },
+  { id: 11, name: "Kelto", brand: "Quebec Refinance", status: "GREEN", bmType: "Own BM", cpl: 10.02, cpm: 18.50, leads: 457, spend: 4577, formCvr: 20.5, frequency: 3.03, doubleCount: false, trueCpl: 10.02, reportedLeads: 457, trueLeads: 457, lastAudit: "Mar 20" },
+  { id: 12, name: "Shaun Woods", brand: "Opus Grenero", status: "YELLOW", bmType: "Agency BM", cpl: 107.77, cpm: 173.46, leads: 4, spend: 431, formCvr: 2.70, frequency: 1.16, doubleCount: false, trueCpl: 107.77, reportedLeads: 4, trueLeads: 4, lastAudit: "Mar 18" },
+  { id: 13, name: "Dean Onwumere", brand: "Part 2 Lending", status: "YELLOW", bmType: "Agency BM", cpl: 72.96, cpm: 150.05, leads: 9, spend: 657, formCvr: 2.04, frequency: 1.46, doubleCount: false, trueCpl: 72.96, reportedLeads: 9, trueLeads: 9, lastAudit: "Mar 15" },
+  { id: 14, name: "Benjamin Gerritsen", brand: "Mortgage Miracles", status: "BLOCKED", bmType: "Agency BM", cpl: 56.35, cpm: 122.37, leads: 8, spend: 451, formCvr: 6.82, frequency: 1.79, doubleCount: false, trueCpl: 56.35, reportedLeads: 8, trueLeads: 8, lastAudit: "Mar 12" },
+  { id: 15, name: "Natalie x Brian", brand: "NB Capital", status: "YELLOW", bmType: "Own BM", cpl: 325.38, cpm: 111.85, leads: 1, spend: 325, formCvr: 8.82, frequency: 1.24, doubleCount: false, trueCpl: 325.38, reportedLeads: 1, trueLeads: 1, lastAudit: "Mar 10" },
 ];
 
 export const clientPortalData = {

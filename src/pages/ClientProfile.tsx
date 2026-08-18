@@ -454,7 +454,7 @@ function ClientProfileInner() {
               <p className="text-sm text-muted-foreground mt-0.5">
                 {client.bmAccountName || client.brand}
                 {client.bmType ? ` · ${client.bmType}` : ""}
-                {client.plaiConnected ? " · Plai connected" : ""}
+                
               </p>
               <p className="text-[11px] text-muted-foreground mt-1">
                 ${Math.round(liveSpend).toLocaleString()} spend · Last synced just now
@@ -732,11 +732,6 @@ function ClientProfileInner() {
                         ? `https://app.gohighlevel.com/v2/location/${client.ghlLocationId}/dashboard`
                         : null,
                       hint: "Link a GHL sub-account first",
-                    },
-                    {
-                      label: "View in Plai",
-                      url: client.plaiConnected ? "https://app.plai.io" : null,
-                      hint: "Not connected to Plai",
                     },
                   ].map((l) =>
                     l.url ? (

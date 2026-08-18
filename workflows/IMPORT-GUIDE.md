@@ -64,7 +64,6 @@ Search for `PLACEHOLDER` across all workflow files and replace with actual IDs:
 
 - `act_PLACEHOLDER_X` → Real Meta Ad Account IDs
 - `PLACEHOLDER_GHL_X` → Real GHL Location IDs
-- `PLACEHOLDER_PLAI_X` → Real Plai Account IDs
 - `PAGE_ID_X` → Real Facebook Page IDs
 - `LIST_ID_*` → Real ClickUp List IDs
 - `CLICKUP_USER_*` → Real ClickUp User IDs

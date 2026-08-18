@@ -14,7 +14,6 @@ export interface DbClient {
   spend: number;
   form_cvr: number;
   frequency: number;
-  plai_connected: boolean;
   double_count: boolean;
   true_cpl: number;
   reported_leads: number;
@@ -125,7 +124,6 @@ export function toClient(c: DbClient) {
     spend: Number(c.spend),
     formCvr: Number(c.form_cvr),
     frequency: Number(c.frequency),
-    plaiConnected: c.plai_connected,
     doubleCount: c.double_count,
     trueCpl: Number(c.true_cpl),
     reportedLeads: c.reported_leads,
