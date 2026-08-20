@@ -79,7 +79,9 @@ export function useMetaScopeStatus() {
       }
 
       const active = connections.filter((c) => c.status === "active");
-      const anyExpired = active.some((c) => c.isExpired);
+      const anyExpired =
+        active.some((c) => c.isExpired) ||
+        connections.some((c) => c.status === "expired");
       const missingUnion = Array.from(
         new Set(active.flatMap((c) => c.missingScopes)),
       );
@@ -88,10 +90,11 @@ export function useMetaScopeStatus() {
       );
 
       let state: MetaScopeState = "ok";
-      if (!active.length) state = "errored";
-      else if (anyExpired) state = "expired";
+      if (anyExpired) state = "expired";
+      else if (!active.length) state = "errored";
       else if (missingUnion.length) state = "missing_scopes";
       else if (anyErrored) state = "errored";
+
 
       const signature = [
         wsId,
