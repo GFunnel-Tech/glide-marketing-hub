@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useOnboarding } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
-import { UserPlus, CheckCircle, X } from "lucide-react";
+import { UserPlus, CheckCircle, X, Images, Wand2 } from "lucide-react";
+
 
 const phases = [
   { num: 1, label: "Access", color: "border-t-blue-500" },
