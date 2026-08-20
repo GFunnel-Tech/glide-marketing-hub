@@ -217,7 +217,10 @@ const Index = () => {
         )}
       </div>
 
+      <MetaScopeBanner />
+      <MetaFreshnessBanner />
       <PaymentAlertBanner />
+
 
       <KPIStrip />
 
