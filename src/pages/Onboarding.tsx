@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useOnboarding } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
-import { UserPlus, CheckCircle, X } from "lucide-react";
+import { UserPlus, CheckCircle, X, Images, Wand2 } from "lucide-react";
+
 
 const phases = [
   { num: 1, label: "Access", color: "border-t-blue-500" },
@@ -47,10 +49,19 @@ export default function Onboarding() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Client Onboarding</h1>
-        <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-2">
-          <UserPlus className="h-4 w-4" />New Client
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/onboarding/assets"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent flex items-center gap-2"
+          >
+            <Images className="h-4 w-4" />Media & assets
+          </Link>
+          <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-2">
+            <UserPlus className="h-4 w-4" />New Client
+          </button>
+        </div>
       </div>
+
 
       <div className="grid grid-cols-4 gap-4">
         {[
@@ -120,6 +131,13 @@ export default function Onboarding() {
               <button onClick={() => setSelectedClient(null)} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
             </div>
             <div className="p-5 space-y-4">
+              <Link
+                to={`/onboarding/wizard?clientId=${selectedClient.client_id}`}
+                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                <Wand2 className="h-4 w-4" />Open onboarding wizard
+              </Link>
+
               {phases.map(phase => {
                 const isComplete = phase.num < selectedClient.phase;
                 const isCurrent = phase.num === selectedClient.phase;
