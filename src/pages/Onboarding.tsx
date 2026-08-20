@@ -47,10 +47,19 @@ export default function Onboarding() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Client Onboarding</h1>
-        <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-2">
-          <UserPlus className="h-4 w-4" />New Client
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/onboarding/assets"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent flex items-center gap-2"
+          >
+            <Images className="h-4 w-4" />Media & assets
+          </Link>
+          <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-2">
+            <UserPlus className="h-4 w-4" />New Client
+          </button>
+        </div>
       </div>
+
 
       <div className="grid grid-cols-4 gap-4">
         {[
