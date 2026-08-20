@@ -131,6 +131,13 @@ export default function Onboarding() {
               <button onClick={() => setSelectedClient(null)} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
             </div>
             <div className="p-5 space-y-4">
+              <Link
+                to={`/onboarding/wizard?clientId=${selectedClient.client_id}`}
+                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                <Wand2 className="h-4 w-4" />Open onboarding wizard
+              </Link>
+
               {phases.map(phase => {
                 const isComplete = phase.num < selectedClient.phase;
                 const isCurrent = phase.num === selectedClient.phase;
