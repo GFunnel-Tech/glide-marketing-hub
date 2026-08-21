@@ -53,17 +53,21 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const {
+      action = "list",
       workspaceId,
       clientId,
       sources = ["ghl", "meta", "metahub"],
       query = "",
       limit = 100,
+      assets = [],
     } = body as {
+      action?: "list" | "import";
       workspaceId?: string;
       clientId?: number;
       sources?: string[];
       query?: string;
       limit?: number;
+      assets?: { url: string; name?: string; type?: "image" | "video" }[];
     };
 
     if (!workspaceId) return json({ error: "workspaceId is required" }, 400);
@@ -83,8 +87,41 @@ Deno.serve(async (req) => {
       if (!isSuper) return json({ error: "Not a workspace member" }, 403);
     }
 
+    // ---------- Import remote media into Metahub storage (CORS-safe for the editor) ----------
+    if (action === "import") {
+      if (!Array.isArray(assets) || assets.length === 0) {
+        return json({ error: "assets[] is required for import" }, 400);
+      }
+      const imported: { url: string; name: string; type: "image" | "video" }[] = [];
+      const failures: { url: string; message: string }[] = [];
+      for (const asset of assets.slice(0, 20)) {
+        try {
+          const res = await fetch(asset.url);
+          if (!res.ok) throw new Error(`Download failed (${res.status})`);
+          const blob = await res.blob();
+          const contentType = res.headers.get("content-type") || blob.type || "application/octet-stream";
+          const safeName = (asset.name || "media").replace(/[^\w.\-]+/g, "_").slice(-80);
+          const path = `${workspaceId}/library/${crypto.randomUUID()}-${safeName}`;
+          const { error: upErr } = await admin.storage
+            .from("ad-creatives")
+            .upload(path, blob, { contentType, upsert: false });
+          if (upErr) throw new Error(upErr.message);
+          const { data: pub } = admin.storage.from("ad-creatives").getPublicUrl(path);
+          imported.push({
+            url: pub.publicUrl,
+            name: asset.name || safeName,
+            type: asset.type ?? (contentType.startsWith("video/") ? "video" : "image"),
+          });
+        } catch (e) {
+          failures.push({ url: asset.url, message: e instanceof Error ? e.message : String(e) });
+        }
+      }
+      return json({ imported, failures });
+    }
+
     const items: LibraryItem[] = [];
     const errors: { source: string; message: string }[] = [];
+
 
     // ---------- GHL media library ----------
     if (sources.includes("ghl") && clientId) {
