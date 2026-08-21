@@ -195,7 +195,122 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "update_user") {
+      const { user_id, display_name, position, department, email, password } = body;
+      if (!user_id) return json({ error: "user_id required" }, 400);
+      if (email || password) {
+        const blocked = user_id === caller.id ? null : await guardTarget(user_id);
+        if (blocked) return json({ error: blocked }, 403);
+        const attrs: Record<string, unknown> = {};
+        if (email) {
+          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "Invalid email" }, 400);
+          attrs.email = email;
+          attrs.email_confirm = true;
+        }
+        if (password) {
+          if (String(password).length < 8) return json({ error: "Password must be at least 8 characters" }, 400);
+          attrs.password = password;
+        }
+        const { error } = await admin.auth.admin.updateUserById(user_id, attrs as any);
+        if (error) throw error;
+      }
+      const patch: Record<string, unknown> = {};
+      if (display_name !== undefined) patch.display_name = display_name;
+      if (position !== undefined) patch.position = position;
+      if (department !== undefined) patch.department = department;
+      if (email) patch.email = email;
+      if (Object.keys(patch).length) {
+        const { error } = await admin.from("profiles").update(patch).eq("id", user_id);
+        if (error) throw error;
+      }
+      await admin.from("impersonation_log").insert({
+        super_admin_id: caller.id,
+        target_user_id: user_id,
+        action: "update_user",
+        meta: { fields: Object.keys({ ...patch, ...(password ? { password: true } : {}) }) },
+      }).then(() => {}, () => {});
+      return json({ ok: true });
+    }
+
+    if (action === "create_user") {
+      const { email, password, display_name, position, workspace_id, workspace_role } = body;
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "Valid email required" }, 400);
+      if (!password || String(password).length < 8) return json({ error: "Password must be at least 8 characters" }, 400);
+      const { data: created, error } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          display_name: display_name ?? null,
+          ...(workspace_id ? { invited_to_workspace: workspace_id } : {}),
+        },
+      });
+      if (error) throw error;
+      const newId = created.user!.id;
+      await admin.from("profiles").update({ display_name: display_name ?? null, position: position ?? null, email }).eq("id", newId);
+      if (workspace_id) {
+        const { data: existing } = await admin.from("workspace_members")
+          .select("id").eq("workspace_id", workspace_id).eq("user_id", newId).maybeSingle();
+        if (!existing) {
+          await admin.from("workspace_members").insert({
+            workspace_id, user_id: newId, role: workspace_role ?? "member",
+          });
+        }
+      }
+      await admin.from("impersonation_log").insert({
+        super_admin_id: caller.id, target_user_id: newId, action: "create_user", meta: { email },
+      }).then(() => {}, () => {});
+      return json({ ok: true, user_id: newId });
+    }
+
+    const WS_ROLES = new Set(["owner", "admin", "member", "viewer"]);
+
+    if (action === "set_workspace_member") {
+      const { user_id, workspace_id, role } = body;
+      if (!user_id || !workspace_id) return json({ error: "user_id and workspace_id required" }, 400);
+      if (!WS_ROLES.has(role)) return json({ error: "Unknown workspace role" }, 400);
+      const { data: existing } = await admin.from("workspace_members")
+        .select("id").eq("workspace_id", workspace_id).eq("user_id", user_id).maybeSingle();
+      if (existing) {
+        const { error } = await admin.from("workspace_members").update({ role }).eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await admin.from("workspace_members").insert({ workspace_id, user_id, role });
+        if (error) throw error;
+      }
+      await admin.from("impersonation_log").insert({
+        super_admin_id: caller.id, target_user_id: user_id,
+        action: existing ? "update_workspace_member" : "add_workspace_member",
+        meta: { workspace_id, role },
+      }).then(() => {}, () => {});
+      return json({ ok: true });
+    }
+
+    if (action === "remove_workspace_member") {
+      const { user_id, workspace_id } = body;
+      if (!user_id || !workspace_id) return json({ error: "user_id and workspace_id required" }, 400);
+      const { error } = await admin.from("workspace_members")
+        .delete().eq("workspace_id", workspace_id).eq("user_id", user_id);
+      if (error) throw error;
+      await admin.from("impersonation_log").insert({
+        super_admin_id: caller.id, target_user_id: user_id,
+        action: "remove_workspace_member", meta: { workspace_id },
+      }).then(() => {}, () => {});
+      return json({ ok: true });
+    }
+
+    if (action === "create_workspace") {
+      const { name } = body;
+      if (!name || !String(name).trim()) return json({ error: "Name required" }, 400);
+      const { data, error } = await admin.from("workspaces")
+        .insert({ name: String(name).trim(), created_by: caller.id })
+        .select("id").single();
+      if (error) throw error;
+      return json({ ok: true, workspace_id: data.id });
+    }
+
     return json({ error: "Unknown action" }, 400);
+
   } catch (e: any) {
     console.error(e);
     return json({ error: e.message ?? "Server error" }, 500);
