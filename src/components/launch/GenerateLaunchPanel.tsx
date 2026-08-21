@@ -26,11 +26,10 @@ interface Props {
   objective: Objective;
   specialAdCategory: SpecialAdCategory;
   clientId: number | null;
-  onClientChange: (id: number | null) => void;
   onGenerated: (plan: CampaignPlan) => void;
 }
 
-export function GenerateLaunchPanel({ objective, specialAdCategory, clientId, onClientChange, onGenerated }: Props) {
+export function GenerateLaunchPanel({ objective, specialAdCategory, clientId, onGenerated }: Props) {
   const { data: clients = [] } = useClients();
   const [prompt, setPrompt] = useState("");
   const [creativeType, setCreativeType] = useState<"ai_images" | "use_own">("ai_images");
@@ -70,23 +69,9 @@ export function GenerateLaunchPanel({ objective, specialAdCategory, clientId, on
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label className="text-xs">Client</Label>
-          <Select value={clientId ? String(clientId) : "none"} onValueChange={(v) => onClientChange(v === "none" ? null : Number(v))}>
-            <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-            <SelectContent className="max-h-72">
-              <SelectItem value="none">No client</SelectItem>
-              {clients.map((c: any) => (
-                <SelectItem key={c.id} value={String(c.id)}>{clientDisplayName(c)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Total daily budget (USD)</Label>
-          <Input type="number" min={5} value={budget} onChange={(e) => setBudget(Number(e.target.value))} />
-        </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Total daily budget (USD)</Label>
+        <Input type="number" min={5} value={budget} onChange={(e) => setBudget(Number(e.target.value))} />
       </div>
 
       <div>
