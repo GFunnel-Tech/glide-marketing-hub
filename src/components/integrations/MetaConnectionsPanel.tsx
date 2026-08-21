@@ -323,22 +323,30 @@ export function MetaConnectionsPanel() {
   const startOAuthForWorkspace = async (workspaceId: string, forceConsent = false) => {
     setConnecting(true);
     try {
+      if (!(await ensureSession())) {
+        toast.error("Your session expired — sign out and back in, then try again.");
+        return;
+      }
       const { data, error } = await supabase.functions.invoke("meta-oauth-start", {
         body: { workspaceId, forceConsent },
       });
       if (error) throw error;
-      window.open(data.url, "_blank", "width=600,height=700");
-      toast.info(
-        forceConsent
-          ? "Fresh consent screen opened — re-approve every scope, then refresh this page."
-          : "Complete sign-in in the popup, then refresh this page.",
-      );
+      if (!data?.url) throw new Error("No authorization URL returned");
+      const popped = openOAuthPopup(data.url);
+      if (popped) {
+        toast.info(
+          forceConsent
+            ? "Fresh consent screen opened — re-approve every scope, then refresh this page."
+            : "Complete sign-in in the popup, then refresh this page.",
+        );
+      }
     } catch (e: any) {
-      toast.error(e.message || "Failed to start OAuth");
+      toast.error(await readEdgeError(e));
     } finally {
       setConnecting(false);
     }
   };
+
 
   const [resettingFailed, setResettingFailed] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
