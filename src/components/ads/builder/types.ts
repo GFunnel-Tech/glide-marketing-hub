@@ -274,9 +274,11 @@ export function makeInitialState(
   specialAdCategory: SpecialAdCategory = [],
   countries: string[] = ["US"],
 ): AdBuilderState {
+  // note: selectedCampaignId is patched below to the first campaign
   const cta: CTA = objective === "leads" ? "APPLY_NOW" : "LEARN_MORE";
   const firstSet = makeAdSet("Ad Set 1", cta);
   const firstAd = firstSet.ads[0];
+  const firstCampaignId = crypto.randomUUID();
   return {
     objective,
     specialAdCategory,
@@ -329,6 +331,16 @@ export function makeInitialState(
     igUsername: null,
     adAccountId: null,
     adAccountName: null,
+    campaigns: [{
+      id: firstCampaignId,
+      name: "Campaign 1",
+      objective,
+      specialAdCategory,
+      adSets: [firstSet],
+      selectedAdSetId: firstSet.id,
+      selectedAdId: firstAd.id,
+    }],
+    selectedCampaignId: firstCampaignId,
     adSets: [firstSet],
     selectedAdSetId: firstSet.id,
     selectedAdId: firstAd.id,
