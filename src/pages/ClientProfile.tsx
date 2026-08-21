@@ -1096,7 +1096,12 @@ function ClientProfileInner() {
         </TabsContent>
 
         {/* ACCESS */}
-        <TabsContent value="access" className="mt-5">
+        <TabsContent value="access" className="mt-5 space-y-5">
+          <PortalEmbedLinkCard
+            clientId={client.id}
+            workspaceId={(client as any).workspace_id ?? null}
+            locationId={(client as any).ghl_location_id ?? null}
+          />
           <ClientInvitesPanel
             clientId={client.id}
             workspaceId={(client as any).workspace_id ?? null}
