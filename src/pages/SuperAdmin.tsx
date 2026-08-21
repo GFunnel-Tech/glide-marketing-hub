@@ -188,7 +188,11 @@ export default function SuperAdmin() {
                     <td className="p-3">
                       <div className="font-medium">{u.profile?.display_name || u.email}</div>
                       <div className="text-xs text-muted-foreground">{u.email}</div>
+                      {u.profile?.position && (
+                        <div className="text-xs text-primary mt-0.5">{u.profile.position}</div>
+                      )}
                     </td>
+
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1">
                         {u.roles.map((r) => (
