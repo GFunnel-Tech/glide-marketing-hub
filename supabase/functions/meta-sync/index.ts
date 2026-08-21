@@ -195,7 +195,11 @@ async function runSync(
         ad_account_id: acc.id,
         trigger: workspaceFilter ? "manual" : (tier ? `scheduled-${tier}` : "scheduled"),
         status: "running",
-      }).select().single();
+      }).select().maybeSingle();
+      // The log row is best-effort telemetry: if the insert fails (RLS, unique
+      // conflict, transient error) we must still run the actual sync instead of
+      // crashing the whole worker on log.data!.id.
+      const logId: string | null = log?.data?.id ?? null;
 
       try {
         if (adsOnly) {
@@ -208,7 +212,7 @@ async function runSync(
             status: "success",
             rows_synced: adRows,
             finished_at: new Date().toISOString(),
-          }).eq("id", log.data!.id);
+          }).eq("id", logId ?? "00000000-0000-0000-0000-000000000000");
 
           totalRows += adRows;
           return;
@@ -233,7 +237,7 @@ async function runSync(
               status: "rate_limited",
               error_message: JSON.stringify(json_).slice(0, 500),
               finished_at: new Date().toISOString(),
-            }).eq("id", log.data!.id);
+            }).eq("id", logId ?? "00000000-0000-0000-0000-000000000000");
             skippedRateLimited++;
             return;
           }
@@ -311,7 +315,7 @@ async function runSync(
           error_message: adsError ? ("ads: " + adsError).slice(0, 2000) : null,
           rows_synced: rows.length + campaignRows + granularRows + adRows,
           finished_at: new Date().toISOString(),
-        }).eq("id", log.data!.id);
+        }).eq("id", logId ?? "00000000-0000-0000-0000-000000000000");
 
         totalRows += rows.length + campaignRows + granularRows + adRows;
       } catch (e) {
@@ -320,7 +324,7 @@ async function runSync(
           status: "error",
           error_message: String(e),
           finished_at: new Date().toISOString(),
-        }).eq("id", log.data!.id);
+        }).eq("id", logId ?? "00000000-0000-0000-0000-000000000000");
       }
     };
 
@@ -330,7 +334,10 @@ async function runSync(
     const workers = Array.from({ length: CONCURRENCY }, async () => {
       while (cursor < shuffled.length) {
         const acc = shuffled[cursor++];
-        await syncOneAccount(acc);
+        // One bad account must never abort the whole run — that used to skip
+        // the KPI rollup entirely and leave every client's numbers stale.
+        try { await syncOneAccount(acc); }
+        catch (e) { errors.push({ account: acc?.act_id, error: String(e) }); }
       }
     });
     await Promise.all(workers);
@@ -360,7 +367,19 @@ async function rollupClients(admin: any, workspaceFilter: string | null) {
 async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise<number> {
   // 1. List campaigns for the ad account
   const campFields = "id,name,status,effective_status,objective,daily_budget,lifetime_budget";
-  const campUrl = `https://graph.facebook.com/v21.0/${acc.act_id}/campaigns?fields=${campFields}&limit=200&access_token=${encodeURIComponent(accessToken)}`;
+  // Meta hides ARCHIVED/DELETED campaigns by default. Without them the campaigns
+  // table loses rows that historical insights are attributed through, which makes
+  // past analytics look like they vanished after a resync.
+  const campFilter = encodeURIComponent(JSON.stringify([{
+    field: "campaign.effective_status",
+    operator: "IN",
+    value: [
+      "ACTIVE", "PAUSED", "DELETED", "ARCHIVED", "CAMPAIGN_PAUSED",
+      "IN_PROCESS", "WITH_ISSUES", "PENDING_REVIEW", "DISAPPROVED",
+      "PREAPPROVED", "PENDING_BILLING_INFO", "ADSET_PAUSED",
+    ],
+  }]));
+  const campUrl = `https://graph.facebook.com/v21.0/${acc.act_id}/campaigns?fields=${campFields}&filtering=${campFilter}&limit=200&access_token=${encodeURIComponent(accessToken)}`;
   const campRes = await fetch(campUrl);
   const campJson = await campRes.json();
   if (!campRes.ok) throw new Error("campaigns: " + JSON.stringify(campJson));
