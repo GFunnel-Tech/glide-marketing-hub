@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       const [{ data: roles }, { data: members }, { data: profiles }] = await Promise.all([
         admin.from("user_roles").select("user_id, role").in("user_id", ids),
         admin.from("workspace_members").select("user_id, workspace_id, role, workspaces:workspace_id(id,name)").in("user_id", ids),
-        admin.from("profiles").select("id, display_name, avatar_url").in("id", ids),
+        admin.from("profiles").select("id, display_name, avatar_url, position, department").in("id", ids),
       ]);
       return json({
         users: users.users.map((u) => ({
