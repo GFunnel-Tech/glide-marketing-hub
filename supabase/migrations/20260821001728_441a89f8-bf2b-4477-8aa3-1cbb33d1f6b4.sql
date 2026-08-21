@@ -1,0 +1,1 @@
+UPDATE public.clients SET name = brand, brand = name WHERE id IN (144, 145);
