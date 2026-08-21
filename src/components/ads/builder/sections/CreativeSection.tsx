@@ -3,13 +3,16 @@ import { useAdDraftStore } from "@/stores/adDraftStore";
 import { Section } from "../shared/Section";
 import { MediaUploader } from "../shared/MediaUploader";
 import { AiCreativeStudio } from "../shared/AiCreativeStudio";
-import { Palette, Plus, X, Sparkles } from "lucide-react";
+import { MediaLibraryDialog } from "@/components/ads/media/MediaLibraryDialog";
+import { MediaStudioDialog } from "@/components/ads/media/MediaStudioDialog";
+import type { StudioSource } from "@/components/ads/media/studio/ImageEditor";
+import { Palette, Plus, X, Sparkles, FolderOpen, Wand2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { CTA_OPTIONS, type CreativeType } from "../types";
+import { CTA_OPTIONS, type CreativeType, type MediaAsset } from "../types";
 
 
 const TYPES: { id: CreativeType; label: string; available: boolean }[] = [
@@ -22,6 +25,28 @@ export function CreativeSection() {
   const state = useAdDraftStore((s) => s.state);
   const patch = useAdDraftStore((s) => s.patch);
   const [studioOpen, setStudioOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorSources, setEditorSources] = useState<StudioSource[]>([]);
+
+  const addAssets = (assets: { url: string; name: string; type: "image" | "video" }[]) => {
+    const next: MediaAsset[] = assets.map((a) => ({
+      id: crypto.randomUUID(),
+      url: a.url,
+      type: a.type,
+      name: a.name,
+      thumbnail: a.type === "image" ? a.url : undefined,
+    }));
+    patch("media", [...state.media, ...next].slice(0, 10));
+  };
+
+  const openEditorWith = (assets: StudioSource[]) => {
+    if (!assets.length) return;
+    setEditorSources(assets);
+    setLibraryOpen(false);
+    setEditorOpen(true);
+  };
+
 
   return (
     <Section title="Creative" icon={<Palette className="h-4 w-4 text-primary" />}>
@@ -44,16 +69,38 @@ export function CreativeSection() {
 
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="text-xs text-muted-foreground">{state.media.length} / 10 images and videos. {state.creativeType === "dynamic" && "We'll rotate & learn."}</div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => setStudioOpen(true)}
-          disabled={state.media.length >= 10}
-        >
-          <Sparkles className="h-3 w-3 mr-1.5 text-primary" /> Generate with AI
-        </Button>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setLibraryOpen(true)}
+            disabled={state.media.length >= 10}
+          >
+            <FolderOpen className="h-3 w-3 mr-1.5 text-primary" /> Media library
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => openEditorWith(state.media.map((m) => ({ url: m.url, name: m.name, type: m.type })))}
+            disabled={state.media.length === 0}
+          >
+            <Wand2 className="h-3 w-3 mr-1.5 text-primary" /> Creative Studio
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setStudioOpen(true)}
+            disabled={state.media.length >= 10}
+          >
+            <Sparkles className="h-3 w-3 mr-1.5 text-primary" /> Generate with AI
+          </Button>
+        </div>
       </div>
 
       <MediaUploader value={state.media} onChange={(v) => patch("media", v)} max={10} accept="both" label="Add" />
@@ -64,6 +111,23 @@ export function CreativeSection() {
         remaining={Math.max(10 - state.media.length, 0)}
         onAdd={(assets) => patch("media", [...state.media, ...assets].slice(0, 10))}
       />
+
+      <MediaLibraryDialog
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        clientId={state.clientId}
+        remaining={Math.max(10 - state.media.length, 0)}
+        onAdd={addAssets}
+        onEditInStudio={(assets) => openEditorWith(assets)}
+      />
+
+      <MediaStudioDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        sources={editorSources}
+        onExport={(a) => addAssets([a])}
+      />
+
 
 
       {/* Caption (above media) */}
