@@ -105,6 +105,9 @@ export function AdActionsMenu({ ad, channel }: { ad: AdLike; channel: AdChannel 
           <DropdownMenuItem onClick={() => navigate(`/ads/${ad.id}/edit`)}>
             <Pencil className="h-4 w-4 mr-2" /> Edit ad
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/entity/ad/${ad.id}`)}>
+            <TrendingUp className="h-4 w-4 mr-2" /> Ad profile & audit
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setEditOpen(true)} disabled={!adapter.supports.updateCreative}>
             <Pencil className="h-4 w-4 mr-2" /> Quick edit copy
           </DropdownMenuItem>
