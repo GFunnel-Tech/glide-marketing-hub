@@ -73,6 +73,13 @@ export default function SuperAdmin() {
 
   useEffect(() => { if (isSuper) load(); }, [isSuper]);
 
+  // Keep the open edit dialog in sync after a refresh
+  useEffect(() => {
+    if (!editOpen || !editUser) return;
+    const fresh = users.find((u) => u.id === editUser.id);
+    if (fresh && fresh !== (editUser as any)) setEditUser(fresh as EditableUser);
+  }, [users]);
+
   if (checking) return <div className="p-8"><Loader2 className="animate-spin" /></div>;
   if (!isSuper) return <Navigate to="/" replace />;
 
