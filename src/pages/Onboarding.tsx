@@ -37,6 +37,8 @@ interface OnboardingClient {
 export default function Onboarding() {
   const { data: onboardingClients = [], isLoading } = useOnboarding();
   const [selectedClient, setSelectedClient] = useState<OnboardingClient | null>(null);
+  const [newClientOpen, setNewClientOpen] = useState(false);
+
 
   const totalOnboarding = onboardingClients.length;
   const blocked = onboardingClients.filter(c => c.blockers.length > 0).length;
