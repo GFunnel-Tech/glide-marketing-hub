@@ -41,6 +41,9 @@ import Tracking from "./pages/Tracking";
 import Tasks from "./pages/Tasks";
 import TrendBriefs from "./pages/TrendBriefs";
 import CalendarPage from "./pages/Calendar";
+import Research from "./pages/operations/Research";
+import Sandbox from "./pages/operations/Sandbox";
+
 import NotFound from "./pages/NotFound";
 import PortalLayout from "./pages/portal/PortalLayout";
 import PortalAuth from "./pages/portal/PortalAuth";
@@ -243,6 +246,9 @@ const App = () => (
                   <Route path="tracking" element={<Tracking />} />
                   <Route path="tasks" element={<Tasks />} />
                   <Route path="calendar" element={<CalendarPage />} />
+                  <Route path="operations/research" element={<Research />} />
+                  <Route path="operations/sandbox" element={<Sandbox />} />
+
                   <Route path="trend-briefs" element={<TrendBriefs />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="settings/integrations" element={<Navigate to="/settings?tab=integrations" replace />} />

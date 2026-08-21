@@ -2,61 +2,73 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useUnreadMessageCount } from "@/hooks/useMessages";
 import {
-  LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown, Radar, CheckSquare, Calendar as CalendarIcon
+  LayoutDashboard, Megaphone, UserPlus, FileBarChart,
+  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown, Radar, Calendar as CalendarIcon,
+  Rocket, Microscope, FlaskConical, Boxes, ChevronRight
 } from "lucide-react";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger
 } from "@/components/ui/dropdown-menu";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { UserMenu } from "./UserMenu";
+import { TasksButton } from "./TasksButton";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 
-type NavChild = { icon: any; label: string; path: string; badge?: string };
-type NavGroup = { icon: any; label: string; children: NavChild[] };
-type NavSingle = { icon: any; label: string; path: string; badge?: string };
+type NavLeaf = { icon: any; label: string; path: string; badge?: string };
+type NavBranch = { icon: any; label: string; financeOnly?: boolean; children: NavLeaf[] };
+type NavChild = NavLeaf | NavBranch;
+type NavGroup = { icon: any; label: string; financeOnly?: boolean; children: NavChild[] };
+type NavSingle = NavLeaf;
 type NavEntry = NavSingle | NavGroup;
 
-const isGroup = (e: NavEntry): e is NavGroup => "children" in e;
+const isGroup = (e: NavEntry | NavChild): e is NavGroup | NavBranch => "children" in e;
+
 
 const navItems: NavEntry[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: CheckSquare, label: "Tasks", path: "/tasks" },
   { icon: CalendarIcon, label: "Calendar", path: "/calendar" },
-  { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
   {
-    icon: Megaphone, label: "Marketing", children: [
-      { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
-      { icon: Sparkles, label: "Creatives", path: "/creatives" },
-      { icon: Megaphone, label: "Ads", path: "/ads" },
-      { icon: Inbox, label: "Leads", path: "/leads" },
-    ]
-  },
-  {
-    icon: CreditCard, label: "Finance", children: [
-      { icon: CreditCard, label: "Billing", path: "/billing" },
-      { icon: Receipt, label: "Rebilling", path: "/rebilling" },
-      { icon: Coins, label: "Affiliates", path: "/affiliate" },
-      { icon: TrendingUp, label: "Forecast", path: "/forecast" },
-    ]
-  },
-  {
-    icon: FileBarChart, label: "Insights", children: [
-      { icon: FileBarChart, label: "Reports", path: "/reports" },
-      { icon: Radar, label: "Tracking", path: "/tracking" },
-      { icon: Bot, label: "AI Assistant", path: "/ai" },
-      { icon: TrendingUp, label: "Trend Briefs", path: "/trend-briefs", badge: "NEW" },
+    icon: Boxes, label: "Operations", children: [
+      { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
+      {
+        icon: Rocket, label: "Launch", children: [
+          { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
+          { icon: Sparkles, label: "Creatives", path: "/creatives" },
+          { icon: Megaphone, label: "Ads", path: "/ads" },
+          { icon: Inbox, label: "Leads", path: "/leads" },
+        ]
+      },
+      {
+        icon: FileBarChart, label: "Insights", children: [
+          { icon: FileBarChart, label: "Reports", path: "/reports" },
+          { icon: Radar, label: "Tracking", path: "/tracking" },
+          { icon: Bot, label: "AI Assistant", path: "/ai" },
+          { icon: TrendingUp, label: "Trend Briefs", path: "/trend-briefs", badge: "NEW" },
+        ]
+      },
+      { icon: Microscope, label: "Research", path: "/operations/research" },
+      {
+        icon: CreditCard, label: "Finances", financeOnly: true, children: [
+          { icon: CreditCard, label: "Billing", path: "/billing" },
+          { icon: Receipt, label: "Rebilling", path: "/rebilling" },
+          { icon: Coins, label: "Affiliates", path: "/affiliate" },
+          { icon: TrendingUp, label: "Forecast", path: "/forecast" },
+        ]
+      },
+      { icon: FlaskConical, label: "Sandbox", path: "/operations/sandbox", badge: "SOON" },
     ]
   },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
+
 
 export function TopNav() {
   const location = useLocation();
@@ -70,12 +82,25 @@ export function TopNav() {
   const isWorkspaceAdmin =
     currentWorkspace?.role === "owner" || currentWorkspace?.role === "admin";
   const canSeeFinance = isSuperAdmin || isWorkspaceAdmin;
+  // Finance lives inside Operations now — strip it for non-admins.
   const filtered = canSeeFinance
     ? navItems
-    : navItems.filter((e) => !(isGroup(e) && e.label === "Finance"));
+    : navItems.map((e) =>
+        isGroup(e)
+          ? { ...e, children: e.children.filter((c) => !(isGroup(c) && c.financeOnly)) }
+          : e,
+      );
   const items: NavEntry[] = isSuperAdmin
     ? [...filtered, { icon: Shield, label: "Admin", path: "/admin" }]
     : filtered;
+
+  const leafActive = (leaf: NavLeaf) =>
+    location.pathname === leaf.path ||
+    (leaf.path !== "/" && location.pathname.startsWith(leaf.path));
+  const groupOrLeafActive = (c: NavChild): boolean =>
+    isGroup(c) ? c.children.some((g) => leafActive(g)) : leafActive(c);
+
+
 
 
   const connectMeta = async () => {
@@ -137,7 +162,10 @@ export function TopNav() {
           </button>
 
 
+          <TasksButton />
+
           <NotificationsBell />
+
 
           <button
             onClick={toggle}
@@ -156,9 +184,7 @@ export function TopNav() {
           const Icon = item.icon;
 
           if (isGroup(item)) {
-            const isActive = item.children.some(
-              (c) => location.pathname === c.path || (c.path !== "/" && location.pathname.startsWith(c.path))
-            );
+            const isActive = item.children.some((c) => groupOrLeafActive(c));
             return (
               <DropdownMenu key={item.label}>
                 <DropdownMenuTrigger
@@ -173,25 +199,62 @@ export function TopNav() {
                   <span>{item.label}</span>
                   <ChevronDown className="h-3 w-3 opacity-60" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-[180px]">
+                <DropdownMenuContent align="start" className="min-w-[190px]">
                   {item.children.map((child) => {
                     const ChildIcon = child.icon;
-                    const childActive =
-                      location.pathname === child.path ||
-                      (child.path !== "/" && location.pathname.startsWith(child.path));
+
+                    // Nested section (e.g. Operations → Launch → Campaigns)
+                    if (isGroup(child)) {
+                      const branchActive = child.children.some((g) => leafActive(g));
+                      return (
+                        <DropdownMenuSub key={child.label}>
+                          <DropdownMenuSubTrigger
+                            className={cn(
+                              "flex items-center gap-2 cursor-pointer",
+                              branchActive && "text-primary font-medium"
+                            )}
+                          >
+                            <ChildIcon className="h-4 w-4 shrink-0" />
+                            <span className="flex-1">{child.label}</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="min-w-[180px]">
+                            {child.children.map((leaf) => (
+                              <DropdownMenuItem key={leaf.path} asChild>
+                                <Link
+                                  to={leaf.path}
+                                  className={cn(
+                                    "flex items-center gap-2 cursor-pointer",
+                                    leafActive(leaf) && "text-primary font-medium"
+                                  )}
+                                >
+                                  <leaf.icon className="h-4 w-4 shrink-0" />
+                                  <span className="flex-1">{leaf.label}</span>
+                                  {leaf.badge && (
+                                    <span className="text-[10px] bg-gradient-primary text-primary-foreground rounded px-1.5 py-0.5 font-medium leading-none">
+                                      {leaf.badge}
+                                    </span>
+                                  )}
+                                </Link>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      );
+                    }
+
                     return (
                       <DropdownMenuItem key={child.path} asChild>
                         <Link
                           to={child.path}
                           className={cn(
                             "flex items-center gap-2 cursor-pointer",
-                            childActive && "text-primary font-medium"
+                            leafActive(child) && "text-primary font-medium"
                           )}
                         >
                           <ChildIcon className="h-4 w-4 shrink-0" />
                           <span className="flex-1">{child.label}</span>
                           {child.badge && (
-                            <span className="text-[10px] bg-gradient-primary text-primary-foreground rounded px-1.5 py-0.5 font-medium leading-none">
+                            <span className="text-[10px] bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-medium leading-none">
                               {child.badge}
                             </span>
                           )}
@@ -203,6 +266,7 @@ export function TopNav() {
               </DropdownMenu>
             );
           }
+
 
           const isActive =
             location.pathname === item.path ||
