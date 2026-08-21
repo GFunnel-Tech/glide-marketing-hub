@@ -94,6 +94,13 @@ export function TopNav() {
     ? [...filtered, { icon: Shield, label: "Admin", path: "/admin" }]
     : filtered;
 
+  const leafActive = (leaf: NavLeaf) =>
+    location.pathname === leaf.path ||
+    (leaf.path !== "/" && location.pathname.startsWith(leaf.path));
+  const groupOrLeafActive = (c: NavChild): boolean =>
+    isGroup(c) ? c.children.some((g) => leafActive(g)) : leafActive(c);
+
+
 
 
   const connectMeta = async () => {
