@@ -162,7 +162,10 @@ export function TopNav() {
           </button>
 
 
+          <TasksButton />
+
           <NotificationsBell />
+
 
           <button
             onClick={toggle}
