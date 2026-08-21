@@ -25,11 +25,12 @@ import { NotificationsBell } from "@/components/notifications/NotificationsBell"
 type NavLeaf = { icon: any; label: string; path: string; badge?: string };
 type NavBranch = { icon: any; label: string; financeOnly?: boolean; children: NavLeaf[] };
 type NavChild = NavLeaf | NavBranch;
-type NavGroup = { icon: any; label: string; children: NavChild[] };
+type NavGroup = { icon: any; label: string; financeOnly?: boolean; children: NavChild[] };
 type NavSingle = NavLeaf;
 type NavEntry = NavSingle | NavGroup;
 
 const isGroup = (e: NavEntry | NavChild): e is NavGroup | NavBranch => "children" in e;
+
 
 const navItems: NavEntry[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
