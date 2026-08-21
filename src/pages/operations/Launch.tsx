@@ -4,6 +4,9 @@ import { Sparkles, LayoutTemplate, Edit3, Magnet, Globe, Megaphone, MessageCircl
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useClients } from "@/hooks/useDatabase";
+import { clientDisplayName } from "@/lib/clientName";
 import { useAdDraftStore } from "@/stores/adDraftStore";
 import { TemplateMode } from "@/components/ads/builder/TemplateMode";
 import { GenerateLaunchPanel } from "@/components/launch/GenerateLaunchPanel";
@@ -29,6 +32,8 @@ const SPECIAL: { id: SpecialAdCategoryValue; label: string; icon: any }[] = [
 export default function Launch() {
   const navigate = useNavigate();
   const init = useAdDraftStore((s) => s.init);
+  const patch = useAdDraftStore((s) => s.patch);
+  const { data: clients = [] } = useClients();
   const hydrate = useAdDraftStore((s) => s.hydrate);
 
   const [tab, setTab] = useState<Tab>("generate");
@@ -39,6 +44,8 @@ export default function Launch() {
 
   // Keep the shared draft store in sync so Template mode filters correctly
   useEffect(() => { init(objective, special, ["US"]); }, [objective, special.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { patch("clientId", clientId); }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toBuilder = () => navigate(`/ads/new?objective=${objective}${special.length ? `&special=${special.join(",")}` : ""}`);
 
@@ -71,6 +78,18 @@ export default function Launch() {
       </div>
 
       <Card className="p-4 rounded-xl space-y-3">
+        <div>
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Client account</div>
+          <Select value={clientId ? String(clientId) : "none"} onValueChange={(v) => setClientId(v === "none" ? null : Number(v))}>
+            <SelectTrigger className="sm:max-w-sm"><SelectValue placeholder="Select client account" /></SelectTrigger>
+            <SelectContent className="max-h-72">
+              <SelectItem value="none">No client (internal)</SelectItem>
+              {clients.map((c: any) => (
+                <SelectItem key={c.id} value={String(c.id)}>{clientDisplayName(c)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div>
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Objective</div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -127,7 +146,6 @@ export default function Launch() {
               objective={objective}
               specialAdCategory={special}
               clientId={clientId}
-              onClientChange={setClientId}
               onGenerated={setPlan}
             />
           )
