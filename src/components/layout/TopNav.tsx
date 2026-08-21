@@ -2,61 +2,72 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useUnreadMessageCount } from "@/hooks/useMessages";
 import {
-  LayoutDashboard, Users, Megaphone, UserPlus, FileBarChart,
-  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown, Radar, CheckSquare, Calendar as CalendarIcon
+  LayoutDashboard, Megaphone, UserPlus, FileBarChart,
+  Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown, Radar, Calendar as CalendarIcon,
+  Rocket, Microscope, FlaskConical, Boxes, ChevronRight
 } from "lucide-react";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger
 } from "@/components/ui/dropdown-menu";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { UserMenu } from "./UserMenu";
+import { TasksButton } from "./TasksButton";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 
-type NavChild = { icon: any; label: string; path: string; badge?: string };
+type NavLeaf = { icon: any; label: string; path: string; badge?: string };
+type NavBranch = { icon: any; label: string; financeOnly?: boolean; children: NavLeaf[] };
+type NavChild = NavLeaf | NavBranch;
 type NavGroup = { icon: any; label: string; children: NavChild[] };
-type NavSingle = { icon: any; label: string; path: string; badge?: string };
+type NavSingle = NavLeaf;
 type NavEntry = NavSingle | NavGroup;
 
-const isGroup = (e: NavEntry): e is NavGroup => "children" in e;
+const isGroup = (e: NavEntry | NavChild): e is NavGroup | NavBranch => "children" in e;
 
 const navItems: NavEntry[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: CheckSquare, label: "Tasks", path: "/tasks" },
   { icon: CalendarIcon, label: "Calendar", path: "/calendar" },
-  { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
   {
-    icon: Megaphone, label: "Marketing", children: [
-      { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
-      { icon: Sparkles, label: "Creatives", path: "/creatives" },
-      { icon: Megaphone, label: "Ads", path: "/ads" },
-      { icon: Inbox, label: "Leads", path: "/leads" },
-    ]
-  },
-  {
-    icon: CreditCard, label: "Finance", children: [
-      { icon: CreditCard, label: "Billing", path: "/billing" },
-      { icon: Receipt, label: "Rebilling", path: "/rebilling" },
-      { icon: Coins, label: "Affiliates", path: "/affiliate" },
-      { icon: TrendingUp, label: "Forecast", path: "/forecast" },
-    ]
-  },
-  {
-    icon: FileBarChart, label: "Insights", children: [
-      { icon: FileBarChart, label: "Reports", path: "/reports" },
-      { icon: Radar, label: "Tracking", path: "/tracking" },
-      { icon: Bot, label: "AI Assistant", path: "/ai" },
-      { icon: TrendingUp, label: "Trend Briefs", path: "/trend-briefs", badge: "NEW" },
+    icon: Boxes, label: "Operations", children: [
+      { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
+      {
+        icon: Rocket, label: "Launch", children: [
+          { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
+          { icon: Sparkles, label: "Creatives", path: "/creatives" },
+          { icon: Megaphone, label: "Ads", path: "/ads" },
+          { icon: Inbox, label: "Leads", path: "/leads" },
+        ]
+      },
+      {
+        icon: FileBarChart, label: "Insights", children: [
+          { icon: FileBarChart, label: "Reports", path: "/reports" },
+          { icon: Radar, label: "Tracking", path: "/tracking" },
+          { icon: Bot, label: "AI Assistant", path: "/ai" },
+          { icon: TrendingUp, label: "Trend Briefs", path: "/trend-briefs", badge: "NEW" },
+        ]
+      },
+      { icon: Microscope, label: "Research", path: "/operations/research" },
+      {
+        icon: CreditCard, label: "Finances", financeOnly: true, children: [
+          { icon: CreditCard, label: "Billing", path: "/billing" },
+          { icon: Receipt, label: "Rebilling", path: "/rebilling" },
+          { icon: Coins, label: "Affiliates", path: "/affiliate" },
+          { icon: TrendingUp, label: "Forecast", path: "/forecast" },
+        ]
+      },
+      { icon: FlaskConical, label: "Sandbox", path: "/operations/sandbox", badge: "SOON" },
     ]
   },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
+
 
 export function TopNav() {
   const location = useLocation();
