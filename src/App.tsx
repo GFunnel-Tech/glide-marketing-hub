@@ -22,6 +22,7 @@ import Campaigns from "./pages/Campaigns";
 import Creatives from "./pages/Creatives";
 import Ads from "./pages/Ads";
 import AdCreator from "./pages/AdCreator";
+import AdEditor from "./pages/AdEditor";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Leads from "./pages/Leads";
