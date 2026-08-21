@@ -81,21 +81,48 @@ export default function Auth() {
     }
   };
 
+  const isTransientAuthError = (msg: string) =>
+    /timeout|timed out|504|502|503|500|network|deadline|temporar|connection/i.test(msg);
+
   const handleGoogle = async () => {
     setLoading(true);
-    try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
-      if (result.error) throw result.error;
-      if (result.redirected) return;
-      window.location.href = "/";
-    } catch (err: any) {
-      console.error("Google sign-in error", err);
-      toast.error(err?.message || "Google sign-in failed");
-      setLoading(false);
+    // Google sign-in goes through a token exchange that can transiently fail
+    // when the auth service is briefly saturated. Retry a few times with
+    // backoff instead of dead-ending the user on a one-off blip.
+    const attempts = 3;
+    for (let i = 1; i <= attempts; i++) {
+      try {
+        const result = await lovable.auth.signInWithOAuth("google", {
+          redirect_uri: window.location.origin,
+        });
+        if (result.error) throw result.error;
+        if (result.redirected) return;
+
+        // Confirm the session actually landed before navigating.
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) throw new Error("Sign-in did not complete. Please try again.");
+        clearStoredRedirect();
+        navigate(redirectTo || "/", { replace: true });
+        return;
+      } catch (err: any) {
+        const msg = err?.message || String(err);
+        console.error(`Google sign-in error (attempt ${i}/${attempts})`, err);
+        if (i < attempts && isTransientAuthError(msg)) {
+          await new Promise((r) => setTimeout(r, 1200 * i));
+          continue;
+        }
+        toast.error(
+          isTransientAuthError(msg)
+            ? "Sign-in service is busy right now — please try again in a moment."
+            : msg || "Google sign-in failed",
+        );
+        setLoading(false);
+        return;
+      }
     }
+    setLoading(false);
   };
+
 
 
   return (
