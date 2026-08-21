@@ -553,16 +553,28 @@ async function syncGranularInsights(
       next = j.paging?.next ?? null;
     }
     if (rows.length) {
-      // chunk to avoid payload limits
-      for (let i = 0; i < rows.length; i += 500) {
-        const chunk = rows.slice(i, i + 500);
-        const { error } = await admin
+      // Chunk small enough to stay well under the Postgres statement timeout.
+      // On a timeout, retry the chunk in smaller slices before giving up.
+      const upsert = async (chunk: any[]) =>
+        await admin
           .from("meta_insights_granular_daily")
           .upsert(chunk, { onConflict: "ad_account_id,level,object_id,date" });
+
+      for (let i = 0; i < rows.length; i += 200) {
+        const chunk = rows.slice(i, i + 200);
+        let { error } = await upsert(chunk);
+        if (error && /timeout/i.test(error.message)) {
+          error = null;
+          for (let j = 0; j < chunk.length; j += 50) {
+            const { error: e2 } = await upsert(chunk.slice(j, j + 50));
+            if (e2) { error = e2; break; }
+          }
+        }
         if (error) throw new Error(`granular ${level}: ${error.message}`);
       }
       total += rows.length;
     }
+
   }
   return total;
 }
