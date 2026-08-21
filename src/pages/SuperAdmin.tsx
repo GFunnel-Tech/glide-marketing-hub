@@ -214,7 +214,9 @@ export default function SuperAdmin() {
                     </td>
                     <td className="p-3">
                       <div className="flex items-center justify-end gap-1">
+                        <button title="Edit user" onClick={() => { setEditUser(u as EditableUser); setEditOpen(true); }} className="p-1.5 rounded hover:bg-accent"><Pencil className="h-4 w-4" /></button>
                         <button title="Impersonate" onClick={() => impersonate(u)} className="p-1.5 rounded hover:bg-accent"><LogIn className="h-4 w-4" /></button>
+
                         <button title={isSuper ? "Remove super admin" : "Make super admin"}
                           onClick={() => call({ action: "set_role", user_id: u.id, role: "super_admin", enabled: !isSuper },
                             isSuper ? "Removed super admin" : "Granted super admin")}
