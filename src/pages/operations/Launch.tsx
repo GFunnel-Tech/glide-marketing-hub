@@ -43,7 +43,10 @@ export default function Launch() {
   const [plan, setPlan] = useState<CampaignPlan | null>(null);
 
   // Keep the shared draft store in sync so Template mode filters correctly
-  useEffect(() => { init(objective, special, ["US"]); }, [objective, special.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    init(objective, special, ["US"]);
+    patch("clientId", clientId);
+  }, [objective, special.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { patch("clientId", clientId); }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
 
