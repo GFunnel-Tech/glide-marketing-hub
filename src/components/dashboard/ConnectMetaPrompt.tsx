@@ -14,18 +14,23 @@ export function ConnectMetaPrompt() {
     if (!currentWorkspace) return;
     setLoading(true);
     try {
+      if (!(await ensureSession())) {
+        toast.error("Your session expired — sign out and back in, then try again.");
+        return;
+      }
       const { data, error } = await supabase.functions.invoke("meta-oauth-start", {
         body: { workspaceId: currentWorkspace.id },
       });
       if (error) throw error;
-      window.open(data.url, "_blank", "width=600,height=700");
-      toast.info("Complete sign-in in the popup, then refresh.");
+      if (!data?.url) throw new Error("No authorization URL returned");
+      if (openOAuthPopup(data.url)) toast.info("Complete sign-in in the popup, then refresh.");
     } catch (e: any) {
-      toast.error(e.message || "Failed to start OAuth");
+      toast.error(await readEdgeError(e));
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
