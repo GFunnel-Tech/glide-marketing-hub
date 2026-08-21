@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Shield, Ban, Trash2, UserCog, LogIn, Building2, History, LogOut as LogOutIcon } from "lucide-react";
+import { Loader2, Shield, Ban, Trash2, UserCog, LogIn, Building2, History, LogOut as LogOutIcon, Pencil, UserPlus, Plus } from "lucide-react";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Navigate } from "react-router-dom";
+import UserEditDialog, { type EditableUser } from "@/components/admin/UserEditDialog";
 
 type AdminUser = {
   id: string;
@@ -11,10 +12,11 @@ type AdminUser = {
   created_at: string;
   last_sign_in_at: string | null;
   banned_until: string | null;
-  profile: { display_name?: string | null } | null;
+  profile: { display_name?: string | null; position?: string | null; department?: string | null } | null;
   roles: string[];
   workspaces: { id: string; name: string; role: string }[];
 };
+
 
 type AdminWorkspace = {
   id: string;
