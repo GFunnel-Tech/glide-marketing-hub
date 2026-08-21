@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalClient } from "@/hooks/usePortalClient";
 import { PortalClientSwitcher } from "@/components/portal/PortalClientSwitcher";
-import { usePortalBasePath } from "@/hooks/usePortalLocationScope";
+import { usePortalBasePath, usePortalLocationId } from "@/hooks/usePortalLocationScope";
 
 const nav = [
   { to: "", end: true, icon: Home, label: "Dashboard" },
@@ -29,6 +29,7 @@ export function PortalTopNav() {
   const navigate = useNavigate();
   const { client, isLoading } = usePortalClient();
   const base = usePortalBasePath();
+  const locationScoped = !!usePortalLocationId();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -45,9 +46,11 @@ export function PortalTopNav() {
               {isLoading ? "Loading…" : client?.name ?? "Your account"}
             </p>
           </div>
-          <div className="hidden md:block w-56 ml-2">
-            <PortalClientSwitcher />
-          </div>
+          {!locationScoped && (
+            <div className="hidden md:block w-56 ml-2">
+              <PortalClientSwitcher />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
