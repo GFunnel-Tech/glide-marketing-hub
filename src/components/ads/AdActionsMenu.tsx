@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { getAdapter, type AdChannel } from "@/lib/adChannels";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { metaAdsManagerUrl } from "@/lib/metaAdsLink";
@@ -32,6 +33,7 @@ interface AdLike {
 export function AdActionsMenu({ ad, channel }: { ad: AdLike; channel: AdChannel }) {
   const { currentWorkspace } = useWorkspace();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
@@ -100,8 +102,11 @@ export function AdActionsMenu({ ad, channel }: { ad: AdLike; channel: AdChannel 
 
             <Copy className="h-4 w-4 mr-2" /> Duplicate ad
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/ads/${ad.id}/edit`)}>
+            <Pencil className="h-4 w-4 mr-2" /> Edit ad
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setEditOpen(true)} disabled={!adapter.supports.updateCreative}>
-            <Pencil className="h-4 w-4 mr-2" /> Edit copy
+            <Pencil className="h-4 w-4 mr-2" /> Quick edit copy
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={scaleQuick} disabled={!adapter.supports.updateBudget || !ad.adset_id}>
