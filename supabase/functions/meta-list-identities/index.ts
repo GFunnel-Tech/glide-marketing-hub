@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     if (!pagesRes.ok) {
       return json({ error: pagesJson?.error?.message || "Failed to list Pages", connection: conn, pages: [], adAccounts: [] }, 200);
     }
-    const pages = (pagesJson.data ?? []).map((p: any) => ({
+    let pages = (pagesJson.data ?? []).map((p: any) => ({
       id: p.id,
       name: p.name,
       avatar: p.picture?.data?.url ?? null,
@@ -53,6 +53,54 @@ Deno.serve(async (req) => {
           }
         : null,
     }));
+
+    // Scope identities to a specific ad account when one is selected.
+    // Meta only allows publishing as a Page/IG that is promotable by the ad account.
+    let scopedToAdAccount = false;
+    let scopeWarning: string | null = null;
+    if (adAccountId) {
+      const actId = String(adAccountId).startsWith("act_") ? String(adAccountId) : `act_${adAccountId}`;
+      try {
+        const [promoRes, igRes] = await Promise.all([
+          fetch(`https://graph.facebook.com/v21.0/${actId}/promote_pages?fields=id,name,picture{url}&limit=200&access_token=${conn.access_token}`),
+          fetch(`https://graph.facebook.com/v21.0/${actId}/instagram_accounts?fields=id,username&limit=200&access_token=${conn.access_token}`),
+        ]);
+        const promoJson = await promoRes.json();
+        const igJson = await igRes.json();
+
+        if (promoRes.ok && Array.isArray(promoJson.data)) {
+          const allowedPageIds = new Set<string>(promoJson.data.map((p: any) => String(p.id)));
+          const byId = new Map(pages.map((p: any) => [p.id, p]));
+          // Keep the ad account's promotable pages, enriching with data from me/accounts.
+          pages = promoJson.data.map((p: any) => {
+            const known: any = byId.get(String(p.id));
+            return known ?? {
+              id: String(p.id),
+              name: p.name,
+              avatar: p.picture?.data?.url ?? null,
+              canAdvertise: true,
+              instagram: null,
+            };
+          });
+          scopedToAdAccount = true;
+          if (allowedPageIds.size === 0) {
+            scopeWarning = "This ad account has no Pages available to advertise with. Add the Page to the same Business Manager as the ad account.";
+          }
+        } else {
+          scopeWarning = promoJson?.error?.message || "Couldn't verify which Pages this ad account can advertise with.";
+        }
+
+        if (igRes.ok && Array.isArray(igJson.data) && igJson.data.length > 0) {
+          const allowedIg = new Set<string>(igJson.data.map((a: any) => String(a.id)));
+          pages = pages.map((p: any) =>
+            p.instagram && !allowedIg.has(String(p.instagram.id)) ? { ...p, instagram: null } : p,
+          );
+        }
+      } catch (_e) {
+        scopeWarning = "Couldn't verify Page access for this ad account.";
+      }
+    }
+
 
     // Ad Accounts (from our table — already synced via the connect flow)
     const { data: accounts } = await admin.from("meta_ad_accounts")
