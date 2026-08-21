@@ -173,9 +173,7 @@ export function TopNav() {
           const Icon = item.icon;
 
           if (isGroup(item)) {
-            const isActive = item.children.some(
-              (c) => location.pathname === c.path || (c.path !== "/" && location.pathname.startsWith(c.path))
-            );
+            const isActive = item.children.some((c) => groupOrLeafActive(c));
             return (
               <DropdownMenu key={item.label}>
                 <DropdownMenuTrigger
@@ -190,25 +188,62 @@ export function TopNav() {
                   <span>{item.label}</span>
                   <ChevronDown className="h-3 w-3 opacity-60" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-[180px]">
+                <DropdownMenuContent align="start" className="min-w-[190px]">
                   {item.children.map((child) => {
                     const ChildIcon = child.icon;
-                    const childActive =
-                      location.pathname === child.path ||
-                      (child.path !== "/" && location.pathname.startsWith(child.path));
+
+                    // Nested section (e.g. Operations → Launch → Campaigns)
+                    if (isGroup(child)) {
+                      const branchActive = child.children.some((g) => leafActive(g));
+                      return (
+                        <DropdownMenuSub key={child.label}>
+                          <DropdownMenuSubTrigger
+                            className={cn(
+                              "flex items-center gap-2 cursor-pointer",
+                              branchActive && "text-primary font-medium"
+                            )}
+                          >
+                            <ChildIcon className="h-4 w-4 shrink-0" />
+                            <span className="flex-1">{child.label}</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="min-w-[180px]">
+                            {child.children.map((leaf) => (
+                              <DropdownMenuItem key={leaf.path} asChild>
+                                <Link
+                                  to={leaf.path}
+                                  className={cn(
+                                    "flex items-center gap-2 cursor-pointer",
+                                    leafActive(leaf) && "text-primary font-medium"
+                                  )}
+                                >
+                                  <leaf.icon className="h-4 w-4 shrink-0" />
+                                  <span className="flex-1">{leaf.label}</span>
+                                  {leaf.badge && (
+                                    <span className="text-[10px] bg-gradient-primary text-primary-foreground rounded px-1.5 py-0.5 font-medium leading-none">
+                                      {leaf.badge}
+                                    </span>
+                                  )}
+                                </Link>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      );
+                    }
+
                     return (
                       <DropdownMenuItem key={child.path} asChild>
                         <Link
                           to={child.path}
                           className={cn(
                             "flex items-center gap-2 cursor-pointer",
-                            childActive && "text-primary font-medium"
+                            leafActive(child) && "text-primary font-medium"
                           )}
                         >
                           <ChildIcon className="h-4 w-4 shrink-0" />
                           <span className="flex-1">{child.label}</span>
                           {child.badge && (
-                            <span className="text-[10px] bg-gradient-primary text-primary-foreground rounded px-1.5 py-0.5 font-medium leading-none">
+                            <span className="text-[10px] bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-medium leading-none">
                               {child.badge}
                             </span>
                           )}
@@ -220,6 +255,7 @@ export function TopNav() {
               </DropdownMenu>
             );
           }
+
 
           const isActive =
             location.pathname === item.path ||
