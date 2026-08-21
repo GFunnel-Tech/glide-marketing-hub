@@ -69,16 +69,38 @@ export function CreativeSection() {
 
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="text-xs text-muted-foreground">{state.media.length} / 10 images and videos. {state.creativeType === "dynamic" && "We'll rotate & learn."}</div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => setStudioOpen(true)}
-          disabled={state.media.length >= 10}
-        >
-          <Sparkles className="h-3 w-3 mr-1.5 text-primary" /> Generate with AI
-        </Button>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setLibraryOpen(true)}
+            disabled={state.media.length >= 10}
+          >
+            <FolderOpen className="h-3 w-3 mr-1.5 text-primary" /> Media library
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => openEditorWith(state.media.map((m) => ({ url: m.url, name: m.name, type: m.type })))}
+            disabled={state.media.length === 0}
+          >
+            <Wand2 className="h-3 w-3 mr-1.5 text-primary" /> Creative Studio
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setStudioOpen(true)}
+            disabled={state.media.length >= 10}
+          >
+            <Sparkles className="h-3 w-3 mr-1.5 text-primary" /> Generate with AI
+          </Button>
+        </div>
       </div>
 
       <MediaUploader value={state.media} onChange={(v) => patch("media", v)} max={10} accept="both" label="Add" />
@@ -89,6 +111,23 @@ export function CreativeSection() {
         remaining={Math.max(10 - state.media.length, 0)}
         onAdd={(assets) => patch("media", [...state.media, ...assets].slice(0, 10))}
       />
+
+      <MediaLibraryDialog
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        clientId={state.clientId}
+        remaining={Math.max(10 - state.media.length, 0)}
+        onAdd={addAssets}
+        onEditInStudio={(assets) => openEditorWith(assets)}
+      />
+
+      <MediaStudioDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        sources={editorSources}
+        onExport={(a) => addAssets([a])}
+      />
+
 
 
       {/* Caption (above media) */}
