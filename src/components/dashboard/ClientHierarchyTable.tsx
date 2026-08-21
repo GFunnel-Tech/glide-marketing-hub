@@ -51,6 +51,7 @@ import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { useChurnRisks } from "@/hooks/useChurnRisk";
 import { ChurnRiskBadge } from "./ChurnRiskBadge";
 import { EntityChartsDrawer, type EntityLevel } from "./EntityChartsDrawer";
+import { clientDisplayName } from "@/lib/clientName";
 
 const TABLE_KEY = "client_hierarchy";
 
@@ -849,7 +850,7 @@ export function ClientHierarchyTable() {
                                   onClick={(e) => { e.stopPropagation(); navigate(clientPath(client.id)); }}
                                   className="font-semibold text-foreground hover:text-primary truncate"
                                 >
-                                  {client.brand || client.name}
+                                  {clientDisplayName(client as any)}
                                 </button>
                                 {(client as any).isAgencyAccount && (
                                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide shrink-0">
@@ -911,9 +912,6 @@ export function ClientHierarchyTable() {
                                   );
                                 })()}
                               </div>
-                              {client.brand && client.name && (
-                                <p className="text-[10px] text-muted-foreground truncate">{client.name}</p>
-                              )}
                               {clientCampaigns.length > 0 && (
                                 <p className="text-[11px] text-muted-foreground">
                                   {clientCampaigns.length} campaign{clientCampaigns.length === 1 ? "" : "s"}
