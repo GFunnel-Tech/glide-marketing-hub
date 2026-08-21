@@ -37,6 +37,8 @@ interface AgentChatProps {
   detectClient?: (text: string) => number | undefined;
   /** Edge function to invoke. Defaults to "ai-agent" (per-client). Use "ai-ops-chat" for portfolio. */
   endpoint?: string;
+  /** Message auto-sent once when the chat mounts (used by the dashboard launcher bar). */
+  initialPrompt?: string;
   className?: string;
 }
 
@@ -57,6 +59,7 @@ export function AgentChat({
   onClientDetected,
   detectClient,
   endpoint = "ai-agent",
+  initialPrompt,
   className,
 }: AgentChatProps) {
   const qc = useQueryClient();
@@ -145,6 +148,15 @@ export function AgentChat({
       setLoading(false);
     }
   };
+
+  const sentInitial = useRef(false);
+  useEffect(() => {
+    if (initialPrompt && workspaceId && !sentInitial.current) {
+      sentInitial.current = true;
+      void sendMessage(initialPrompt);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt, workspaceId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
