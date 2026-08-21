@@ -1,5 +1,5 @@
 import { useAdDraftStore } from "@/stores/adDraftStore";
-import { ChevronDown, ChevronRight, LayoutGrid, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, LayoutGrid, Plus, MoreHorizontal, Pencil, Trash2, Copy, Megaphone } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -16,6 +16,14 @@ export function AdSetSidebar() {
   const renameAd = useAdDraftStore((s) => s.renameAd);
   const deleteAdSet = useAdDraftStore((s) => s.deleteAdSet);
   const deleteAd = useAdDraftStore((s) => s.deleteAd);
+  const selectCampaign = useAdDraftStore((s) => s.selectCampaign);
+  const addCampaign = useAdDraftStore((s) => s.addCampaign);
+  const duplicateCampaign = useAdDraftStore((s) => s.duplicateCampaign);
+  const renameCampaign = useAdDraftStore((s) => s.renameCampaign);
+  const deleteCampaign = useAdDraftStore((s) => s.deleteCampaign);
+  const duplicateAdSet = useAdDraftStore((s) => s.duplicateAdSet);
+  const duplicateAd = useAdDraftStore((s) => s.duplicateAd);
+  const campaigns = state.campaigns ?? [];
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(state.adSets.map((s) => [s.id, true])),
@@ -36,11 +44,79 @@ export function AdSetSidebar() {
   return (
     <aside className="w-[260px] flex-shrink-0 border-r border-border bg-muted/30 h-full overflow-y-auto p-2">
       <div className="mb-2 px-1">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Campaign</div>
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-card border border-border">
-          <LayoutGrid className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-          <span className="text-xs font-medium text-foreground truncate">{state.draftName || "Untitled"}</span>
-          <span className="ml-auto h-2 w-2 rounded-full bg-muted-foreground/40" />
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Campaigns ({campaigns.length})
+          </span>
+          <button
+            onClick={addCampaign}
+            className="text-muted-foreground hover:text-foreground p-0.5"
+            title="Add campaign"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <div className="space-y-1">
+          {campaigns.map((c) => {
+            const active = c.id === state.selectedCampaignId;
+            const adCount = c.adSets.reduce((n, x) => n + x.ads.length, 0);
+            return (
+              <div
+                key={c.id}
+                className={cn(
+                  "flex items-center gap-2 px-2 py-1.5 rounded-md border group cursor-pointer",
+                  active ? "bg-card border-primary/40 shadow-sm" : "bg-card/50 border-border hover:bg-accent/40",
+                )}
+                onClick={() => !active && selectCampaign(c.id)}
+              >
+                <Megaphone className={cn("h-3.5 w-3.5 flex-shrink-0", active ? "text-primary" : "text-muted-foreground")} />
+                {editing === c.id ? (
+                  <Input
+                    autoFocus
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onBlur={() => commitEdit((v) => renameCampaign(c.id, v))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitEdit((v) => renameCampaign(c.id, v));
+                      if (e.key === "Escape") setEditing(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-6 text-xs"
+                  />
+                ) : (
+                  <div className="min-w-0 flex-1" onDoubleClick={(e) => { e.stopPropagation(); beginEdit(c.id, c.name); }}>
+                    <div className="text-xs font-medium text-foreground truncate">{c.name}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {c.adSets.length} ad set{c.adSets.length === 1 ? "" : "s"} · {adCount} ad{adCount === 1 ? "" : "s"} · {c.objective}
+                    </div>
+                  </div>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button onClick={(e) => e.stopPropagation()} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground p-0.5">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onClick={() => beginEdit(c.id, c.name)}>
+                      <Pencil className="h-3.5 w-3.5 mr-2" /> Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => duplicateCampaign(c.id)}>
+                      <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate campaign
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => deleteCampaign(c.id)}
+                      disabled={campaigns.length <= 1}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -102,6 +178,9 @@ export function AdSetSidebar() {
                     <DropdownMenuItem onClick={() => addAd(set.id)}>
                       <Plus className="h-3.5 w-3.5 mr-2" /> Add ad
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => duplicateAdSet(set.id)}>
+                      <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate ad set
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => deleteAdSet(set.id)}
@@ -161,6 +240,9 @@ export function AdSetSidebar() {
                           <DropdownMenuContent align="end" className="w-36">
                             <DropdownMenuItem onClick={() => beginEdit(ad.id, ad.name)}>
                               <Pencil className="h-3.5 w-3.5 mr-2" /> Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => duplicateAd(set.id, ad.id)}>
+                              <Copy className="h-3.5 w-3.5 mr-2" /> Duplicate ad
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => deleteAd(set.id, ad.id)}
