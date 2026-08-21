@@ -195,7 +195,11 @@ async function runSync(
         ad_account_id: acc.id,
         trigger: workspaceFilter ? "manual" : (tier ? `scheduled-${tier}` : "scheduled"),
         status: "running",
-      }).select().single();
+      }).select().maybeSingle();
+      // The log row is best-effort telemetry: if the insert fails (RLS, unique
+      // conflict, transient error) we must still run the actual sync instead of
+      // crashing the whole worker on log.data!.id.
+      const logId: string | null = log?.data?.id ?? null;
 
       try {
         if (adsOnly) {
@@ -208,7 +212,7 @@ async function runSync(
             status: "success",
             rows_synced: adRows,
             finished_at: new Date().toISOString(),
-          }).eq("id", log.data!.id);
+          }).eq("id", logId ?? "00000000-0000-0000-0000-000000000000");
 
           totalRows += adRows;
           return;
@@ -233,7 +237,7 @@ async function runSync(
               status: "rate_limited",
               error_message: JSON.stringify(json_).slice(0, 500),
               finished_at: new Date().toISOString(),
-            }).eq("id", log.data!.id);
+            }).eq("id", logId ?? "00000000-0000-0000-0000-000000000000");
             skippedRateLimited++;
             return;
           }
@@ -311,7 +315,7 @@ async function runSync(
           error_message: adsError ? ("ads: " + adsError).slice(0, 2000) : null,
           rows_synced: rows.length + campaignRows + granularRows + adRows,
           finished_at: new Date().toISOString(),
-        }).eq("id", log.data!.id);
+        }).eq("id", logId ?? "00000000-0000-0000-0000-000000000000");
 
         totalRows += rows.length + campaignRows + granularRows + adRows;
       } catch (e) {
@@ -320,7 +324,7 @@ async function runSync(
           status: "error",
           error_message: String(e),
           finished_at: new Date().toISOString(),
-        }).eq("id", log.data!.id);
+        }).eq("id", logId ?? "00000000-0000-0000-0000-000000000000");
       }
     };
 
