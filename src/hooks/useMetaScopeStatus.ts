@@ -79,21 +79,21 @@ export function useMetaScopeStatus() {
       }
 
       const active = connections.filter((c) => c.status === "active");
-      const anyExpired =
-        active.some((c) => c.isExpired) ||
-        connections.some((c) => c.status === "expired");
+      // Healthy = active, unexpired, all scopes granted. If at least one
+      // connection is healthy the workspace is fine, even if other/older
+      // rows carry transient errors (e.g. Meta rate limits).
+      const healthy = active.filter((c) => !c.isExpired && !c.missingScopes.length);
+      const anyExpired = active.some((c) => c.isExpired);
       const missingUnion = Array.from(
         new Set(active.flatMap((c) => c.missingScopes)),
       );
-      const anyErrored = connections.some(
-        (c) => c.status !== "active" || !!c.last_error,
-      );
 
       let state: MetaScopeState = "ok";
-      if (anyExpired) state = "expired";
-      else if (!active.length) state = "errored";
+      if (healthy.length) state = "ok";
+      else if (!active.length) state = "expired";
+      else if (anyExpired) state = "expired";
       else if (missingUnion.length) state = "missing_scopes";
-      else if (anyErrored) state = "errored";
+      else state = "errored";
 
 
       const signature = [
