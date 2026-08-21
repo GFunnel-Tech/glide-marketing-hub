@@ -46,6 +46,9 @@ export default function SuperAdmin() {
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editUser, setEditUser] = useState<EditableUser | null>(null);
+
 
   const load = async () => {
     setLoading(true);
