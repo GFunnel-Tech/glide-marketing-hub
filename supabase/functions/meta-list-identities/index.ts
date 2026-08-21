@@ -118,6 +118,9 @@ Deno.serve(async (req) => {
       },
       pages,
       adAccounts: accounts ?? [],
+      scopedToAdAccount,
+      scopeWarning,
+
     });
   } catch (e: any) {
     return json({ error: e.message }, 500);
