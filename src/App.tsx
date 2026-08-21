@@ -41,6 +41,9 @@ import Tracking from "./pages/Tracking";
 import Tasks from "./pages/Tasks";
 import TrendBriefs from "./pages/TrendBriefs";
 import CalendarPage from "./pages/Calendar";
+import Research from "./pages/operations/Research";
+import Sandbox from "./pages/operations/Sandbox";
+
 import NotFound from "./pages/NotFound";
 import PortalLayout from "./pages/portal/PortalLayout";
 import PortalAuth from "./pages/portal/PortalAuth";
