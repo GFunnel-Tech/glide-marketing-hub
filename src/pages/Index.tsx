@@ -100,7 +100,9 @@ function ExportOverviewButton() {
     }
   };
 
-  const busy = exporting || isLoading || isFetching;
+  // Only reflect the actual export action — background metric refetches
+  // shouldn't make the button look permanently busy (it refetches on click).
+  const busy = exporting;
   return (
     <Button variant="outline" size="sm" onClick={handleExport} disabled={busy}>
       <Download className="h-4 w-4 mr-1.5" /> {busy ? "Preparing…" : "Export"}
