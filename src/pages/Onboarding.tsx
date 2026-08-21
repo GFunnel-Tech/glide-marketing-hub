@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useOnboarding } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
 import { UserPlus, CheckCircle, X, Images, Wand2 } from "lucide-react";
+import NewClientDialog from "@/components/onboarding/NewClientDialog";
 
 
 const phases = [
@@ -37,6 +38,8 @@ interface OnboardingClient {
 export default function Onboarding() {
   const { data: onboardingClients = [], isLoading } = useOnboarding();
   const [selectedClient, setSelectedClient] = useState<OnboardingClient | null>(null);
+  const [newClientOpen, setNewClientOpen] = useState(false);
+
 
   const totalOnboarding = onboardingClients.length;
   const blocked = onboardingClients.filter(c => c.blockers.length > 0).length;
@@ -56,9 +59,13 @@ export default function Onboarding() {
           >
             <Images className="h-4 w-4" />Media & assets
           </Link>
-          <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-2">
+          <button
+            onClick={() => setNewClientOpen(true)}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 flex items-center gap-2"
+          >
             <UserPlus className="h-4 w-4" />New Client
           </button>
+
         </div>
       </div>
 
@@ -163,6 +170,8 @@ export default function Onboarding() {
           </div>
         </>
       )}
+      <NewClientDialog open={newClientOpen} onOpenChange={setNewClientOpen} />
     </div>
+
   );
 }
