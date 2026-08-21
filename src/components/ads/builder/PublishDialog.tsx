@@ -65,28 +65,91 @@ export function PublishDialog({ open, onOpenChange, onMissingIdentity }: Props) 
           state,
         });
       }
-      const { data, error } = await supabase.functions.invoke("meta-ad-launch", {
-        body: { workspaceId: currentWorkspace.id, draftId: id, state },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      // Publish every campaign in the plan; extra ad sets are appended to their campaign.
+      const campaigns = state.campaigns?.length
+        ? state.campaigns
+        : [{
+            id: "single",
+            name: state.campaignName || state.draftName,
+            objective: state.objective,
+            specialAdCategory: state.specialAdCategory,
+            adSets: state.adSets,
+            selectedAdSetId: state.selectedAdSetId,
+            selectedAdId: state.selectedAdId,
+          }];
 
-      const campaignId = data?.campaignId || data?.campaign_id;
-      if (state.activateOnPublish && campaignId) {
+      const createdCampaignIds: string[] = [];
+      const failures: string[] = [];
+
+      for (const c of campaigns) {
+        let campaignId: string | null = null;
+        for (const set of c.adSets) {
+          const ads = set.ads ?? [];
+          const payload = {
+            ...state,
+            objective: c.objective,
+            specialAdCategory: c.specialAdCategory,
+            campaignName: c.name || state.campaignName || state.draftName,
+            adSetName: `${c.name} – ${set.name}`,
+            // ad-set level
+            interests: set.interests,
+            customAudiences: set.customAudiences,
+            excludedAudiences: set.excludedAudiences,
+            ageMin: set.ageMin,
+            ageMax: set.ageMax,
+            genders: set.genders,
+            placements: set.placements,
+            budgetType: set.budgetType,
+            budgetAmount: set.budgetAmount,
+            // ad level – merge every ad in the set into creative variants
+            media: ads.flatMap((a) => a.media ?? []),
+            primaryTexts: ads.flatMap((a) => (a.primaryTexts ?? []).filter(Boolean)),
+            headlines: ads.flatMap((a) => (a.headlines ?? []).filter(Boolean)),
+            descriptions: ads.flatMap((a) => (a.descriptions ?? []).filter(Boolean)),
+            cta: ads[0]?.cta ?? state.cta,
+            displayLink: ads[0]?.displayLink ?? state.displayLink,
+            websiteUrl: ads[0]?.websiteUrl ?? state.websiteUrl,
+          };
+
+          const { data, error } = await supabase.functions.invoke("meta-ad-launch", {
+            body: {
+              workspaceId: currentWorkspace.id,
+              draftId: id,
+              state: payload,
+              existingCampaignId: campaignId,
+            },
+          });
+          const err = error?.message || data?.error;
+          if (err) {
+            failures.push(`${c.name} / ${set.name}: ${err}`);
+            break;
+          }
+          campaignId = campaignId ?? (data?.campaignId || data?.campaign_id);
+        }
+        if (campaignId) createdCampaignIds.push(campaignId);
+      }
+
+      if (createdCampaignIds.length === 0) {
+        throw new Error(failures[0] || "Publish failed");
+      }
+
+      if (state.activateOnPublish) {
         try {
           const { data: statusData, error: statusErr } = await supabase.functions.invoke("meta-ad-status", {
-            body: { workspaceId: currentWorkspace.id, adIds: [campaignId], status: "ACTIVE" },
+            body: { workspaceId: currentWorkspace.id, adIds: createdCampaignIds, status: "ACTIVE" },
           });
           if (statusErr) throw statusErr;
           const failed = (statusData?.results ?? []).filter((r: any) => !r.ok);
           if (failed.length) throw new Error(failed[0]?.error || "Activation failed");
-          toast.success("Campaign published and activated. It's now live on Meta.");
+          toast.success(`${createdCampaignIds.length} campaign(s) published and activated.`);
         } catch (e: any) {
           toast.warning(`Published (PAUSED) but activation failed: ${e.message}. Activate manually.`);
         }
       } else {
-        toast.success("Campaign published (PAUSED). Review and activate it in Meta Ads Manager.");
+        toast.success(`${createdCampaignIds.length} campaign(s) published (PAUSED). Review and activate in Meta Ads Manager.`);
       }
+      if (failures.length) toast.warning(`${failures.length} part(s) failed: ${failures[0]}`);
+
       onOpenChange(false);
       navigate("/ads");
     } catch (e: any) {
