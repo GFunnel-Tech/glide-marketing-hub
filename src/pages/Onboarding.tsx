@@ -170,6 +170,8 @@ export default function Onboarding() {
           </div>
         </>
       )}
+      <NewClientDialog open={newClientOpen} onOpenChange={setNewClientOpen} />
     </div>
+
   );
 }
