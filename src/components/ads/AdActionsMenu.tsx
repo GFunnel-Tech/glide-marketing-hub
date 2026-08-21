@@ -100,8 +100,11 @@ export function AdActionsMenu({ ad, channel }: { ad: AdLike; channel: AdChannel 
 
             <Copy className="h-4 w-4 mr-2" /> Duplicate ad
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/ads/${ad.id}/edit`)}>
+            <Pencil className="h-4 w-4 mr-2" /> Edit ad
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setEditOpen(true)} disabled={!adapter.supports.updateCreative}>
-            <Pencil className="h-4 w-4 mr-2" /> Edit copy
+            <Pencil className="h-4 w-4 mr-2" /> Quick edit copy
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={scaleQuick} disabled={!adapter.supports.updateBudget || !ad.adset_id}>
