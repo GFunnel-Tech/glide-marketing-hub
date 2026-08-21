@@ -4880,6 +4880,70 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_embed_tokens: {
+        Row: {
+          client_id: number
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          last_used_at: string | null
+          location_id: string
+          revoked: boolean
+          token: string
+          use_count: number
+          workspace_id: string | null
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          location_id: string
+          revoked?: boolean
+          token: string
+          use_count?: number
+          workspace_id?: string | null
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          location_id?: string
+          revoked?: boolean
+          token?: string
+          use_count?: number
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_embed_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_onboarding_status"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "portal_embed_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_embed_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       portal_onboarding: {
         Row: {
           billing_done: boolean

@@ -53,6 +53,7 @@ import { GhlSubaccountTokenInput } from "@/components/integrations/GhlSubaccount
 import { MetaAccountsForClient } from "@/components/integrations/MetaAccountsForClient";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
+import { PortalEmbedLinkCard } from "@/components/clients/PortalEmbedLinkCard";
 import { ImpersonateClientButton } from "@/components/clients/ImpersonateClientButton";
 import { ClientRequestsPanel } from "@/components/client/ClientRequestsPanel";
 import { ClientTasksTab } from "@/components/clients/ClientTasksTab";
@@ -1096,7 +1097,12 @@ function ClientProfileInner() {
         </TabsContent>
 
         {/* ACCESS */}
-        <TabsContent value="access" className="mt-5">
+        <TabsContent value="access" className="mt-5 space-y-5">
+          <PortalEmbedLinkCard
+            clientId={client.id}
+            workspaceId={(client as any).workspace_id ?? null}
+            locationId={(client as any).ghl_location_id ?? null}
+          />
           <ClientInvitesPanel
             clientId={client.id}
             workspaceId={(client as any).workspace_id ?? null}

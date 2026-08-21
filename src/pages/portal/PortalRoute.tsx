@@ -7,6 +7,7 @@ import { useIsAgencyStaff } from "@/hooks/useIsAgencyStaff";
 import { Card } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 import { usePortalLocationId } from "@/hooks/usePortalLocationScope";
+import { usePortalEmbedAuth } from "@/hooks/usePortalEmbedAuth";
 
 export function PortalRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -18,10 +19,13 @@ export function PortalRoute({ children }: { children: ReactNode }) {
   const locationId = usePortalLocationId();
   const portalBase = locationId ? `/portal/${locationId}` : "/portal";
 
+  // GHL embed: `?t=<token>` signs the viewer in automatically.
+  const embed = usePortalEmbedAuth(!!user);
+
   // Wait for all access checks (auth, mappings, super-admin, staff) before
   // deciding what to render — otherwise agency owners briefly see the
   // "No portal access" screen while the role queries are still in flight.
-  if (loading || (user && (isLoading || superAdminLoading || staffLoading))) {
+  if (loading || embed.exchanging || (user && (isLoading || superAdminLoading || staffLoading))) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -30,6 +34,14 @@ export function PortalRoute({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
+    if (embed.error) {
+      return (
+        <div className="flex h-screen flex-col items-center justify-center bg-background p-6 text-center">
+          <h1 className="text-xl font-semibold text-foreground">Link no longer valid</h1>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">{embed.error}</p>
+        </div>
+      );
+    }
     return <Navigate to="/portal/login" state={{ from: location }} replace />;
   }
 
