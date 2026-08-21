@@ -27,6 +27,7 @@ import { useClientPath } from "@/lib/clientPath";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Client } from "@/data/mockData";
+import { clientDisplayName } from "@/lib/clientName";
 
 type StatusFilter = "ALL" | "NEW" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
 type Channel = "all" | "meta" | "google" | "tiktok" | "linkedin";
@@ -97,10 +98,9 @@ const BUILTIN_COLUMNS: ColDef[] = [
     render: (c) => (
       <div>
         <p className="flex items-center gap-1.5 font-medium text-foreground">
-          <span className="truncate">{c.name}</span>
+          <span className="truncate">{clientDisplayName(c as any)}</span>
           <NoMetaAccountWarning clientId={c.id} />
         </p>
-        <p className="text-xs text-muted-foreground">{c.brand}</p>
       </div>
     ),
 
@@ -277,7 +277,7 @@ export function ClientTable() {
     };
     const rowValue = (c: any, key: string): any => {
       switch (key) {
-        case "name": return `${c.name}${c.brand ? ` (${c.brand})` : ""}`;
+        case "name": return clientDisplayName(c as any);
         case "status": return c.status;
         case "bmType": return c.bmType ?? "";
         case "cpl": return Number(c.cpl ?? 0).toFixed(2);
@@ -511,8 +511,7 @@ export function ClientTable() {
                       >
                         <Check className={cn("mr-2 h-3.5 w-3.5", selectedClientId === c.id ? "opacity-100" : "opacity-0")} />
                         <div className="flex flex-col">
-                          <span className="font-medium">{c.name}</span>
-                          <span className="text-[10px] text-muted-foreground">{c.brand}</span>
+                          <span className="font-medium">{clientDisplayName(c as any)}</span>
                         </div>
                       </CommandItem>
                     ))}
