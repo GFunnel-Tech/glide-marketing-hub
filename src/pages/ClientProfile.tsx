@@ -167,7 +167,7 @@ export default function ClientProfile() {
 }
 
 function ClientProfileInner() {
-  const { id } = useParams();
+  const { id, locationId } = useParams();
   const { data: client, isLoading } = useClient(Number(id));
   const { data: allCampaigns = [] } = useCampaigns();
   const { data: rangeCampaignsData = [] } = useClientCampaignsRange(Number(id));
