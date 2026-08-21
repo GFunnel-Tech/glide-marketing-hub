@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useOnboarding } from "@/hooks/useDatabase";
 import { cn } from "@/lib/utils";
 import { UserPlus, CheckCircle, X, Images, Wand2 } from "lucide-react";
+import NewClientDialog from "@/components/onboarding/NewClientDialog";
 
 
 const phases = [
