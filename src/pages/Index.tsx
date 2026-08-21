@@ -11,6 +11,7 @@ import { MetaFreshnessBanner } from "@/components/integrations/MetaFreshnessBann
 
 import { PortfolioChart } from "@/components/dashboard/PortfolioChart";
 import { QuickActionBar } from "@/components/dashboard/QuickActionBar";
+import { DashboardAiBar } from "@/components/dashboard/DashboardAiBar";
 import { ConnectMetaPrompt } from "@/components/dashboard/ConnectMetaPrompt";
 import { useHasActiveMetaConnection } from "@/hooks/useMetaConnections";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
@@ -182,6 +183,8 @@ const Index = () => {
           <DateRangePicker />
         </div>
       </div>
+
+      <DashboardAiBar />
 
       <div className="rounded-xl border border-border bg-card">
         <button
