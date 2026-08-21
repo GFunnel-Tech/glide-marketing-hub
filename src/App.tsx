@@ -246,6 +246,9 @@ const App = () => (
                   <Route path="tracking" element={<Tracking />} />
                   <Route path="tasks" element={<Tasks />} />
                   <Route path="calendar" element={<CalendarPage />} />
+                  <Route path="operations/research" element={<Research />} />
+                  <Route path="operations/sandbox" element={<Sandbox />} />
+
                   <Route path="trend-briefs" element={<TrendBriefs />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="settings/integrations" element={<Navigate to="/settings?tab=integrations" replace />} />
