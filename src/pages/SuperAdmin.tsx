@@ -357,6 +357,15 @@ export default function SuperAdmin() {
           </table>
         </div>
       )}
+
+      <UserEditDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        user={editUser}
+        workspaces={workspaces.map((w) => ({ id: w.id, name: w.name }))}
+        onSaved={load}
+      />
     </div>
+
   );
 }
