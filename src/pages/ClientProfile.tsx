@@ -53,6 +53,7 @@ import { GhlSubaccountTokenInput } from "@/components/integrations/GhlSubaccount
 import { MetaAccountsForClient } from "@/components/integrations/MetaAccountsForClient";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { ClientInvitesPanel } from "@/components/clients/ClientInvitesPanel";
+import { PortalEmbedLinkCard } from "@/components/clients/PortalEmbedLinkCard";
 import { ImpersonateClientButton } from "@/components/clients/ImpersonateClientButton";
 import { ClientRequestsPanel } from "@/components/client/ClientRequestsPanel";
 import { ClientTasksTab } from "@/components/clients/ClientTasksTab";
