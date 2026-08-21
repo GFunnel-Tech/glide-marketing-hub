@@ -360,7 +360,19 @@ async function rollupClients(admin: any, workspaceFilter: string | null) {
 async function syncCampaigns(admin: any, acc: any, accessToken: string): Promise<number> {
   // 1. List campaigns for the ad account
   const campFields = "id,name,status,effective_status,objective,daily_budget,lifetime_budget";
-  const campUrl = `https://graph.facebook.com/v21.0/${acc.act_id}/campaigns?fields=${campFields}&limit=200&access_token=${encodeURIComponent(accessToken)}`;
+  // Meta hides ARCHIVED/DELETED campaigns by default. Without them the campaigns
+  // table loses rows that historical insights are attributed through, which makes
+  // past analytics look like they vanished after a resync.
+  const campFilter = encodeURIComponent(JSON.stringify([{
+    field: "campaign.effective_status",
+    operator: "IN",
+    value: [
+      "ACTIVE", "PAUSED", "DELETED", "ARCHIVED", "CAMPAIGN_PAUSED",
+      "IN_PROCESS", "WITH_ISSUES", "PENDING_REVIEW", "DISAPPROVED",
+      "PREAPPROVED", "PENDING_BILLING_INFO", "ADSET_PAUSED",
+    ],
+  }]));
+  const campUrl = `https://graph.facebook.com/v21.0/${acc.act_id}/campaigns?fields=${campFields}&filtering=${campFilter}&limit=200&access_token=${encodeURIComponent(accessToken)}`;
   const campRes = await fetch(campUrl);
   const campJson = await campRes.json();
   if (!campRes.ok) throw new Error("campaigns: " + JSON.stringify(campJson));
