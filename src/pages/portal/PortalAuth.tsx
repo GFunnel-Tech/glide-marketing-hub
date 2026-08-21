@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,14 +20,17 @@ export default function PortalAuth() {
   const [name, setName] = useState("");
   const [code, setCode] = useState(params.get("code") ?? "");
   const [busy, setBusy] = useState(false);
+  const routerLocation = useLocation();
+  const redirectTo =
+    (routerLocation.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/portal";
 
   useEffect(() => {
     if (user) {
       // If they signed in and brought a code, send through accept flow
       if (code) navigate(`/portal/accept?token=${encodeURIComponent(code)}`, { replace: true });
-      else navigate("/portal", { replace: true });
+      else navigate(redirectTo, { replace: true });
     }
-  }, [user, navigate, code]);
+  }, [user, navigate, code, redirectTo]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
