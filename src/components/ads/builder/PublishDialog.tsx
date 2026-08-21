@@ -170,7 +170,7 @@ export function PublishDialog({ open, onOpenChange, onMissingIdentity }: Props) 
             <Rocket className="h-4 w-4 text-primary" /> Publish campaign
           </DialogTitle>
           <DialogDescription className="text-xs">
-            We'll create the campaign, ad set, and ad on Meta in <strong>PAUSED</strong> state so you can review before going live.
+            We'll create {(state.campaigns?.length ?? 1) > 1 ? `${state.campaigns.length} campaigns` : "the campaign"}, their ad sets and ads on Meta in <strong>PAUSED</strong> state so you can review before going live.
           </DialogDescription>
         </DialogHeader>
 
@@ -182,7 +182,14 @@ export function PublishDialog({ open, onOpenChange, onMissingIdentity }: Props) 
               <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                 <SummaryRow label="Objective" value={state.objective} cap />
                 {state.specialAdCategory.length > 0 && <SummaryRow label="Special category" value={state.specialAdCategory.join(", ")} cap />}
-                <SummaryRow label="Campaign" value={state.campaignName || "Untitled"} />
+                <SummaryRow
+                  label="Campaigns"
+                  value={
+                    (state.campaigns?.length ?? 1) > 1
+                      ? `${state.campaigns.length} campaigns · ${state.campaigns.reduce((n, c) => n + c.adSets.length, 0)} ad sets`
+                      : state.campaigns?.[0]?.name || state.campaignName || "Untitled"
+                  }
+                />
                 <SummaryRow label="Page" value={state.pageName ?? "—"} />
                 {state.igUsername && <SummaryRow label="Instagram" value={`@${state.igUsername}`} />}
                 <SummaryRow label="Ad account" value={state.adAccountName || state.adAccountId || "—"} />
