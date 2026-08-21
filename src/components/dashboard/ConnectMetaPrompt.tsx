@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
+import { readEdgeError, ensureSession, openOAuthPopup } from "@/lib/edgeError";
+
 
 export function ConnectMetaPrompt() {
   const { currentWorkspace } = useWorkspace();
