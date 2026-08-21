@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { getAdapter, type AdChannel } from "@/lib/adChannels";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { metaAdsManagerUrl } from "@/lib/metaAdsLink";
@@ -32,6 +33,7 @@ interface AdLike {
 export function AdActionsMenu({ ad, channel }: { ad: AdLike; channel: AdChannel }) {
   const { currentWorkspace } = useWorkspace();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
