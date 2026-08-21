@@ -176,7 +176,14 @@ function ClientProfileInner() {
   const { data: metaMappedSet } = useClientsWithMetaAccount();
   const { data: allClients = [] } = useClients();
   const { currentWorkspace } = useWorkspace();
-  const workspaceId = currentWorkspace?.id ?? null;
+  // Fall back to the workspace in the URL, then the client's own workspace, so
+  // the page still works before the workspace context hydrates (or for users
+  // whose membership list hasn't loaded yet).
+  const workspaceId =
+    currentWorkspace?.id ??
+    locationId ??
+    ((client as any)?.workspace_id as string | undefined) ??
+    null;
   const navigate = useNavigate();
   const clientPath = useClientPath();
 
