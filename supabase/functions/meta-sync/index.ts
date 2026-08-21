@@ -334,7 +334,10 @@ async function runSync(
     const workers = Array.from({ length: CONCURRENCY }, async () => {
       while (cursor < shuffled.length) {
         const acc = shuffled[cursor++];
-        await syncOneAccount(acc);
+        // One bad account must never abort the whole run — that used to skip
+        // the KPI rollup entirely and leave every client's numbers stale.
+        try { await syncOneAccount(acc); }
+        catch (e) { errors.push({ account: acc?.act_id, error: String(e) }); }
       }
     });
     await Promise.all(workers);
