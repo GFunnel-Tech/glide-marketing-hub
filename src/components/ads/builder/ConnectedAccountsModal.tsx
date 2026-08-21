@@ -30,6 +30,8 @@ interface IdentitiesPayload {
   connection: { id: string; userName: string | null; status: string; expiresAt: string | null } | null;
   pages: IdentityPage[];
   adAccounts: IdentityAdAccount[];
+  scopedToAdAccount?: boolean;
+  scopeWarning?: string | null;
   error?: string;
 }
 
@@ -53,10 +55,10 @@ export function ConnectedAccountsModal({ open, onOpenChange }: Props) {
   const [reconnecting, setReconnecting] = useState(false);
 
   const { data, isLoading, isFetching, refetch, error } = useQuery({
-    queryKey: ["meta_identities", currentWorkspace?.id],
+    queryKey: ["meta_identities", currentWorkspace?.id, draftAcctId],
     queryFn: async (): Promise<IdentitiesPayload> => {
       const { data, error } = await supabase.functions.invoke("meta-list-identities", {
-        body: { workspaceId: currentWorkspace!.id },
+        body: { workspaceId: currentWorkspace!.id, adAccountId: draftAcctId ?? undefined },
       });
       if (error) throw error;
       return data as IdentitiesPayload;
@@ -237,7 +239,10 @@ export function ConnectedAccountsModal({ open, onOpenChange }: Props) {
                     <button
                       key={a.act_id}
                       type="button"
-                      onClick={() => setDraftAcctId(a.act_id)}
+                      onClick={() => {
+                        if (a.act_id !== draftAcctId) { setDraftPageId(null); setDraftIgId(null); }
+                        setDraftAcctId(a.act_id);
+                      }}
                       className={cn(
                         "w-full text-left rounded-lg border px-3 py-2 flex items-center gap-3 transition-all",
                         active ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/40 hover:bg-muted/40",
@@ -270,7 +275,9 @@ export function ConnectedAccountsModal({ open, onOpenChange }: Props) {
                   <span className={cn("inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold", draftAcctId ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>2</span>
                   <Facebook className="h-3.5 w-3.5 text-[#1877F2]" /> Facebook Page
                 </h3>
-                <span className="text-[10px] text-muted-foreground">{pages.length} available</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {draftAcctId ? `${pages.length} for this account` : "select account"}
+                </span>
               </div>
               <div className="relative">
                 <Search className="h-3 w-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -285,8 +292,13 @@ export function ConnectedAccountsModal({ open, onOpenChange }: Props) {
                 </div>
               ) : (
                 <>
+                  {data?.scopeWarning && (
+                    <p className="text-[11px] text-amber-600 px-3 pb-2">{data.scopeWarning}</p>
+                  )}
                   {hasConnection && filteredPages.length === 0 && (
-                    <p className="text-xs text-muted-foreground p-3 text-center">No pages match.</p>
+                    <p className="text-xs text-muted-foreground p-3 text-center">
+                      No Pages are available to advertise with on this ad account.
+                    </p>
                   )}
                   <div className="space-y-1.5">
                     {filteredPages.map((p) => {
