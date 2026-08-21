@@ -22,6 +22,8 @@ function mirrorToSnapshots(state: AdBuilderState, changedKeys: string[]): AdBuil
       next = {
         ...next,
         interests: state.interests,
+        customAudiences: state.customAudiences,
+        excludedAudiences: state.excludedAudiences,
         ageMin: state.ageMin,
         ageMax: state.ageMax,
         genders: state.genders,
@@ -74,6 +76,8 @@ function hydrateFromSelection(state: AdBuilderState, setId: string, adId: string
     websiteUrl: ad.websiteUrl,
     // set-level
     interests: set.interests,
+    customAudiences: set.customAudiences ?? [],
+    excludedAudiences: set.excludedAudiences ?? [],
     ageMin: set.ageMin,
     ageMax: set.ageMax,
     genders: set.genders,

@@ -257,6 +257,12 @@ Deno.serve(async (req) => {
       if (state.interests?.length) {
         targeting.flexible_spec = [{ interests: state.interests.map((i: any) => ({ id: i.id, name: i.name })) }];
       }
+      if (state.customAudiences?.length) {
+        targeting.custom_audiences = state.customAudiences.map((a: any) => ({ id: a.id }));
+      }
+      if (state.excludedAudiences?.length) {
+        targeting.excluded_custom_audiences = state.excludedAudiences.map((a: any) => ({ id: a.id }));
+      }
       if (optimizeForMe || state.placements === "advantage_plus") {
         targeting.targeting_automation = { advantage_audience: 1 };
       }

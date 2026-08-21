@@ -2,6 +2,7 @@ import { useAdDraftStore } from "@/stores/adDraftStore";
 import { Section } from "../shared/Section";
 import { Target, Info } from "lucide-react";
 import { InterestAutocomplete } from "../shared/InterestAutocomplete";
+import { AudiencePicker } from "../shared/AudiencePicker";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 
@@ -59,6 +60,8 @@ export function TargetingSection() {
           </div>
         </div>
       )}
+
+      <AudiencePicker />
 
       <div>
         <label className="text-xs font-medium text-foreground mb-1.5 block">Detailed Interests</label>

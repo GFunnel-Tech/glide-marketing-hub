@@ -4,7 +4,7 @@ import { useUnreadMessageCount } from "@/hooks/useMessages";
 import {
   LayoutDashboard, Megaphone, UserPlus, FileBarChart,
   Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown, Radar, Calendar as CalendarIcon,
-  Rocket, Microscope, FlaskConical, Boxes, ChevronRight
+  Rocket, Microscope, FlaskConical, Boxes, ChevronRight, Users
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -45,6 +45,7 @@ const navItems: NavEntry[] = [
           { icon: Sparkles, label: "Creatives", path: "/creatives" },
           { icon: Megaphone, label: "Ads", path: "/ads" },
           { icon: Inbox, label: "Leads", path: "/leads" },
+          { icon: Users, label: "Audiences & Datasets", path: "/operations/audiences", badge: "NEW" },
         ]
       },
       {

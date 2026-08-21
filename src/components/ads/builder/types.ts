@@ -36,6 +36,11 @@ export interface InterestTarget {
   audience_size?: number;
 }
 
+export interface AudienceRef {
+  id: string;
+  name: string;
+}
+
 export interface LeadFormQuestion {
   id: string;
   type: "FULL_NAME" | "EMAIL" | "PHONE" | "CUSTOM" | "MULTIPLE_CHOICE";
@@ -74,6 +79,8 @@ export interface AdSetSnapshot {
   name: string;
   ads: AdSnapshot[];
   interests: InterestTarget[];
+  customAudiences: AudienceRef[];
+  excludedAudiences: AudienceRef[];
   ageMin: number;
   ageMax: number;
   genders: ("male" | "female" | "all")[];
@@ -90,7 +97,7 @@ export const AD_LEVEL_KEYS = [
 
 // Keys that mirror to the selected Ad Set snapshot
 export const ADSET_LEVEL_KEYS = [
-  "interests", "ageMin", "ageMax", "genders", "placements",
+  "interests", "customAudiences", "excludedAudiences", "ageMin", "ageMax", "genders", "placements",
   "budgetType", "budgetAmount",
 ] as const;
 
@@ -134,6 +141,8 @@ export interface AdBuilderState {
 
   // Targeting (live mirror of selected ad set)
   interests: InterestTarget[];
+  customAudiences: AudienceRef[];
+  excludedAudiences: AudienceRef[];
   ageMin: number;
   ageMax: number;
   genders: ("male" | "female" | "all")[];
@@ -192,6 +201,8 @@ export function makeAdSet(name = "Ad Set 1", cta: CTA = "LEARN_MORE"): AdSetSnap
     name,
     ads: [makeAd("Ad 1", cta)],
     interests: [],
+    customAudiences: [],
+    excludedAudiences: [],
     ageMin: 18,
     ageMax: 65,
     genders: ["all"],
@@ -238,6 +249,8 @@ export function makeInitialState(
       { id: "q3", type: "PHONE", label: "Phone number" },
     ]},
     interests: firstSet.interests,
+    customAudiences: firstSet.customAudiences,
+    excludedAudiences: firstSet.excludedAudiences,
     ageMin: firstSet.ageMin,
     ageMax: firstSet.ageMax,
     genders: firstSet.genders,
