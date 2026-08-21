@@ -44,8 +44,8 @@ export function usePortalEmbedAuth(hasSession: boolean) {
         if (fnErr) throw fnErr;
         if (!data?.token_hash || !data?.email) throw new Error("Invalid embed link");
 
+        // GoTrue rejects the request if `email` is sent alongside token_hash.
         const { error: otpErr } = await supabase.auth.verifyOtp({
-          email: data.email,
           token_hash: data.token_hash,
           type: "magiclink",
         });
