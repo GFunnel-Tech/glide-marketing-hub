@@ -81,12 +81,18 @@ export function TopNav() {
   const isWorkspaceAdmin =
     currentWorkspace?.role === "owner" || currentWorkspace?.role === "admin";
   const canSeeFinance = isSuperAdmin || isWorkspaceAdmin;
+  // Finance lives inside Operations now — strip it for non-admins.
   const filtered = canSeeFinance
     ? navItems
-    : navItems.filter((e) => !(isGroup(e) && e.label === "Finance"));
+    : navItems.map((e) =>
+        isGroup(e)
+          ? { ...e, children: e.children.filter((c) => !(isGroup(c) && c.financeOnly)) }
+          : e,
+      );
   const items: NavEntry[] = isSuperAdmin
     ? [...filtered, { icon: Shield, label: "Admin", path: "/admin" }]
     : filtered;
+
 
 
   const connectMeta = async () => {
