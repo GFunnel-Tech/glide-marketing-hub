@@ -66,13 +66,9 @@ export default function Launch() {
     : tab === "template" ? "from-blue-600 to-indigo-500" : "from-primary to-primary/70";
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5">
-      <div className={cn("rounded-2xl bg-gradient-to-r px-5 py-4 text-primary-foreground space-y-3", headerGradient)}>
-        <div className="inline-flex items-center gap-1 bg-white/15 rounded-lg p-1">
-          <TabBtn label="Generate" icon={<Sparkles className="h-4 w-4" />} active={tab === "generate"} onClick={() => setTab("generate")} />
-          <TabBtn label="Template" icon={<LayoutTemplate className="h-4 w-4" />} active={tab === "template"} onClick={() => setTab("template")} />
-          <TabBtn label="Manual" icon={<Edit3 className="h-4 w-4" />} active={tab === "manual"} onClick={() => setTab("manual")} />
-        </div>
+    <div className="max-w-6xl mx-auto space-y-4">
+      <div className={cn("rounded-2xl bg-gradient-to-r px-5 py-4 text-primary-foreground", headerGradient)}>
+        <div className="text-base font-semibold">New launch</div>
         <p className="text-sm opacity-90">
           {tab === "generate" && "Fill in these steps and we'll build the campaign, ad sets and ads with AI — then you approve and edit."}
           {tab === "template" && "Start from a saved campaign template and tweak it before publishing."}
@@ -80,108 +76,130 @@ export default function Launch() {
         </p>
       </div>
 
-      <Card className="p-4 rounded-xl space-y-3">
-        <div>
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Client account</div>
-          <Select value={clientId ? String(clientId) : "none"} onValueChange={(v) => setClientId(v === "none" ? null : Number(v))}>
-            <SelectTrigger className="sm:max-w-sm"><SelectValue placeholder="Select client account" /></SelectTrigger>
-            <SelectContent className="max-h-72">
-              <SelectItem value="none">No client (internal)</SelectItem>
-              {clients.map((c: any) => (
-                <SelectItem key={c.id} value={String(c.id)}>{clientDisplayName(c)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Objective</div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {OBJECTIVES.map((o) => {
-              const Icon = o.icon;
-              return (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => setObjective(o.id)}
-                  className={cn(
-                    "rounded-xl border-2 p-3 text-left transition-all",
-                    objective === o.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
-                  )}
-                >
-                  <Icon className="h-4 w-4 text-primary mb-1.5" />
-                  <div className="text-sm font-medium text-foreground">{o.label}</div>
-                  <div className="text-[11px] text-muted-foreground">{o.desc}</div>
-                </button>
-              );
-            })}
+      <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-4 items-start">
+        {/* Left column */}
+        <Card className="p-3 rounded-xl space-y-4 lg:sticky lg:top-4">
+          <div>
+            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">Mode</div>
+            <div className="space-y-1">
+              <SideTab label="Generate" desc="AI builds it" icon={<Sparkles className="h-4 w-4" />} active={tab === "generate"} onClick={() => setTab("generate")} />
+              <SideTab label="Template" desc="Start from saved" icon={<LayoutTemplate className="h-4 w-4" />} active={tab === "template"} onClick={() => setTab("template")} />
+              <SideTab label="Manual" desc="Full builder" icon={<Edit3 className="h-4 w-4" />} active={tab === "manual"} onClick={() => setTab("manual")} />
+            </div>
           </div>
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Special ad categories</div>
-          <div className="flex flex-wrap gap-2">
-            {SPECIAL.map((s) => {
-              const Icon = s.icon;
-              const on = special.includes(s.id);
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => toggleSpecial(s.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors",
-                    on ? "border-primary bg-primary/10 text-primary font-medium" : "border-border text-muted-foreground hover:border-primary/40",
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" /> {s.label}
-                </button>
-              );
-            })}
+
+          <div>
+            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">Client account</div>
+            <Select value={clientId ? String(clientId) : "none"} onValueChange={(v) => setClientId(v === "none" ? null : Number(v))}>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Select client account" /></SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="none">No client (internal)</SelectItem>
+                {clients.map((c: any) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{clientDisplayName(c)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      </Card>
 
-      <Card className="p-5 rounded-xl">
-        {tab === "generate" && (
-          plan ? (
-            <PlanApproval plan={plan} onChange={setPlan} onRestart={() => setPlan(null)} onApprove={approve} />
-          ) : (
-            <GenerateLaunchPanel
-              objective={objective}
-              specialAdCategory={special}
-              clientId={clientId}
-              onGenerated={setPlan}
-            />
-          )
-        )}
-
-        {tab === "template" && <TemplateMode onApplied={toBuilder} />}
-
-        {tab === "manual" && (
-          <div className="text-center py-8 space-y-3">
-            <Edit3 className="h-8 w-8 mx-auto text-muted-foreground" />
-            <div className="text-sm font-medium text-foreground">Build it yourself</div>
-            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-              Opens the full builder with ad set sidebar, creative, targeting, budget and live preview.
-            </p>
-            <Button onClick={toBuilder} className="h-10">Open manual builder</Button>
+          <div>
+            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">Objective</div>
+            <div className="space-y-1">
+              {OBJECTIVES.map((o) => {
+                const Icon = o.icon;
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setObjective(o.id)}
+                    className={cn(
+                      "w-full flex items-start gap-2 rounded-lg border px-2.5 py-2 text-left transition-all",
+                      objective === o.id ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/60",
+                    )}
+                  >
+                    <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-foreground">{o.label}</span>
+                      <span className="block text-[11px] text-muted-foreground truncate">{o.desc}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        )}
-      </Card>
+
+          <div>
+            <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">Special ad categories</div>
+            <div className="flex flex-wrap gap-1.5">
+              {SPECIAL.map((s) => {
+                const Icon = s.icon;
+                const on = special.includes(s.id);
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => toggleSpecial(s.id)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                      on ? "border-primary bg-primary/10 text-primary font-medium" : "border-border text-muted-foreground hover:border-primary/40",
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" /> {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+
+        {/* Right column */}
+        <Card className="p-5 rounded-xl min-h-[420px]">
+          {tab === "generate" && (
+            plan ? (
+              <PlanApproval plan={plan} onChange={setPlan} onRestart={() => setPlan(null)} onApprove={approve} />
+            ) : (
+              <GenerateLaunchPanel
+                objective={objective}
+                specialAdCategory={special}
+                clientId={clientId}
+                onGenerated={setPlan}
+              />
+            )
+          )}
+
+          {tab === "template" && <TemplateMode onApplied={toBuilder} />}
+
+          {tab === "manual" && (
+            <div className="text-center py-8 space-y-3">
+              <Edit3 className="h-8 w-8 mx-auto text-muted-foreground" />
+              <div className="text-sm font-medium text-foreground">Build it yourself</div>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                Opens the full builder with ad set sidebar, creative, targeting, budget and live preview.
+              </p>
+              <Button onClick={toBuilder} className="h-10">Open manual builder</Button>
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
 
-function TabBtn({ label, icon, active, onClick }: { label: string; icon: React.ReactNode; active: boolean; onClick: () => void }) {
+function SideTab({ label, desc, icon, active, onClick }: { label: string; desc: string; icon: React.ReactNode; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-        active ? "bg-white text-foreground shadow-sm" : "text-white/85 hover:bg-white/10",
+        "w-full flex items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors",
+        active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/60",
       )}
     >
-      {icon} {label}
+      <span className="mt-0.5 shrink-0">{icon}</span>
+      <span className="min-w-0">
+        <span className={cn("block text-sm font-medium", active ? "text-primary" : "text-foreground")}>{label}</span>
+        <span className="block text-[11px] text-muted-foreground truncate">{desc}</span>
+      </span>
     </button>
   );
 }
+
