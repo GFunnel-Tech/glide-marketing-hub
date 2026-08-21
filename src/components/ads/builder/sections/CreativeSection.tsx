@@ -3,13 +3,16 @@ import { useAdDraftStore } from "@/stores/adDraftStore";
 import { Section } from "../shared/Section";
 import { MediaUploader } from "../shared/MediaUploader";
 import { AiCreativeStudio } from "../shared/AiCreativeStudio";
-import { Palette, Plus, X, Sparkles } from "lucide-react";
+import { MediaLibraryDialog } from "@/components/ads/media/MediaLibraryDialog";
+import { MediaStudioDialog } from "@/components/ads/media/MediaStudioDialog";
+import type { StudioSource } from "@/components/ads/media/studio/ImageEditor";
+import { Palette, Plus, X, Sparkles, FolderOpen, Wand2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { CTA_OPTIONS, type CreativeType } from "../types";
+import { CTA_OPTIONS, type CreativeType, type MediaAsset } from "../types";
 
 
 const TYPES: { id: CreativeType; label: string; available: boolean }[] = [
@@ -22,6 +25,28 @@ export function CreativeSection() {
   const state = useAdDraftStore((s) => s.state);
   const patch = useAdDraftStore((s) => s.patch);
   const [studioOpen, setStudioOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorSources, setEditorSources] = useState<StudioSource[]>([]);
+
+  const addAssets = (assets: { url: string; name: string; type: "image" | "video" }[]) => {
+    const next: MediaAsset[] = assets.map((a) => ({
+      id: crypto.randomUUID(),
+      url: a.url,
+      type: a.type,
+      name: a.name,
+      thumbnail: a.type === "image" ? a.url : undefined,
+    }));
+    patch("media", [...state.media, ...next].slice(0, 10));
+  };
+
+  const openEditorWith = (assets: StudioSource[]) => {
+    if (!assets.length) return;
+    setEditorSources(assets);
+    setLibraryOpen(false);
+    setEditorOpen(true);
+  };
+
 
   return (
     <Section title="Creative" icon={<Palette className="h-4 w-4 text-primary" />}>
