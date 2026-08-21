@@ -120,13 +120,35 @@ export default function SuperAdmin() {
           <Shield className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">Super Admin</h1>
         </div>
-        <input
-          placeholder="Search…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="h-9 px-3 rounded-md border border-border bg-background text-sm w-64"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            placeholder="Search…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-9 px-3 rounded-md border border-border bg-background text-sm w-64"
+          />
+          {tab === "users" && (
+            <button
+              onClick={() => { setEditUser(null); setEditOpen(true); }}
+              className="h-9 px-3 rounded-md bg-primary text-primary-foreground text-sm font-medium inline-flex items-center gap-1.5"
+            >
+              <UserPlus className="h-4 w-4" /> New user
+            </button>
+          )}
+          {tab === "workspaces" && (
+            <button
+              onClick={async () => {
+                const name = prompt("Workspace name:");
+                if (name?.trim()) call({ action: "create_workspace", name: name.trim() }, "Workspace created");
+              }}
+              className="h-9 px-3 rounded-md bg-primary text-primary-foreground text-sm font-medium inline-flex items-center gap-1.5"
+            >
+              <Plus className="h-4 w-4" /> New workspace
+            </button>
+          )}
+        </div>
       </div>
+
 
       <div className="flex gap-1 border-b border-border">
         {(["users", "workspaces", "audit"] as const).map((t) => (
