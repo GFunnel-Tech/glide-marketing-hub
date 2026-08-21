@@ -45,6 +45,7 @@ const navItems: NavEntry[] = [
           { icon: Sparkles, label: "Creatives", path: "/creatives" },
           { icon: Megaphone, label: "Ads", path: "/ads" },
           { icon: Inbox, label: "Leads", path: "/leads" },
+          { icon: Users, label: "Audiences & Datasets", path: "/operations/audiences", badge: "NEW" },
         ]
       },
       {
