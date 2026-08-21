@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     const { data: userData } = await userClient.auth.getUser();
     if (!userData?.user) return json({ error: "Unauthorized" }, 401);
 
-    const { workspaceId } = await req.json();
+    const { workspaceId, adAccountId } = await req.json();
     if (!workspaceId) return json({ error: "workspaceId required" }, 400);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
