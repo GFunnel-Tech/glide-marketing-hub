@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Shield, Ban, Trash2, UserCog, LogIn, Building2, History, LogOut as LogOutIcon } from "lucide-react";
+import { Loader2, Shield, Ban, Trash2, UserCog, LogIn, Building2, History, LogOut as LogOutIcon, Pencil, UserPlus, Plus } from "lucide-react";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Navigate } from "react-router-dom";
+import UserEditDialog, { type EditableUser } from "@/components/admin/UserEditDialog";
 
 type AdminUser = {
   id: string;
@@ -11,10 +12,11 @@ type AdminUser = {
   created_at: string;
   last_sign_in_at: string | null;
   banned_until: string | null;
-  profile: { display_name?: string | null } | null;
+  profile: { display_name?: string | null; position?: string | null; department?: string | null } | null;
   roles: string[];
   workspaces: { id: string; name: string; role: string }[];
 };
+
 
 type AdminWorkspace = {
   id: string;
@@ -44,6 +46,9 @@ export default function SuperAdmin() {
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [editUser, setEditUser] = useState<EditableUser | null>(null);
+
 
   const load = async () => {
     setLoading(true);
@@ -67,6 +72,13 @@ export default function SuperAdmin() {
   };
 
   useEffect(() => { if (isSuper) load(); }, [isSuper]);
+
+  // Keep the open edit dialog in sync after a refresh
+  useEffect(() => {
+    if (!editOpen || !editUser) return;
+    const fresh = users.find((u) => u.id === editUser.id);
+    if (fresh && fresh !== (editUser as any)) setEditUser(fresh as EditableUser);
+  }, [users]);
 
   if (checking) return <div className="p-8"><Loader2 className="animate-spin" /></div>;
   if (!isSuper) return <Navigate to="/" replace />;
@@ -115,13 +127,35 @@ export default function SuperAdmin() {
           <Shield className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">Super Admin</h1>
         </div>
-        <input
-          placeholder="Search…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="h-9 px-3 rounded-md border border-border bg-background text-sm w-64"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            placeholder="Search…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-9 px-3 rounded-md border border-border bg-background text-sm w-64"
+          />
+          {tab === "users" && (
+            <button
+              onClick={() => { setEditUser(null); setEditOpen(true); }}
+              className="h-9 px-3 rounded-md bg-primary text-primary-foreground text-sm font-medium inline-flex items-center gap-1.5"
+            >
+              <UserPlus className="h-4 w-4" /> New user
+            </button>
+          )}
+          {tab === "workspaces" && (
+            <button
+              onClick={async () => {
+                const name = prompt("Workspace name:");
+                if (name?.trim()) call({ action: "create_workspace", name: name.trim() }, "Workspace created");
+              }}
+              className="h-9 px-3 rounded-md bg-primary text-primary-foreground text-sm font-medium inline-flex items-center gap-1.5"
+            >
+              <Plus className="h-4 w-4" /> New workspace
+            </button>
+          )}
+        </div>
       </div>
+
 
       <div className="flex gap-1 border-b border-border">
         {(["users", "workspaces", "audit"] as const).map((t) => (
@@ -161,7 +195,11 @@ export default function SuperAdmin() {
                     <td className="p-3">
                       <div className="font-medium">{u.profile?.display_name || u.email}</div>
                       <div className="text-xs text-muted-foreground">{u.email}</div>
+                      {u.profile?.position && (
+                        <div className="text-xs text-primary mt-0.5">{u.profile.position}</div>
+                      )}
                     </td>
+
                     <td className="p-3">
                       <div className="flex flex-wrap gap-1">
                         {u.roles.map((r) => (
@@ -183,7 +221,9 @@ export default function SuperAdmin() {
                     </td>
                     <td className="p-3">
                       <div className="flex items-center justify-end gap-1">
+                        <button title="Edit user" onClick={() => { setEditUser(u as EditableUser); setEditOpen(true); }} className="p-1.5 rounded hover:bg-accent"><Pencil className="h-4 w-4" /></button>
                         <button title="Impersonate" onClick={() => impersonate(u)} className="p-1.5 rounded hover:bg-accent"><LogIn className="h-4 w-4" /></button>
+
                         <button title={isSuper ? "Remove super admin" : "Make super admin"}
                           onClick={() => call({ action: "set_role", user_id: u.id, role: "super_admin", enabled: !isSuper },
                             isSuper ? "Removed super admin" : "Granted super admin")}
@@ -324,6 +364,15 @@ export default function SuperAdmin() {
           </table>
         </div>
       )}
+
+      <UserEditDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        user={editUser}
+        workspaces={workspaces.map((w) => ({ id: w.id, name: w.name }))}
+        onSaved={load}
+      />
     </div>
+
   );
 }
