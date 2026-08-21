@@ -43,6 +43,7 @@ import TrendBriefs from "./pages/TrendBriefs";
 import CalendarPage from "./pages/Calendar";
 import Research from "./pages/operations/Research";
 import Sandbox from "./pages/operations/Sandbox";
+import Launch from "./pages/operations/Launch";
 
 import NotFound from "./pages/NotFound";
 import PortalLayout from "./pages/portal/PortalLayout";
@@ -246,6 +247,7 @@ const App = () => (
                   <Route path="tracking" element={<Tracking />} />
                   <Route path="tasks" element={<Tasks />} />
                   <Route path="calendar" element={<CalendarPage />} />
+                  <Route path="operations/launch" element={<Launch />} />
                   <Route path="operations/research" element={<Research />} />
                   <Route path="operations/sandbox" element={<Sandbox />} />
 

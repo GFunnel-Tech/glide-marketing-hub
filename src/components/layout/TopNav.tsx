@@ -40,6 +40,7 @@ const navItems: NavEntry[] = [
       { icon: UserPlus, label: "Onboarding", path: "/onboarding" },
       {
         icon: Rocket, label: "Launch", children: [
+          { icon: Rocket, label: "New Launch", path: "/operations/launch", badge: "AI" },
           { icon: Megaphone, label: "Campaigns", path: "/campaigns" },
           { icon: Sparkles, label: "Creatives", path: "/creatives" },
           { icon: Megaphone, label: "Ads", path: "/ads" },
