@@ -171,7 +171,11 @@ export interface AdBuilderState {
   adAccountId: string | null;
   adAccountName: string | null;
 
-  // Ad set hierarchy
+  // Campaign hierarchy
+  campaigns: CampaignSnapshot[];
+  selectedCampaignId: string;
+
+  // Ad set hierarchy (live mirror of the selected campaign)
   adSets: AdSetSnapshot[];
   selectedAdSetId: string;
   selectedAdId: string;
@@ -212,14 +216,69 @@ export function makeAdSet(name = "Ad Set 1", cta: CTA = "LEARN_MORE"): AdSetSnap
   };
 }
 
+export interface CampaignSnapshot {
+  id: string;
+  name: string;
+  objective: Objective;
+  specialAdCategory: SpecialAdCategory;
+  adSets: AdSetSnapshot[];
+  selectedAdSetId: string;
+  selectedAdId: string;
+}
+
+export function makeCampaign(
+  name = "Campaign 1",
+  objective: Objective = "leads",
+  specialAdCategory: SpecialAdCategory = [],
+): CampaignSnapshot {
+  const cta: CTA = objective === "leads" ? "APPLY_NOW" : "LEARN_MORE";
+  const set = makeAdSet("Ad Set 1", cta);
+  return {
+    id: crypto.randomUUID(),
+    name,
+    objective,
+    specialAdCategory,
+    adSets: [set],
+    selectedAdSetId: set.id,
+    selectedAdId: set.ads[0].id,
+  };
+}
+
+export function cloneAd(ad: AdSnapshot, name?: string): AdSnapshot {
+  return { ...ad, id: crypto.randomUUID(), name: name ?? `${ad.name} copy` };
+}
+
+export function cloneAdSet(set: AdSetSnapshot, name?: string): AdSetSnapshot {
+  return {
+    ...set,
+    id: crypto.randomUUID(),
+    name: name ?? `${set.name} copy`,
+    ads: set.ads.map((a) => cloneAd(a, a.name)),
+  };
+}
+
+export function cloneCampaign(c: CampaignSnapshot, name?: string): CampaignSnapshot {
+  const adSets = c.adSets.map((s) => cloneAdSet(s, s.name));
+  return {
+    ...c,
+    id: crypto.randomUUID(),
+    name: name ?? `${c.name} copy`,
+    adSets,
+    selectedAdSetId: adSets[0].id,
+    selectedAdId: adSets[0].ads[0].id,
+  };
+}
+
 export function makeInitialState(
   objective: Objective,
   specialAdCategory: SpecialAdCategory = [],
   countries: string[] = ["US"],
 ): AdBuilderState {
+  // note: selectedCampaignId is patched below to the first campaign
   const cta: CTA = objective === "leads" ? "APPLY_NOW" : "LEARN_MORE";
   const firstSet = makeAdSet("Ad Set 1", cta);
   const firstAd = firstSet.ads[0];
+  const firstCampaignId = crypto.randomUUID();
   return {
     objective,
     specialAdCategory,
@@ -272,6 +331,16 @@ export function makeInitialState(
     igUsername: null,
     adAccountId: null,
     adAccountName: null,
+    campaigns: [{
+      id: firstCampaignId,
+      name: "Campaign 1",
+      objective,
+      specialAdCategory,
+      adSets: [firstSet],
+      selectedAdSetId: firstSet.id,
+      selectedAdId: firstAd.id,
+    }],
+    selectedCampaignId: firstCampaignId,
     adSets: [firstSet],
     selectedAdSetId: firstSet.id,
     selectedAdId: firstAd.id,

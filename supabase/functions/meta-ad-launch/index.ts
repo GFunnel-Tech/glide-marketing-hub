@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
     const { data: userData } = await userClient.auth.getUser();
     if (!userData?.user) return json({ error: "Unauthorized" }, 401);
 
-    const { workspaceId, draftId, state } = await req.json();
+    const { workspaceId, draftId, state, existingCampaignId } = await req.json();
     if (!workspaceId || !state) return json({ error: "workspaceId, state required" }, 400);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -230,8 +230,8 @@ Deno.serve(async (req) => {
       const { objective, optimization_goal } = objectiveMap(state.objective);
       const specialCategories = specialCategoryMap(state.specialAdCategory);
 
-      // 1. Campaign
-      const campaign = await metaPost(`${actId}/campaigns`, {
+      // 1. Campaign (reuse when publishing extra ad sets into the same campaign)
+      const campaign = existingCampaignId ? { id: existingCampaignId } : await metaPost(`${actId}/campaigns`, {
         name: state.campaignName || `${state.objective} campaign`,
         objective,
         status: "PAUSED",
@@ -268,7 +268,7 @@ Deno.serve(async (req) => {
       }
 
       const adsetBody: any = {
-        name: `${state.campaignName || "Ad Set"} – Ad Set 1`,
+        name: state.adSetName || `${state.campaignName || "Ad Set"} – Ad Set 1`,
         campaign_id: campaign.id,
         status: "PAUSED",
         optimization_goal,

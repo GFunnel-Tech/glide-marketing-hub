@@ -7,6 +7,9 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   ResponsiveContainer, ComposedChart, LineChart, Line, Bar, Area, AreaChart,
@@ -244,6 +247,13 @@ export function EntityChartsDrawer({
               {level ?? ""}
             </Badge>
             <SheetTitle className="text-base">{name ?? "Performance"}</SheetTitle>
+            {level && objectId && (
+              <Button size="sm" variant="outline" className="ml-auto h-7 text-xs" asChild>
+                <Link to={`/entity/${level}/${objectId}`} onClick={() => onOpenChange(false)}>
+                  Full profile & audit <ArrowUpRight className="h-3 w-3 ml-1" />
+                </Link>
+              </Button>
+            )}
           </div>
           <SheetDescription className="text-xs">
             {rangeLabel} · {shortDate(fromStr)} – {shortDate(toStr)}

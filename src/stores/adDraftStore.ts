@@ -2,7 +2,8 @@ import { create } from "zustand";
 import {
   AdBuilderState, makeInitialState, makeAd, makeAdSet,
   Objective, SpecialAdCategory, AD_LEVEL_KEYS, ADSET_LEVEL_KEYS,
-  AdSnapshot, AdSetSnapshot,
+  AdSnapshot, AdSetSnapshot, CampaignSnapshot,
+  makeCampaign, cloneCampaign, cloneAdSet, cloneAd,
 } from "@/components/ads/builder/types";
 
 const AD_KEY_SET = new Set<string>(AD_LEVEL_KEYS as readonly string[]);
@@ -87,6 +88,44 @@ function hydrateFromSelection(state: AdBuilderState, setId: string, adId: string
   };
 }
 
+// Write the live ad-set tree back into the selected campaign snapshot
+function syncCampaign(state: AdBuilderState): AdBuilderState {
+  const campaigns = state.campaigns ?? [];
+  if (campaigns.length === 0) return state;
+  return {
+    ...state,
+    campaigns: campaigns.map((c) =>
+      c.id === state.selectedCampaignId
+        ? {
+            ...c,
+            objective: state.objective,
+            specialAdCategory: state.specialAdCategory,
+            adSets: state.adSets,
+            selectedAdSetId: state.selectedAdSetId,
+            selectedAdId: state.selectedAdId,
+          }
+        : c,
+    ),
+  };
+}
+
+// Load a campaign snapshot into the live editing surface
+function loadCampaign(state: AdBuilderState, campaignId: string): AdBuilderState {
+  const synced = syncCampaign(state);
+  const target = synced.campaigns.find((c) => c.id === campaignId);
+  if (!target) return synced;
+  const base: AdBuilderState = {
+    ...synced,
+    selectedCampaignId: target.id,
+    objective: target.objective,
+    specialAdCategory: target.specialAdCategory,
+    adSets: target.adSets,
+    selectedAdSetId: target.selectedAdSetId,
+    selectedAdId: target.selectedAdId,
+  };
+  return hydrateFromSelection(base, target.selectedAdSetId, target.selectedAdId);
+}
+
 interface AdDraftStore {
   draftId: string | null;
   state: AdBuilderState;
@@ -100,6 +139,15 @@ interface AdDraftStore {
   markClean: () => void;
   reset: () => void;
   setDraftName: (name: string) => void;
+
+  // Campaign hierarchy
+  selectCampaign: (campaignId: string) => void;
+  addCampaign: () => void;
+  duplicateCampaign: (campaignId: string) => void;
+  renameCampaign: (campaignId: string, name: string) => void;
+  deleteCampaign: (campaignId: string) => void;
+  duplicateAdSet: (setId: string) => void;
+  duplicateAd: (setId: string, adId: string) => void;
 
   // Ad set hierarchy
   selectAdSet: (setId: string) => void;
@@ -154,6 +202,24 @@ export const useAdDraftStore = create<AdDraftStore>((set) => ({
         selectedAdId: seed.ads[0].id,
       };
     }
+    if (!next.campaigns || next.campaigns.length === 0) {
+      const cid = crypto.randomUUID();
+      next = {
+        ...next,
+        campaigns: [{
+          id: cid,
+          name: next.campaignName || next.draftName || "Campaign 1",
+          objective: next.objective,
+          specialAdCategory: next.specialAdCategory ?? [],
+          adSets: next.adSets,
+          selectedAdSetId: next.selectedAdSetId,
+          selectedAdId: next.selectedAdId,
+        }],
+        selectedCampaignId: cid,
+      };
+    } else if (!next.campaigns.some((c) => c.id === next.selectedCampaignId)) {
+      next = { ...next, selectedCampaignId: next.campaigns[0].id };
+    }
     set({ draftId: id, state: next, dirty: false });
   },
 
@@ -163,13 +229,13 @@ export const useAdDraftStore = create<AdDraftStore>((set) => ({
   patch: (key, value) =>
     set((s) => {
       const updated = { ...s.state, [key]: value };
-      return { state: mirrorToSnapshots(updated, [key as string]), dirty: true };
+      return { state: syncCampaign(mirrorToSnapshots(updated, [key as string])), dirty: true };
     }),
 
   patchMany: (partial) =>
     set((s) => {
       const updated = { ...s.state, ...partial };
-      return { state: mirrorToSnapshots(updated, Object.keys(partial)), dirty: true };
+      return { state: syncCampaign(mirrorToSnapshots(updated, Object.keys(partial))), dirty: true };
     }),
 
   markClean: () => set({ dirty: false }),
@@ -178,22 +244,87 @@ export const useAdDraftStore = create<AdDraftStore>((set) => ({
 
   setDraftName: (name) => set((s) => ({ state: { ...s.state, draftName: name }, dirty: true })),
 
+  selectCampaign: (campaignId) =>
+    set((s) => ({ state: loadCampaign(s.state, campaignId), dirty: true })),
+
+  addCampaign: () =>
+    set((s) => {
+      const synced = syncCampaign(s.state);
+      const created = makeCampaign(
+        `Campaign ${(synced.campaigns?.length ?? 0) + 1}`,
+        synced.objective,
+        synced.specialAdCategory,
+      );
+      const withNew = { ...synced, campaigns: [...(synced.campaigns ?? []), created] };
+      return { state: loadCampaign(withNew, created.id), dirty: true };
+    }),
+
+  duplicateCampaign: (campaignId) =>
+    set((s) => {
+      const synced = syncCampaign(s.state);
+      const source = synced.campaigns.find((c) => c.id === campaignId);
+      if (!source) return s;
+      const copy = cloneCampaign(source);
+      const withNew = { ...synced, campaigns: [...synced.campaigns, copy] };
+      return { state: loadCampaign(withNew, copy.id), dirty: true };
+    }),
+
+  renameCampaign: (campaignId, name) =>
+    set((s) => ({
+      state: {
+        ...syncCampaign(s.state),
+        campaigns: syncCampaign(s.state).campaigns.map((c) => (c.id === campaignId ? { ...c, name } : c)),
+      },
+      dirty: true,
+    })),
+
+  deleteCampaign: (campaignId) =>
+    set((s) => {
+      const synced = syncCampaign(s.state);
+      if ((synced.campaigns?.length ?? 0) <= 1) return s;
+      const campaigns = synced.campaigns.filter((c) => c.id !== campaignId);
+      const withRemoved = { ...synced, campaigns };
+      const nextId = campaignId === synced.selectedCampaignId ? campaigns[0].id : synced.selectedCampaignId;
+      return { state: loadCampaign(withRemoved, nextId), dirty: true };
+    }),
+
+  duplicateAdSet: (setId) =>
+    set((s) => {
+      const source = s.state.adSets.find((x) => x.id === setId);
+      if (!source) return s;
+      const copy = cloneAdSet(source);
+      const adSets = [...s.state.adSets, copy];
+      const next = hydrateFromSelection({ ...s.state, adSets }, copy.id, copy.ads[0].id);
+      return { state: syncCampaign(next), dirty: true };
+    }),
+
+  duplicateAd: (setId, adId) =>
+    set((s) => {
+      const setRef = s.state.adSets.find((x) => x.id === setId);
+      const source = setRef?.ads.find((a) => a.id === adId);
+      if (!setRef || !source) return s;
+      const copy = cloneAd(source);
+      const adSets = s.state.adSets.map((x) => (x.id === setId ? { ...x, ads: [...x.ads, copy] } : x));
+      const next = hydrateFromSelection({ ...s.state, adSets }, setId, copy.id);
+      return { state: syncCampaign(next), dirty: true };
+    }),
+
   selectAdSet: (setId) =>
     set((s) => {
       const target = s.state.adSets.find((x) => x.id === setId);
       if (!target) return s;
-      return { state: hydrateFromSelection(s.state, setId, target.ads[0]?.id ?? s.state.selectedAdId), dirty: true };
+      return { state: syncCampaign(hydrateFromSelection(s.state, setId, target.ads[0]?.id ?? s.state.selectedAdId)), dirty: true };
     }),
 
   selectAd: (setId, adId) =>
-    set((s) => ({ state: hydrateFromSelection(s.state, setId, adId), dirty: true })),
+    set((s) => ({ state: syncCampaign(hydrateFromSelection(s.state, setId, adId)), dirty: true })),
 
   addAdSet: () =>
     set((s) => {
       const newSet = makeAdSet(`Ad Set ${s.state.adSets.length + 1}`, s.state.cta);
       const adSets = [...s.state.adSets, newSet];
       const next = hydrateFromSelection({ ...s.state, adSets }, newSet.id, newSet.ads[0].id);
-      return { state: next, dirty: true };
+      return { state: syncCampaign(next), dirty: true };
     }),
 
   addAd: (setId) =>
@@ -207,7 +338,7 @@ export const useAdDraftStore = create<AdDraftStore>((set) => ({
         set.id === setId ? { ...set, ads: [...set.ads, newAd] } : set,
       );
       const next = hydrateFromSelection({ ...s.state, adSets }, setId, newAd.id);
-      return { state: next, dirty: true };
+      return { state: syncCampaign(next), dirty: true };
     }),
 
   renameAdSet: (setId, name) =>
@@ -215,6 +346,11 @@ export const useAdDraftStore = create<AdDraftStore>((set) => ({
       state: {
         ...s.state,
         adSets: s.state.adSets.map((x) => (x.id === setId ? { ...x, name } : x)),
+        campaigns: (s.state.campaigns ?? []).map((c) =>
+          c.id === s.state.selectedCampaignId
+            ? { ...c, adSets: c.adSets.map((x) => (x.id === setId ? { ...x, name } : x)) }
+            : c,
+        ),
       },
       dirty: true,
     })),
@@ -228,6 +364,18 @@ export const useAdDraftStore = create<AdDraftStore>((set) => ({
             ? { ...set, ads: set.ads.map((a) => (a.id === adId ? { ...a, name } : a)) }
             : set,
         ),
+        campaigns: (s.state.campaigns ?? []).map((c) =>
+          c.id === s.state.selectedCampaignId
+            ? {
+                ...c,
+                adSets: c.adSets.map((set) =>
+                  set.id === setId
+                    ? { ...set, ads: set.ads.map((a) => (a.id === adId ? { ...a, name } : a)) }
+                    : set,
+                ),
+              }
+            : c,
+        ),
       },
       dirty: true,
     })),
@@ -238,7 +386,7 @@ export const useAdDraftStore = create<AdDraftStore>((set) => ({
       const adSets = s.state.adSets.filter((x) => x.id !== setId);
       const nextSet = adSets[0];
       const next = hydrateFromSelection({ ...s.state, adSets }, nextSet.id, nextSet.ads[0]?.id ?? "");
-      return { state: next, dirty: true };
+      return { state: syncCampaign(next), dirty: true };
     }),
 
   deleteAd: (setId, adId) =>
@@ -250,6 +398,6 @@ export const useAdDraftStore = create<AdDraftStore>((set) => ({
       );
       const newSet = adSets.find((x) => x.id === setId)!;
       const next = hydrateFromSelection({ ...s.state, adSets }, setId, newSet.ads[0].id);
-      return { state: next, dirty: true };
+      return { state: syncCampaign(next), dirty: true };
     }),
 }));
