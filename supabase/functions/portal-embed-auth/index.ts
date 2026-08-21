@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
 
     await admin
       .from("portal_embed_tokens")
-      .update({ use_count: (row as any).use_count ?? undefined, last_used_at: new Date().toISOString() })
+      .update({ last_used_at: new Date().toISOString() })
       .eq("id", row.id);
 
     return json({
