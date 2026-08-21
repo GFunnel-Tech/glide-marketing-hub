@@ -8,25 +8,28 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalClient } from "@/hooks/usePortalClient";
 import { PortalClientSwitcher } from "@/components/portal/PortalClientSwitcher";
+import { usePortalBasePath, usePortalLocationId } from "@/hooks/usePortalLocationScope";
 
 const nav = [
-  { to: "/portal", end: true, icon: Home, label: "Dashboard" },
-  { to: "/portal/performance", icon: BarChart3, label: "Performance" },
-  { to: "/portal/leads", icon: Users, label: "Leads" },
-  { to: "/portal/requests", icon: Sparkles, label: "Requests" },
-  { to: "/portal/reports", icon: FileText, label: "Reports" },
-  { to: "/portal/integrations", icon: Plug, label: "Integrations" },
-  { to: "/portal/approvals", icon: CheckSquare, label: "Approvals" },
-  { to: "/portal/creative", icon: ImageIcon, label: "Creative" },
-  { to: "/portal/documents", icon: FileText, label: "Documents" },
-  { to: "/portal/billing", icon: CreditCard, label: "Billing" },
-  { to: "/portal/support", icon: LifeBuoy, label: "Support" },
-  { to: "/portal/settings", icon: SettingsIcon, label: "Settings" },
+  { to: "", end: true, icon: Home, label: "Dashboard" },
+  { to: "/performance", icon: BarChart3, label: "Performance" },
+  { to: "/leads", icon: Users, label: "Leads" },
+  { to: "/requests", icon: Sparkles, label: "Requests" },
+  { to: "/reports", icon: FileText, label: "Reports" },
+  { to: "/integrations", icon: Plug, label: "Integrations" },
+  { to: "/approvals", icon: CheckSquare, label: "Approvals" },
+  { to: "/creative", icon: ImageIcon, label: "Creative" },
+  { to: "/documents", icon: FileText, label: "Documents" },
+  { to: "/billing", icon: CreditCard, label: "Billing" },
+  { to: "/support", icon: LifeBuoy, label: "Support" },
+  { to: "/settings", icon: SettingsIcon, label: "Settings" },
 ];
 
 export function PortalTopNav() {
   const navigate = useNavigate();
   const { client, isLoading } = usePortalClient();
+  const base = usePortalBasePath();
+  const locationScoped = !!usePortalLocationId();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -43,14 +46,16 @@ export function PortalTopNav() {
               {isLoading ? "Loading…" : client?.name ?? "Your account"}
             </p>
           </div>
-          <div className="hidden md:block w-56 ml-2">
-            <PortalClientSwitcher />
-          </div>
+          {!locationScoped && (
+            <div className="hidden md:block w-56 ml-2">
+              <PortalClientSwitcher />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
           <NavLink
-            to="/portal/support"
+            to={`${base}/support`}
             className="hidden sm:flex h-9 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             <Bot className="h-4 w-4" /> AI Assistant
@@ -71,7 +76,7 @@ export function PortalTopNav() {
           return (
             <NavLink
               key={item.to}
-              to={item.to}
+              to={`${base}${item.to}`}
               end={item.end}
               className={({ isActive }) =>
                 cn(

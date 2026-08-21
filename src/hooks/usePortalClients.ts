@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
+import { usePortalLocationId, usePortalLocationClient } from "./usePortalLocationScope";
 
 export type PortalMapping = {
   id: string;
@@ -103,12 +104,15 @@ export function usePortalClient() {
   const mappingsQ = usePortalMappings();
   const [activeId, setActiveId] = useActiveClientId(mappingsQ.data);
   const viewAsId = useViewAsClientId();
-  const effectiveId = viewAsId ?? activeId;
+  const locationId = usePortalLocationId();
+  const locationClientQ = usePortalLocationClient(locationId);
+  const scopedId = locationClientQ.data ?? null;
+  const effectiveId = scopedId ?? viewAsId ?? activeId;
   const mapping = mappingsQ.data?.find((m) => m.client_id === effectiveId) ?? null;
 
   const clientQ = useQuery({
     queryKey: ["portal-client", effectiveId],
-    enabled: effectiveId !== null && (!!viewAsId || mapping?.status === "active"),
+    enabled: effectiveId !== null && (!!scopedId || !!viewAsId || mapping?.status === "active"),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
@@ -126,9 +130,12 @@ export function usePortalClient() {
     setActiveClientId: setActiveId,
     activeMapping: mapping,
     client: clientQ.data ?? null,
-    isLoading: mappingsQ.isLoading || clientQ.isLoading,
+    isLoading: mappingsQ.isLoading || clientQ.isLoading || locationClientQ.isLoading,
     hasAnyMapping: (mappingsQ.data?.length ?? 0) > 0,
     viewAsClientId: viewAsId,
+    locationId,
+    locationClientId: scopedId,
+    locationNotFound: !!locationId && !locationClientQ.isLoading && !locationClientQ.isError && scopedId === null,
   };
 }
 

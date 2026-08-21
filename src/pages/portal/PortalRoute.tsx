@@ -6,6 +6,7 @@ import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useIsAgencyStaff } from "@/hooks/useIsAgencyStaff";
 import { Card } from "@/components/ui/card";
 import { Clock } from "lucide-react";
+import { usePortalLocationId } from "@/hooks/usePortalLocationScope";
 
 export function PortalRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -14,6 +15,8 @@ export function PortalRoute({ children }: { children: ReactNode }) {
   const { data: isAgencyStaff, isLoading: staffLoading } = useIsAgencyStaff();
   const { data: onboarding, isLoading: onbLoading } = useActiveOnboarding(activeClientId);
   const location = useLocation();
+  const locationId = usePortalLocationId();
+  const portalBase = locationId ? `/portal/${locationId}` : "/portal";
 
   // Wait for all access checks (auth, mappings, super-admin, staff) before
   // deciding what to render — otherwise agency owners briefly see the
@@ -33,6 +36,12 @@ export function PortalRoute({ children }: { children: ReactNode }) {
   // Super-admins and any workspace member (agency staff) can always preview
   // the portal, even without a portal_users mapping.
   const canPreview = !!isSuperAdmin || !!isAgencyStaff;
+
+  // Location-scoped embeds (/portal/:ghlLocationId) resolve the client from the
+  // URL, so a portal_users mapping isn't required to render.
+  if (locationId) {
+    return <>{children}</>;
+  }
 
   if (!hasAnyMapping) {
     if (canPreview) {
@@ -71,9 +80,9 @@ export function PortalRoute({ children }: { children: ReactNode }) {
     activeMapping?.status === "active" &&
     !onbLoading &&
     (!onboarding || !onboarding.completed_at) &&
-    !location.pathname.startsWith("/portal/onboarding")
+    !location.pathname.startsWith(`${portalBase}/onboarding`)
   ) {
-    return <Navigate to="/portal/onboarding" replace />;
+    return <Navigate to={`${portalBase}/onboarding`} replace />;
   }
 
   return <>{children}</>;

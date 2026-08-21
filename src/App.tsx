@@ -189,6 +189,35 @@ const App = () => (
                   <Route path="support" element={<PortalSupport />} />
                   <Route path="settings" element={<PortalSettings />} />
                 </Route>
+                <Route
+                  path="/portal/:locationId/onboarding"
+                  element={
+                    <PortalRoute>
+                      <PortalOnboarding />
+                    </PortalRoute>
+                  }
+                />
+                <Route
+                  path="/portal/:locationId"
+                  element={
+                    <PortalRoute>
+                      <PortalLayout />
+                    </PortalRoute>
+                  }
+                >
+                  <Route index element={<PortalDashboard />} />
+                  <Route path="performance" element={<PortalPerformance />} />
+                  <Route path="leads" element={<PortalLeads />} />
+                  <Route path="requests" element={<PortalRequests />} />
+                  <Route path="reports" element={<PortalReports />} />
+                  <Route path="integrations" element={<PortalIntegrations />} />
+                  <Route path="approvals" element={<PortalApprovals />} />
+                  <Route path="creative" element={<PortalCreative />} />
+                  <Route path="documents" element={<PortalDocuments />} />
+                  <Route path="billing" element={<PortalBilling />} />
+                  <Route path="support" element={<PortalSupport />} />
+                  <Route path="settings" element={<PortalSettings />} />
+                </Route>
 
                 <Route
                   path="/"
