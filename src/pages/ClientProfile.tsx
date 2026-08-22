@@ -556,9 +556,11 @@ function ClientProfileInner() {
           </TabsTrigger>
           <TabsTrigger value="tracking" className="gap-1.5">
             <Link2 className="h-3.5 w-3.5" /> Tracking
+          </TabsTrigger>
           <TabsTrigger value="ghl" className="gap-1.5">
             <Plug className="h-3.5 w-3.5" /> GHL CRM
           </TabsTrigger>
+
 
           <TabsTrigger value="integrations" className="gap-1.5">
             <Plug className="h-3.5 w-3.5" /> Integrations
