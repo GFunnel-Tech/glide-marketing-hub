@@ -2595,13 +2595,16 @@ export type Database = {
       ghl_appointments: {
         Row: {
           assigned_to: string | null
+          assigned_user_name: string | null
           calendar_id: string | null
+          calendar_name: string | null
           client_id: number | null
           contact_id: string | null
           created_at: string | null
           end_time: string | null
           id: string
           location_id: string
+          outcome: string | null
           raw: Json | null
           start_time: string | null
           status: string | null
@@ -2612,13 +2615,16 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          assigned_user_name?: string | null
           calendar_id?: string | null
+          calendar_name?: string | null
           client_id?: number | null
           contact_id?: string | null
           created_at?: string | null
           end_time?: string | null
           id: string
           location_id: string
+          outcome?: string | null
           raw?: Json | null
           start_time?: string | null
           status?: string | null
@@ -2629,13 +2635,16 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          assigned_user_name?: string | null
           calendar_id?: string | null
+          calendar_name?: string | null
           client_id?: number | null
           contact_id?: string | null
           created_at?: string | null
           end_time?: string | null
           id?: string
           location_id?: string
+          outcome?: string | null
           raw?: Json | null
           start_time?: string | null
           status?: string | null
@@ -2645,6 +2654,252 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: []
+      }
+      ghl_contact_notes: {
+        Row: {
+          body: string | null
+          client_id: number | null
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          date_added: string | null
+          id: string
+          location_id: string
+          raw: Json | null
+          synced_at: string
+          workspace_id: string
+        }
+        Insert: {
+          body?: string | null
+          client_id?: number | null
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          date_added?: string | null
+          id: string
+          location_id: string
+          raw?: Json | null
+          synced_at?: string
+          workspace_id: string
+        }
+        Update: {
+          body?: string | null
+          client_id?: number | null
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          date_added?: string | null
+          id?: string
+          location_id?: string
+          raw?: Json | null
+          synced_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ghl_contact_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_onboarding_status"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ghl_contact_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ghl_contact_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ghl_contact_notes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ghl_contact_tasks: {
+        Row: {
+          assigned_to: string | null
+          body: string | null
+          client_id: number | null
+          completed: boolean
+          contact_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          location_id: string
+          raw: Json | null
+          synced_at: string
+          title: string | null
+          workspace_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          body?: string | null
+          client_id?: number | null
+          completed?: boolean
+          contact_id: string
+          created_at?: string
+          due_date?: string | null
+          id: string
+          location_id: string
+          raw?: Json | null
+          synced_at?: string
+          title?: string | null
+          workspace_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          body?: string | null
+          client_id?: number | null
+          completed?: boolean
+          contact_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          location_id?: string
+          raw?: Json | null
+          synced_at?: string
+          title?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ghl_contact_tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_onboarding_status"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ghl_contact_tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ghl_contact_tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ghl_contact_tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ghl_contacts: {
+        Row: {
+          assigned_to: string | null
+          client_id: number | null
+          created_at: string
+          custom_fields: Json | null
+          date_added: string | null
+          date_updated: string | null
+          dnd: boolean
+          email: string | null
+          first_name: string | null
+          full_name: string | null
+          id: string
+          last_name: string | null
+          location_id: string
+          phone: string | null
+          raw: Json | null
+          source: string | null
+          synced_at: string
+          tags: string[]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id?: number | null
+          created_at?: string
+          custom_fields?: Json | null
+          date_added?: string | null
+          date_updated?: string | null
+          dnd?: boolean
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id: string
+          last_name?: string | null
+          location_id: string
+          phone?: string | null
+          raw?: Json | null
+          source?: string | null
+          synced_at?: string
+          tags?: string[]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: number | null
+          created_at?: string
+          custom_fields?: Json | null
+          date_added?: string | null
+          date_updated?: string | null
+          dnd?: boolean
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          last_name?: string | null
+          location_id?: string
+          phone?: string | null
+          raw?: Json | null
+          source?: string | null
+          synced_at?: string
+          tags?: string[]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ghl_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_onboarding_status"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ghl_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ghl_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ghl_contacts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ghl_installs: {
         Row: {
@@ -2840,6 +3095,118 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: []
+      }
+      ghl_pipeline_stages: {
+        Row: {
+          created_at: string
+          id: string
+          location_id: string
+          name: string | null
+          pipeline_id: string
+          position: number | null
+          raw: Json | null
+          synced_at: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          location_id: string
+          name?: string | null
+          pipeline_id: string
+          position?: number | null
+          raw?: Json | null
+          synced_at?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location_id?: string
+          name?: string | null
+          pipeline_id?: string
+          position?: number | null
+          raw?: Json | null
+          synced_at?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ghl_pipeline_stages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ghl_pipelines: {
+        Row: {
+          client_id: number | null
+          created_at: string
+          id: string
+          location_id: string
+          name: string | null
+          raw: Json | null
+          synced_at: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id?: number | null
+          created_at?: string
+          id: string
+          location_id: string
+          name?: string | null
+          raw?: Json | null
+          synced_at?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: number | null
+          created_at?: string
+          id?: string
+          location_id?: string
+          name?: string | null
+          raw?: Json | null
+          synced_at?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ghl_pipelines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_onboarding_status"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ghl_pipelines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ghl_pipelines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_kpi_snapshot"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ghl_pipelines_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ghl_stage_map: {
         Row: {
