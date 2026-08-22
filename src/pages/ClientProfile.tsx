@@ -971,6 +971,13 @@ function ClientProfileInner() {
           <TrackingPanel clientId={client.id} title={`Tracking · ${client.name}`} />
         </TabsContent>
 
+        {/* GHL CRM */}
+        <TabsContent value="ghl" className="mt-5">
+          <ClientGhlPanel clientId={client.id} locationId={client.ghlLocationId} />
+        </TabsContent>
+
+
+
         {/* INTEGRATIONS */}
         <TabsContent value="integrations" className="mt-5 space-y-4">
           <ErrorBoundary label="Integrations tab">
