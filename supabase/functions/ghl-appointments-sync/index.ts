@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
             results.push({ client_id: c.id, name: c.name, calendars: 0, events: 0 });
             continue;
           }
-          const calendars: Array<{ id: string }> = calRes.data?.calendars ?? [];
+          const calendars: Array<{ id: string; name?: string }> = calRes.data?.calendars ?? [];
 
           let eventsForClient = 0;
           const rows: any[] = [];
@@ -174,6 +174,9 @@ Deno.serve(async (req) => {
                 start_time: new Date(e.startTime).toISOString(),
                 end_time: e.endTime ? new Date(e.endTime).toISOString() : null,
                 status: e.appointmentStatus ?? e.status ?? null,
+                calendar_name: cal.name ?? null,
+                assigned_user_name: (e as any).assignedUserName ?? null,
+                outcome: (e as any).outcome ?? (e as any).appointmentOutcome ?? null,
                 assigned_to: e.assignedUserId ?? null,
                 raw: e,
                 synced_at: new Date().toISOString(),

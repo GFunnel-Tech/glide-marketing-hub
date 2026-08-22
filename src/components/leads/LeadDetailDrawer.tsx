@@ -10,6 +10,8 @@ import type { ChannelLead, LeadChannel, LeadStage } from "@/hooks/useChannelLead
 import { useUpdateLead } from "@/hooks/useChannelLeads";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { GhlContactCard } from "@/components/ghl/GhlContactCard";
+
 
 const STAGES: { value: LeadStage; label: string }[] = [
   { value: "intake", label: "Intake" },
@@ -161,6 +163,10 @@ export function LeadDetailDrawer({
                     <p className="text-sm text-muted-foreground">No form answers captured.</p>
                   )}
                 </div>
+
+                <GhlContactCard lead={lead as any} />
+
+
 
                 <div className="flex justify-end gap-2 pt-2">
                   <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>

@@ -59,6 +59,8 @@ import { ClientRequestsPanel } from "@/components/client/ClientRequestsPanel";
 import { ClientTasksTab } from "@/components/clients/ClientTasksTab";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { TrackingPanel } from "@/components/tracking/TrackingPanel";
+import { ClientGhlPanel } from "@/components/ghl/ClientGhlPanel";
+
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -557,6 +559,11 @@ function ClientProfileInner() {
           <TabsTrigger value="tracking" className="gap-1.5">
             <Link2 className="h-3.5 w-3.5" /> Tracking
           </TabsTrigger>
+          <TabsTrigger value="ghl" className="gap-1.5">
+            <Plug className="h-3.5 w-3.5" /> GHL CRM
+          </TabsTrigger>
+
+
           <TabsTrigger value="integrations" className="gap-1.5">
             <Plug className="h-3.5 w-3.5" /> Integrations
           </TabsTrigger>
@@ -965,6 +972,13 @@ function ClientProfileInner() {
         <TabsContent value="tracking" className="mt-5">
           <TrackingPanel clientId={client.id} title={`Tracking · ${client.name}`} />
         </TabsContent>
+
+        {/* GHL CRM */}
+        <TabsContent value="ghl" className="mt-5">
+          <ClientGhlPanel clientId={client.id} locationId={client.ghlLocationId} />
+        </TabsContent>
+
+
 
         {/* INTEGRATIONS */}
         <TabsContent value="integrations" className="mt-5 space-y-4">
