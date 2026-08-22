@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
           const rows = list.map((ct: any) => {
             const first = ct.firstName ?? ct.first_name ?? null;
             const last = ct.lastName ?? ct.last_name ?? null;
-            const fullName = ct.contactName ?? ct.name ?? [first, last].filter(Boolean).join(" ") || null;
+            const fullName = ct.contactName ?? ct.name ?? ([first, last].filter(Boolean).join(" ") || null);
             return {
               id: String(ct.id),
               workspace_id: workspaceId,
