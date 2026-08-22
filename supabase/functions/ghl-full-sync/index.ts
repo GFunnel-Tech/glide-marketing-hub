@@ -293,11 +293,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ---------- 4) Link leads to contacts by email/phone ----------
-      try {
-        await admin.rpc("noop_placeholder_never_exists").catch?.(() => {});
-      } catch { /* ignore */ }
-
       await admin.from("ghl_sync_state").upsert({
         location_id: locationId,
         workspace_id: workspaceId,
