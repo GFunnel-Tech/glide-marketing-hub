@@ -59,6 +59,8 @@ import { ClientRequestsPanel } from "@/components/client/ClientRequestsPanel";
 import { ClientTasksTab } from "@/components/clients/ClientTasksTab";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { TrackingPanel } from "@/components/tracking/TrackingPanel";
+import { ClientGhlPanel } from "@/components/ghl/ClientGhlPanel";
+
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
