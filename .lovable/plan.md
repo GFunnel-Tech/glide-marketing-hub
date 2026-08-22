@@ -1,80 +1,43 @@
-## Goal
+# Full GHL Sync: Contacts, Notes, Pipelines, Appointments
 
-Make each client's portal feel like a client-facing mirror of the internal Client Profile card — same KPI tiles, status pill, tabs — while giving the client self-service tools (request a campaign, download reports, connect integrations). Every new client automatically gets their own password-protected portal.
+Yes — it's possible. We already sync locations, appointments and opportunities from GoHighLevel using the same location tokens (OAuth install token or per-subaccount Private Integration Token). Everything else — contacts, notes/tasks, pipeline definitions, conversations — comes from the same API family and can be added the same way.
 
-## 1. Portal redesign (mirror the Client Profile)
+## What exists today
+- Locations sync, appointments sync, opportunities, stage map, inbound webhook for stage changes.
+- Auth per subaccount already solved (install token or PIT), plus a daily auth health check.
 
-Rework `src/pages/portal/PortalDashboard.tsx` + `PortalLayout.tsx` to reuse the same visual language as `ClientProfile.tsx`:
+## What to add
 
-- **Header card**: client name + colored status pill (GREEN/YELLOW/RED/LEARNING/NEW), business name + brand, "Last synced" timestamp, right-aligned Month-to-date range picker.
-- **KPI row (6 tiles, identical to profile)**: CPL, Leads MTD, Spend, CPM, Form CVR, Frequency — each with target line and a red/amber/green health dot. Extract the tile from `ClientProfile.tsx` into a shared `ClientKpiTile.tsx` so both views stay in sync.
-- **Tabs** (client-safe subset): Overview · Campaigns · Leads · Reports · Requests · Integrations · Documents · Support.
-- **Right rail**: "Quick Actions" card matching the profile — buttons become client-appropriate: *Request a Campaign*, *Request a Report*, *Book a Call*. Plus an "External Links" card (GHL, Terms, any `client_embeds`).
-- Keep the top-nav-only shell (per iframe constraint) — no branding/search/profile chrome.
+### 1. Contacts
+New `ghl_contacts` table (contact id, location, name, email, phone, tags, source, DND, custom fields, created/updated). Full backfill on first run, then incremental by `dateUpdated`. Links to existing leads by GHL contact id, then email/phone.
 
-## 2. Auto-provision portal on client creation
+### 2. Notes and tasks
+New `ghl_contact_notes` and `ghl_contact_tasks` tables, fetched per contact (the API is contact-scoped, so this runs after contacts and only for contacts touched since last sync). Surfaced on the lead drawer and client profile as a read-only activity timeline.
 
-When a client row is inserted:
+### 3. Pipelines and stages
+New `ghl_pipelines` / `ghl_pipeline_stages` tables so stage names, order and pipeline ownership are real data instead of the current keyword guessing in the webhook. The existing `ghl_stage_map` then maps real stage ids to our `lead_stage` enum, and inbound webhooks resolve stages exactly.
 
-- DB trigger `on_client_created_provision_portal()` creates a `portal_users` row linked to the client with a generated temporary password and `must_reset_password = true`.
-- Edge function `portal-provision` (called from the trigger via `pg_net` or from the client-create UI) invites the primary contact email via Supabase Auth `inviteUserByEmail`, storing the mapping in `portal_users(client_id, user_id, status='invited')`.
-- If no email exists yet, the invite is queued and surfaced in the Client Profile → Access tab as "Send portal invite".
-- Add `portal_slug` to `clients` so each portal has a stable URL: `/portal/<slug>`. `PortalRoute.tsx` resolves slug → client_id.
+### 4. Appointments (extend)
+Add calendar id/name, assigned user, and appointment outcome so the calendar can filter by calendar and show who owns the booking.
 
-## 3. Password protection + first-login flow
+### 5. Conversations (optional, phase 2)
+Last inbound/outbound message timestamp per contact — enough to show "last contacted" without storing full message bodies.
 
-- Reuse existing Supabase Auth. Invite email → magic link → forced password set on first login (`/portal/set-password`).
-- Session gated by `portal_users.status = 'active'`. RLS: portal user can only read their own client's data.
-- Agency staff impersonation (already built) continues to work via `admin-impersonate`.
+## Where it shows up
+- Lead drawer: GHL contact card with tags, owner, pipeline stage, notes and tasks timeline.
+- Client profile: a GHL tab with contacts count, pipeline funnel by real stage, upcoming appointments.
+- Calendar: appointments enriched with calendar and assignee.
+- Portal: read-only pipeline stage on the client's own leads.
 
-## 4. Self-service features
+## Technical notes
+- One new `ghl-full-sync` edge function orchestrating per-location sync with cursor state in `ghl_sync_state` (contacts → notes/tasks → pipelines → appointments), chunked and resumable so it never hits the function timeout.
+- Cron every 15 min for incrementals; manual "Full resync" button per location in Integrations.
+- Scopes required on the install/PIT: `contacts.readonly`, `objects/pipeline.readonly` (`opportunities.readonly`), `calendars.readonly`, `calendars/events.readonly`, plus `conversations.readonly` only if phase 2 is included. Locations missing a scope get flagged in the existing auth-health panel rather than failing silently.
+- All new tables workspace-scoped with RLS matching the current GHL tables, plus grants for `authenticated` and `service_role`.
 
-New tables (all with GRANTs + RLS scoped to `client_id` the portal user owns):
-
-- `campaign_requests(id, client_id, requested_by, type, objective, budget, target_audience, creative_notes, status, created_at)` — statuses: `new → in_review → scheduled → launched → declined`. Shows up in agency Tasks feed and routes to `media_buying` position.
-- `report_requests(id, client_id, requested_by, period_start, period_end, format, status, file_url)` — "Download Full Report PDF" button generates on demand via `report-generate` edge function.
-- `integration_requests(id, client_id, provider, credentials_note, status)` — for clients to ask the agency to connect GHL, Meta, GA4, Stripe, etc.
-
-Portal pages:
-
-- **Requests tab**: form to submit a new campaign request + list of prior requests with status timeline.
-- **Reports tab**: list of generated monthly/weekly reports with download links + "Generate new report" button.
-- **Integrations tab**: read-only list of connected platforms (Meta, GHL, GA4, Stripe) with green/gray dots + "Request an integration" CTA.
-
-## 5. Agency-side surfacing
-
-- New "Requests" panel on `ClientProfile.tsx` and a global `Requests` inbox at `/requests` for staff.
-- Notifications: new campaign/report/integration request creates a task assigned by `task_routing_rules` (existing) and pings the assignee.
-
-## Technical section
-
-**DB migration (single migration, in order):**
-1. `ALTER TABLE clients ADD COLUMN portal_slug text UNIQUE` (backfill from name).
-2. `CREATE TABLE public.campaign_requests`, `report_requests`, `integration_requests` — each with `GRANT SELECT, INSERT, UPDATE ON ... TO authenticated`, `GRANT ALL ... TO service_role`, then `ENABLE ROW LEVEL SECURITY` + policies:
-   - portal user: `client_id IN (SELECT client_id FROM portal_users WHERE user_id = auth.uid() AND status='active')`
-   - agency staff: `workspace_id` membership via existing helper.
-3. Trigger `on_client_insert_provision_portal` → `net.http_post` to `portal-provision` edge function.
-
-**Edge functions:**
-- `portal-provision` — invite email, create `portal_users` row, set temp password.
-- `report-generate` — assembles PDF for a period (reuses existing KPI rollup RPC), stores in `reports` bucket, updates `report_requests.file_url`.
-
-**Frontend files touched/added:**
-- `src/components/client/ClientKpiTile.tsx` (extracted, shared).
-- `src/pages/portal/PortalDashboard.tsx` — rebuilt to match profile layout.
-- `src/pages/portal/PortalRequests.tsx`, `PortalReports.tsx`, `PortalIntegrations.tsx` (new).
-- `src/components/portal/RequestCampaignDialog.tsx` (new).
-- `src/pages/ClientProfile.tsx` — add "Requests" panel.
-- `src/pages/portal/PortalLayout.tsx` — add Requests/Reports/Integrations tabs.
-- `src/hooks/useClientRequests.ts` (new).
-
-**Security notes:**
-- Portal auth is standard Supabase email/password + magic-link invite; no client-side role checks.
-- All request tables enforce `client_id` scoping via RLS.
-- Temp passwords never returned to the browser; user always sets their own on first login.
-
-## Out of scope (ask before adding)
-
-- White-labeled per-client domains for the portal.
-- Client-initiated billing / plan changes.
-- Full custom-report designer (v1 uses a fixed monthly template).
+## Suggested order
+1. Pipelines + stages (small, immediately improves stage accuracy).
+2. Contacts + incremental cursor.
+3. Notes and tasks timeline.
+4. Appointment enrichment.
+5. Conversations last-contacted (optional).
