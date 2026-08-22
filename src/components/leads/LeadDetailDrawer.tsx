@@ -162,6 +162,10 @@ export function LeadDetailDrawer({
                   )}
                 </div>
 
+                <GhlContactCard lead={lead as any} />
+
+
+
                 <div className="flex justify-end gap-2 pt-2">
                   <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
                   <Button onClick={save} disabled={!dirty || update.isPending}>
