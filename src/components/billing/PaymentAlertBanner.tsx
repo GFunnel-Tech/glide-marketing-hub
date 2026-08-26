@@ -67,7 +67,11 @@ export function PaymentAlertBanner() {
           <p className="mt-0.5 text-xs text-muted-foreground">
             {preview
               .map((e) => {
-                const who = e.client_id ? nameById[e.client_id] ?? `Client #${e.client_id}` : e.description ?? "Agency account";
+                const who =
+                  (e.client_id ? nameById[e.client_id] : null) ??
+                  e.description ??
+                  (e.client_id ? `Client #${e.client_id}` : "Agency account");
+
                 return `${who} — ${LABEL[e.event_type] ?? e.event_type}`;
               })
               .join(" · ")}
