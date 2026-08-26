@@ -334,7 +334,9 @@ export async function buildReportPdf(payload: ReportPayload, commentaryIn: strin
       ["Top states", ls.byState],
       ["Top campaigns", ls.byCampaign],
       ["Top forms", ls.byForm],
-    ].filter(([, arr]) => (arr as any[]).length) as any;
+      [(ls as any).byQualifier?.question ?? "", (ls as any).byQualifier?.rows ?? []],
+    ].filter(([label, arr]) => label && (arr as any[]).length) as any;
+
     if (groups.length) {
       const gw = (AVAIL - 12 * (groups.length - 1)) / groups.length;
       const maxRows = Math.max(...groups.map(([, arr]) => Math.min(arr.length, 6)));
