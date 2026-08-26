@@ -1,6 +1,9 @@
-// Generate a client performance report and store it in client_reports.
-// Body: { clientId, periodStart?, periodEnd?, requestId?, scheduleId?, recipients?, triggerType? }
+// Generate a client performance report, render a PDF, store both, and (when
+// recipients exist) hand it to report-deliver for emailing.
+// Body: { clientId, periodStart?, periodEnd?, requestId?, scheduleId?, recipients?, triggerType?, send? }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { buildReportPdf } from "../_shared/reportPdf.ts";
+
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -69,14 +72,17 @@ Deno.serve(async (req) => {
     const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
     const cvr = totals.clicks > 0 ? (totals.leads / totals.clicks) * 100 : 0;
 
-    // Daily series for chart
-    const daily = insights
-      .map((r) => ({
-        date: r.date,
-        spend: Number(r.spend || 0),
-        leads: Number(r.leads || 0),
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    // Daily series for chart — one row per calendar day across all ad accounts.
+    const byDate = new Map<string, { date: string; spend: number; leads: number }>();
+    for (const r of insights) {
+      const key = String(r.date);
+      const acc = byDate.get(key) ?? { date: key, spend: 0, leads: 0 };
+      acc.spend += Number(r.spend || 0);
+      acc.leads += Number(r.leads || 0);
+      byDate.set(key, acc);
+    }
+    const daily = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+
 
     const shareToken =
       crypto.randomUUID().replace(/-/g, "") + Math.random().toString(36).slice(2, 8);
@@ -114,14 +120,53 @@ Deno.serve(async (req) => {
       .single();
     if (repErr) return json({ error: repErr.message }, 500);
 
+    // ---- PDF render + upload -------------------------------------------------
+    let pdfUrl: string | null = null;
+    try {
+      const bytes = await buildReportPdf(payload as any, commentary);
+      const path = `${client.workspace_id}/${clientId}/${startStr}_${endStr}_${rep.id}.pdf`;
+      const up = await supabase.storage
+        .from("client-reports")
+        .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+      if (up.error) throw up.error;
+      const { data: signed } = await supabase.storage
+        .from("client-reports")
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      pdfUrl = signed?.signedUrl ?? null;
+      await supabase.from("client_reports").update({ pdf_url: pdfUrl }).eq("id", rep.id);
+    } catch (e) {
+      console.error("pdf render failed", e);
+      await supabase
+        .from("client_reports")
+        .update({ error_message: `PDF render failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 500) })
+        .eq("id", rep.id);
+    }
+
     if (body.requestId) {
       await supabase
         .from("report_requests")
-        .update({ status: "ready", file_url: `/r/${shareToken}` })
+        .update({ status: "ready", file_url: pdfUrl || `/r/${shareToken}` })
         .eq("id", body.requestId);
     }
 
-    return json({ ok: true, reportId: rep.id, shareToken, url: `/r/${shareToken}` });
+    // ---- Delivery ------------------------------------------------------------
+    const recipients: string[] = Array.isArray(body.recipients) ? body.recipients.filter(Boolean) : [];
+    let delivery: unknown = null;
+    if (recipients.length && body.send !== false) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/report-deliver`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
+          body: JSON.stringify({ reportId: rep.id }),
+        });
+        delivery = await r.json().catch(() => null);
+      } catch (e) {
+        delivery = { ok: false, error: String(e) };
+      }
+    }
+
+    return json({ ok: true, reportId: rep.id, shareToken, url: `/r/${shareToken}`, pdfUrl, delivery });
+
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
