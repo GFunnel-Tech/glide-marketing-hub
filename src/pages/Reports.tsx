@@ -1,202 +1,490 @@
-import { useState } from "react";
-import { useReports, useClients } from "@/hooks/useDatabase";
+import { useMemo, useState } from "react";
 import { useVisibleClients } from "@/hooks/useVisibleClients";
-import { cplTrendData } from "@/data/mockData";
+import {
+  useReportSchedules,
+  useGeneratedReports,
+  useSaveSchedule,
+  useToggleSchedule,
+  useDeleteSchedule,
+  useGenerateReport,
+  useDeliverReport,
+  type ReportSchedule,
+} from "@/hooks/useClientReports";
 import { cn } from "@/lib/utils";
-import { Download, Send, Eye, Loader2, CheckCircle, Clock, X } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  Download,
+  Send,
+  Loader2,
+  CheckCircle,
+  Clock,
+  Plus,
+  Trash2,
+  Pencil,
+  CalendarClock,
+  FileText,
+  Link as LinkIcon,
+  AlertTriangle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const statusConfig = {
-  draft: { label: "Draft", className: "bg-muted text-muted-foreground", icon: null },
-  generating: { label: "Generating...", className: "bg-primary/15 text-primary", icon: Loader2 },
-  ready: { label: "Ready", className: "bg-warning/15 text-warning", icon: null },
-  delivered: { label: "Delivered", className: "bg-success/15 text-success", icon: CheckCircle },
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+const statusStyles: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  ready: "bg-warning/15 text-warning",
+  delivered: "bg-success/15 text-success",
+};
+
+const fmtDate = (v?: string | null) =>
+  v ? new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
+
+const fmtDateTime = (v?: string | null) =>
+  v ? new Date(v).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
+
+interface DraftSchedule {
+  id?: string;
+  client_id: string;
+  cadence: string;
+  day_of_week: number;
+  day_of_month: number;
+  send_hour: number;
+  recipients: string;
+  active: boolean;
+}
+
+const emptyDraft: DraftSchedule = {
+  client_id: "",
+  cadence: "weekly",
+  day_of_week: 1,
+  day_of_month: 1,
+  send_hour: 9,
+  recipients: "",
+  active: true,
 };
 
 export default function Reports() {
-  const { data: monthlyReports = [], isLoading } = useReports();
   const clients = useVisibleClients();
-  const [loading, setLoading] = useState<string | null>(null);
-  const [previewReport, setPreviewReport] = useState<typeof monthlyReports[0] | null>(null);
-  const [genClient, setGenClient] = useState("");
-  const [genMonth, setGenMonth] = useState("March 2026");
-  const [genProgress, setGenProgress] = useState<string | null>(null);
+  const { data: schedules = [], isLoading: loadingSchedules } = useReportSchedules();
+  const { data: reports = [], isLoading: loadingReports } = useGeneratedReports();
+  const saveSchedule = useSaveSchedule();
+  const toggleSchedule = useToggleSchedule();
+  const deleteSchedule = useDeleteSchedule();
+  const generate = useGenerateReport();
+  const deliver = useDeliverReport();
 
-  const delivered = monthlyReports.filter(r => r.status === "delivered").length;
-  const awaitingReview = monthlyReports.filter(r => r.status === "delivered" && !r.clientReviewed).length;
-  const overdue = monthlyReports.filter(r => r.status === "draft").length;
+  const [draft, setDraft] = useState<DraftSchedule | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const handleGenerate = async (reportId: string) => {
-    const report = monthlyReports.find(r => r.id === reportId);
-    if (!report) return;
-    setLoading(reportId);
+  const clientName = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const c of clients as any[]) map.set(Number(c.id), c.brand || c.name || `Client #${c.id}`);
+    return (id: number) => map.get(Number(id)) ?? `Client #${id}`;
+  }, [clients]);
+
+  const stats = useMemo(
+    () => ({
+      active: schedules.filter((s) => s.active).length,
+      delivered: reports.filter((r) => r.status === "delivered").length,
+      failed: reports.filter((r) => !!r.error_message).length,
+    }),
+    [schedules, reports],
+  );
+
+  const openNew = () => setDraft({ ...emptyDraft });
+  const openEdit = (s: ReportSchedule) =>
+    setDraft({
+      id: s.id,
+      client_id: String(s.client_id),
+      cadence: s.cadence,
+      day_of_week: s.day_of_week ?? 1,
+      day_of_month: s.day_of_month ?? 1,
+      send_hour: s.send_hour ?? 9,
+      recipients: (s.recipients ?? []).join(", "),
+      active: s.active,
+    });
+
+  const handleSave = async () => {
+    if (!draft?.client_id) return toast.error("Pick a client");
+    const recipients = draft.recipients
+      .split(/[,\s]+/)
+      .map((e) => e.trim())
+      .filter((e) => e.includes("@"));
     try {
-      await api.generateReport(report.clientId, report.month);
-      toast.success("Report generated");
-    } catch { toast.error("Generation failed"); }
-    finally { setLoading(null); }
+      await saveSchedule.mutateAsync({
+        id: draft.id,
+        client_id: Number(draft.client_id),
+        cadence: draft.cadence,
+        day_of_week: draft.day_of_week,
+        day_of_month: draft.day_of_month,
+        send_hour: draft.send_hour,
+        recipients,
+        active: draft.active,
+      });
+      toast.success(draft.id ? "Schedule updated" : "Schedule created");
+      setDraft(null);
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not save schedule");
+    }
   };
 
-  const handleGenerateNew = async () => {
-    if (!genClient) { toast.error("Select a client"); return; }
-    setGenProgress("Pulling Meta data...");
-    await new Promise(r => setTimeout(r, 1000));
-    setGenProgress("Pulling GHL...");
-    await new Promise(r => setTimeout(r, 1000));
-    setGenProgress("Generating with Claude...");
-    await new Promise(r => setTimeout(r, 1500));
-    setGenProgress("Done ✓");
-    toast.success("Report generated successfully");
-    setTimeout(() => setGenProgress(null), 2000);
+  const runNow = async (s: ReportSchedule) => {
+    setBusyId(s.id);
+    try {
+      const res = await generate.mutateAsync({
+        clientId: s.client_id,
+        recipients: s.recipients,
+        send: (s.recipients ?? []).length > 0,
+      });
+      if (res?.delivery && res.delivery.ok === false) {
+        toast.warning(`Report created, but email failed: ${res.delivery.error}`);
+      } else {
+        toast.success("Report generated");
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Generation failed");
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  if (isLoading) return <div className="text-center py-10 text-muted-foreground">Loading reports...</div>;
+  const resend = async (reportId: string) => {
+    setBusyId(reportId);
+    try {
+      await deliver.mutateAsync({ reportId });
+      toast.success("Report emailed");
+    } catch (e: any) {
+      toast.error(e.message ?? "Delivery failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-foreground">Monthly Reports</h1>
-        <button onClick={() => { setLoading("export"); api.exportAllReports().then(() => toast.success("Reports exported")).catch(() => toast.error("Export failed")).finally(() => setLoading(null)); }} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          {loading === "export" ? <Loader2 className="h-4 w-4 animate-spin inline mr-1" /> : null}Generate All Reports
-        </button>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Automated Reports</h1>
+          <p className="text-sm text-muted-foreground">
+            Scheduled PDF performance reports, generated and emailed to your clients.
+          </p>
+        </div>
+        <Button onClick={openNew} className="gap-1.5">
+          <Plus className="h-4 w-4" /> New schedule
+        </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
-          { label: "Reports Delivered", value: delivered, color: "text-success" },
-          { label: "Awaiting Review", value: awaitingReview, color: "text-warning" },
-          { label: "Overdue", value: overdue, color: "text-destructive" },
-        ].map(s => (
-          <div key={s.label} className="rounded-lg border border-border bg-card p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{s.label}</p>
-            <p className={cn("text-3xl font-bold tabular-nums mt-1", s.color)}>{s.value}</p>
+          { label: "Active Schedules", value: stats.active, icon: CalendarClock, tint: "bg-primary/10 text-primary" },
+          { label: "Reports Delivered", value: stats.delivered, icon: CheckCircle, tint: "bg-success/10 text-success" },
+          { label: "Needs Attention", value: stats.failed, icon: AlertTriangle, tint: "bg-destructive/10 text-destructive" },
+        ].map((s) => (
+          <div key={s.label} className="flex items-center gap-3 rounded-xl border border-border bg-card p-5">
+            <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", s.tint)}>
+              <s.icon className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{s.label}</p>
+              <p className="mt-0.5 text-2xl font-bold tabular-nums text-foreground">{s.value}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-accent/50">
-              {["Client", "Brand", "Month", "Status", "Delivered", "Reviewed", "Actions"].map(h => (
-                <th key={h} className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {monthlyReports.map(r => {
-              const sc = statusConfig[r.status as keyof typeof statusConfig];
-              return (
-                <tr key={r.id} className="border-b border-border hover:bg-accent/30 transition-colors">
-                  <td className="px-4 py-3 font-medium text-foreground">{r.clientName}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.brand}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.month}</td>
-                  <td className="px-4 py-3">
-                    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", sc.className)}>
-                      {sc.icon && <sc.icon className="h-3 w-3 animate-spin" />}
-                      {sc.label}
-                    </span>
+      {/* Schedules */}
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-3">
+          <CalendarClock className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground">Schedules</h2>
+        </div>
+        {loadingSchedules ? (
+          <div className="p-6 text-sm text-muted-foreground">Loading…</div>
+        ) : schedules.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground">
+            No schedules yet. Create one to send reports automatically.
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-accent/40">
+                {["Client", "Cadence", "Recipients", "Next run", "Last run", "Active", ""].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {schedules.map((s) => (
+                <tr key={s.id} className="border-b border-border last:border-0 hover:bg-accent/30">
+                  <td className="px-4 py-3 font-medium text-foreground">{clientName(s.client_id)}</td>
+                  <td className="px-4 py-3 capitalize text-muted-foreground">
+                    {s.cadence}
+                    {s.cadence === "weekly" && s.day_of_week != null ? ` · ${DAYS[s.day_of_week]}` : ""}
+                    {s.cadence === "monthly" && s.day_of_month != null ? ` · day ${s.day_of_month}` : ""}
+                    {` · ${String(s.send_hour ?? 9).padStart(2, "0")}:00 UTC`}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.deliveredDate || "—"}</td>
-                  <td className="px-4 py-3">{r.clientReviewed ? <CheckCircle className="h-4 w-4 text-success" /> : <Clock className="h-4 w-4 text-muted-foreground" />}</td>
-                  <td className="px-4 py-3 flex items-center gap-1.5">
-                    <button onClick={() => setPreviewReport(r)} className="rounded bg-accent px-2 py-1 text-xs hover:bg-accent/80"><Eye className="h-3 w-3 inline mr-0.5" />View</button>
-                    <button className="rounded bg-accent px-2 py-1 text-xs hover:bg-accent/80"><Download className="h-3 w-3 inline mr-0.5" />PDF</button>
-                    {r.status === "delivered" && <button className="rounded bg-accent px-2 py-1 text-xs hover:bg-accent/80"><Send className="h-3 w-3 inline mr-0.5" />Resend</button>}
-                    {(r.status === "draft" || r.status === "ready") && (
-                      <button onClick={() => handleGenerate(r.id)} className="rounded bg-primary/10 text-primary px-2 py-1 text-xs hover:bg-primary/20">
-                        {loading === r.id ? <Loader2 className="h-3 w-3 animate-spin inline mr-0.5" /> : null}Generate
-                      </button>
-                    )}
+                  <td className="max-w-[220px] truncate px-4 py-3 text-muted-foreground">
+                    {(s.recipients ?? []).join(", ") || "— none —"}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">{fmtDateTime(s.next_run_at)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{fmtDateTime(s.last_run_at)}</td>
+                  <td className="px-4 py-3">
+                    <Switch
+                      checked={s.active}
+                      onCheckedChange={(active) => toggleSchedule.mutate({ id: s.id, active })}
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Button size="sm" variant="secondary" onClick={() => runNow(s)} disabled={busyId === s.id}>
+                        {busyId === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Run now"}
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(s)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          if (confirm("Delete this schedule?")) deleteSchedule.mutate(s.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-3">Generate New Report</h3>
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <label className="text-xs text-muted-foreground">Client</label>
-            <select value={genClient} onChange={e => setGenClient(e.target.value)} className="w-full mt-1 rounded-md border border-border bg-accent px-3 py-2 text-sm">
-              <option value="">Select client...</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name} — {c.brand}</option>)}
-            </select>
-          </div>
-          <div className="w-40">
-            <label className="text-xs text-muted-foreground">Month</label>
-            <select value={genMonth} onChange={e => setGenMonth(e.target.value)} className="w-full mt-1 rounded-md border border-border bg-accent px-3 py-2 text-sm">
-              <option>March 2026</option>
-              <option>February 2026</option>
-              <option>January 2026</option>
-            </select>
-          </div>
-          <button onClick={handleGenerateNew} disabled={!!genProgress} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-            Generate with AI
-          </button>
+      {/* Generated reports */}
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-3">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground">Generated reports</h2>
         </div>
-        {genProgress && <p className="text-sm text-primary mt-3 animate-pulse">{genProgress}</p>}
+        {loadingReports ? (
+          <div className="p-6 text-sm text-muted-foreground">Loading…</div>
+        ) : reports.length === 0 ? (
+          <div className="p-6 text-sm text-muted-foreground">No reports generated yet.</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-accent/40">
+                {["Client", "Period", "Status", "Generated", "Sent", "Actions"].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {reports.map((r) => (
+                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-accent/30">
+                  <td className="px-4 py-3 font-medium text-foreground">{clientName(r.client_id)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {fmtDate(r.period_start)} – {fmtDate(r.period_end)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                        statusStyles[r.status] ?? "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {r.status === "delivered" ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                      {r.status}
+                    </span>
+                    {r.error_message && (
+                      <p className="mt-1 max-w-[240px] text-xs text-destructive">{r.error_message}</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">{fmtDateTime(r.generated_at)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{fmtDateTime(r.sent_at)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      {r.pdf_url && (
+                        <a
+                          href={r.pdf_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded bg-accent px-2 py-1 text-xs hover:bg-accent/70"
+                        >
+                          <Download className="h-3 w-3" /> PDF
+                        </a>
+                      )}
+                      {r.share_token && (
+                        <a
+                          href={`/r/${r.share_token}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded bg-accent px-2 py-1 text-xs hover:bg-accent/70"
+                        >
+                          <LinkIcon className="h-3 w-3" /> Share
+                        </a>
+                      )}
+                      <Button size="sm" variant="secondary" onClick={() => resend(r.id)} disabled={busyId === r.id}>
+                        {busyId === r.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <>
+                            <Send className="mr-1 h-3 w-3" />
+                            {r.sent_at ? "Resend" : "Send"}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {previewReport && (
-        <>
-          <div className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm" onClick={() => setPreviewReport(null)} />
-          <div className="fixed right-0 top-0 z-50 h-full w-[600px] border-l border-border bg-card shadow-2xl overflow-auto animate-in slide-in-from-right duration-200">
-            <div className="flex items-center justify-between border-b border-border p-5">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">{previewReport.clientName}</h2>
-                <p className="text-sm text-muted-foreground">{previewReport.month}</p>
+      <Dialog open={!!draft} onOpenChange={(o) => !o && setDraft(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{draft?.id ? "Edit schedule" : "New report schedule"}</DialogTitle>
+          </DialogHeader>
+          {draft && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Client</Label>
+                <Select
+                  value={draft.client_id}
+                  onValueChange={(v) => setDraft({ ...draft, client_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {(clients as any[]).map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.brand || c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="flex gap-2">
-                <button className="rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground"><Download className="h-3 w-3 inline mr-1" />Download PDF</button>
-                <button onClick={() => setPreviewReport(null)} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
-              </div>
-            </div>
-            <div className="p-5 space-y-6">
-              <div>
-                <h3 className="text-sm font-semibold mb-2">Account Snapshot</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { label: "Spend", value: `$${previewReport.metrics.spend.toLocaleString()}` },
-                    { label: "Leads", value: previewReport.metrics.leads },
-                    { label: "CPL", value: `$${previewReport.metrics.cpl.toFixed(2)}` },
-                    { label: "Appointments", value: previewReport.metrics.appointments },
-                    { label: "Applications", value: previewReport.metrics.applications },
-                    { label: "Closed Deals", value: previewReport.metrics.closedDeals },
-                  ].map(m => (
-                    <div key={m.label} className="rounded border border-border p-3">
-                      <p className="text-xs text-muted-foreground">{m.label}</p>
-                      <p className="text-lg font-bold tabular-nums">{m.value}</p>
-                    </div>
-                  ))}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Cadence</Label>
+                  <Select value={draft.cadence} onValueChange={(v) => setDraft({ ...draft, cadence: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Daily</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Send hour (UTC)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={draft.send_hour}
+                    onChange={(e) => setDraft({ ...draft, send_hour: Number(e.target.value) })}
+                  />
                 </div>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold mb-2">CPL Trend</h3>
-                <div className="h-40">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={cplTrendData}>
-                      <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
-                      <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }} />
-                      <Line type="monotone" dataKey="reported" stroke="hsl(var(--primary))" dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
+
+              {draft.cadence === "weekly" && (
+                <div className="space-y-1.5">
+                  <Label>Day of week</Label>
+                  <Select
+                    value={String(draft.day_of_week)}
+                    onValueChange={(v) => setDraft({ ...draft, day_of_week: Number(v) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DAYS.map((d, i) => (
+                        <SelectItem key={d} value={String(i)}>
+                          {d}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              )}
+
+              {draft.cadence === "monthly" && (
+                <div className="space-y-1.5">
+                  <Label>Day of month</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={28}
+                    value={draft.day_of_month}
+                    onChange={(e) => setDraft({ ...draft, day_of_month: Number(e.target.value) })}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label>Recipients</Label>
+                <Input
+                  placeholder="client@example.com, owner@example.com"
+                  value={draft.recipients}
+                  onChange={(e) => setDraft({ ...draft, recipients: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Comma-separated. Leave empty to generate the PDF without emailing.
+                </p>
               </div>
-              <div>
-                <h3 className="text-sm font-semibold mb-2">Pipeline Value</h3>
-                <p className="text-2xl font-bold text-foreground">${previewReport.metrics.pipelineValue.toLocaleString()}</p>
+
+              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                <span className="text-sm">Active</span>
+                <Switch checked={draft.active} onCheckedChange={(active) => setDraft({ ...draft, active })} />
               </div>
             </div>
-          </div>
-        </>
-      )}
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDraft(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saveSchedule.isPending}>
+              {saveSchedule.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Save schedule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
