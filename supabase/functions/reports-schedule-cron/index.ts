@@ -46,8 +46,9 @@ Deno.serve(async (req) => {
     .from("client_report_schedules")
     .select("*")
     .eq("active", true)
-    .lte("next_run_at", new Date().toISOString())
+    .or(`next_run_at.is.null,next_run_at.lte.${new Date().toISOString()}`)
     .limit(50);
+
 
   const results: any[] = [];
   for (const s of due ?? []) {
