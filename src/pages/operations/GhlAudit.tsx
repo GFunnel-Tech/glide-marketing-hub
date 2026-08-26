@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useClientPath } from "@/lib/clientPath";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ type Filter = "all" | "issues" | "critical";
 
 export default function GhlAudit() {
   const { data, isLoading, isFetching, refetch } = useGhlAudit();
+  const clientPath = useClientPath();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<number | null>(null);
@@ -172,7 +174,7 @@ export default function GhlAudit() {
                                 <p><span className="text-muted-foreground">Open opportunities:</span> {a.pipeline.openOpportunities} (${Number(a.pipeline.openValue).toLocaleString()})</p>
                                 <p><span className="text-muted-foreground">Upcoming appointments:</span> {a.pipeline.upcomingAppointments} · no-shows 60d: {a.pipeline.noShows60d}</p>
                                 <div className="flex gap-3 pt-2">
-                                  <Link to={`/client/${a.clientId}`} className="text-primary text-sm hover:underline">
+                                  <Link to={clientPath(a.clientId)} className="text-primary text-sm hover:underline">
                                     Open client profile
                                   </Link>
                                   <a

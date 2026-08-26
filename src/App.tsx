@@ -47,6 +47,7 @@ import Research from "./pages/operations/Research";
 import Sandbox from "./pages/operations/Sandbox";
 import Launch from "./pages/operations/Launch";
 import Audiences from "./pages/operations/Audiences";
+import GhlAudit from "./pages/operations/GhlAudit";
 
 import NotFound from "./pages/NotFound";
 import PortalLayout from "./pages/portal/PortalLayout";
@@ -254,6 +255,7 @@ const App = () => (
                   <Route path="calendar" element={<CalendarPage />} />
                   <Route path="operations/launch" element={<Launch />} />
                   <Route path="operations/audiences" element={<Audiences />} />
+                  <Route path="operations/ghl-audit" element={<GhlAudit />} />
                   <Route path="operations/research" element={<Research />} />
                   <Route path="operations/sandbox" element={<Sandbox />} />
 

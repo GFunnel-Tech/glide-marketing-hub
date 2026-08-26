@@ -54,6 +54,7 @@ const navItems: NavEntry[] = [
           { icon: Radar, label: "Tracking", path: "/tracking" },
           { icon: Bot, label: "AI Assistant", path: "/ai" },
           { icon: TrendingUp, label: "Trend Briefs", path: "/trend-briefs", badge: "NEW" },
+          { icon: Plug, label: "GHL Audit", path: "/operations/ghl-audit", badge: "NEW" },
         ]
       },
       { icon: Microscope, label: "Research", path: "/operations/research" },

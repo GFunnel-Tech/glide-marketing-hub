@@ -60,6 +60,7 @@ import { ClientTasksTab } from "@/components/clients/ClientTasksTab";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { TrackingPanel } from "@/components/tracking/TrackingPanel";
 import { ClientGhlPanel } from "@/components/ghl/ClientGhlPanel";
+import { GhlClientAuditPanel } from "@/components/ghl/GhlClientAuditPanel";
 
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -974,8 +975,9 @@ function ClientProfileInner() {
         </TabsContent>
 
         {/* GHL CRM */}
-        <TabsContent value="ghl" className="mt-5">
+        <TabsContent value="ghl" className="mt-5 space-y-6">
           <ClientGhlPanel clientId={client.id} locationId={client.ghlLocationId} />
+          {client.ghlLocationId && <GhlClientAuditPanel clientId={client.id} />}
         </TabsContent>
 
 
