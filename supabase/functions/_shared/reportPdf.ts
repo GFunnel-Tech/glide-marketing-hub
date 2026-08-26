@@ -27,7 +27,7 @@ const money = (n: number, cur: string) =>
   `${cur === "USD" ? "$" : cur + " "}${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const num = (n: number) => Math.round(n).toLocaleString("en-US");
 
-export async function buildReportPdf(payload: ReportPayload, commentary: string): Promise<Uint8Array> {
+export async function buildReportPdf(payload: ReportPayload, commentaryIn: string): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -37,8 +37,20 @@ export async function buildReportPdf(payload: ReportPayload, commentary: string)
   const M = 48;
   let y = 841.89 - M;
 
+  // pdf-lib's standard fonts are WinAnsi-only: swap common typographic glyphs
+  // and drop anything else outside the encodable range.
+  const san = (s: string) =>
+    String(s ?? "")
+      .replace(/[\u2192\u2794]/g, "->")
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2013\u2014]/g, "-")
+      .replace(/\u2022/g, "-")
+      .replace(/\u2026/g, "...")
+      .replace(/[^\x20-\xFF\n]/g, "");
+
   const text = (s: string, x: number, yy: number, size = 10, f = font, color = INK) =>
-    page.drawText(s, { x, y: yy, size, font: f, color });
+    page.drawText(san(s), { x, y: yy, size, font: f, color });
 
   const cur = payload.client.currency || "USD";
   const title = payload.client.brand || payload.client.name || "Client";
@@ -125,6 +137,7 @@ export async function buildReportPdf(payload: ReportPayload, commentary: string)
     return out;
   };
 
+  const commentary = san(commentaryIn);
   if (commentary) {
     text("Summary", M, y, 11, bold, INK);
     y -= 16;
