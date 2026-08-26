@@ -689,11 +689,19 @@ export function ClientHierarchyTable() {
               <button
                 key={f}
                 onClick={() => setStatusFilter(f)}
+                title={f === "Hidden" ? "Archived clients, campaigns and ads — excluded from all KPI totals" : undefined}
                 className={cn(
                   "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                   statusFilter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
-              >{f}</button>
+              >
+                {f}
+                {f === "Hidden" && hiddenCount > 0 && (
+                  <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+                    {hiddenCount}
+                  </span>
+                )}
+              </button>
             ))}
           </div>
 
@@ -702,11 +710,13 @@ export function ClientHierarchyTable() {
             variant="outline"
             size="sm"
             className="h-8 gap-1.5 text-xs"
+            disabled={showArchived}
             onClick={() => setHideZero((v) => !v)}
-            title={hideZero ? "Currently hiding clients with no spend/impressions in range" : "Showing all mapped clients, including those without data in range"}
+            title={hideZeroPref ? "Currently hiding clients with no spend/impressions in range" : "Showing all mapped clients, including those without data in range"}
           >
-            {hideZero ? "Show all" : "Hide empty"}
+            {hideZeroPref ? "Show all" : "Hide empty"}
           </Button>
+
 
           {/* Search */}
           <div className="relative">
