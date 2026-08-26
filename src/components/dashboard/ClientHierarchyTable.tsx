@@ -173,7 +173,7 @@ function AdRatingBadge({ rating }: { rating: AdRating }) {
   return null;
 }
 
-type StatusFilter = "All" | "Active" | "Paused" | "Issues";
+type StatusFilter = "All" | "Active" | "Paused" | "Issues" | "Hidden";
 
 export function ClientHierarchyTable() {
   const navigate = useNavigate();
