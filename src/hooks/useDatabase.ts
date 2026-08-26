@@ -6,6 +6,8 @@ export interface DbClient {
   id: number;
   name: string;
   brand: string;
+  contact_name?: string | null;
+
   status: "GREEN" | "YELLOW" | "RED" | "BLOCKED" | "NEW" | "PENDING_APPROVAL" | "SETUP_COMPLETE" | "LAUNCHING" | "LEARNING" | "RELAUNCH" | "PAUSED" | "PENDING_CANCELLATION" | "CANCELLED";
   bm_type: "Own BM" | "Agency BM";
   cpl: number;
@@ -116,7 +118,11 @@ export function toClient(c: DbClient) {
     id: c.id,
     name: c.name,
     brand: c.brand,
+    // Contact person ("Nick Smith") shown alongside the brand name.
+    contact_name: (c as any).contact_name ?? null,
+    contactName: (c as any).contact_name ?? null,
     status: c.status,
+
     bmType: c.bm_type,
     cpl: Number(c.cpl),
     cpm: Number(c.cpm),

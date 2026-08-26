@@ -253,12 +253,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Keep client.name aligned with the linked GHL sub-account name
+    // Keep client.name + contact_name aligned with the linked GHL sub-account
     let renamed = 0;
     {
       const { data: linkedClients } = await supabase
         .from("clients")
-        .select("id, name, ghl_location_id")
+        .select("id, name, contact_name, ghl_location_id")
         .eq("workspace_id", workspace_id)
         .not("ghl_location_id", "is", null);
       const locById = new Map<string, any>();
@@ -266,12 +266,20 @@ Deno.serve(async (req) => {
       for (const c of linkedClients || []) {
         const loc = locById.get(c.ghl_location_id);
         const ghlName = loc?.name;
-        if (ghlName && ghlName !== c.name) {
-          await supabase.from("clients").update({ name: ghlName }).eq("id", c.id);
+        const contact = [loc?.firstName, loc?.lastName]
+          .map((v: unknown) => String(v ?? "").trim())
+          .filter(Boolean)
+          .join(" ");
+        const patch: Record<string, string> = {};
+        if (ghlName && ghlName !== c.name) patch.name = ghlName;
+        if (contact && contact !== (c as any).contact_name) patch.contact_name = contact;
+        if (Object.keys(patch).length) {
+          await supabase.from("clients").update(patch).eq("id", c.id);
           renamed++;
         }
       }
     }
+
 
     return new Response(
       JSON.stringify({ ok: true, locations: locations.length, linked, suggested, renamed }),

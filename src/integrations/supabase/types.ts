@@ -2163,6 +2163,7 @@ export type Database = {
           brief_recipients: string[]
           brief_seasonal_context: string | null
           clickup_list_id: string | null
+          contact_name: string | null
           country: string | null
           cpl: number
           cpm: number
@@ -2204,6 +2205,7 @@ export type Database = {
           brief_recipients?: string[]
           brief_seasonal_context?: string | null
           clickup_list_id?: string | null
+          contact_name?: string | null
           country?: string | null
           cpl?: number
           cpm?: number
@@ -2245,6 +2247,7 @@ export type Database = {
           brief_recipients?: string[]
           brief_seasonal_context?: string | null
           clickup_list_id?: string | null
+          contact_name?: string | null
           country?: string | null
           cpl?: number
           cpm?: number
