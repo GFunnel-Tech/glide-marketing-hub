@@ -34,6 +34,8 @@ export interface ReportPayload {
     byState: { label: string; count: number }[];
     byCampaign: { label: string; count: number }[];
     byForm: { label: string; count: number }[];
+    byQualifier?: { question: string; rows: { label: string; count: number }[] } | null;
+
   } | null;
   notes?: { contact: string; body: string; date: string | null }[];
   activity?: { action: string; status: string; detail: string; date: string | null }[];
