@@ -67,7 +67,7 @@ function ExportOverviewButton() {
         "Client", "Status", "Brand", "Currency",
         "Spend", "Impressions", "Clicks", "CTR %",
         "Reported Leads", "True Leads", "CPL", "True CPL",
-        "CPM", "Form CVR %", "Frequency", "Above 640 %",
+        "CPM", "Form CVR %", "Frequency",
       ];
       const rows = clients.map((c: any) => {
         const m: any = m0[c.id] || {};
@@ -81,7 +81,6 @@ function ExportOverviewButton() {
           (m.cpm ?? 0).toFixed(2),
           (m.formCvr ?? 0).toFixed(2),
           (m.frequency ?? 0).toFixed(2),
-          m.above640Pct == null ? "" : m.above640Pct.toFixed(1),
         ].map(csvEscape).join(",");
       });
       const csv = [headers.join(","), ...rows].join("\n");

@@ -46,7 +46,7 @@ import { NoteBubble } from "@/components/notes/NoteBubble";
 import { GhlLocationLink } from "@/components/integrations/GhlLocationLink";
 import { ColumnPicker, BuiltinColumnOption } from "@/components/common/ColumnPicker";
 import { useTableView, evalFormula, formatColumnValue } from "@/hooks/useTableColumns";
-import { useCampaignLeadBreakdown } from "@/hooks/useCampaignLeadBreakdown";
+
 import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { useChurnRisks } from "@/hooks/useChurnRisk";
 import { ChurnRiskBadge } from "./ChurnRiskBadge";
@@ -64,17 +64,11 @@ const HIERARCHY_BUILTINS: BuiltinColumnOption[] = [
   { id: "cpl", label: "CPL", token: "cpl" },
   { id: "cpm", label: "CPM", token: "cpm" },
   { id: "freq", label: "Frequency", token: "frequency" },
-  { id: "above640", label: "Above 640 %", token: "above640" },
 ];
 const HIERARCHY_ALWAYS = ["status", "name"];
 const FORMULA_TOKENS = HIERARCHY_BUILTINS.map((b) => b.token!).filter(Boolean);
 
-function above640Color(pct: number | null) {
-  if (pct === null) return "text-muted-foreground";
-  if (pct >= 60) return "text-success font-semibold";
-  if (pct >= 30) return "text-warning font-semibold";
-  return "text-destructive font-semibold";
-}
+const KNOWN_BUILTIN_IDS = new Set([...HIERARCHY_BUILTINS.map((b) => b.id!), ...HIERARCHY_ALWAYS]);
 
 // ---------- helpers ----------
 // Money formatter. When the row's account currency is known (and not MIXED),
@@ -197,7 +191,7 @@ export function ClientHierarchyTable() {
     return m;
   }, [churnRisks]);
   const { data: campaignRangeMetrics = EMPTY_CAMPAIGNS_RANGE_METRICS, isLoading: campaignRangeLoading } = useCampaignsRangeMetrics();
-  const { data: leadBreakdown = { byCampaign: {}, byAdset: {}, byAd: {} } } = useCampaignLeadBreakdown();
+  
   const { view } = useTableView(TABLE_KEY);
   const { data: customKpis = [] } = useCustomKpis();
   const enabledKpiIds = useMemo(
@@ -218,7 +212,7 @@ export function ClientHierarchyTable() {
     () => new Set(view.columns.filter((c: any) => c.kind === "builtin" && c.hidden).map((c: any) => c.id)),
     [view]
   );
-  const isVisible = (id: string) => !hidden.has(id);
+  const isVisible = (id: string) => KNOWN_BUILTIN_IDS.has(id) && !hidden.has(id);
 
   // Extra columns appended after built-ins
   const extraCols = useMemo(() => {
@@ -747,7 +741,7 @@ export function ClientHierarchyTable() {
                 {isVisible("cpl") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">CPL</th>}
                 {isVisible("cpm") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">CPM</th>}
                 {isVisible("freq") && <th className="w-16 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Freq</th>}
-                {isVisible("above640") && <th className="w-20 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap" title="Percentage of leads in window self-reporting a credit score above 640">Above 640</th>}
+                
                 {extraCols.map((col) => (
                   <th key={col.id} className="w-24 px-2 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">{col.label}</th>
                 ))}
@@ -809,8 +803,6 @@ export function ClientHierarchyTable() {
                 const avgCpl = rm?.cpl ?? (totLeads > 0 ? totSpend / totLeads : 0);
                 const cAvgCpm = rm?.cpm ?? (totImpr > 0 ? (totSpend / totImpr) * 1000 : 0);
                 const cAvgFreq = rm?.frequency ?? 0;
-                const cAbove640 = rm?.above640Pct ?? null;
-                const cScored = rm?.scoredLeads ?? 0;
 
 
                 return (
@@ -969,14 +961,6 @@ export function ClientHierarchyTable() {
                             {cAvgFreq > 0 ? cAvgFreq.toFixed(2) : "—"}
                           </td>
                         )}
-                        {isVisible("above640") && (
-                          <td
-                            className={cn("px-2 py-2.5 text-right tabular-nums", above640Color(cAbove640))}
-                            title={cAbove640 !== null ? `${cScored} scored lead${cScored === 1 ? "" : "s"} in range` : "No credit-score answers in range"}
-                          >
-                            {cAbove640 === null ? "—" : `${cAbove640.toFixed(0)}%`}
-                          </td>
-                        )}
                         {extraCols.map((col) => {
                           const scope: Record<string, number> = {
                             impressions: totImpr,
@@ -987,7 +971,6 @@ export function ClientHierarchyTable() {
                             cpl: avgCpl,
                             cpm: cAvgCpm,
                             frequency: cAvgFreq,
-                            above640: cAbove640 ?? 0,
                           };
                           if (col.kind === "formula") {
                             const v = evalFormula(col.expr, scope);
@@ -1109,7 +1092,7 @@ export function ClientHierarchyTable() {
                               const rCtr = rImpr > 0 ? (rClicks / rImpr) * 100 : 0;
                               const campCpm = rangedCamp?.cpm ?? (rImpr > 0 ? (rSpend / rImpr) * 1000 : 0);
                               const campFreq = Number(rangedCamp?.frequency ?? 0);
-                              const campAbove = leadBreakdown.byCampaign[camp.id] ?? null;
+                              
                               const cplVal = rLeads > 0 ? rSpend / rLeads : 0;
                               return (
                                 <>
@@ -1129,19 +1112,11 @@ export function ClientHierarchyTable() {
                                       {campFreq > 0 ? campFreq.toFixed(2) : "—"}
                                     </td>
                                   )}
-                                  {isVisible("above640") && (
-                                    <td
-                                      className={cn("px-2 py-2 text-right tabular-nums", above640Color(campAbove?.pct ?? null))}
-                                      title={campAbove?.pct != null ? `${campAbove.scored} scored lead${campAbove.scored === 1 ? "" : "s"}` : "No credit-score answers"}
-                                    >
-                                      {campAbove?.pct == null ? "—" : `${campAbove.pct.toFixed(0)}%`}
-                                    </td>
-                                  )}
                                   {extraCols.map((col) => {
                                     const scope: Record<string, number> = {
                                       impressions: rImpr, clicks: rClicks, ctr: rCtr,
                                       spend: rSpend, leads: rLeads, cpl: cplVal,
-                                      cpm: campCpm, frequency: campFreq, above640: campAbove?.pct ?? 0,
+                                      cpm: campCpm, frequency: campFreq,
                                     };
                                     if (col.kind === "formula") {
                                       const v = evalFormula(col.expr, scope);
@@ -1217,7 +1192,7 @@ export function ClientHierarchyTable() {
                                   </td>
                                   {(() => {
                                     const asCpm = impr > 0 ? (spend / impr) * 1000 : 0;
-                                    const asAbove = leadBreakdown.byAdset[adsetId] ?? null;
+                                    
                                     return (
                                       <>
                                         {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(impr)}</td>}
@@ -1232,18 +1207,10 @@ export function ClientHierarchyTable() {
                                         )}
                                         {isVisible("cpm") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{asCpm > 0 ? fmtMoney(asCpm, cur, 2) : "—"}</td>}
                                         {isVisible("freq") && <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>}
-                                        {isVisible("above640") && (
-                                          <td
-                                            className={cn("px-2 py-2 text-right tabular-nums", above640Color(asAbove?.pct ?? null))}
-                                            title={asAbove?.pct != null ? `${asAbove.scored} scored lead${asAbove.scored === 1 ? "" : "s"}` : "No credit-score answers"}
-                                          >
-                                            {asAbove?.pct == null ? "—" : `${asAbove.pct.toFixed(0)}%`}
-                                          </td>
-                                        )}
                                         {extraCols.map((col) => {
                                           const scope: Record<string, number> = {
                                             impressions: impr, clicks, ctr, spend, leads, cpl,
-                                            cpm: asCpm, frequency: 0, above640: asAbove?.pct ?? 0,
+                                            cpm: asCpm, frequency: 0,
                                           };
                                           if (col.kind === "formula") {
                                             const v = evalFormula(col.expr, scope);
@@ -1302,7 +1269,7 @@ export function ClientHierarchyTable() {
                                         </td>
                                       {(() => {
                                         const adCpm = ad.impressions > 0 ? (ad.spend / ad.impressions) * 1000 : 0;
-                                        const adAbove = leadBreakdown.byAd[ad.id] ?? null;
+                                        
                                         return (
                                           <>
                                             {isVisible("impressions") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{fmtInt(ad.impressions)}</td>}
@@ -1317,19 +1284,11 @@ export function ClientHierarchyTable() {
                                             )}
                                             {isVisible("cpm") && <td className="px-2 py-2 text-right tabular-nums text-foreground">{adCpm > 0 ? fmtMoney(adCpm, cur, 2) : "—"}</td>}
                                             {isVisible("freq") && <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">—</td>}
-                                            {isVisible("above640") && (
-                                              <td
-                                                className={cn("px-2 py-2 text-right tabular-nums", above640Color(adAbove?.pct ?? null))}
-                                                title={adAbove?.pct != null ? `${adAbove.scored} scored lead${adAbove.scored === 1 ? "" : "s"}` : "No credit-score answers"}
-                                              >
-                                                {adAbove?.pct == null ? "—" : `${adAbove.pct.toFixed(0)}%`}
-                                              </td>
-                                            )}
                                             {extraCols.map((col) => {
                                               const scope: Record<string, number> = {
                                                 impressions: ad.impressions, clicks: ad.clicks, ctr: adCtr,
                                                 spend: ad.spend, leads: ad.leads, cpl: ad.cpl,
-                                                cpm: adCpm, frequency: 0, above640: adAbove?.pct ?? 0,
+                                                cpm: adCpm, frequency: 0,
                                               };
                                               if (col.kind === "formula") {
                                                 const v = evalFormula(col.expr, scope);
