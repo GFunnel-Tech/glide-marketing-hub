@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useDateRange } from "@/hooks/useDateRange";
-import { readCreditScore } from "@/lib/leadCreditScore";
+
 
 
 export interface ClientRangeMetrics {
@@ -20,8 +20,6 @@ export interface ClientRangeMetrics {
   frequency: number;
   doubleCount: boolean;
   currency: string;
-  above640Pct: number | null;
-  scoredLeads: number;
 }
 
 
@@ -167,8 +165,6 @@ export function useClientsRangeMetrics() {
         freqSum: number;
         freqWeight: number;
         leadKeys: Set<string>;
-        scoredLeads: number;
-        above640: number;
         currency: string | null;
       }> = {};
 
@@ -182,8 +178,6 @@ export function useClientsRangeMetrics() {
             freqSum: 0,
             freqWeight: 0,
             leadKeys: new Set(),
-            scoredLeads: 0,
-            above640: 0,
             currency: null,
           };
         }
@@ -256,13 +250,6 @@ export function useClientsRangeMetrics() {
         }
       }
 
-      // Field_data for credit-score scoring
-      const { data: scoredRaw } = await (supabase as any)
-        .from("meta_leads")
-        .select("client_id, field_data")
-        .eq("workspace_id", wsId)
-        .gte("created_time", fromISO)
-        .lte("created_time", toISO);
 
       for (const row of (lErr ? [] : leads) || []) {
         if (!row.client_id) continue;
@@ -273,15 +260,6 @@ export function useClientsRangeMetrics() {
         b.leadKeys.add(key);
       }
 
-      for (const row of scoredRaw || []) {
-        if (!row.client_id) continue;
-        const { hasScore, isAbove } = readCreditScore(row.field_data);
-        if (hasScore) {
-          const b = bucket(row.client_id);
-          b.scoredLeads += 1;
-          if (isAbove) b.above640 += 1;
-        }
-      }
 
 
       const out: Record<number, ClientRangeMetrics> = {};
@@ -301,7 +279,7 @@ export function useClientsRangeMetrics() {
         const cpm = b.impressions > 0 ? (b.spend / b.impressions) * 1000 : 0;
         const formCvr = b.clicks > 0 ? (b.reportedLeads / b.clicks) * 100 : 0;
         const frequency = b.freqWeight > 0 ? b.freqSum / b.freqWeight : 0;
-        const above640Pct = b.scoredLeads > 0 ? (b.above640 / b.scoredLeads) * 100 : null;
+        
         out[cid] = {
           clientId: cid,
           spend: b.spend,
@@ -317,8 +295,6 @@ export function useClientsRangeMetrics() {
           frequency,
           currency: b.currency || "USD",
           doubleCount: reliableTrueCpl && b.reportedLeads > trueLeads * 1.15,
-          above640Pct,
-          scoredLeads: b.scoredLeads,
         };
       }
       return out;
