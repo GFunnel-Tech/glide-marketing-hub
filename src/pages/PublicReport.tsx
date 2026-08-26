@@ -142,8 +142,10 @@ export default function PublicReport() {
                 { label: "Top states", rows: leadStats.byState },
                 { label: "Top campaigns", rows: leadStats.byCampaign },
                 { label: "Top forms", rows: leadStats.byForm },
+                { label: leadStats.byQualifier?.question ?? "", rows: leadStats.byQualifier?.rows ?? [] },
               ]
-                .filter((g) => (g.rows ?? []).length)
+                .filter((g) => g.label && (g.rows ?? []).length)
+
                 .map((g) => (
                   <div key={g.label} className="rounded-lg border border-border bg-muted/30 p-3">
                     <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{g.label}</p>
