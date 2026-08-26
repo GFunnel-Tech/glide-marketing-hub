@@ -60,7 +60,7 @@ export async function buildReportPdf(payload: ReportPayload, commentaryIn: strin
   text("PERFORMANCE REPORT", M, y + 30, 9, bold, rgb(1, 1, 1));
   text(title.slice(0, 48), M, y + 8, 20, bold, rgb(1, 1, 1));
   text(`${payload.period.start}  to  ${payload.period.end}`, M, y - 8, 10, font, rgb(0.9, 0.94, 1));
-  y -= 56;
+  y -= 46;
 
   // KPI grid
   const kpis: [string, string][] = [
@@ -76,7 +76,7 @@ export async function buildReportPdf(payload: ReportPayload, commentaryIn: strin
   const cols = 4;
   const cardW = (W - M * 2 - 12 * (cols - 1)) / cols;
   const cardH = 58;
-  y -= 34;
+  y -= 14;
   kpis.forEach((k, i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
