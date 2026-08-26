@@ -6,6 +6,8 @@ export interface DbClient {
   id: number;
   name: string;
   brand: string;
+  contact_name?: string | null;
+
   status: "GREEN" | "YELLOW" | "RED" | "BLOCKED" | "NEW" | "PENDING_APPROVAL" | "SETUP_COMPLETE" | "LAUNCHING" | "LEARNING" | "RELAUNCH" | "PAUSED" | "PENDING_CANCELLATION" | "CANCELLED";
   bm_type: "Own BM" | "Agency BM";
   cpl: number;
