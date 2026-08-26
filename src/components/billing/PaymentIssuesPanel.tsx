@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Eye, Loader2, ShieldAlert } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, ExternalLink, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { metaAdsManagerUrl } from "@/lib/metaAdsLink";
 import { usePaymentEvents, usePaymentEventStats, useUpdatePaymentEvent, type PaymentEvent } from "@/hooks/usePaymentEvents";
+
 
 const TYPE_LABEL: Record<string, string> = {
   charge_failed: "Charge failed",
@@ -109,6 +111,7 @@ export function PaymentIssuesPanel({ clientNames }: { clientNames: Record<number
                 e.description ??
                 (e.client_id ? `Client #${e.client_id}` : e.customer_email ?? "Agency account");
               const unmapped = !e.client_id;
+              const actId = /^act_\d+$/.test(e.stripe_charge_id ?? "") ? e.stripe_charge_id! : null;
               const isOpen = e.status === "open";
               return (
                 <tr key={e.id} className={`border-t border-gray-100 ${e.severity === "critical" && isOpen ? "bg-red-50/40" : ""}`}>
@@ -118,11 +121,33 @@ export function PaymentIssuesPanel({ clientNames }: { clientNames: Record<number
                         {clientName}
                       </Link>
                     ) : <span className="font-medium text-gray-900">{clientName}</span>}
+                    {actId && (
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <a
+                          href={`https://adsmanager.facebook.com/ads/manage/billing_settings?act=${actId.replace(/^act_/, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
+                          title={`Open billing settings for ${actId} in Meta Ads Manager`}
+                        >
+                          <ExternalLink className="w-3 h-3" /> {actId}
+                        </a>
+                        <a
+                          href={metaAdsManagerUrl({ adAccountId: actId }) ?? "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-gray-400 hover:text-gray-600 hover:underline"
+                        >
+                          campaigns
+                        </a>
+                      </div>
+                    )}
                     {unmapped && (
                       <div className="text-xs text-amber-600">Ad account not mapped to a client</div>
                     )}
                     {e.customer_email && <div className="text-xs text-gray-400">{e.customer_email}</div>}
                   </td>
+
 
                   <td className="px-3 py-2.5">
                     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
