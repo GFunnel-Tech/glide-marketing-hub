@@ -451,11 +451,17 @@ export function ClientHierarchyTable() {
     const q = search.trim().toLowerCase();
     const filtered = base.filter((c) => {
       const archived = archivedSet.has(`client:${c.id}`);
-      if (archived) return false;
       if (q) {
         const hay = `${c.name ?? ""} ${c.brand ?? ""} ${(c as any).accountName ?? ""} ${(c as any).ghlName ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
+      if (showArchived) {
+        // Archive view: archived clients, plus clients that still own an
+        // individually-archived campaign so those rows stay reachable.
+        if (archived) return true;
+        return (campaignsByClient.get(String(c.id))?.length ?? 0) > 0;
+      }
+      if (archived) return false;
       // Active / Paused / Issues are campaign-level filters: only clients that
       // still have at least one matching campaign belong in the list.
       if (statusFilter !== "All" && (campaignsByClient.get(String(c.id))?.length ?? 0) === 0) return false;
@@ -465,6 +471,7 @@ export function ClientHierarchyTable() {
       if (synced && hideZero && !hasActivity) return false;
       return true;
     });
+
     // Rank: the agency's own account is always pinned first, then active
     // (synced + activity), then synced-no-activity, then unconnected. Keeps the
     // KPI "Active Clients" rows above the long tail of clients awaiting setup.
