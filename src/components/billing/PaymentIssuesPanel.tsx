@@ -103,7 +103,12 @@ export function PaymentIssuesPanel({ clientNames }: { clientNames: Record<number
           </thead>
           <tbody>
             {list.map((e) => {
-              const clientName = e.client_id ? clientNames[e.client_id] ?? `Client #${e.client_id}` : "—";
+              const mappedName = e.client_id ? clientNames[e.client_id] : null;
+              const clientName =
+                mappedName ??
+                e.description ??
+                (e.client_id ? `Client #${e.client_id}` : e.customer_email ?? "Agency account");
+              const unmapped = !e.client_id;
               const isOpen = e.status === "open";
               return (
                 <tr key={e.id} className={`border-t border-gray-100 ${e.severity === "critical" && isOpen ? "bg-red-50/40" : ""}`}>
@@ -112,9 +117,13 @@ export function PaymentIssuesPanel({ clientNames }: { clientNames: Record<number
                       <Link to={`/client/${e.client_id}`} className="font-medium text-gray-900 hover:text-indigo-700">
                         {clientName}
                       </Link>
-                    ) : <span className="text-gray-500">{clientName}</span>}
+                    ) : <span className="font-medium text-gray-900">{clientName}</span>}
+                    {unmapped && (
+                      <div className="text-xs text-amber-600">Ad account not mapped to a client</div>
+                    )}
                     {e.customer_email && <div className="text-xs text-gray-400">{e.customer_email}</div>}
                   </td>
+
                   <td className="px-3 py-2.5">
                     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
                       e.severity === "critical" ? "bg-red-50 text-red-700 border-red-200" : "bg-amber-50 text-amber-700 border-amber-200"
