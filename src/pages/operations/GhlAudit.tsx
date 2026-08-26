@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useClientPath } from "@/lib/clientPath";
 import { Card } from "@/components/ui/card";
@@ -130,9 +130,8 @@ export default function GhlAudit() {
                   const crit = a.issues.filter((i) => i.severity === "critical").length;
                   const warn = a.issues.filter((i) => i.severity === "warning").length;
                   return (
-                    <>
+                    <Fragment key={a.clientId}>
                       <tr
-                        key={a.clientId}
                         className="border-t border-border cursor-pointer hover:bg-muted/40"
                         onClick={() => setOpen(isOpen ? null : a.clientId)}
                       >
@@ -160,7 +159,7 @@ export default function GhlAudit() {
                         </td>
                       </tr>
                       {isOpen && (
-                        <tr key={`${a.clientId}-detail`} className="border-t border-border bg-muted/20">
+                        <tr className="border-t border-border bg-muted/20">
                           <td colSpan={9} className="px-4 py-4">
                             <div className="grid gap-4 lg:grid-cols-2">
                               <div>
@@ -191,7 +190,7 @@ export default function GhlAudit() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
