@@ -72,14 +72,17 @@ Deno.serve(async (req) => {
     const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
     const cvr = totals.clicks > 0 ? (totals.leads / totals.clicks) * 100 : 0;
 
-    // Daily series for chart
-    const daily = insights
-      .map((r) => ({
-        date: r.date,
-        spend: Number(r.spend || 0),
-        leads: Number(r.leads || 0),
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    // Daily series for chart — one row per calendar day across all ad accounts.
+    const byDate = new Map<string, { date: string; spend: number; leads: number }>();
+    for (const r of insights) {
+      const key = String(r.date);
+      const acc = byDate.get(key) ?? { date: key, spend: 0, leads: 0 };
+      acc.spend += Number(r.spend || 0);
+      acc.leads += Number(r.leads || 0);
+      byDate.set(key, acc);
+    }
+    const daily = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+
 
     const shareToken =
       crypto.randomUUID().replace(/-/g, "") + Math.random().toString(36).slice(2, 8);
