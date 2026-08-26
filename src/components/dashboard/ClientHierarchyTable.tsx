@@ -173,7 +173,7 @@ function AdRatingBadge({ rating }: { rating: AdRating }) {
   return null;
 }
 
-type StatusFilter = "All" | "Active" | "Paused" | "Issues";
+type StatusFilter = "All" | "Active" | "Paused" | "Issues" | "Hidden";
 
 export function ClientHierarchyTable() {
   const navigate = useNavigate();
@@ -246,9 +246,12 @@ export function ClientHierarchyTable() {
   const [chartEntity, setChartEntity] = useState<{ level: EntityLevel; id: string; name: string } | null>(null);
   // Single unified view: hide manually-archived + non-fully-synced clients,
   // hide campaigns with no spend/impressions. The All/Active/Paused/Issues
-  // filter is the only view toggle.
-  const showArchived = false;
-  const [hideZero, setHideZero] = useState(true);
+  // filter is the only view toggle. "Hidden" flips the table into the archive
+  // view, which lists exactly what was archived and never feeds the KPI tiles.
+  const showArchived = statusFilter === "Hidden";
+  const [hideZeroPref, setHideZero] = useState(true);
+  const hideZero = showArchived ? false : hideZeroPref;
+
 
   // Archived items
   const archivedSet = useArchivedSet();
@@ -346,7 +349,16 @@ export function ClientHierarchyTable() {
     if (statusFilter === "Active") list = list.filter((c) => c.status === "active");
     if (statusFilter === "Paused") list = list.filter((c) => c.status === "paused");
     if (statusFilter === "Issues") list = list.filter((c) => c.doubleCount || c.issuesStatus);
-    if (!showArchived) list = list.filter((c) => !archivedSet.has(`campaign:${c.id}`));
+    if (showArchived) {
+      // Archive view: campaigns archived directly, or belonging to an archived client.
+      list = list.filter(
+        (c) =>
+          archivedSet.has(`campaign:${c.id}`) || archivedSet.has(`client:${c.clientId}`),
+      );
+    } else {
+      list = list.filter((c) => !archivedSet.has(`campaign:${c.id}`));
+    }
+
     if (hideZero) list = list.filter((c) => {
       // Always keep agency-owned campaigns so the agency row stays expandable.
       if (agencyClientIds.has(String(c.clientId))) return true;
@@ -439,11 +451,17 @@ export function ClientHierarchyTable() {
     const q = search.trim().toLowerCase();
     const filtered = base.filter((c) => {
       const archived = archivedSet.has(`client:${c.id}`);
-      if (archived) return false;
       if (q) {
         const hay = `${c.name ?? ""} ${c.brand ?? ""} ${(c as any).accountName ?? ""} ${(c as any).ghlName ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
+      if (showArchived) {
+        // Archive view: archived clients, plus clients that still own an
+        // individually-archived campaign so those rows stay reachable.
+        if (archived) return true;
+        return (campaignsByClient.get(String(c.id))?.length ?? 0) > 0;
+      }
+      if (archived) return false;
       // Active / Paused / Issues are campaign-level filters: only clients that
       // still have at least one matching campaign belong in the list.
       if (statusFilter !== "All" && (campaignsByClient.get(String(c.id))?.length ?? 0) === 0) return false;
@@ -453,6 +471,7 @@ export function ClientHierarchyTable() {
       if (synced && hideZero && !hasActivity) return false;
       return true;
     });
+
     // Rank: the agency's own account is always pinned first, then active
     // (synced + activity), then synced-no-activity, then unconnected. Keeps the
     // KPI "Active Clients" rows above the long tail of clients awaiting setup.
@@ -465,7 +484,7 @@ export function ClientHierarchyTable() {
       return 2;
     };
     return [...filtered].sort((a, b) => rank(a) - rank(b));
-  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero, search, statusFilter, campaignsByClient]);
+  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero, search, statusFilter, campaignsByClient, showArchived]);
 
   const handleQuickSync = async () => {
     setSyncing(true);
@@ -582,7 +601,12 @@ export function ClientHierarchyTable() {
 
   const showCompanyCol = isAllClients;
 
-  const filters: StatusFilter[] = ["All", "Active", "Paused", "Issues"];
+  const filters: StatusFilter[] = ["All", "Active", "Paused", "Issues", "Hidden"];
+  const hiddenCount = useMemo(
+    () => Array.from(archivedSet).filter((k) => typeof k === "string").length,
+    [archivedSet],
+  );
+
   const isLoading = clientsLoading || campLoading || rangeLoading || campaignRangeLoading;
 
   return (
@@ -665,11 +689,19 @@ export function ClientHierarchyTable() {
               <button
                 key={f}
                 onClick={() => setStatusFilter(f)}
+                title={f === "Hidden" ? "Archived clients, campaigns and ads — excluded from all KPI totals" : undefined}
                 className={cn(
                   "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                   statusFilter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
-              >{f}</button>
+              >
+                {f}
+                {f === "Hidden" && hiddenCount > 0 && (
+                  <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+                    {hiddenCount}
+                  </span>
+                )}
+              </button>
             ))}
           </div>
 
@@ -678,11 +710,13 @@ export function ClientHierarchyTable() {
             variant="outline"
             size="sm"
             className="h-8 gap-1.5 text-xs"
+            disabled={showArchived}
             onClick={() => setHideZero((v) => !v)}
-            title={hideZero ? "Currently hiding clients with no spend/impressions in range" : "Showing all mapped clients, including those without data in range"}
+            title={hideZeroPref ? "Currently hiding clients with no spend/impressions in range" : "Showing all mapped clients, including those without data in range"}
           >
-            {hideZero ? "Show all" : "Hide empty"}
+            {hideZeroPref ? "Show all" : "Hide empty"}
           </Button>
+
 
           {/* Search */}
           <div className="relative">
