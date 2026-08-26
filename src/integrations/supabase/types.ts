@@ -7156,6 +7156,10 @@ export type Database = {
         Args: { _workspace_id: string }
         Returns: Json
       }
+      ghl_account_audit: {
+        Args: { _client_id?: number; _workspace_id: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

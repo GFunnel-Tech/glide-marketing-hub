@@ -4,7 +4,7 @@ import { useUnreadMessageCount } from "@/hooks/useMessages";
 import {
   LayoutDashboard, Megaphone, UserPlus, FileBarChart,
   Bot, Settings, Moon, Sun, MessageSquare, Facebook, Loader2, Inbox, Shield, Receipt, Sparkles, CreditCard, Coins, TrendingUp, ChevronDown, Radar, Calendar as CalendarIcon,
-  Rocket, Microscope, FlaskConical, Boxes, ChevronRight, Users
+  Rocket, Microscope, FlaskConical, Boxes, ChevronRight, Users, Plug
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -54,6 +54,7 @@ const navItems: NavEntry[] = [
           { icon: Radar, label: "Tracking", path: "/tracking" },
           { icon: Bot, label: "AI Assistant", path: "/ai" },
           { icon: TrendingUp, label: "Trend Briefs", path: "/trend-briefs", badge: "NEW" },
+          { icon: Plug, label: "GHL Audit", path: "/operations/ghl-audit", badge: "NEW" },
         ]
       },
       { icon: Microscope, label: "Research", path: "/operations/research" },
