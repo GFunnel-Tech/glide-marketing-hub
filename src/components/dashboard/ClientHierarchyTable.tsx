@@ -484,7 +484,7 @@ export function ClientHierarchyTable() {
       return 2;
     };
     return [...filtered].sort((a, b) => rank(a) - rank(b));
-  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero, search, statusFilter, campaignsByClient]);
+  }, [isAllClients, focusedClient, clients, archivedSet, clientsWithActivity, clientsWithMetaAcct, hideZero, search, statusFilter, campaignsByClient, showArchived]);
 
   const handleQuickSync = async () => {
     setSyncing(true);
