@@ -83,22 +83,200 @@ Deno.serve(async (req) => {
     }
     const daily = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
 
+    // ---- Previous period comparison -----------------------------------------
+    const spanMs = Math.max(1, end.getTime() - start.getTime());
+    const prevEnd = new Date(start.getTime() - 86400000);
+    const prevStart = new Date(prevEnd.getTime() - spanMs);
+    let previous: { spend: number; leads: number; cpl: number } | null = null;
+    if (acctIds.length) {
+      const { data: prevRows } = await supabase
+        .from("meta_insights_daily")
+        .select("spend,leads")
+        .in("ad_account_id", acctIds)
+        .gte("date", prevStart.toISOString().slice(0, 10))
+        .lte("date", prevEnd.toISOString().slice(0, 10));
+      const p = (prevRows ?? []).reduce(
+        (a: any, r: any) => ({ spend: a.spend + Number(r.spend || 0), leads: a.leads + Number(r.leads || 0) }),
+        { spend: 0, leads: 0 },
+      );
+      previous = { ...p, cpl: p.leads > 0 ? p.spend / p.leads : 0 };
+    }
+
+    // ---- Campaign breakdown --------------------------------------------------
+    let campaigns: any[] = [];
+    if (acctIds.length) {
+      const { data: gran } = await supabase
+        .from("meta_insights_granular_daily")
+        .select("object_id,object_name,spend,leads,clicks,impressions")
+        .eq("level", "campaign")
+        .in("ad_account_id", acctIds)
+        .gte("date", startStr)
+        .lte("date", endStr);
+      const byCamp = new Map<string, any>();
+      for (const r of gran ?? []) {
+        const key = String(r.object_id);
+        const acc = byCamp.get(key) ?? { name: r.object_name || "Unnamed campaign", spend: 0, leads: 0, clicks: 0, impressions: 0 };
+        acc.spend += Number(r.spend || 0);
+        acc.leads += Number(r.leads || 0);
+        acc.clicks += Number(r.clicks || 0);
+        acc.impressions += Number(r.impressions || 0);
+        byCamp.set(key, acc);
+      }
+      campaigns = Array.from(byCamp.values()).sort((a, b) => b.spend - a.spend).slice(0, 15);
+    }
+
+    // ---- Leads (detail + breakdowns) -----------------------------------------
+    const { data: leadRows } = await supabase
+      .from("meta_leads")
+      .select("full_name,email,phone,campaign_name,form_name,created_time,field_data,ghl_check_status")
+      .eq("client_id", clientId)
+      .gte("created_time", `${startStr}T00:00:00Z`)
+      .lte("created_time", `${endStr}T23:59:59Z`)
+      .order("created_time", { ascending: false })
+      .limit(500);
+
+    const STATE_KEYS = /(^|_|\s)(state|province|region)(\b|_|$)/i;
+    const stateOf = (fd: any): string | null => {
+      if (!Array.isArray(fd)) return null;
+      const hit = fd.find((f: any) => STATE_KEYS.test(String(f?.name ?? "")));
+      const v = hit?.values?.[0];
+      return v ? String(v).slice(0, 24) : null;
+    };
+    const leadsAll = (leadRows ?? []).map((l: any) => ({
+      name: l.full_name || "—",
+      email: l.email,
+      phone: l.phone,
+      campaign: l.campaign_name,
+      form: l.form_name,
+      state: stateOf(l.field_data),
+      date: l.created_time,
+      stage:
+        l.ghl_check_status === "created" ? "Sent to CRM"
+        : l.ghl_check_status === "found" ? "In CRM"
+        : "New",
+    }));
+    const tally = (key: (l: any) => string | null | undefined) => {
+      const m = new Map<string, number>();
+      for (const l of leadsAll) {
+        const k = (key(l) || "").trim();
+        if (!k) continue;
+        m.set(k, (m.get(k) ?? 0) + 1);
+      }
+      return Array.from(m.entries())
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6);
+    };
+    const leadStats = leadsAll.length
+      ? {
+          total: leadsAll.length,
+          byState: tally((l) => l.state),
+          byCampaign: tally((l) => l.campaign),
+          byForm: tally((l) => l.form),
+        }
+      : null;
+
+    // ---- CRM notes + appointments -------------------------------------------
+    const { data: noteRows } = await supabase
+      .from("ghl_contact_notes")
+      .select("body,date_added,contact_id")
+      .eq("client_id", clientId)
+      .gte("date_added", `${startStr}T00:00:00Z`)
+      .lte("date_added", `${endStr}T23:59:59Z`)
+      .order("date_added", { ascending: false })
+      .limit(10);
+    const noteContactIds = Array.from(new Set((noteRows ?? []).map((n: any) => n.contact_id).filter(Boolean)));
+    const contactNames = new Map<string, string>();
+    if (noteContactIds.length) {
+      const { data: cts } = await supabase
+        .from("ghl_contacts")
+        .select("contact_id,full_name,email")
+        .in("contact_id", noteContactIds as string[]);
+      for (const c of cts ?? []) contactNames.set(c.contact_id, c.full_name || c.email || "Contact");
+    }
+    const notes = (noteRows ?? []).map((n: any) => ({
+      contact: contactNames.get(n.contact_id) || "Contact",
+      body: String(n.body || "").slice(0, 500),
+      date: n.date_added,
+    }));
+
+    const { data: apptRows } = await supabase
+      .from("ghl_appointments")
+      .select("title,start_time,status,contact_id")
+      .eq("client_id", clientId)
+      .gte("start_time", `${startStr}T00:00:00Z`)
+      .lte("start_time", `${endStr}T23:59:59Z`)
+      .order("start_time", { ascending: false })
+      .limit(25);
+    const apptContactIds = Array.from(new Set((apptRows ?? []).map((a: any) => a.contact_id).filter(Boolean)));
+    if (apptContactIds.length) {
+      const { data: cts } = await supabase
+        .from("ghl_contacts")
+        .select("contact_id,full_name,email")
+        .in("contact_id", apptContactIds as string[]);
+      for (const c of cts ?? []) contactNames.set(c.contact_id, c.full_name || c.email || "Contact");
+    }
+    const appointments = (apptRows ?? []).map((a: any) => ({
+      title: a.title || "Appointment",
+      contact: contactNames.get(a.contact_id) || "Contact",
+      date: a.start_time,
+      status: a.status || null,
+    }));
+
+    // ---- Optimization / audit log -------------------------------------------
+    const { data: actionRows } = await supabase
+      .from("ad_action_log")
+      .select("action,status,error_message,meta,created_at")
+      .eq("client_id", clientId)
+      .gte("created_at", `${startStr}T00:00:00Z`)
+      .lte("created_at", `${endStr}T23:59:59Z`)
+      .order("created_at", { ascending: false })
+      .limit(25);
+    const activity = (actionRows ?? []).map((a: any) => {
+      const m = a.meta ?? {};
+      const detail =
+        m.name || m.object_name || m.campaign_name ||
+        (m.budget ? `Budget -> ${m.budget}` : "") ||
+        a.error_message || "—";
+      return {
+        action: String(a.action || "").replace(/_/g, " "),
+        status: a.status === "success" ? "Applied" : a.status || "—",
+        detail: String(detail).slice(0, 120),
+        date: a.created_at,
+      };
+    });
 
     const shareToken =
       crypto.randomUUID().replace(/-/g, "") + Math.random().toString(36).slice(2, 8);
 
     const payload = {
-      client: { id: client.id, name: client.name, brand: client.brand, currency: client.currency_code || "USD" },
+      client: {
+        id: client.id, name: client.name, brand: client.brand,
+        currency: client.currency_code || "USD", website: client.website ?? null,
+      },
       period: { start: startStr, end: endStr },
       totals: { ...totals, cpl, cpm, ctr, cvr },
+      previous,
       daily,
+      campaigns,
+      leads: leadsAll.slice(0, 60),
+      leadStats,
+      notes,
+      appointments,
+      activity,
       generated_at: new Date().toISOString(),
     };
 
+    const deltaTxt =
+      previous && previous.leads > 0
+        ? ` That is ${totals.leads >= previous.leads ? "up" : "down"} ${Math.abs(((totals.leads - previous.leads) / previous.leads) * 100).toFixed(0)}% in lead volume versus the prior period.`
+        : "";
+    const topState = leadStats?.byState?.[0];
     const commentary =
       totals.leads > 0
-        ? `Delivered ${totals.leads} leads at ${payload.client.currency} ${cpl.toFixed(2)} CPL across ${startStr} → ${endStr}.`
-        : `No lead activity recorded in ${startStr} → ${endStr}.`;
+        ? `Between ${startStr} and ${endStr} we invested ${payload.client.currency} ${totals.spend.toFixed(2)} and delivered ${totals.leads} leads at an average cost per lead of ${payload.client.currency} ${cpl.toFixed(2)}.${deltaTxt}${topState ? ` The strongest region was ${topState.label} with ${topState.count} leads.` : ""}${activity.length ? ` ${activity.length} optimization actions were applied to the account during this period.` : ""}`
+        : `No lead activity was recorded between ${startStr} and ${endStr}. Spend for the period was ${payload.client.currency} ${totals.spend.toFixed(2)}.`;
+
 
     const { data: rep, error: repErr } = await supabase
       .from("client_reports")
