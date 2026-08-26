@@ -914,14 +914,18 @@ export function ClientHierarchyTable() {
                               </div>
                               {(() => {
                                 const person = clientContactName(client as any);
-                                const campTxt = clientCampaigns.length > 0
-                                  ? `${clientCampaigns.length} campaign${clientCampaigns.length === 1 ? "" : "s"}${allClientAds.length > 0 ? ` · ${allClientAds.length} ad${allClientAds.length === 1 ? "" : "s"}` : ""}`
-                                  : "";
-                                if (!person && !campTxt) return null;
+                                const parts: string[] = [];
+                                if (person) parts.push(person);
+                                if (clientCampaigns.length > 0) {
+                                  parts.push(`${clientCampaigns.length} campaign${clientCampaigns.length === 1 ? "" : "s"}`);
+                                }
+                                if (allClientAds.length > 0) {
+                                  parts.push(`${allClientAds.length} ad${allClientAds.length === 1 ? "" : "s"}`);
+                                }
+                                if (parts.length === 0) return null;
                                 return (
-                                  <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
-                                    <span className="truncate">{person}</span>
-                                    {campTxt && <span className="tabular-nums shrink-0">{campTxt}</span>}
+                                  <div className="text-[11px] text-muted-foreground truncate">
+                                    {parts.join(" · ")}
                                   </div>
                                 );
                               })()}
