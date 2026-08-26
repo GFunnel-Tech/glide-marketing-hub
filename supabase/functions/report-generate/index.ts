@@ -117,14 +117,53 @@ Deno.serve(async (req) => {
       .single();
     if (repErr) return json({ error: repErr.message }, 500);
 
+    // ---- PDF render + upload -------------------------------------------------
+    let pdfUrl: string | null = null;
+    try {
+      const bytes = await buildReportPdf(payload as any, commentary);
+      const path = `${client.workspace_id}/${clientId}/${startStr}_${endStr}_${rep.id}.pdf`;
+      const up = await supabase.storage
+        .from("client-reports")
+        .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+      if (up.error) throw up.error;
+      const { data: signed } = await supabase.storage
+        .from("client-reports")
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      pdfUrl = signed?.signedUrl ?? null;
+      await supabase.from("client_reports").update({ pdf_url: pdfUrl }).eq("id", rep.id);
+    } catch (e) {
+      console.error("pdf render failed", e);
+      await supabase
+        .from("client_reports")
+        .update({ error_message: `PDF render failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 500) })
+        .eq("id", rep.id);
+    }
+
     if (body.requestId) {
       await supabase
         .from("report_requests")
-        .update({ status: "ready", file_url: `/r/${shareToken}` })
+        .update({ status: "ready", file_url: pdfUrl || `/r/${shareToken}` })
         .eq("id", body.requestId);
     }
 
-    return json({ ok: true, reportId: rep.id, shareToken, url: `/r/${shareToken}` });
+    // ---- Delivery ------------------------------------------------------------
+    const recipients: string[] = Array.isArray(body.recipients) ? body.recipients.filter(Boolean) : [];
+    let delivery: unknown = null;
+    if (recipients.length && body.send !== false) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/report-deliver`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
+          body: JSON.stringify({ reportId: rep.id }),
+        });
+        delivery = await r.json().catch(() => null);
+      } catch (e) {
+        delivery = { ok: false, error: String(e) };
+      }
+    }
+
+    return json({ ok: true, reportId: rep.id, shareToken, url: `/r/${shareToken}`, pdfUrl, delivery });
+
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
