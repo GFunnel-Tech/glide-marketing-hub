@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Eye, Loader2, ShieldAlert } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, ExternalLink, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { metaAdsManagerUrl } from "@/lib/metaAdsLink";
 import { usePaymentEvents, usePaymentEventStats, useUpdatePaymentEvent, type PaymentEvent } from "@/hooks/usePaymentEvents";
+
 
 const TYPE_LABEL: Record<string, string> = {
   charge_failed: "Charge failed",
