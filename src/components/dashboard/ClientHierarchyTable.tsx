@@ -51,7 +51,7 @@ import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { useChurnRisks } from "@/hooks/useChurnRisk";
 import { ChurnRiskBadge } from "./ChurnRiskBadge";
 import { EntityChartsDrawer, type EntityLevel } from "./EntityChartsDrawer";
-import { clientDisplayName } from "@/lib/clientName";
+import { clientBrandName, clientContactName } from "@/lib/clientName";
 
 const TABLE_KEY = "client_hierarchy";
 
