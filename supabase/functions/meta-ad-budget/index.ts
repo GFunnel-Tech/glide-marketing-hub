@@ -22,13 +22,59 @@ Deno.serve(async (req) => {
     const { data: userData } = await userClient.auth.getUser();
     if (!userData?.user) return json({ error: "Unauthorized" }, 401);
 
-    const { workspaceId, adsetId, percent, dailyBudget, lifetimeBudget } = (await req.json().catch(() => ({}))) as any;
+    const body = (await req.json().catch(() => ({}))) as any;
+    const { workspaceId, percent, dailyBudget, lifetimeBudget } = body;
+    const adsetId = body.adsetId ?? body.objectId;
     if (!workspaceId || !adsetId) return json({ error: "workspaceId, adsetId required" }, 400);
     if (percent == null && dailyBudget == null && lifetimeBudget == null) return json({ error: "percent, dailyBudget, or lifetimeBudget required" }, 400);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const token = await getToken(admin, workspaceId);
     if (!token) return json({ error: "No active Meta connection" }, 400);
+
+    // If the target is a campaign without its own budget (ABO), fan the change
+    // out to each of its ad sets so "Scale 20%" works from campaign rows too.
+    if (percent != null) {
+      const probe = await fetch(
+        `https://graph.facebook.com/v21.0/${adsetId}?fields=daily_budget,lifetime_budget,adsets.limit(50){id,daily_budget,lifetime_budget,status}&access_token=${encodeURIComponent(token)}`,
+      );
+      const pj = await probe.json();
+      const children = pj?.adsets?.data ?? [];
+      if (probe.ok && !pj.daily_budget && !pj.lifetime_budget && children.length) {
+        const results: any[] = [];
+        for (const child of children) {
+          if (!child.daily_budget && !child.lifetime_budget) {
+            results.push({ id: child.id, ok: false, error: "No budget on ad set" });
+            continue;
+          }
+          const params = new URLSearchParams();
+          if (child.daily_budget) {
+            params.set("daily_budget", String(Math.round(Number(child.daily_budget) * (1 + percent / 100))));
+          } else {
+            params.set("lifetime_budget", String(Math.round(Number(child.lifetime_budget) * (1 + percent / 100))));
+          }
+          params.set("access_token", token);
+          const r = await fetch(`https://graph.facebook.com/v21.0/${child.id}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: params.toString(),
+          });
+          const j = await r.json().catch(() => ({}));
+          results.push({ id: child.id, ok: r.ok, error: r.ok ? undefined : j?.error?.message });
+        }
+        await admin.from("ad_action_log").insert({
+          workspace_id: workspaceId, channel: "meta", action: "budget_change",
+          source_object_id: adsetId, performed_by: userData.user.id,
+          status: results.some((r) => r.ok) ? "success" : "failed",
+          meta: { percent, fannedOut: true, results },
+        });
+        const failed = results.filter((r) => !r.ok);
+        if (!results.some((r) => r.ok)) {
+          return json({ error: failed[0]?.error || "No ad set budgets to scale" }, 400);
+        }
+        return json({ ok: true, campaignId: adsetId, results });
+      }
+    }
 
     const log = await admin.from("ad_action_log").insert({
       workspace_id: workspaceId, channel: "meta", action: "budget_change",

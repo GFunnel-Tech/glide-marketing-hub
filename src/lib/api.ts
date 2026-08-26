@@ -80,7 +80,26 @@ export const api = {
   syncAllAccounts: () => post("sync-all"),
   runAudit: (clientId: string) => post("manus-audit", { clientId }),
   swapForm: (clientId: string) => post("form-swap", { clientId }),
-  scaleBudget: (clientId: string, campaignIds: string[]) => post("budget-scale", { clientId, campaignIds, percentage: 20 }),
+  scaleBudget: async (clientId: string, campaignIds: string[], percentage = 20) => {
+    const workspaceId = await resolveWorkspaceId(clientId);
+    if (!workspaceId) throw new Error("Could not resolve workspace for client");
+    const ids = campaignIds.filter(Boolean);
+    if (!ids.length) throw new Error("No campaigns selected");
+    const results: any[] = [];
+    for (const id of ids) {
+      const { data, error } = await supabase.functions.invoke("meta-ad-budget", {
+        body: { workspaceId, objectId: id, percent: percentage },
+      });
+      const err = error?.message || (data as any)?.error;
+      results.push({ id, ok: !err, error: err });
+    }
+    const failed = results.filter((r) => !r.ok);
+    if (failed.length === results.length) {
+      throw new Error(failed[0]?.error || "Budget scale failed");
+    }
+    return { ok: true, results };
+  },
+
   pauseCampaigns: (clientId: string, campaignIds: string[]) =>
     setMetaObjectStatus(clientId, campaignIds, "PAUSED"),
   resumeCampaigns: (clientId: string, campaignIds: string[]) =>
