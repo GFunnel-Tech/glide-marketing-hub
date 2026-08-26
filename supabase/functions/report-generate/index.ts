@@ -135,7 +135,8 @@ Deno.serve(async (req) => {
       .order("created_time", { ascending: false })
       .limit(500);
 
-    const STATE_KEYS = /(^|_|\s)(state|province|region)(\b|_|$)/i;
+    const STATE_KEYS = /(^|_|\s)(state|province|region|city|location)(\b|_|$)/i;
+    const CONTACT_KEYS = /(full_?name|first_?name|last_?name|email|phone|inbox_url|zip|postal)/i;
     const stateOf = (fd: any): string | null => {
       if (!Array.isArray(fd)) return null;
       const hit = fd.find((f: any) => STATE_KEYS.test(String(f?.name ?? "")));
@@ -150,6 +151,7 @@ Deno.serve(async (req) => {
       form: l.form_name,
       state: stateOf(l.field_data),
       date: l.created_time,
+      fields: Array.isArray(l.field_data) ? l.field_data : [],
       stage:
         l.ghl_check_status === "created" ? "Sent to CRM"
         : l.ghl_check_status === "found" ? "In CRM"
@@ -167,14 +169,40 @@ Deno.serve(async (req) => {
         .sort((a, b) => b.count - a.count)
         .slice(0, 6);
     };
+
+    // Most-answered qualifying question (everything that isn't contact info),
+    // so forms without a state field still get a meaningful breakdown.
+    const qCounts = new Map<string, number>();
+    for (const l of leadsAll) {
+      for (const f of l.fields) {
+        const n = String(f?.name ?? "");
+        if (!n || CONTACT_KEYS.test(n) || STATE_KEYS.test(n)) continue;
+        qCounts.set(n, (qCounts.get(n) ?? 0) + 1);
+      }
+    }
+    const topQuestion = Array.from(qCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const humanize = (s: string) =>
+      s.replace(/_/g, " ").replace(/\s+/g, " ").trim().replace(/^./, (c) => c.toUpperCase());
+    const byQualifier = topQuestion
+      ? {
+          question: humanize(topQuestion).slice(0, 60),
+          rows: tally((l) => {
+            const hit = l.fields.find((f: any) => String(f?.name ?? "") === topQuestion);
+            return hit?.values?.[0] ? String(hit.values[0]).slice(0, 40) : null;
+          }),
+        }
+      : null;
+
     const leadStats = leadsAll.length
       ? {
           total: leadsAll.length,
           byState: tally((l) => l.state),
           byCampaign: tally((l) => l.campaign),
           byForm: tally((l) => l.form),
+          byQualifier,
         }
       : null;
+
 
     // ---- CRM notes + appointments -------------------------------------------
     const { data: noteRows } = await supabase
