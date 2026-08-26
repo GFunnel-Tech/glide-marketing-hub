@@ -190,9 +190,9 @@ Deno.serve(async (req) => {
     if (noteContactIds.length) {
       const { data: cts } = await supabase
         .from("ghl_contacts")
-        .select("contact_id,full_name,email")
+        .select("id,full_name,email")
         .in("contact_id", noteContactIds as string[]);
-      for (const c of cts ?? []) contactNames.set(c.contact_id, c.full_name || c.email || "Contact");
+      for (const c of cts ?? []) contactNames.set(c.id, c.full_name || c.email || "Contact");
     }
     const notes = (noteRows ?? []).map((n: any) => ({
       contact: contactNames.get(n.contact_id) || "Contact",
@@ -212,9 +212,9 @@ Deno.serve(async (req) => {
     if (apptContactIds.length) {
       const { data: cts } = await supabase
         .from("ghl_contacts")
-        .select("contact_id,full_name,email")
+        .select("id,full_name,email")
         .in("contact_id", apptContactIds as string[]);
-      for (const c of cts ?? []) contactNames.set(c.contact_id, c.full_name || c.email || "Contact");
+      for (const c of cts ?? []) contactNames.set(c.id, c.full_name || c.email || "Contact");
     }
     const appointments = (apptRows ?? []).map((a: any) => ({
       title: a.title || "Appointment",
