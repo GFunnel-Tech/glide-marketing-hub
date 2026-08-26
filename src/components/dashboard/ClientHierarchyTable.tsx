@@ -850,7 +850,7 @@ export function ClientHierarchyTable() {
                                   onClick={(e) => { e.stopPropagation(); navigate(clientPath(client.id)); }}
                                   className="font-semibold text-foreground hover:text-primary truncate"
                                 >
-                                  {clientDisplayName(client as any)}
+                                  {clientBrandName(client as any)}
                                 </button>
                                 {(client as any).isAgencyAccount && (
                                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide shrink-0">
