@@ -601,7 +601,12 @@ export function ClientHierarchyTable() {
 
   const showCompanyCol = isAllClients;
 
-  const filters: StatusFilter[] = ["All", "Active", "Paused", "Issues"];
+  const filters: StatusFilter[] = ["All", "Active", "Paused", "Issues", "Hidden"];
+  const hiddenCount = useMemo(
+    () => Array.from(archivedSet).filter((k) => typeof k === "string").length,
+    [archivedSet],
+  );
+
   const isLoading = clientsLoading || campLoading || rangeLoading || campaignRangeLoading;
 
   return (
