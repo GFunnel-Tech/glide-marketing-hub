@@ -246,9 +246,12 @@ export function ClientHierarchyTable() {
   const [chartEntity, setChartEntity] = useState<{ level: EntityLevel; id: string; name: string } | null>(null);
   // Single unified view: hide manually-archived + non-fully-synced clients,
   // hide campaigns with no spend/impressions. The All/Active/Paused/Issues
-  // filter is the only view toggle.
-  const showArchived = false;
-  const [hideZero, setHideZero] = useState(true);
+  // filter is the only view toggle. "Hidden" flips the table into the archive
+  // view, which lists exactly what was archived and never feeds the KPI tiles.
+  const showArchived = statusFilter === "Hidden";
+  const [hideZeroPref, setHideZero] = useState(true);
+  const hideZero = showArchived ? false : hideZeroPref;
+
 
   // Archived items
   const archivedSet = useArchivedSet();
