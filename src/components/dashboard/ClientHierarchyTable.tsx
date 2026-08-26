@@ -349,7 +349,16 @@ export function ClientHierarchyTable() {
     if (statusFilter === "Active") list = list.filter((c) => c.status === "active");
     if (statusFilter === "Paused") list = list.filter((c) => c.status === "paused");
     if (statusFilter === "Issues") list = list.filter((c) => c.doubleCount || c.issuesStatus);
-    if (!showArchived) list = list.filter((c) => !archivedSet.has(`campaign:${c.id}`));
+    if (showArchived) {
+      // Archive view: campaigns archived directly, or belonging to an archived client.
+      list = list.filter(
+        (c) =>
+          archivedSet.has(`campaign:${c.id}`) || archivedSet.has(`client:${c.clientId}`),
+      );
+    } else {
+      list = list.filter((c) => !archivedSet.has(`campaign:${c.id}`));
+    }
+
     if (hideZero) list = list.filter((c) => {
       // Always keep agency-owned campaigns so the agency row stays expandable.
       if (agencyClientIds.has(String(c.clientId))) return true;
