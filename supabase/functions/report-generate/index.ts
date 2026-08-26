@@ -1,6 +1,9 @@
-// Generate a client performance report and store it in client_reports.
-// Body: { clientId, periodStart?, periodEnd?, requestId?, scheduleId?, recipients?, triggerType? }
+// Generate a client performance report, render a PDF, store both, and (when
+// recipients exist) hand it to report-deliver for emailing.
+// Body: { clientId, periodStart?, periodEnd?, requestId?, scheduleId?, recipients?, triggerType?, send? }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { buildReportPdf } from "../_shared/reportPdf.ts";
+
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
