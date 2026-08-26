@@ -287,7 +287,7 @@ Deno.serve(async (req) => {
       previous,
       daily,
       campaigns,
-      leads: leadsAll.slice(0, 60),
+      leads: leadsAll.slice(0, 60).map(({ fields: _f, ...rest }) => rest),
       leadStats,
       notes,
       appointments,
