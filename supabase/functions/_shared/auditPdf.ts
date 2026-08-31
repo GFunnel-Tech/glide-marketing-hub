@@ -209,10 +209,9 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
   page.drawRectangle({ x: 0, y: H - 296, width: W, height: 6, color: BRAND_DARK });
   text("ACCOUNT AUDIT", M, H - 88, 10, bold, rgb(0.82, 0.88, 1));
   text(ellipsize(title, 28, AVAIL, bold), M, H - 132, 28, bold, rgb(1, 1, 1));
-  text(
-    san(story.headline || "Paid media, lead delivery, CRM operations and pipeline integrity"),
-    M, H - 156, 10.5, font, rgb(0.88, 0.93, 1),
-  );
+  wrap(san(story.headline || "Paid media, lead delivery, CRM operations and pipeline integrity"), 10.5, AVAIL)
+    .slice(0, 2)
+    .forEach((l, i) => text(l, M, H - 156 - i * 14, 10.5, font, rgb(0.88, 0.93, 1)));
   text(
     `Window ${pretty(data.meta.windowStart)} - ${pretty(data.meta.windowEnd)}   ·   Prepared ${pretty(data.meta.generatedAt)}`,
     M, H - 178, 9, font, rgb(0.8, 0.87, 1),
