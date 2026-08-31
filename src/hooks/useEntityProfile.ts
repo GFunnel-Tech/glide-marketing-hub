@@ -232,7 +232,7 @@ export function buildAudit(data: EntityProfileData): AuditFinding[] {
       f.push({ severity: "info", title: `Status: ${ad.effective_status}`, detail: "This ad isn't active on Meta." });
     }
     if (!ad.image_url && !ad.thumbnail_url) {
-      f.push({ severity: "warning", title: "No creative asset found", detail: "Metahub has no image or thumbnail synced for this ad." });
+      f.push({ severity: "warning", title: "No creative asset found", detail: "Glide Media has no image or thumbnail synced for this ad." });
     }
     if (!ad.title) f.push({ severity: "warning", title: "Missing headline", detail: "No headline synced on this ad's creative." });
     if (!ad.body) f.push({ severity: "warning", title: "Missing primary text", detail: "No body copy synced on this ad's creative." });

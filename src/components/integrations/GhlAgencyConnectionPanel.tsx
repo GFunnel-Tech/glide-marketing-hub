@@ -263,7 +263,7 @@ export function GhlAgencyConnectionPanel() {
             </h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-xl">
               Connect once at the agency level using an Agency Private Integration Token.
-              All sub-accounts (locations) will sync into MetaHub automatically and can be
+              All sub-accounts (locations) will sync into Glide Media automatically and can be
               auto-linked to clients.
             </p>
           </div>
@@ -486,12 +486,12 @@ export function GhlAgencyConnectionPanel() {
                 </div>
                 <div className="flex-1">
                   <h4 className="text-sm font-semibold text-foreground">
-                    Inbound webhook (GHL → MetaHub)
+                    Inbound webhook (GHL → Glide Media)
                   </h4>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     Paste this URL into a GHL <strong>Workflow → Webhook</strong> action
                     (trigger: <em>Opportunity Status Changed</em> or <em>Contact Stage
-                    Changed</em>). MetaHub will update each matching lead's stage
+                    Changed</em>). Glide Media will update each matching lead's stage
                     automatically.
                   </p>
                 </div>

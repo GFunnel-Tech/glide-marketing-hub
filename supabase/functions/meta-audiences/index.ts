@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       if (!name) return json({ error: "name required" }, 400);
       const list: { email?: string; phone?: string }[] = Array.isArray(records) ? records : [];
       const created = await metaPost(`${actId}/customaudiences`, {
-        name, description: description || "Created in Metahub",
+        name, description: description || "Created in Glide Media",
         subtype: "CUSTOM",
         customer_file_source: "USER_PROVIDED_ONLY",
       }, token, "Creating customer list audience");
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
       }
       if (!records.length) return json({ error: "No leads with email or phone found for this client in the selected window" }, 400);
       const created = await metaPost(`${actId}/customaudiences`, {
-        name, description: `Metahub leads (last ${Number(days) || 180} days)`,
+        name, description: `Glide Media leads (last ${Number(days) || 180} days)`,
         subtype: "CUSTOM", customer_file_source: "USER_PROVIDED_ONLY",
       }, token, "Creating leads audience");
       const uploaded = await pushUsers(created.id, records, token);

@@ -98,7 +98,7 @@ export function DashboardAiBar() {
                 launch(value);
               }
             }}
-            placeholder="Ask MetaHub about your portfolio…"
+            placeholder="Ask Glide Media about your portfolio…"
             className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder:text-white/55 focus:outline-none"
           />
           <button

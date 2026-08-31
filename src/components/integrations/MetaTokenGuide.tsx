@@ -48,12 +48,12 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
       link: { href: "https://business.facebook.com/settings", label: "business.facebook.com/settings" },
     },
     {
-      title: "Add the Meta Hub app to your Business Manager",
+      title: "Add the Glide Media app to your Business Manager",
       body: (
         <>
           Go to <span className="font-medium text-foreground">Accounts → Apps</span> →{" "}
           <span className="font-medium text-foreground">Add → Connect an app ID</span> and paste the
-          Meta Hub <span className="font-mono">App ID</span> shown below. Skip this if it's already listed.
+          Glide Media <span className="font-mono">App ID</span> shown below. Skip this if it's already listed.
           Without this step, the app won't appear in the token generator dropdown.
         </>
       ),
@@ -64,19 +64,19 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
       body: (
         <>
           Go to <span className="font-medium text-foreground">Users → System Users</span>. Click{" "}
-          <span className="font-medium text-foreground">Add</span>, give it a name (e.g. "Meta Hub"),
+          <span className="font-medium text-foreground">Add</span>, give it a name (e.g. "Glide Media"),
           and set role to <span className="font-medium text-foreground">Admin</span>.
         </>
       ),
       link: { href: "https://business.facebook.com/settings/system-users", label: "Open System Users" },
     },
     {
-      title: "Assign the Meta Hub app to the System User",
+      title: "Assign the Glide Media app to the System User",
       body: (
         <>
           Click the system user → <span className="font-medium text-foreground">Add Assets</span> →{" "}
           <span className="font-medium text-foreground">Apps</span>. Select{" "}
-          <span className="font-medium text-foreground">Meta Hub</span> and enable{" "}
+          <span className="font-medium text-foreground">Glide Media</span> and enable{" "}
           <span className="font-medium text-foreground">Develop app</span> and{" "}
           <span className="font-medium text-foreground">Manage app</span>. If you skip this, Meta will
           reject the token with "Application does not have permission".
@@ -89,7 +89,7 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
         <>
           Same system user → <span className="font-medium text-foreground">Add Assets</span> →{" "}
           <span className="font-medium text-foreground">Ad Accounts</span>. Select every ad account
-          you want Meta Hub to read, then enable{" "}
+          you want Glide Media to read, then enable{" "}
           <span className="font-medium text-foreground">Manage campaigns</span> &{" "}
           <span className="font-medium text-foreground">View performance</span>. Without this, the
           token connects but discovers <span className="text-foreground font-medium">0 ad accounts</span>.
@@ -101,7 +101,7 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
       body: (
         <>
           On the system user page, click <span className="font-medium text-foreground">Generate New Token</span>.
-          Pick <span className="font-medium text-foreground">Meta Hub</span> from the app dropdown, set{" "}
+          Pick <span className="font-medium text-foreground">Glide Media</span> from the app dropdown, set{" "}
           <span className="font-medium text-foreground">Token expiration: Never</span>, and check every
           scope listed below.
         </>
@@ -123,7 +123,7 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
   const userSteps: Step[] = [
     {
       title: "Open Graph API Explorer",
-      body: <>Pick the Meta Hub app from the top-right dropdown.</>,
+      body: <>Pick the Glide Media app from the top-right dropdown.</>,
       link: { href: `https://developers.facebook.com/tools/explorer/${APP_ID}/`, label: "Graph API Explorer" },
     },
     {
@@ -242,7 +242,7 @@ export function MetaTokenGuide({ defaultOpen = false }: { defaultOpen?: boolean 
 
           {/* App ID + scopes */}
           <div className="rounded border border-border bg-muted/30 p-2.5 space-y-2">
-            <CopyRow label="Meta Hub App ID" value={APP_ID} copied={copied === "app"} onCopy={() => copy("app", APP_ID)} />
+            <CopyRow label="Glide Media App ID" value={APP_ID} copied={copied === "app"} onCopy={() => copy("app", APP_ID)} />
             <div>
               <p className="text-[11px] font-medium text-foreground mb-1">Required scopes</p>
               <div className="flex flex-wrap gap-1">
@@ -302,10 +302,10 @@ const TROUBLESHOOTING: TroubleshootEntry[] = [
     issue: "“Generate New Token” is greyed out / disabled",
     branches: [
       {
-        when: <>The <span className="font-medium text-foreground">app dropdown is empty</span> or Meta Hub isn't listed</>,
+        when: <>The <span className="font-medium text-foreground">app dropdown is empty</span> or Glide Media isn't listed</>,
         then: (
           <>
-            The Meta Hub app isn't connected to your Business Manager yet. Open{" "}
+            The Glide Media app isn't connected to your Business Manager yet. Open{" "}
             <a className="text-primary hover:underline" href="https://business.facebook.com/settings/apps" target="_blank" rel="noreferrer">Business Settings → Apps</a>{" "}
             → <span className="font-medium text-foreground">Add → Connect an app ID</span> and paste{" "}
             <span className="font-mono">{APP_ID}</span>. Reload the System Users page after.
@@ -318,7 +318,7 @@ const TROUBLESHOOTING: TroubleshootEntry[] = [
           <>
             The System User doesn't have the app assigned. Click the user →{" "}
             <span className="font-medium text-foreground">Add Assets → Apps</span>, pick{" "}
-            <span className="font-medium text-foreground">Meta Hub</span>, and enable both{" "}
+            <span className="font-medium text-foreground">Glide Media</span>, and enable both{" "}
             <span className="font-medium text-foreground">Develop app</span> and{" "}
             <span className="font-medium text-foreground">Manage app</span>.
           </>
@@ -585,16 +585,16 @@ type ChecklistItem = { id: string; label: string; hint?: string };
 
 const SYSTEM_PREREQS: ChecklistItem[] = [
   { id: "bm", label: "I own (or am Admin of) a Meta Business Manager", hint: "Required to create System Users and assign assets." },
-  { id: "app", label: "I've added the Meta Hub app to my Business Manager", hint: "Business Settings → Accounts → Apps → Connect an app ID." },
+  { id: "app", label: "I've added the Glide Media app to my Business Manager", hint: "Business Settings → Accounts → Apps → Connect an app ID." },
   { id: "su", label: "I've created a System User with Admin role", hint: "Business Settings → Users → System Users → Add." },
-  { id: "app-assigned", label: "I've assigned the Meta Hub app to that System User", hint: "System User → Add Assets → Apps → enable Develop & Manage." },
+  { id: "app-assigned", label: "I've assigned the Glide Media app to that System User", hint: "System User → Add Assets → Apps → enable Develop & Manage." },
   { id: "ads", label: "I've assigned all ad accounts to that System User", hint: "Same screen → Add Assets → Ad Accounts → Manage campaigns + View performance." },
   { id: "scopes", label: "When generating, I'll tick ads_read + read_insights (+ leads_retrieval for lead sync)", hint: "Scopes are listed below for one-click copy." },
 ];
 
 const USER_PREREQS: ChecklistItem[] = [
   { id: "fb", label: "I'm signed in with the Facebook account that has access to the ad accounts" },
-  { id: "explorer", label: "I can open Graph API Explorer and select the Meta Hub app from the top-right dropdown" },
+  { id: "explorer", label: "I can open Graph API Explorer and select the Glide Media app from the top-right dropdown" },
   { id: "scopes", label: "I'll request ads_read + read_insights (+ leads_retrieval) before generating" },
   { id: "extend", label: "I'll extend the short-lived token to 60 days via the Access Token Debugger" },
   { id: "note", label: "I understand User tokens expire — I'll switch to a System User token for production" },
@@ -712,7 +712,7 @@ function MultiBmCallout() {
         <div className="mt-2 space-y-2 text-xs text-muted-foreground leading-relaxed pl-5">
           <p className="text-foreground font-medium">Good news — one connection can cover them all.</p>
           <p>
-            Meta Hub stores ad accounts independently of the BM they live in, so a single System User token can
+            Glide Media stores ad accounts independently of the BM they live in, so a single System User token can
             import every ad account that user has access to (across any number of BMs). The platform groups them
             by Business Manager automatically once connected.
           </p>
@@ -747,7 +747,7 @@ function MultiBmCallout() {
             </p>
           </div>
           <p className="text-[11px] italic">
-            Either way works — Meta Hub handles unlimited connections and unlimited ad accounts per workspace.
+            Either way works — Glide Media handles unlimited connections and unlimited ad accounts per workspace.
           </p>
         </div>
       )}

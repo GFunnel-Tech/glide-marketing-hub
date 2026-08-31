@@ -1,5 +1,5 @@
 // Unified client media library: GHL sub-account media library + Meta ad account
-// library (adimages / advideos) + Metahub-stored client assets.
+// library (adimages / advideos) + Glide Media-stored client assets.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
       if (!isSuper) return json({ error: "Not a workspace member" }, 403);
     }
 
-    // ---------- Import remote media into Metahub storage (CORS-safe for the editor) ----------
+    // ---------- Import remote media into Glide Media storage (CORS-safe for the editor) ----------
     if (action === "import") {
       if (!Array.isArray(assets) || assets.length === 0) {
         return json({ error: "assets[] is required for import" }, 400);
@@ -281,7 +281,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ---------- Metahub stored assets ----------
+    // ---------- Glide Media stored assets ----------
     if (sources.includes("metahub")) {
       try {
         let q = admin
