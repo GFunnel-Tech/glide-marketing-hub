@@ -27,7 +27,7 @@ import { useClientPath } from "@/lib/clientPath";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Client } from "@/data/mockData";
-import { clientDisplayName } from "@/lib/clientName";
+import { clientDisplayName, clientSearchHaystack } from "@/lib/clientName";
 
 type StatusFilter = "ALL" | "NEW" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
 type Channel = "all" | "meta" | "google" | "tiktok" | "linkedin";
