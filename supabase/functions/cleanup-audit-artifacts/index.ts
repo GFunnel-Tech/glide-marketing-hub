@@ -38,12 +38,13 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const dryRun = body?.dryRun === true;
 
-    const { data: rows, error: findErr } = await admin
+    let q = admin
       .from("client_audit_artifacts")
       .select("id,storage_path")
       .eq("is_permanent", false)
-      .lte("expires_at", new Date().toISOString())
-      .eq(body?.clientId ? "client_id" : "workspace_id", body?.clientId ? Number(body.clientId) : "workspace_id");
+      .lte("expires_at", new Date().toISOString());
+    if (body?.clientId) q = q.eq("client_id", Number(body.clientId));
+    const { data: rows, error: findErr } = await q;
     if (findErr) return json({ error: findErr.message }, 500);
 
     const paths = (rows ?? []).map((r: any) => r.storage_path).filter(Boolean);
