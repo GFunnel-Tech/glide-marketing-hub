@@ -1,8 +1,10 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { ForcePasswordChange } from "@/components/auth/ForcePasswordChange";
 
 const AUTH_REDIRECT_KEY = "metahub-auth-redirect";
+
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -24,5 +26,5 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  return <>{children}</>;
+  return <ForcePasswordChange>{children}</ForcePasswordChange>;
 }
