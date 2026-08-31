@@ -293,22 +293,6 @@ Deno.serve(async (req) => {
       .createSignedUrl(path, 60 * 60 * 24 * 365);
     const pdfUrl = signed?.signedUrl ?? null;
 
-    await admin.from("client_audit_artifacts").insert({
-      workspace_id: client.workspace_id,
-      client_id: clientId,
-      kind: "audit_pdf",
-      audience,
-      storage_path: path,
-      file_name: fileName,
-      days_window: daysWindow,
-      findings: story.findings.length,
-      defects: data.defects.length,
-      tasks_created: 0,
-      summary: story.executive_summary,
-      is_permanent: false,
-      created_by: userId,
-    });
-
     // ---- assigned tasks from findings ---------------------------------------
     let tasksCreated = 0;
     if (audience === "client" ? body.createTasks === true : body.createTasks !== false) {
