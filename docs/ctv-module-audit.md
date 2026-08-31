@@ -3,7 +3,8 @@
 **Source:** `CTV_Business_Module_1.docx` (GFunnel Business Module — Connected TV, "Streaming Revenue System"), dated June 2026, target launch **September 1**.
 **Audited against:** `gfunnel-tech/glide-marketing-hub` @ `claude/glide-business-module-audit-osgl3z` (115 tables, 78 edge functions, 13 n8n workflows).
 **Audit date:** 2026-08-31.
-**Companion:** `docs/d3-sales-onboarding-audit.md` — audits the RIVE D3 sales playbook and the onboarding handoff. Four builds below (G2, G3, G12, G13) are shared with that audit and should be built once.
+**Companion:** `docs/d3-sales-onboarding-audit.md`. **Superseded for planning by:** `docs/scope-of-work.md`.
+**Note:** `docs/d3-sales-onboarding-audit.md` — audits the RIVE D3 sales playbook and the onboarding handoff. Four builds below (G2, G3, G12, G13) are shared with that audit and should be built once.
 
 ---
 

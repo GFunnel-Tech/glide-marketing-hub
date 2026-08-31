@@ -2,7 +2,7 @@
 
 **Source:** `DIVIDE_DEVELOP_DISRUPT.docx` — "RIVE D3 — Two-Week Divide Phase Sales Playbook" (Divide → Develop → Disrupt).
 **Audited against:** `gfunnel-tech/glide-marketing-hub` @ `claude/glide-business-module-audit-osgl3z`.
-**Companion to:** `docs/ctv-module-audit.md`.
+**Companion to:** `docs/ctv-module-audit.md`. **Superseded for planning by:** `docs/scope-of-work.md`.
 **Audit date:** 2026-08-31.
 
 ---
@@ -206,4 +206,4 @@ Four builds serve both wings. They should be built once, not twice.
 | Onboarding wizard re-shaped per offer type | G3 | O1 |
 | Close → fulfillment orchestration and handoff | G13 | S14 + O2 |
 
-Combined open build list across both documents: **18 CTV items + 16 D3/onboarding items, less 4 shared = 30 distinct builds**, against 11 blocking decisions.
+This audit lists 18 items (8 P0 + 8 P1 + 2 P2). Consolidated with the CTV audit's 18 and decomposed for delivery, the unified build list is **38 work items across 6 workstreams**, against 11 blocking decisions — see `docs/scope-of-work.md`, which supersedes the per-audit counts.
