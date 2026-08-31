@@ -190,6 +190,8 @@ Deno.serve(async (req) => {
     // "manifest" = workspace + clients + the table plan; "tables" = a slice of tables.
     const mode: string = body?.mode === "tables" ? "tables" : "manifest";
     const requested: string[] = Array.isArray(body?.tables) ? body.tables : [];
+    const clientScope: number | null =
+      body?.clientId != null && Number.isFinite(Number(body.clientId)) ? Number(body.clientId) : null;
     if (!workspaceId) return json({ error: "workspaceId required" }, 400);
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
@@ -218,16 +220,22 @@ Deno.serve(async (req) => {
     if (mode === "manifest") {
       const [wsRows, clientRows] = await Promise.all([
         fetchAll(admin, "workspaces", (q) => q.eq("id", workspaceId)),
-        fetchAll(admin, "clients", (q) => q.eq("workspace_id", workspaceId)),
+        fetchAll(admin, "clients", (q) => {
+          const base = q.eq("workspace_id", workspaceId);
+          return clientScope != null ? base.eq("id", clientScope) : base;
+        }),
       ]);
       return json({
         workspace: wsRows[0] ?? null,
         exported_at: new Date().toISOString(),
         exported_by: userId,
-        scope: { days_window: daysWindow, since: sinceIso },
+        scope: { days_window: daysWindow, since: sinceIso, client_id: clientScope },
         clients: clientRows,
         plan: {
-          workspace_tables: WORKSPACE_TABLES.filter((t) => t !== "workspaces" && t !== "clients"),
+          // A client-scoped export skips workspace-wide tables entirely.
+          workspace_tables: clientScope != null
+            ? []
+            : WORKSPACE_TABLES.filter((t) => t !== "workspaces" && t !== "clients"),
           client_tables: BY_CLIENT_TABLES,
         },
       });
@@ -236,13 +244,20 @@ Deno.serve(async (req) => {
     // mode === "tables": return only the requested slice, keeps each response small.
     const wsSet = new Set(WORKSPACE_TABLES);
     const clientSet = new Set(BY_CLIENT_TABLES);
-    const valid = requested.filter((t) => wsSet.has(t) || clientSet.has(t));
+    const valid = requested.filter((t) => (clientScope != null ? clientSet.has(t) : wsSet.has(t) || clientSet.has(t)));
     if (!valid.length) return json({ tables: {}, counts: {} });
 
     let clientIds: number[] = [];
     if (valid.some((t) => clientSet.has(t))) {
-      const rows = await fetchAll(admin, "clients", (q) => q.eq("workspace_id", workspaceId));
-      clientIds = rows.map((c: any) => c.id);
+      if (clientScope != null) {
+        const rows = await fetchAll(admin, "clients", (q) =>
+          q.eq("workspace_id", workspaceId).eq("id", clientScope),
+        );
+        clientIds = rows.map((c: any) => c.id);
+      } else {
+        const rows = await fetchAll(admin, "clients", (q) => q.eq("workspace_id", workspaceId));
+        clientIds = rows.map((c: any) => c.id);
+      }
     }
     const chunked = <T,>(arr: T[], n: number) => {
       const o: T[][] = [];

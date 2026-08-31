@@ -57,6 +57,7 @@ import { PortalEmbedLinkCard } from "@/components/clients/PortalEmbedLinkCard";
 import { ImpersonateClientButton } from "@/components/clients/ImpersonateClientButton";
 import { ClientRequestsPanel } from "@/components/client/ClientRequestsPanel";
 import { ClientTasksTab } from "@/components/clients/ClientTasksTab";
+import { ClientAuditExportPanel } from "@/components/clients/ClientAuditExportPanel";
 import { ClientGuaranteesPanel } from "@/components/guarantees/ClientGuaranteesPanel";
 import { TrackingPanel } from "@/components/tracking/TrackingPanel";
 import { ClientGhlPanel } from "@/components/ghl/ClientGhlPanel";
@@ -774,6 +775,8 @@ function ClientProfileInner() {
                   )}
                 </div>
               </SectionCard>
+
+              <ClientAuditExportPanel workspaceId={workspaceId} clientId={client.id} />
             </aside>
           </div>
         </TabsContent>
