@@ -59,3 +59,8 @@ verify_jwt = false
 # owner/admin before touching credentials.
 [functions.affiliate-sync]
 verify_jwt = true
+
+# Per-client account audit generator — JWT verified at the gateway; the function
+# then enforces workspace membership (or super_admin) for the client.
+[functions.client-audit-generate]
+verify_jwt = true
