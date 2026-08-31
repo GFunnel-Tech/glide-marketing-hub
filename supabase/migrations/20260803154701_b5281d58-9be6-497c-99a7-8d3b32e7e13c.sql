@@ -1,1 +1,0 @@
-DELETE FROM public.clients WHERE id = 165 AND name = 'Spectrum One Mortgage' AND ghl_location_id IS NULL AND NOT EXISTS (SELECT 1 FROM public.campaigns WHERE client_id = 165) AND NOT EXISTS (SELECT 1 FROM public.meta_ad_accounts WHERE client_id = 165);

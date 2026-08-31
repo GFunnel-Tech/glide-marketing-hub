@@ -1,2 +1,0 @@
-ALTER TABLE public.meta_ad_accounts ADD COLUMN IF NOT EXISTS rate_limited_until timestamptz;
-CREATE INDEX IF NOT EXISTS idx_meta_ad_accounts_rate_limited_until ON public.meta_ad_accounts(rate_limited_until) WHERE rate_limited_until IS NOT NULL;

@@ -1,1 +1,0 @@
-ALTER TABLE public.meta_leads ADD COLUMN IF NOT EXISTS ghl_stage text;

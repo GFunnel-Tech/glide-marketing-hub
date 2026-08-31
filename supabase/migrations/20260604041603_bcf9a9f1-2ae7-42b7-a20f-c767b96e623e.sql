@@ -1,1 +1,0 @@
-REVOKE EXECUTE ON FUNCTION public.fire_due_client_notes() FROM PUBLIC, anon, authenticated;

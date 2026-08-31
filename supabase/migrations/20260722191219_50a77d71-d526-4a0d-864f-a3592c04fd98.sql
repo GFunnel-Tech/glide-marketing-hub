@@ -1,1 +1,0 @@
-ALTER TABLE public.client_report_schedules ALTER COLUMN template_id DROP NOT NULL;

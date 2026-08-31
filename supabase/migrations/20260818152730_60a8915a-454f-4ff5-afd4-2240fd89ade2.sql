@@ -1,1 +1,0 @@
-ALTER TABLE public.clients DROP COLUMN IF EXISTS plai_connected;

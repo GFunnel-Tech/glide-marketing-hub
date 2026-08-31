@@ -1,1 +1,0 @@
-revoke execute on function public.ghl_account_audit(uuid, integer) from public, anon;
