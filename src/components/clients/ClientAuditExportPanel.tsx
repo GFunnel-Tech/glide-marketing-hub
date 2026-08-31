@@ -167,6 +167,24 @@ export function ClientAuditExportPanel({
     setTogglingId(null);
   }
 
+  async function purgeExpired() {
+    setPurging(true);
+    try {
+      const { data, error } = await supabase.functions.invoke<any>("cleanup-audit-artifacts", {
+        body: { clientId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(data?.deleted ? `Purged ${data.deleted} expired exports` : "No expired exports to purge");
+      loadHistory();
+    } catch (e: any) {
+      console.error("[purge expired]", e);
+      toast.error(e?.message ?? "Failed to purge expired exports");
+    } finally {
+      setPurging(false);
+    }
+  }
+
   async function storeZip(blob: Blob, fileName: string) {
     const form = new FormData();
     form.append("clientId", String(clientId));
