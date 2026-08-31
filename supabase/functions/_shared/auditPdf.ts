@@ -24,6 +24,15 @@ export interface AuditNarrative {
 const BRAND = rgb(0.145, 0.388, 0.921);
 const BRAND_DARK = rgb(0.08, 0.22, 0.55);
 const INK = rgb(0.06, 0.09, 0.16);
+
+/** Form keys arrive as snake_case slugs; make them readable. */
+const humanize = (s: string) =>
+  String(s ?? "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^last question:?\s*/i, "")
+    .trim()
+    .replace(/^./, (c) => c.toUpperCase());
 const MUTED = rgb(0.42, 0.45, 0.52);
 const LINE = rgb(0.89, 0.91, 0.94);
 const SOFT = rgb(0.968, 0.975, 0.988);
@@ -102,7 +111,7 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
     return out;
   };
   const sectionTitle = (label: string, sub?: string) => {
-    ensure(56);
+    ensure(110);
     page.drawRectangle({ x: M, y: y - 3, width: 3, height: 16, color: BRAND });
     text(label.toUpperCase(), M + 10, y, 11, bold, INK);
     y -= sub ? 14 : 20;
@@ -149,7 +158,7 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
     head();
     rows.forEach((r, idx) => {
       const lineCounts = colsDef.map((c, ci) => wrap(r[ci] ?? "", 8.5, c.w - 6).length);
-      const lines = Math.min(4, Math.max(...lineCounts));
+      const lines = Math.min(12, Math.max(...lineCounts));
       const thisH = rowH + (lines - 1) * 10;
       if (y - thisH < M + 46) {
         newPage();
@@ -157,7 +166,7 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
       }
       if (idx % 2 === 1) page.drawRectangle({ x: M, y: y - thisH + 11, width: AVAIL, height: thisH, color: rgb(0.985, 0.99, 0.997) });
       colsDef.forEach((c, ci) => {
-        const wrapped = wrap(r[ci] ?? "", 8.5, c.w - 6).slice(0, 4);
+        const wrapped = wrap(r[ci] ?? "", 8.5, c.w - 6).slice(0, 12);
         wrapped.forEach((val, li) => {
           const tx = c.align === "right" ? c.x + c.w - widthOf(val, 8.5) : c.x;
           text(val, tx, y - li * 10, 8.5, font, INK);
@@ -209,10 +218,9 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
   page.drawRectangle({ x: 0, y: H - 296, width: W, height: 6, color: BRAND_DARK });
   text("ACCOUNT AUDIT", M, H - 88, 10, bold, rgb(0.82, 0.88, 1));
   text(ellipsize(title, 28, AVAIL, bold), M, H - 132, 28, bold, rgb(1, 1, 1));
-  text(
-    san(story.headline || "Paid media, lead delivery, CRM operations and pipeline integrity"),
-    M, H - 156, 10.5, font, rgb(0.88, 0.93, 1),
-  );
+  wrap(san(story.headline || "Paid media, lead delivery, CRM operations and pipeline integrity"), 10.5, AVAIL)
+    .slice(0, 2)
+    .forEach((l, i) => text(l, M, H - 156 - i * 14, 10.5, font, rgb(0.88, 0.93, 1)));
   text(
     `Window ${pretty(data.meta.windowStart)} - ${pretty(data.meta.windowEnd)}   ·   Prepared ${pretty(data.meta.generatedAt)}`,
     M, H - 178, 9, font, rgb(0.8, 0.87, 1),
@@ -313,9 +321,9 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
 
   for (const q of data.leadQuality.formQuestions.slice(0, 5)) {
     table(
-      q.question.slice(0, 70),
+      humanize(q.question).slice(0, 70),
       colsFrom([["Answer", 0.7], ["Count", 0.15, "right"], ["Share", 0.15, "right"]]),
-      q.rows.map((r) => [r.label, num(r.count), `${((r.count / Math.max(1, q.answered)) * 100).toFixed(0)}%`]),
+      q.rows.map((r) => [humanize(r.label), num(r.count), `${((r.count / Math.max(1, q.answered)) * 100).toFixed(0)}%`]),
       `${q.answered} responses`,
     );
   }
