@@ -2224,11 +2224,16 @@ export type Database = {
           brief_seasonal_context: string | null
           clickup_list_id: string | null
           contact_name: string | null
+          converted_at: string | null
           country: string | null
           cpl: number
           cpm: number
           created_at: string
           currency_code: string | null
+          decision_maker: string | null
+          decision_maker_email: string | null
+          decision_maker_phone: string | null
+          decision_maker_role: string | null
           double_count: boolean
           form_cvr: number
           frequency: number
@@ -2240,8 +2245,13 @@ export type Database = {
           last_audit: string | null
           launched_at: string | null
           leads: number
+          lifecycle: Database["public"]["Enums"]["client_lifecycle"]
+          lost_at: string | null
+          lost_reason: string | null
           name: string
           portal_slug: string | null
+          prospect_source: string | null
+          relationship_owner: string | null
           reported_leads: number
           spend: number
           status: Database["public"]["Enums"]["client_status"]
@@ -2249,6 +2259,7 @@ export type Database = {
           true_leads: number
           updated_at: string
           vertical: string | null
+          warm_path: string | null
           website: string | null
           workspace_id: string | null
         }
@@ -2266,11 +2277,16 @@ export type Database = {
           brief_seasonal_context?: string | null
           clickup_list_id?: string | null
           contact_name?: string | null
+          converted_at?: string | null
           country?: string | null
           cpl?: number
           cpm?: number
           created_at?: string
           currency_code?: string | null
+          decision_maker?: string | null
+          decision_maker_email?: string | null
+          decision_maker_phone?: string | null
+          decision_maker_role?: string | null
           double_count?: boolean
           form_cvr?: number
           frequency?: number
@@ -2282,8 +2298,13 @@ export type Database = {
           last_audit?: string | null
           launched_at?: string | null
           leads?: number
+          lifecycle?: Database["public"]["Enums"]["client_lifecycle"]
+          lost_at?: string | null
+          lost_reason?: string | null
           name: string
           portal_slug?: string | null
+          prospect_source?: string | null
+          relationship_owner?: string | null
           reported_leads?: number
           spend?: number
           status?: Database["public"]["Enums"]["client_status"]
@@ -2291,6 +2312,7 @@ export type Database = {
           true_leads?: number
           updated_at?: string
           vertical?: string | null
+          warm_path?: string | null
           website?: string | null
           workspace_id?: string | null
         }
@@ -2308,11 +2330,16 @@ export type Database = {
           brief_seasonal_context?: string | null
           clickup_list_id?: string | null
           contact_name?: string | null
+          converted_at?: string | null
           country?: string | null
           cpl?: number
           cpm?: number
           created_at?: string
           currency_code?: string | null
+          decision_maker?: string | null
+          decision_maker_email?: string | null
+          decision_maker_phone?: string | null
+          decision_maker_role?: string | null
           double_count?: boolean
           form_cvr?: number
           frequency?: number
@@ -2324,8 +2351,13 @@ export type Database = {
           last_audit?: string | null
           launched_at?: string | null
           leads?: number
+          lifecycle?: Database["public"]["Enums"]["client_lifecycle"]
+          lost_at?: string | null
+          lost_reason?: string | null
           name?: string
           portal_slug?: string | null
+          prospect_source?: string | null
+          relationship_owner?: string | null
           reported_leads?: number
           spend?: number
           status?: Database["public"]["Enums"]["client_status"]
@@ -2333,6 +2365,7 @@ export type Database = {
           true_leads?: number
           updated_at?: string
           vertical?: string | null
+          warm_path?: string | null
           website?: string | null
           workspace_id?: string | null
         }
@@ -7314,6 +7347,7 @@ export type Database = {
       bm_type: "Own BM" | "Agency BM"
       calibration_status: "pending" | "approved" | "rejected" | "superseded"
       campaign_status: "active" | "paused"
+      client_lifecycle: "prospect" | "client" | "churned"
       client_status:
         | "GREEN"
         | "YELLOW"

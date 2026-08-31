@@ -30,6 +30,7 @@ import Leads from "./pages/Leads";
 import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
 import Onboarding from "./pages/Onboarding";
+import Prospects from "./pages/Prospects";
 import OnboardingWizardPage from "./pages/OnboardingWizardPage";
 import OnboardingAssetsPage from "./pages/OnboardingAssetsPage";
 import AiAssistant from "./pages/AiAssistant";
@@ -239,6 +240,7 @@ const App = () => (
                   <Route path="clients" element={<Index />} />
                   <Route path="client/:id" element={<ScopedClientRedirect />} />
                   <Route path=":locationId/client/:id" element={<ScopedClientRoute />} />
+                  <Route path="prospects" element={<Prospects />} />
                   <Route path="campaigns" element={<Campaigns />} />
                   <Route path="creatives" element={<Creatives />} />
                   <Route path="ads" element={<Ads />} />
