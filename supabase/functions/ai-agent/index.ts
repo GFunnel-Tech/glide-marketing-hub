@@ -2,6 +2,7 @@
 // Body: { messages: {role, content}[], workspaceId, clientId?, scheduled?: boolean }
 // Returns: { reply: string, toolEvents: {tool, args, status, result|error, pendingActionId?}[] }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { anthropicCompatMessages, getDeepseekKey } from "../_shared/deepseek.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,14 +11,14 @@ const corsHeaders = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const AI_API_KEY = getDeepseekKey();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Most capable model by default; override with AI_AGENT_MODEL (e.g. claude-sonnet-4-6) to trade cost for speed.
-const MODEL = Deno.env.get("AI_AGENT_MODEL") ?? "claude-opus-4-8";
+const MODEL = Deno.env.get("AI_AGENT_MODEL") ?? Deno.env.get("DEEPSEEK_MODEL") ?? "deepseek-chat";
 // Anthropic server-side web search lets the agent pull external context (competitor ads, benchmarks, news).
-const ENABLE_WEB_SEARCH = (Deno.env.get("AI_AGENT_ENABLE_WEB_SEARCH") ?? "true") !== "false";
+const ENABLE_WEB_SEARCH = false; // DeepSeek has no server-side web search tool
 const WEB_SEARCH_TOOL = { type: "web_search_20260209", name: "web_search" };
 
 // Custom (client-side) tools exposed to Claude. Read tools always execute; action tools queue or execute on Meta.
@@ -162,7 +163,7 @@ const TOOLS = [
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    if (!ANTHROPIC_API_KEY) return json({ error: "ANTHROPIC_API_KEY not configured" }, 500);
+    if (!AI_API_KEY) return json({ error: "DEEPSEEK_API_KEY not configured" }, 500);
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Missing auth" }, 401);
 
@@ -216,33 +217,22 @@ Deno.serve(async (req) => {
     let finalText = "";
     let useWeb = ENABLE_WEB_SEARCH;
 
-    const callClaude = async (): Promise<any> => {
+    const callModel = async (): Promise<any> => {
       const tools = useWeb ? [...TOOLS, WEB_SEARCH_TOOL] : TOOLS;
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": ANTHROPIC_API_KEY!,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ model: MODEL, max_tokens: 4096, system: systemPrompt, tools, messages: aMessages }),
+      const { ok, status, data } = await anthropicCompatMessages({
+        model: MODEL,
+        max_tokens: 4096,
+        system: systemPrompt,
+        tools,
+        messages: aMessages,
       });
-      if (!resp.ok) {
-        const t = await resp.text();
-        // If web search isn't enabled on this account, drop it and retry once.
-        if (useWeb && /web_search|web search|not.*enabled|unsupported tool/i.test(t)) {
-          console.warn("web_search unavailable, retrying without it:", t);
-          useWeb = false;
-          return callClaude();
-        }
-        throw new Error(`Claude API error ${resp.status}: ${t}`);
-      }
-      return resp.json();
+      if (!ok) throw new Error(`DeepSeek API error ${status}: ${data?.error?.message ?? JSON.stringify(data)}`);
+      return data;
     };
 
     // Agent loop: bounded tool turns (web search may add server-side pauses)
     for (let turn = 0; turn < 10; turn++) {
-      const data = await callClaude();
+      const data = await callModel();
       const content = data.content || [];
 
       const textParts = content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n");

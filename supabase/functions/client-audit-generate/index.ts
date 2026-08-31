@@ -5,6 +5,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { computeAudit, type AuditData } from "../_shared/auditMetrics.ts";
 import { buildAuditPdf, type AuditNarrative } from "../_shared/auditPdf.ts";
+import { anthropicCompatMessages, getDeepseekKey } from "../_shared/deepseek.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -17,7 +18,7 @@ const json = (b: unknown, s = 200) =>
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+const AI_API_KEY = getDeepseekKey() ?? "";
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
 
 const SYSTEM_AGENCY = `You are a senior paid-media and CRM operations auditor writing an internal account audit for a mortgage/lending marketing agency.
@@ -90,25 +91,20 @@ async function writeNarrative(data: AuditData, audience: "agency" | "client"): P
       ? `Write the client-facing performance review. Cover: where the account stands, a short ranked list of priorities we are acting on (translate the machine-detected defects into plain business language, and drop anything that is purely internal tooling noise), advertising performance in plain terms, lead quality and what the form answers say about who is coming through, follow-up speed and pipeline/appointment discipline, a bottom line, and what happens next split between our team and theirs. Leave the compliance field as a short neutral note or an empty string.`
       : `Write the audit. Cover: executive summary, a ranked findings list (use the machine-detected defects as the backbone but merge, rank and explain them in business terms), paid media performance including CPL decomposition (CPL = CPM / (CTR x form CVR)), compliance flags, lead quality and form design, CRM operations including sync integrity, speed to first contact and pipeline/appointment discipline, a bottom line, and an ordered action plan.`);
 
-  if (ANTHROPIC_API_KEY) {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({
-        model: Deno.env.get("AI_OPS_MODEL") ?? "claude-sonnet-4-5",
-        max_tokens: 6000,
-        system: SYSTEM,
-        tools: [{ name: "emit_audit", description: "Return the finished audit", input_schema: SCHEMA }],
-        tool_choice: { type: "tool", name: "emit_audit" },
-        messages: [{ role: "user", content: prompt }],
-      }),
+  if (AI_API_KEY) {
+    const { ok, data: j } = await anthropicCompatMessages({
+      model: Deno.env.get("AI_OPS_MODEL") ?? Deno.env.get("DEEPSEEK_MODEL") ?? "deepseek-chat",
+      max_tokens: 6000,
+      system: SYSTEM,
+      tools: [{ name: "emit_audit", description: "Return the finished audit", input_schema: SCHEMA }],
+      tool_choice: { type: "tool", name: "emit_audit" },
+      messages: [{ role: "user", content: prompt }],
     });
-    const j = await r.json();
-    if (r.ok) {
+    if (ok) {
       const block = (j.content ?? []).find((b: any) => b.type === "tool_use");
       if (block?.input) return block.input as AuditNarrative;
     }
-    console.error("anthropic audit failed", j?.error?.message ?? r.status);
+    if (!ok) console.error("deepseek audit failed", j?.error?.message);
   }
 
   if (LOVABLE_API_KEY) {

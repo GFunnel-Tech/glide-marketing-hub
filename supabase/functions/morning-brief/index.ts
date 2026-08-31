@@ -7,6 +7,7 @@
 // Body: { workspaceId: string, date?: "YYYY-MM-DD", regenerate?: boolean }
 // Returns: { brief: MorningBriefRow }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { anthropicCompatMessages, getDeepseekKey } from "../_shared/deepseek.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,11 +16,11 @@ const corsHeaders = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const AI_API_KEY = getDeepseekKey();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const MODEL = Deno.env.get("AI_OPS_MODEL") ?? "claude-sonnet-4-5";
+const MODEL = Deno.env.get("AI_OPS_MODEL") ?? Deno.env.get("DEEPSEEK_MODEL") ?? "deepseek-chat";
 
 type Severity = "info" | "warn" | "critical";
 type Priority = "low" | "normal" | "high";
@@ -340,31 +341,22 @@ function buildFallback(signals: any): {
 }
 
 async function generateWithClaude(signals: any) {
-  if (!ANTHROPIC_API_KEY) return null;
+  if (!AI_API_KEY) return null;
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 2048,
-        system: SYSTEM,
-        messages: [{ role: "user", content: JSON.stringify(signals) }],
-      }),
+    const { ok, status, data } = await anthropicCompatMessages({
+      model: MODEL,
+      max_tokens: 2048,
+      system: SYSTEM,
+      messages: [{ role: "user", content: JSON.stringify(signals) }],
     });
-    if (!res.ok) {
-      console.warn(`[morning-brief] Anthropic ${res.status}`);
+    if (!ok) {
+      console.warn(`[morning-brief] DeepSeek ${status}: ${data?.error?.message ?? ""}`);
       return null;
     }
-    const data = await res.json();
     const text = (data.content ?? []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("");
     return extractJson(text);
   } catch (e) {
-    console.warn(`[morning-brief] Claude error: ${(e as Error).message}`);
+    console.warn(`[morning-brief] AI error: ${(e as Error).message}`);
     return null;
   }
 }
