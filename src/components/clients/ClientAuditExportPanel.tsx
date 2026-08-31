@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
