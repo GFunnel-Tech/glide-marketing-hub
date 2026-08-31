@@ -427,6 +427,18 @@ export function ClientAuditExportPanel({
             </div>
           )}
         </div>
+        <DialogFooter className="border-t border-border pt-4 mt-0 flex-row justify-between sm:justify-between">
+          <button
+            type="button"
+            onClick={purgeExpired}
+            disabled={purging}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 transition-colors"
+            title="Remove expired exports from storage and history"
+          >
+            {purging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Purge expired
+          </button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
