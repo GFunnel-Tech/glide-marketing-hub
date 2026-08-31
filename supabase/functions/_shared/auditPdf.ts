@@ -312,9 +312,9 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
 
   for (const q of data.leadQuality.formQuestions.slice(0, 5)) {
     table(
-      q.question.slice(0, 70),
+      humanize(q.question).slice(0, 70),
       colsFrom([["Answer", 0.7], ["Count", 0.15, "right"], ["Share", 0.15, "right"]]),
-      q.rows.map((r) => [r.label, num(r.count), `${((r.count / Math.max(1, q.answered)) * 100).toFixed(0)}%`]),
+      q.rows.map((r) => [humanize(r.label), num(r.count), `${((r.count / Math.max(1, q.answered)) * 100).toFixed(0)}%`]),
       `${q.answered} responses`,
     );
   }
