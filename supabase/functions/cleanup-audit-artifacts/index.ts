@@ -42,7 +42,8 @@ Deno.serve(async (req) => {
       .from("client_audit_artifacts")
       .select("id,storage_path")
       .eq("is_permanent", false)
-      .lte("expires_at", new Date().toISOString());
+      .lte("expires_at", new Date().toISOString())
+      .eq(body?.clientId ? "client_id" : "workspace_id", body?.clientId ? Number(body.clientId) : "workspace_id");
     if (findErr) return json({ error: findErr.message }, 500);
 
     const paths = (rows ?? []).map((r: any) => r.storage_path).filter(Boolean);
