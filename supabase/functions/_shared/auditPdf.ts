@@ -102,7 +102,7 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
     return out;
   };
   const sectionTitle = (label: string, sub?: string) => {
-    ensure(56);
+    ensure(110);
     page.drawRectangle({ x: M, y: y - 3, width: 3, height: 16, color: BRAND });
     text(label.toUpperCase(), M + 10, y, 11, bold, INK);
     y -= sub ? 14 : 20;
@@ -149,7 +149,7 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
     head();
     rows.forEach((r, idx) => {
       const lineCounts = colsDef.map((c, ci) => wrap(r[ci] ?? "", 8.5, c.w - 6).length);
-      const lines = Math.min(4, Math.max(...lineCounts));
+      const lines = Math.min(12, Math.max(...lineCounts));
       const thisH = rowH + (lines - 1) * 10;
       if (y - thisH < M + 46) {
         newPage();
@@ -157,7 +157,7 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
       }
       if (idx % 2 === 1) page.drawRectangle({ x: M, y: y - thisH + 11, width: AVAIL, height: thisH, color: rgb(0.985, 0.99, 0.997) });
       colsDef.forEach((c, ci) => {
-        const wrapped = wrap(r[ci] ?? "", 8.5, c.w - 6).slice(0, 4);
+        const wrapped = wrap(r[ci] ?? "", 8.5, c.w - 6).slice(0, 12);
         wrapped.forEach((val, li) => {
           const tx = c.align === "right" ? c.x + c.w - widthOf(val, 8.5) : c.x;
           text(val, tx, y - li * 10, 8.5, font, INK);
