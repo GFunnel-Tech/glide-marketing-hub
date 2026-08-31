@@ -1007,6 +1007,66 @@ export type Database = {
           },
         ]
       }
+      client_audit_artifacts: {
+        Row: {
+          audience: string
+          client_id: number
+          created_at: string
+          created_by: string | null
+          days_window: number | null
+          defects: number | null
+          expires_at: string | null
+          file_name: string | null
+          findings: number | null
+          id: string
+          is_permanent: boolean
+          kind: string
+          storage_path: string | null
+          summary: string | null
+          tasks_created: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          audience?: string
+          client_id: number
+          created_at?: string
+          created_by?: string | null
+          days_window?: number | null
+          defects?: number | null
+          expires_at?: string | null
+          file_name?: string | null
+          findings?: number | null
+          id?: string
+          is_permanent?: boolean
+          kind?: string
+          storage_path?: string | null
+          summary?: string | null
+          tasks_created?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          audience?: string
+          client_id?: number
+          created_at?: string
+          created_by?: string | null
+          days_window?: number | null
+          defects?: number | null
+          expires_at?: string | null
+          file_name?: string | null
+          findings?: number | null
+          id?: string
+          is_permanent?: boolean
+          kind?: string
+          storage_path?: string | null
+          summary?: string | null
+          tasks_created?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       client_churn_risk: {
         Row: {
           client_id: number
