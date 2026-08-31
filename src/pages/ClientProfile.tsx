@@ -774,6 +774,8 @@ function ClientProfileInner() {
                   )}
                 </div>
               </SectionCard>
+
+              <ClientAuditExportPanel workspaceId={workspaceId} clientId={client.id} />
             </aside>
           </div>
         </TabsContent>
