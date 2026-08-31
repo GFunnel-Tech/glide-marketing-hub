@@ -3,6 +3,7 @@
 **Source:** `CTV_Business_Module_1.docx` (GFunnel Business Module — Connected TV, "Streaming Revenue System"), dated June 2026, target launch **September 1**.
 **Audited against:** `gfunnel-tech/glide-marketing-hub` @ `claude/glide-business-module-audit-osgl3z` (115 tables, 78 edge functions, 13 n8n workflows).
 **Audit date:** 2026-08-31.
+**Companion:** `docs/d3-sales-onboarding-audit.md` — audits the RIVE D3 sales playbook and the onboarding handoff. Four builds below (G2, G3, G12, G13) are shared with that audit and should be built once.
 
 ---
 
@@ -127,7 +128,7 @@ Ordered so the **P0 block is exactly what a 60–90 day paid pilot requires**.
 
 | # | Decision | Why it blocks |
 |---|---|---|
-| D1 | **HubSpot, or GHL/internal for Glide's own CRM?** | §9/§10 name HubSpot; the repo has deep GHL wiring and zero HubSpot. Adopting HubSpot means a net-new integration surface (auth, sync, webhooks, mapping) for one pipeline. This changes G12 substantially. |
+| D1 | **HubSpot, or GHL/internal for Glide's own CRM?** *(superseded by D7 in the D3 audit — the CRM must now serve two different sales motions)* | §9/§10 name HubSpot; the repo has deep GHL wiring and zero HubSpot. Adopting HubSpot means a net-new integration surface (auth, sync, webhooks, mapping) for one pipeline. This changes G12 substantially. |
 | D2 | **Which buying platform first?** | §12 lists this as open. G6's adapter is platform-specific — Vibe, tvScientific and MNTN have materially different APIs and attribution surfaces. Picking one unblocks G6; picking none stalls it. |
 | D3 | **Branding: EMM or Glide?** | The wizard, workflows, and theme are EMM-branded throughout (`EMM_THEME`, `EMM — …` workflow names, and `AUDIT.md` states branding is EMM-only client-facing). The module requires Glide-branded surfaces with GFunnel silent. Multi-brand theming needs a decision before G1/G3. |
 | D4 | **Call-tracking vendor.** | G4 cannot start without it. Also determines whether call data flows via SearchLight or direct. |
