@@ -1,7 +1,7 @@
 // Full account audit for one client: pulls every signal we hold, computes the
 // hard numbers deterministically, has the model write the narrative on top of
 // them, renders a branded PDF, and opens assigned tasks for each finding.
-// Body: { clientId, daysWindow?, createTasks?, recipients? }
+// Body: { clientId, daysWindow?, audience?: "agency" | "client", createTasks?, recipients? }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { computeAudit, type AuditData } from "../_shared/auditMetrics.ts";
 import { buildAuditPdf, type AuditNarrative } from "../_shared/auditPdf.ts";
@@ -20,7 +20,7 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
 
-const SYSTEM = `You are a senior paid-media and CRM operations auditor writing an internal account audit for a mortgage/lending marketing agency.
+const SYSTEM_AGENCY = `You are a senior paid-media and CRM operations auditor writing an internal account audit for a mortgage/lending marketing agency.
 
 Rules:
 - Every number you cite MUST come from the JSON payload you are given. Never invent or estimate figures.
@@ -28,6 +28,17 @@ Rules:
 - Where the platform's own data is broken (sync failures, unlinked leads), say so plainly and explain what downstream reporting it invalidates.
 - Findings must be ranked by business impact, each with a named owner role and a concrete corrective action.
 - Owner roles must be one of: "Media Buyer", "Content Specialist", "Integrations / Engineering", "Account Manager", "Client", "Setter Ops".
+- 3-6 sentences per section. No bullet characters, no markdown, plain prose paragraphs.`;
+
+const SYSTEM_CLIENT = `You are the account strategist at a mortgage/lending marketing agency writing a performance review that will be sent to the client themselves.
+
+Rules:
+- Every number you cite MUST come from the JSON payload you are given. Never invent or estimate figures.
+- Audience is the business owner, not a marketer: plain English, no platform jargon, no acronyms without explanation (say "cost per lead", not "CPL"; "cost per 1,000 views", not "CPM").
+- Be honest but constructive. Frame problems as what is happening, what it costs them, and what we are doing about it. Never blame the client and never expose internal tooling failures, vendor names, engineering detail or internal staff names.
+- Where the client's own follow-up speed or CRM usage is the constraint, say so respectfully and give them a specific ask.
+- Findings are "priorities": each has a title, a short plain-English explanation, a severity, an owner_role of either "Our team" or "Client", and an action written as what will be done next.
+- The action plan must read as commitments and requests, not internal tickets.
 - 3-6 sentences per section. No bullet characters, no markdown, plain prose paragraphs.`;
 
 const SCHEMA = {
@@ -70,10 +81,14 @@ const SCHEMA = {
   required: ["headline", "executive_summary", "findings", "paid_media", "compliance", "lead_quality", "crm_ops", "bottom_line", "action_plan"],
 };
 
-async function writeNarrative(data: AuditData): Promise<AuditNarrative> {
+async function writeNarrative(data: AuditData, audience: "agency" | "client"): Promise<AuditNarrative> {
+  const forClient = audience === "client";
+  const SYSTEM = forClient ? SYSTEM_CLIENT : SYSTEM_AGENCY;
   const prompt =
     `Audit payload (all figures are authoritative):\n\`\`\`json\n${JSON.stringify(data, null, 1).slice(0, 90_000)}\n\`\`\`\n\n` +
-    `Write the audit. Cover: executive summary, a ranked findings list (use the machine-detected defects as the backbone but merge, rank and explain them in business terms), paid media performance including CPL decomposition (CPL = CPM / (CTR x form CVR)), compliance flags, lead quality and form design, CRM operations including sync integrity, speed to first contact and pipeline/appointment discipline, a bottom line, and an ordered action plan.`;
+    (forClient
+      ? `Write the client-facing performance review. Cover: where the account stands, a short ranked list of priorities we are acting on (translate the machine-detected defects into plain business language, and drop anything that is purely internal tooling noise), advertising performance in plain terms, lead quality and what the form answers say about who is coming through, follow-up speed and pipeline/appointment discipline, a bottom line, and what happens next split between our team and theirs. Leave the compliance field as a short neutral note or an empty string.`
+      : `Write the audit. Cover: executive summary, a ranked findings list (use the machine-detected defects as the backbone but merge, rank and explain them in business terms), paid media performance including CPL decomposition (CPL = CPM / (CTR x form CVR)), compliance flags, lead quality and form design, CRM operations including sync integrity, speed to first contact and pipeline/appointment discipline, a bottom line, and an ordered action plan.`);
 
   if (ANTHROPIC_API_KEY) {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -114,6 +129,35 @@ async function writeNarrative(data: AuditData): Promise<AuditNarrative> {
   }
 
   // Deterministic fallback so an audit always renders.
+  if (forClient) {
+    return {
+      headline: "Advertising results, lead quality and follow-up for the period",
+      executive_summary:
+        `Between ${data.meta.windowStart} and ${data.meta.windowEnd} we invested ${data.paid.spend.toFixed(2)} in advertising and delivered ${data.leadQuality.total} leads at an average cost per lead of ${data.paid.cpl.toFixed(2)}. ` +
+        `${data.crm.appointments} appointments were booked and the median time to first contact a new lead was ${data.crm.medianFirstTouchHours.toFixed(1)} hours. ` +
+        `The priorities below are the changes we are making next, plus anything we need from your team.`,
+      findings: data.defects
+        .filter((d) => d.category !== "sync" && d.category !== "scoring")
+        .slice(0, 8)
+        .map((d) => ({
+          title: d.title,
+          detail: d.evidence,
+          severity: d.severity,
+          owner_role: d.category === "setter" ? "Client" : "Our team",
+          action: "We are addressing this in the coming weeks.",
+        })),
+      paid_media: `Spend ${data.paid.spend.toFixed(2)} reached ${data.paid.impressions} views and produced ${data.leadQuality.total} leads, a form completion rate of ${data.paid.cvr.toFixed(2)}%.`,
+      compliance: "",
+      lead_quality: `${data.leadQuality.duplicates} duplicate submissions and ${data.leadQuality.unqualifiedFormLeads} leads did not answer the qualifying questions.`,
+      crm_ops: `Median time to first contact was ${data.crm.medianFirstTouchHours.toFixed(1)} hours across ${data.crm.dialledContacts} leads that were worked.`,
+      bottom_line: "Faster follow-up and tighter targeting are the two levers with the most upside this period.",
+      action_plan: data.defects.slice(0, 6).map((d) => ({
+        when: d.severity === "critical" ? "This week" : "Next 30 days",
+        owner_role: d.category === "setter" ? "Client" : "Our team",
+        task: d.title,
+      })),
+    };
+  }
   return {
     headline: "Paid media, lead delivery, CRM operations and pipeline integrity",
     executive_summary:
@@ -153,6 +197,7 @@ Deno.serve(async (req) => {
     const clientId = Number(body.clientId);
     if (!Number.isFinite(clientId)) return json({ error: "clientId required" }, 400);
     const daysWindow = Math.min(365, Math.max(7, Number(body.daysWindow) || 90));
+    const audience: "agency" | "client" = body.audience === "client" ? "client" : "agency";
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -233,12 +278,13 @@ Deno.serve(async (req) => {
       appointments, opportunities, actions, windowStart: startStr, windowEnd: endStr,
     });
 
-    const story = await writeNarrative(data);
+    const story = await writeNarrative(data, audience);
 
     // ---- render + store ------------------------------------------------------
-    const bytes = await buildAuditPdf(data, story);
+    const bytes = await buildAuditPdf(data, story, audience);
     const stamp = new Date().toISOString().slice(0, 10);
-    const path = `${client.workspace_id}/${clientId}/audit_${stamp}_${crypto.randomUUID().slice(0, 8)}.pdf`;
+    const prefix = audience === "client" ? "review" : "audit";
+    const path = `${client.workspace_id}/${clientId}/${prefix}_${stamp}_${crypto.randomUUID().slice(0, 8)}.pdf`;
     const up = await admin.storage.from("client-reports")
       .upload(path, bytes, { contentType: "application/pdf", upsert: true });
     if (up.error) return json({ error: `PDF upload failed: ${up.error.message}` }, 500);
@@ -248,7 +294,7 @@ Deno.serve(async (req) => {
 
     // ---- assigned tasks from findings ---------------------------------------
     let tasksCreated = 0;
-    if (body.createTasks !== false) {
+    if (audience === "client" ? body.createTasks === true : body.createTasks !== false) {
       const { data: members } = await admin
         .from("workspace_members").select("user_id").eq("workspace_id", client.workspace_id);
       const memberIds = (members ?? []).map((m: any) => m.user_id);
@@ -298,6 +344,7 @@ Deno.serve(async (req) => {
 
     return json({
       ok: true,
+      audience,
       pdfUrl,
       path,
       tasksCreated,
