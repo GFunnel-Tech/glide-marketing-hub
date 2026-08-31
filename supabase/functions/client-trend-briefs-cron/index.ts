@@ -5,6 +5,7 @@
 //
 // Body (all optional): { workspaceId?: string, clientId?: number, force?: boolean, kind?: "weekly_digest" }
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { anthropicCompatMessages, getDeepseekKey } from "../_shared/deepseek.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,9 +16,9 @@ const json = (b: unknown, s = 200) =>
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const AI_API_KEY = getDeepseekKey();
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const MODEL = Deno.env.get("AI_OPS_MODEL") ?? "claude-sonnet-4-5";
+const MODEL = Deno.env.get("AI_OPS_MODEL") ?? Deno.env.get("DEEPSEEK_MODEL") ?? "deepseek-chat";
 
 type Kind = "cpm_spike" | "cpl_spike" | "leads_drop" | "weekly_digest" | "seasonal";
 
@@ -124,21 +125,19 @@ Rules:
 - Never give specific numeric guarantees.`;
 
   try {
-    if (ANTHROPIC_API_KEY) {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 1200,
-          system,
-          messages: [{ role: "user", content: JSON.stringify(payload) }],
-        }),
+    if (AI_API_KEY) {
+      const { ok, data: j } = await anthropicCompatMessages({
+        model: MODEL,
+        max_tokens: 1200,
+        system,
+        messages: [{ role: "user", content: JSON.stringify(payload) }],
       });
-      const j = await r.json();
-      const txt = j?.content?.[0]?.text ?? "";
-      const m = txt.match(/\{[\s\S]*\}/);
-      return m ? JSON.parse(m[0]) : null;
+      if (ok) {
+        const txt = j?.content?.[0]?.text ?? "";
+        const m = txt.match(/\{[\s\S]*\}/);
+        return m ? JSON.parse(m[0]) : null;
+      }
+      console.error("deepseek trend brief failed", j?.error?.message);
     }
     if (LOVABLE_API_KEY) {
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

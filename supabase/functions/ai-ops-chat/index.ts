@@ -3,6 +3,7 @@
 // Tools query the new portfolio views/RPCs and existing tables so the assistant can answer
 // cross-client questions, forecast, detect anomalies, and benchmark.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { anthropicCompatMessages, getDeepseekKey } from "../_shared/deepseek.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,10 +12,10 @@ const corsHeaders = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const AI_API_KEY = getDeepseekKey();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const MODEL = Deno.env.get("AI_OPS_MODEL") ?? "claude-sonnet-4-5";
+const MODEL = Deno.env.get("AI_OPS_MODEL") ?? Deno.env.get("DEEPSEEK_MODEL") ?? "deepseek-chat";
 
 const TOOLS = [
   {
@@ -200,7 +201,7 @@ Style:
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  if (!ANTHROPIC_API_KEY) return json({ error: "ANTHROPIC_API_KEY not configured" }, 500);
+  if (!AI_API_KEY) return json({ error: "DEEPSEEK_API_KEY not configured" }, 500);
 
   try {
     const { messages, workspaceId } = await req.json();
@@ -220,23 +221,14 @@ Deno.serve(async (req) => {
     let finalText = "";
 
     for (let step = 0; step < 12; step++) {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 4096,
-          system: SYSTEM,
-          tools: TOOLS,
-          messages: convo,
-        }),
+      const { ok, status, data } = await anthropicCompatMessages({
+        model: MODEL,
+        max_tokens: 4096,
+        system: SYSTEM,
+        tools: TOOLS,
+        messages: convo,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message ?? `Anthropic ${res.status}`);
+      if (!ok) throw new Error(data?.error?.message ?? `DeepSeek ${status}`);
 
       // accumulate any text
       for (const block of data.content ?? []) {
