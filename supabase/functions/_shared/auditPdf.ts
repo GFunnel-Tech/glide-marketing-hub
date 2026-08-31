@@ -40,7 +40,8 @@ const RED = rgb(0.78, 0.18, 0.22);
 const AMBER = rgb(0.85, 0.55, 0.08);
 const GREY = rgb(0.45, 0.48, 0.55);
 
-const sevColor = (s: string) => (s === "critical" ? RED : s === "high" ? AMBER : s === "medium" ? BRAND : GREY);
+const sevColor = (s: string) =>
+  s === "critical" || s === "urgent" ? RED : s === "high" ? AMBER : s === "medium" ? BRAND : GREY;
 
 const A4: [number, number] = [595.28, 841.89];
 const W = A4[0];
@@ -56,7 +57,14 @@ const pretty = (d?: string | null) => {
   return isNaN(dt.getTime()) ? String(d) : dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 };
 
-export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Promise<Uint8Array> {
+export type AuditAudience = "agency" | "client";
+
+export async function buildAuditPdf(
+  data: AuditData,
+  story: AuditNarrative,
+  audience: AuditAudience = "agency",
+): Promise<Uint8Array> {
+  const forClient = audience === "client";
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -216,7 +224,7 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
   // ---------------------------------------------------------------- cover ---
   page.drawRectangle({ x: 0, y: H - 290, width: W, height: 290, color: BRAND });
   page.drawRectangle({ x: 0, y: H - 296, width: W, height: 6, color: BRAND_DARK });
-  text("ACCOUNT AUDIT", M, H - 88, 10, bold, rgb(0.82, 0.88, 1));
+  text(forClient ? "PERFORMANCE REVIEW" : "ACCOUNT AUDIT", M, H - 88, 10, bold, rgb(0.82, 0.88, 1));
   text(ellipsize(title, 28, AVAIL, bold), M, H - 132, 28, bold, rgb(1, 1, 1));
   wrap(san(story.headline || "Paid media, lead delivery, CRM operations and pipeline integrity"), 10.5, AVAIL)
     .slice(0, 2)
@@ -227,12 +235,19 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
   );
   const crit = story.findings.filter((f) => f.severity === "critical").length;
   const high = story.findings.filter((f) => f.severity === "high").length;
-  const hero: [string, string][] = [
-    ["Findings", `${story.findings.length}`],
-    ["Critical / high", `${crit} / ${high}`],
-    ["Spend in window", money(data.paid.spend, cur)],
-    ["Leads", num(data.leadQuality.total)],
-  ];
+  const hero: [string, string][] = forClient
+    ? [
+        ["Ad spend", money(data.paid.spend, cur)],
+        ["Leads", num(data.leadQuality.total)],
+        ["Cost per lead", money(data.paid.cpl, cur)],
+        ["Appointments", num(data.crm.appointments)],
+      ]
+    : [
+        ["Findings", `${story.findings.length}`],
+        ["Critical / high", `${crit} / ${high}`],
+        ["Spend in window", money(data.paid.spend, cur)],
+        ["Leads", num(data.leadQuality.total)],
+      ];
   hero.forEach((h, i) => {
     const x = M + i * (AVAIL / 4);
     text(h[0].toUpperCase(), x, H - 226, 7.5, bold, rgb(0.78, 0.86, 1));
@@ -240,25 +255,41 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
   });
 
   y = H - 330;
-  sectionTitle("Account", "Identity and platform state at time of audit");
-  defList([
-    ["Client / brand", `${data.meta.brand || data.meta.clientName}${data.meta.contactName ? ` (${data.meta.contactName})` : ""} · client ID ${data.meta.clientId}`],
-    ["Sub-account", data.meta.locationId ? `GHL location ${data.meta.locationId}${data.meta.locationName ? ` · ${data.meta.locationName}` : ""}` : "Not mapped"],
-    ["Platform status", `${data.meta.status ?? "—"} · autonomous optimization ${data.meta.autonomousOptimization ? "on" : "off"}`],
-    ["Token in use", data.sync.tokenType],
-    ["Audit window", `${data.meta.windowStart} to ${data.meta.windowEnd} · ${data.leadQuality.total} leads · ${data.crm.contacts} CRM contacts`],
-  ]);
+  sectionTitle("Account", forClient ? "What this review covers" : "Identity and platform state at time of audit");
+  defList(
+    forClient
+      ? [
+          ["Account", `${data.meta.brand || data.meta.clientName}${data.meta.contactName ? ` (${data.meta.contactName})` : ""}`],
+          ["Period reviewed", `${pretty(data.meta.windowStart)} to ${pretty(data.meta.windowEnd)}`],
+          ["Advertising", `${money(data.paid.spend, cur)} invested across ${data.campaigns.length} campaigns`],
+          ["Leads delivered", `${data.leadQuality.total} leads at ${money(data.paid.cpl, cur)} average cost per lead`],
+          ["Appointments", `${data.crm.appointments} booked · ${data.crm.upcomingAppointments} upcoming`],
+        ]
+      : [
+          ["Client / brand", `${data.meta.brand || data.meta.clientName}${data.meta.contactName ? ` (${data.meta.contactName})` : ""} · client ID ${data.meta.clientId}`],
+          ["Sub-account", data.meta.locationId ? `GHL location ${data.meta.locationId}${data.meta.locationName ? ` · ${data.meta.locationName}` : ""}` : "Not mapped"],
+          ["Platform status", `${data.meta.status ?? "—"} · autonomous optimization ${data.meta.autonomousOptimization ? "on" : "off"}`],
+          ["Token in use", data.sync.tokenType],
+          ["Audit window", `${data.meta.windowStart} to ${data.meta.windowEnd} · ${data.leadQuality.total} leads · ${data.crm.contacts} CRM contacts`],
+        ],
+  );
 
   // ---------------------------------------------------- executive summary ---
   newPage();
-  sectionTitle("Executive summary");
+  sectionTitle(forClient ? "Where the account stands" : "Executive summary");
   para(story.executive_summary, 9.5);
 
   table(
-    "Findings",
-    colsFrom([["#", 0.05], ["Finding", 0.56], ["Severity", 0.13], ["Owner", 0.26]]),
-    story.findings.map((f, i) => [String(i + 1), `${f.title}. ${f.detail}`, f.severity, f.owner_role]),
-    "Ranked by impact",
+    forClient ? "Priorities we are acting on" : "Findings",
+    forClient
+      ? colsFrom([["#", 0.05], ["What we found", 0.55], ["Priority", 0.13], ["What happens next", 0.27]])
+      : colsFrom([["#", 0.05], ["Finding", 0.56], ["Severity", 0.13], ["Owner", 0.26]]),
+    story.findings.map((f, i) =>
+      forClient
+        ? [String(i + 1), `${f.title}. ${f.detail}`, f.severity === "critical" ? "urgent" : f.severity, f.action]
+        : [String(i + 1), `${f.title}. ${f.detail}`, f.severity, f.owner_role],
+    ),
+    forClient ? "In order of impact on your results" : "Ranked by impact",
     (r) => sevColor(r[2]),
   );
   if (story.bottom_line) {
@@ -274,29 +305,56 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
 
   // ----------------------------------------------------------- paid media ---
   newPage();
-  sectionTitle("Paid media performance", `${data.paid.activeDays} days with delivery in the window`);
-  statGrid([
-    ["Spend", money(data.paid.spend, cur)],
-    ["Leads reported / deduped", `${num(data.leadQuality.total)} / ${num(data.leadQuality.deduped)}`],
-    ["CPL reported / true", `${money(data.paid.cpl, cur)} / ${money(data.leadQuality.trueCpl, cur)}`],
-    ["CPM", money(data.paid.cpm, cur)],
-    ["Impressions", num(data.paid.impressions)],
-    ["Clicks", num(data.paid.clicks)],
-    ["Link CTR", `${data.paid.ctr.toFixed(2)}%`],
-    ["Form CVR", `${data.paid.cvr.toFixed(2)}%`],
-  ]);
+  sectionTitle(
+    forClient ? "Advertising performance" : "Paid media performance",
+    `${data.paid.activeDays} days with delivery in the window`,
+  );
+  statGrid(
+    forClient
+      ? [
+          ["Spend", money(data.paid.spend, cur)],
+          ["Leads", num(data.leadQuality.total)],
+          ["Cost per lead", money(data.paid.cpl, cur)],
+          ["Cost per 1,000 views", money(data.paid.cpm, cur)],
+          ["People reached", num(data.paid.impressions)],
+          ["Clicks", num(data.paid.clicks)],
+          ["Click-through rate", `${data.paid.ctr.toFixed(2)}%`],
+          ["Form completion rate", `${data.paid.cvr.toFixed(2)}%`],
+        ]
+      : [
+          ["Spend", money(data.paid.spend, cur)],
+          ["Leads reported / deduped", `${num(data.leadQuality.total)} / ${num(data.leadQuality.deduped)}`],
+          ["CPL reported / true", `${money(data.paid.cpl, cur)} / ${money(data.leadQuality.trueCpl, cur)}`],
+          ["CPM", money(data.paid.cpm, cur)],
+          ["Impressions", num(data.paid.impressions)],
+          ["Clicks", num(data.paid.clicks)],
+          ["Link CTR", `${data.paid.ctr.toFixed(2)}%`],
+          ["Form CVR", `${data.paid.cvr.toFixed(2)}%`],
+        ],
+  );
   para(story.paid_media);
 
-  table(
-    "Campaign structure",
-    colsFrom([["Campaign", 0.32], ["Spend", 0.13, "right"], ["Leads", 0.09, "right"], ["CPL", 0.12, "right"], ["CPM", 0.12, "right"], ["CTR", 0.1, "right"], ["SAC", 0.12]]),
-    data.campaigns.slice(0, 14).map((c) => [
-      c.name, money(c.spend, cur), num(c.leads), c.leads ? money(c.cpl, cur) : "—",
-      money(c.cpm, cur), `${c.ctr.toFixed(2)}%`, c.sac,
-    ]),
-    "Ranked by spend",
-    (r) => (r[6] === "no" ? RED : r[6] === "not declared" ? AMBER : undefined),
-  );
+  if (forClient) {
+    table(
+      "Campaign results",
+      colsFrom([["Campaign", 0.42], ["Spend", 0.16, "right"], ["Leads", 0.12, "right"], ["Cost per lead", 0.18, "right"], ["CTR", 0.12, "right"]]),
+      data.campaigns.slice(0, 14).map((c) => [
+        c.name, money(c.spend, cur), num(c.leads), c.leads ? money(c.cpl, cur) : "—", `${c.ctr.toFixed(2)}%`,
+      ]),
+      "Ranked by spend",
+    );
+  } else {
+    table(
+      "Campaign structure",
+      colsFrom([["Campaign", 0.32], ["Spend", 0.13, "right"], ["Leads", 0.09, "right"], ["CPL", 0.12, "right"], ["CPM", 0.12, "right"], ["CTR", 0.1, "right"], ["SAC", 0.12]]),
+      data.campaigns.slice(0, 14).map((c) => [
+        c.name, money(c.spend, cur), num(c.leads), c.leads ? money(c.cpl, cur) : "—",
+        money(c.cpm, cur), `${c.ctr.toFixed(2)}%`, c.sac,
+      ]),
+      "Ranked by spend",
+      (r) => (r[6] === "no" ? RED : r[6] === "not declared" ? AMBER : undefined),
+    );
+  }
 
   if (data.adConcentration.length) {
     table(
@@ -311,12 +369,19 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
   }
 
   // ----------------------------------------------------------- compliance ---
-  sectionTitle("Compliance flags");
-  para(story.compliance);
+  if (!forClient) {
+    sectionTitle("Compliance flags");
+    para(story.compliance);
+  }
 
   // --------------------------------------------------------- lead quality ---
   newPage();
-  sectionTitle("Lead quality and form design", `${data.leadQuality.total} leads · ${data.leadQuality.duplicates} duplicates · ${data.leadQuality.unqualifiedFormLeads} with no qualification captured`);
+  sectionTitle(
+    forClient ? "Who is coming through your forms" : "Lead quality and form design",
+    forClient
+      ? `${data.leadQuality.total} leads submitted in the period`
+      : `${data.leadQuality.total} leads · ${data.leadQuality.duplicates} duplicates · ${data.leadQuality.unqualifiedFormLeads} with no qualification captured`,
+  );
   para(story.lead_quality);
 
   for (const q of data.leadQuality.formQuestions.slice(0, 5)) {
@@ -329,34 +394,54 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
   }
 
   table(
-    "Data hygiene",
+    forClient ? "Lead data quality" : "Data hygiene",
     colsFrom([["Measure", 0.6], ["Value", 0.4, "right"]]),
-    [
-      ["Duplicate submissions (email/phone)", `${data.leadQuality.duplicates} (${data.leadQuality.duplicateRate.toFixed(1)}%)`],
-      ["Missing email / phone", `${data.leadQuality.missingEmail} / ${data.leadQuality.missingPhone}`],
-      ["Single-word or numeric names", String(data.leadQuality.junkNames)],
-      ["Leads with no qualification answers", String(data.leadQuality.unqualifiedFormLeads)],
-      ["Scored leads / unscored", `${data.scoring.scored} / ${data.scoring.unscored}`],
-      ["Grade distribution", data.scoring.grades.map((g) => `${g.label} x${g.count}`).join(", ") || "—"],
-    ],
+    forClient
+      ? [
+          ["Duplicate submissions", `${data.leadQuality.duplicates} (${data.leadQuality.duplicateRate.toFixed(1)}%)`],
+          ["Missing email / phone", `${data.leadQuality.missingEmail} / ${data.leadQuality.missingPhone}`],
+          ["Leads with no qualification answers", String(data.leadQuality.unqualifiedFormLeads)],
+          ["Unique, contactable leads", String(data.leadQuality.deduped)],
+        ]
+      : [
+          ["Duplicate submissions (email/phone)", `${data.leadQuality.duplicates} (${data.leadQuality.duplicateRate.toFixed(1)}%)`],
+          ["Missing email / phone", `${data.leadQuality.missingEmail} / ${data.leadQuality.missingPhone}`],
+          ["Single-word or numeric names", String(data.leadQuality.junkNames)],
+          ["Leads with no qualification answers", String(data.leadQuality.unqualifiedFormLeads)],
+          ["Scored leads / unscored", `${data.scoring.scored} / ${data.scoring.unscored}`],
+          ["Grade distribution", data.scoring.grades.map((g) => `${g.label} x${g.count}`).join(", ") || "—"],
+        ],
   );
 
   // -------------------------------------------------------------- crm ops ---
   newPage();
-  sectionTitle("CRM operations, sync and pipeline");
-  statGrid([
-    ["Leads linked to CRM", `${num(data.sync.linkedToGhl)} / ${num(data.leadQuality.total)}`],
-    ["Link rate", `${data.sync.linkRate.toFixed(0)}%`],
-    ["Contacts", num(data.crm.contacts)],
-    ["Notes logged", num(data.crm.notes)],
-    ["Median speed to first touch", `${data.crm.medianFirstTouchHours.toFixed(1)}h`],
-    ["Touched within 1h", `${data.crm.within1h} / ${data.crm.dialledContacts}`],
-    ["Appointments", num(data.crm.appointments)],
-    ["Outcome coverage", `${data.crm.outcomeCoverage.toFixed(0)}%`],
-  ]);
+  sectionTitle(forClient ? "Follow-up and pipeline" : "CRM operations, sync and pipeline");
+  statGrid(
+    forClient
+      ? [
+          ["Contacts in your CRM", num(data.crm.contacts)],
+          ["Follow-up notes logged", num(data.crm.notes)],
+          ["Median time to first contact", `${data.crm.medianFirstTouchHours.toFixed(1)}h`],
+          ["Contacted within 1 hour", `${data.crm.within1h} / ${data.crm.dialledContacts}`],
+          ["Appointments booked", num(data.crm.appointments)],
+          ["Upcoming appointments", num(data.crm.upcomingAppointments)],
+          ["Opportunities open", num(data.crm.opportunities)],
+          ["Open pipeline value", money(data.crm.openValue, cur)],
+        ]
+      : [
+          ["Leads linked to CRM", `${num(data.sync.linkedToGhl)} / ${num(data.leadQuality.total)}`],
+          ["Link rate", `${data.sync.linkRate.toFixed(0)}%`],
+          ["Contacts", num(data.crm.contacts)],
+          ["Notes logged", num(data.crm.notes)],
+          ["Median speed to first touch", `${data.crm.medianFirstTouchHours.toFixed(1)}h`],
+          ["Touched within 1h", `${data.crm.within1h} / ${data.crm.dialledContacts}`],
+          ["Appointments", num(data.crm.appointments)],
+          ["Outcome coverage", `${data.crm.outcomeCoverage.toFixed(0)}%`],
+        ],
+  );
   para(story.crm_ops);
 
-  if (data.sync.topErrors.length) {
+  if (!forClient && data.sync.topErrors.length) {
     table(
       "Sync failures",
       colsFrom([["Error", 0.78], ["Leads", 0.22, "right"]]),
@@ -365,7 +450,7 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
       () => RED,
     );
   }
-  if (data.deliveryGaps.length) {
+  if (!forClient && data.deliveryGaps.length) {
     table(
       "Lead delivery gaps",
       colsFrom([["From", 0.4], ["To", 0.4], ["Hours", 0.2, "right"]]),
@@ -391,41 +476,63 @@ export async function buildAuditPdf(data: AuditData, story: AuditNarrative): Pro
     );
   }
   if (data.optimization.recent.length) {
+    const optRows = forClient
+      ? data.optimization.recent.filter((a) => String(a.status).toLowerCase() !== "failed")
+      : data.optimization.recent;
     table(
-      "Optimization log",
-      colsFrom([["Date", 0.16], ["Action", 0.24], ["Detail", 0.44], ["Result", 0.16]]),
-      data.optimization.recent.map((a) => [pretty(a.date), a.action, a.detail, String(a.status)]),
-      `${data.optimization.actions} actions in window, ${data.optimization.failed} failed`,
+      forClient ? "What we changed in your account" : "Optimization log",
+      forClient
+        ? colsFrom([["Date", 0.18], ["Change", 0.28], ["Detail", 0.54]])
+        : colsFrom([["Date", 0.16], ["Action", 0.24], ["Detail", 0.44], ["Result", 0.16]]),
+      optRows.map((a) =>
+        forClient
+          ? [pretty(a.date), a.action, a.detail]
+          : [pretty(a.date), a.action, a.detail, String(a.status)],
+      ),
+      forClient
+        ? `${optRows.length} optimizations made during the period`
+        : `${data.optimization.actions} actions in window, ${data.optimization.failed} failed`,
     );
   }
 
   // --------------------------------------------------------- defect table ---
   newPage();
-  table(
-    "Defect register",
-    colsFrom([["ID", 0.07], ["Defect", 0.32], ["Sev", 0.1], ["Evidence", 0.51]]),
-    data.defects.map((d) => [d.id, d.title, d.severity, d.evidence]),
-    "Machine-detected from platform data",
-    (r) => sevColor(r[2]),
-  );
+  if (!forClient) {
+    table(
+      "Defect register",
+      colsFrom([["ID", 0.07], ["Defect", 0.32], ["Sev", 0.1], ["Evidence", 0.51]]),
+      data.defects.map((d) => [d.id, d.title, d.severity, d.evidence]),
+      "Machine-detected from platform data",
+      (r) => sevColor(r[2]),
+    );
+  }
 
   table(
-    "Recommended actions, in order",
-    colsFrom([["When", 0.16], ["Owner", 0.2], ["Action", 0.64]]),
-    story.action_plan.map((a) => [a.when, a.owner_role, a.task]),
+    forClient ? "What happens next" : "Recommended actions, in order",
+    forClient
+      ? colsFrom([["When", 0.2], ["Owner", 0.2], ["Action", 0.6]])
+      : colsFrom([["When", 0.16], ["Owner", 0.2], ["Action", 0.64]]),
+    story.action_plan.map((a) => [
+      a.when,
+      forClient ? (/client/i.test(a.owner_role) ? "Your team" : "Our team") : a.owner_role,
+      a.task,
+    ]),
   );
 
   // ------------------------------------------------ headers & footers -------
   const pages = pdf.getPages();
   pages.forEach((p, i) => {
     if (!meta[i]?.cover) {
-      p.drawText(san(`${title} - Account audit`), { x: M, y: H - 40, size: 8.5, font: bold, color: MUTED });
+      p.drawText(san(`${title} - ${forClient ? "Performance review" : "Account audit"}`), { x: M, y: H - 40, size: 8.5, font: bold, color: MUTED });
       const per = san(`${data.meta.windowStart} - ${data.meta.windowEnd}`);
       p.drawText(per, { x: W - M - font.widthOfTextAtSize(per, 8.5), y: H - 40, size: 8.5, font, color: MUTED });
       p.drawLine({ start: { x: M, y: H - 48 }, end: { x: W - M, y: H - 48 }, thickness: 0.5, color: LINE });
     }
     p.drawLine({ start: { x: M, y: 42 }, end: { x: W - M, y: 42 }, thickness: 0.5, color: LINE });
-    p.drawText(san(`Generated ${new Date(data.meta.generatedAt).toUTCString()} - internal`), { x: M, y: 28, size: 7.5, font, color: MUTED });
+    p.drawText(
+      san(`Generated ${new Date(data.meta.generatedAt).toUTCString()}${forClient ? "" : " - internal"}`),
+      { x: M, y: 28, size: 7.5, font, color: MUTED },
+    );
     const pg = san(`Page ${i + 1} of ${pages.length}`);
     p.drawText(pg, { x: W - M - font.widthOfTextAtSize(pg, 7.5), y: 28, size: 7.5, font, color: MUTED });
   });

@@ -13,6 +13,23 @@ type Result = {
 
 const WINDOWS = [30, 60, 90, 180] as const;
 
+type Audience = "agency" | "client";
+
+const AUDIENCES: { key: Audience; label: string; blurb: string }[] = [
+  {
+    key: "agency",
+    label: "Agency (internal)",
+    blurb:
+      "Analyst-style audit: CPL decomposition, compliance flags, CRM sync integrity, delivery gaps, defect register and owner-assigned actions.",
+  },
+  {
+    key: "client",
+    label: "Client-facing",
+    blurb:
+      "Plain-English performance review: results, lead quality and form answers, follow-up speed and pipeline, what we changed, and what happens next. No internal tooling or defect detail.",
+  },
+];
+
 /** Generates the analyst-style account audit PDF and opens tasks for each finding. */
 export function ClientAuditReportPanel({
   clientId,
@@ -23,15 +40,18 @@ export function ClientAuditReportPanel({
 }) {
   const [loading, setLoading] = useState(false);
   const [days, setDays] = useState<number>(90);
+  const [audience, setAudience] = useState<Audience>("agency");
   const [createTasks, setCreateTasks] = useState(true);
   const [result, setResult] = useState<Result | null>(null);
+
+  const forClient = audience === "client";
 
   async function run() {
     setLoading(true);
     setResult(null);
     try {
       const { data, error } = await supabase.functions.invoke<any>("client-audit-generate", {
-        body: { clientId, daysWindow: days, createTasks },
+        body: { clientId, daysWindow: days, audience, createTasks: forClient ? false : createTasks },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -43,7 +63,9 @@ export function ClientAuditReportPanel({
         summary: data.summary ?? "",
       });
       toast.success(
-        `Audit ready — ${data.findings ?? 0} findings${data.tasksCreated ? `, ${data.tasksCreated} tasks assigned` : ""}`,
+        `${forClient ? "Client review" : "Audit"} ready — ${data.findings ?? 0} ${
+          forClient ? "priorities" : "findings"
+        }${data.tasksCreated ? `, ${data.tasksCreated} tasks assigned` : ""}`,
       );
       if (data.pdfUrl) window.open(data.pdfUrl, "_blank", "noopener");
     } catch (e: any) {
@@ -61,16 +83,30 @@ export function ClientAuditReportPanel({
           <FileSearch className="h-5 w-5" />
         </div>
         <div className="flex-1">
-          <h3 className="text-base font-semibold text-foreground">Account audit</h3>
+          <h3 className="text-base font-semibold text-foreground">
+            {forClient ? "Client performance review" : "Account audit"}
+          </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            A written audit of {clientName || "this client"} — paid media and CPL decomposition, compliance
-            flags, lead quality and form design, CRM sync integrity, speed to first contact, pipeline and
-            appointment discipline — with a ranked findings list and defect register, rendered as a branded PDF.
+            A written report on {clientName || "this client"}, rendered as a branded PDF.{" "}
+            {AUDIENCES.find((a) => a.key === audience)?.blurb}
           </p>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-md border border-border overflow-hidden">
+          {AUDIENCES.map((a) => (
+            <button
+              key={a.key}
+              onClick={() => setAudience(a.key)}
+              className={`px-3 py-1.5 text-xs font-medium ${
+                audience === a.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
         <div className="inline-flex rounded-md border border-border overflow-hidden">
           {WINDOWS.map((w) => (
             <button
@@ -84,15 +120,17 @@ export function ClientAuditReportPanel({
             </button>
           ))}
         </div>
-        <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={createTasks}
-            onChange={(e) => setCreateTasks(e.target.checked)}
-            className="h-4 w-4 rounded border-border"
-          />
-          Assign tasks from findings
-        </label>
+        {!forClient && (
+          <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={createTasks}
+              onChange={(e) => setCreateTasks(e.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            Assign tasks from findings
+          </label>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
@@ -102,7 +140,9 @@ export function ClientAuditReportPanel({
           className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSearch className="h-4 w-4" />}
-          {loading ? "Running audit…" : "Run account audit"}
+          {loading
+            ? forClient ? "Writing review…" : "Running audit…"
+            : forClient ? "Generate client review" : "Run account audit"}
         </button>
         {result?.pdfUrl && (
           <a
@@ -126,9 +166,15 @@ export function ClientAuditReportPanel({
       {result && (
         <div className="rounded-md border border-border bg-muted/40 p-3 space-y-2">
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-            <span><strong className="text-foreground">{result.findings}</strong> findings</span>
-            <span><strong className="text-foreground">{result.defects}</strong> defects detected</span>
-            <span><strong className="text-foreground">{result.tasksCreated}</strong> tasks assigned</span>
+            <span>
+              <strong className="text-foreground">{result.findings}</strong> {forClient ? "priorities" : "findings"}
+            </span>
+            {!forClient && (
+              <>
+                <span><strong className="text-foreground">{result.defects}</strong> defects detected</span>
+                <span><strong className="text-foreground">{result.tasksCreated}</strong> tasks assigned</span>
+              </>
+            )}
           </div>
           {result.summary && <p className="text-sm text-foreground">{result.summary}</p>}
         </div>
