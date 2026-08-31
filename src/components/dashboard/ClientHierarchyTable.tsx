@@ -51,7 +51,7 @@ import { useCustomKpis, useLatestKpiEvaluations } from "@/hooks/useCustomKpis";
 import { useChurnRisks } from "@/hooks/useChurnRisk";
 import { ChurnRiskBadge } from "./ChurnRiskBadge";
 import { EntityChartsDrawer, type EntityLevel } from "./EntityChartsDrawer";
-import { clientBrandName, clientContactName } from "@/lib/clientName";
+import { clientBrandName, clientContactName, clientSearchHaystack } from "@/lib/clientName";
 
 const TABLE_KEY = "client_hierarchy";
 
@@ -373,9 +373,7 @@ export function ClientHierarchyTable() {
         return (
           c.name.toLowerCase().includes(s) ||
           (c.brand || "").toLowerCase().includes(s) ||
-          `${(cl as any)?.name ?? ""} ${(cl as any)?.brand ?? ""} ${(cl as any)?.accountName ?? ""} ${(cl as any)?.ghlName ?? ""}`
-            .toLowerCase()
-            .includes(s)
+          (cl ? clientSearchHaystack(cl).includes(s) : false)
         );
 
       });
@@ -452,8 +450,7 @@ export function ClientHierarchyTable() {
     const filtered = base.filter((c) => {
       const archived = archivedSet.has(`client:${c.id}`);
       if (q) {
-        const hay = `${c.name ?? ""} ${c.brand ?? ""} ${(c as any).accountName ?? ""} ${(c as any).ghlName ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
+        if (!clientSearchHaystack(c).includes(q)) return false;
       }
       if (showArchived) {
         // Archive view: archived clients, plus clients that still own an

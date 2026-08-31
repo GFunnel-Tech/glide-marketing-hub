@@ -27,7 +27,7 @@ import { useClientPath } from "@/lib/clientPath";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Client } from "@/data/mockData";
-import { clientDisplayName } from "@/lib/clientName";
+import { clientDisplayName, clientSearchHaystack } from "@/lib/clientName";
 
 type StatusFilter = "ALL" | "NEW" | "GREEN" | "YELLOW" | "RED" | "BLOCKED";
 type Channel = "all" | "meta" | "google" | "tiktok" | "linkedin";
@@ -409,9 +409,7 @@ export function ClientTable() {
     }
     if (search) {
       const s = search.toLowerCase();
-      list = list.filter((c: any) =>
-        `${c.name ?? ""} ${c.brand ?? ""} ${c.accountName ?? ""} ${c.ghlName ?? ""}`.toLowerCase().includes(s)
-      );
+      list = list.filter((c: any) => clientSearchHaystack(c).includes(s));
     }
 
     const sorted = [...list].sort((a, b) => {
