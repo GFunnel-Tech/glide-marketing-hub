@@ -110,6 +110,7 @@ export function ClientAuditExportPanel({
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [purging, setPurging] = useState(false);
 
   async function loadHistory() {
     if (!workspaceId) return;
