@@ -130,7 +130,7 @@ export default function Auth() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary text-primary-foreground font-bold text-xl shadow-glow">
-            M
+            G
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Glide Media</h1>
           <p className="mt-2 text-sm text-muted-foreground">
