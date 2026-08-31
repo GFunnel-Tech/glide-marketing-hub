@@ -47,8 +47,8 @@ const FIXES: Record<string, Fix> = {
     tone: "bad",
     summary: "If the Meta app is still in Development mode, Facebook only grants ads permissions to app Admins, Developers, or Testers. Facebook often does not show a bell notification for tester invites.",
     steps: [
-      { text: "App admin: open Meta for Developers → My Apps → Meta Hub → App roles → Roles, then add this Facebook user as Developer or Tester.", href: META_DEVELOPER_APPS_URL },
-      { text: "User: if no notification appears, open Facebook Settings → Apps and Websites, then scroll to Requests and accept the Meta Hub invite.", href: TESTER_ACCEPT_URL },
+      { text: "App admin: open Meta for Developers → My Apps → Glide Media → App roles → Roles, then add this Facebook user as Developer or Tester.", href: META_DEVELOPER_APPS_URL },
+      { text: "User: if no notification appears, open Facebook Settings → Apps and Websites, then scroll to Requests and accept the Glide Media invite.", href: TESTER_ACCEPT_URL },
       { text: "After accepting, click Connect with Meta again and keep every ads permission enabled on the consent screen." },
       { text: "Or switch to the Manual access token flow — System User tokens bypass tester invitations entirely." },
     ],
@@ -80,8 +80,8 @@ const FIXES: Record<string, Fix> = {
     summary: "The System User can't mint a token until the app is assigned.",
     steps: [
       { text: "Open Business Settings → Apps and click 'Add → Connect an app ID'.", href: "https://business.facebook.com/settings/apps" },
-      { text: <>Paste the Meta Hub App ID: <span className="font-mono">{APP_ID}</span></> },
-      { text: "Open the System User → Add Assets → Apps → pick Meta Hub → enable Develop app + Manage app." },
+      { text: <>Paste the Glide Media App ID: <span className="font-mono">{APP_ID}</span></> },
+      { text: "Open the System User → Add Assets → Apps → pick Glide Media → enable Develop app + Manage app." },
       { text: "Reload the System Users page — Generate New Token is now active." },
     ],
   },
@@ -156,7 +156,7 @@ const FIXES: Record<string, Fix> = {
     summary: "App Access Tokens (APP_ID|APP_SECRET) and Page tokens can't read ad data.",
     steps: [
       { text: "Generate a System User token instead — Business Settings → Users → System Users → your user → Generate New Token.", href: "https://business.facebook.com/settings/system-users" },
-      { text: "Or use a User token from Graph API Explorer with the Meta Hub app selected.", href: `https://developers.facebook.com/tools/explorer/${APP_ID}/` },
+      { text: "Or use a User token from Graph API Explorer with the Glide Media app selected.", href: `https://developers.facebook.com/tools/explorer/${APP_ID}/` },
     ],
   },
   syncWorksOnceThenFails: {
@@ -249,7 +249,7 @@ const NODES: Record<string, Node> = {
     question: "What exactly is wrong on the Generate Token screen?",
     options: [
       { id: "greyed", label: "'Generate New Token' button is greyed out", fix: FIXES.manualGenerateGreyed },
-      { id: "no-app", label: "Meta Hub doesn't appear in the app dropdown", fix: FIXES.manualGenerateGreyed },
+      { id: "no-app", label: "Glide Media doesn't appear in the app dropdown", fix: FIXES.manualGenerateGreyed },
       { id: "scopes", label: "Some scopes are greyed out / unavailable", fix: FIXES.manualVerifyFailsPerms },
       { id: "wrong-type", label: "I generated an App token by accident", fix: FIXES.manualWrongTokenType },
     ],

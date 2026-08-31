@@ -230,7 +230,7 @@ export default function Audiences() {
           <TabsContent value="audiences" className="space-y-4 mt-4">
             <div className="flex flex-wrap gap-2">
               <Button size="sm" onClick={() => openDlg("upload")}><Upload className="h-3.5 w-3.5 mr-1.5" />Upload customer list</Button>
-              <Button size="sm" variant="outline" onClick={() => openDlg("leads")}><Sparkles className="h-3.5 w-3.5 mr-1.5" />From Metahub leads</Button>
+              <Button size="sm" variant="outline" onClick={() => openDlg("leads")}><Sparkles className="h-3.5 w-3.5 mr-1.5" />From Glide Media leads</Button>
               <Button size="sm" variant="outline" onClick={() => openDlg("website")}><Globe className="h-3.5 w-3.5 mr-1.5" />Website (pixel)</Button>
               <Button size="sm" variant="outline" onClick={() => openDlg("lookalike")}><Copy className="h-3.5 w-3.5 mr-1.5" />Lookalike</Button>
               <Button size="sm" variant="ghost" onClick={refreshAudiences}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Refresh</Button>
@@ -339,7 +339,7 @@ export default function Audiences() {
 
       <Dialog open={dlg === "leads"} onOpenChange={(o) => !o && setDlg(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Audience from Metahub leads</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Audience from Glide Media leads</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label className="text-xs">Audience name</Label><Input value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} /></div>
             <div>

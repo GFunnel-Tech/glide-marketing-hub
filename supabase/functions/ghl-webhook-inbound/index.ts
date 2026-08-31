@@ -1,5 +1,5 @@
 // Inbound webhook receiver for GoHighLevel.
-// GHL workflows POST status changes here so MetaHub can update lead stages.
+// GHL workflows POST status changes here so Glide Media can update lead stages.
 //
 // URL format (paste in GHL workflow):
 //   https://<project>.supabase.co/functions/v1/ghl-webhook-inbound?secret=<workspace_secret>

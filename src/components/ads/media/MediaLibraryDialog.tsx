@@ -24,7 +24,7 @@ interface Props {
 const SOURCE_LABEL: Record<MediaSource, string> = {
   ghl: "Sub-account library",
   meta: "Meta ad account",
-  metahub: "Metahub uploads",
+  metahub: "Glide Media uploads",
 };
 
 export function MediaLibraryDialog({ open, onOpenChange, clientId, remaining, onAdd, onEditInStudio }: Props) {
@@ -99,7 +99,7 @@ export function MediaLibraryDialog({ open, onOpenChange, clientId, remaining, on
         <DialogHeader>
           <DialogTitle>Media library</DialogTitle>
           <DialogDescription>
-            Pull creative straight from the client's GHL sub-account, their Meta ad account, or Metahub uploads.
+            Pull creative straight from the client's GHL sub-account, their Meta ad account, or Glide Media uploads.
           </DialogDescription>
         </DialogHeader>
 

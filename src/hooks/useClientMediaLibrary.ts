@@ -44,7 +44,7 @@ export function useClientMediaLibrary(
   });
 }
 
-/** Copies remote library media into Metahub storage so the editor can use it without CORS issues. */
+/** Copies remote library media into Glide Media storage so the editor can use it without CORS issues. */
 export async function importLibraryAssets(
   workspaceId: string,
   assets: { url: string; name?: string; type?: "image" | "video" }[],
