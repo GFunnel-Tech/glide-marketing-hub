@@ -324,15 +324,22 @@ export function ClientAuditExportPanel({
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <a
-                          href={`${supabase.supabaseUrl}/storage/v1/object/sign/client-reports/${encodeURIComponent(a.storage_path)}`}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          onClick={async () => {
+                            const { data, error } = await supabase.storage
+                              .from("client-reports")
+                              .createSignedUrl(a.storage_path, 60 * 60);
+                            if (error || !data?.signedUrl) {
+                              toast.error("Could not create download link");
+                              return;
+                            }
+                            window.open(data.signedUrl, "_blank", "noopener");
+                          }}
                           className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                           title="Download"
                         >
                           <Download className="h-4 w-4" />
-                        </a>
+                        </button>
                         <button
                           onClick={() => deleteArtifact(a.id, a.storage_path)}
                           disabled={togglingId === a.id}
