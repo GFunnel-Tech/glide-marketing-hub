@@ -190,6 +190,8 @@ Deno.serve(async (req) => {
     // "manifest" = workspace + clients + the table plan; "tables" = a slice of tables.
     const mode: string = body?.mode === "tables" ? "tables" : "manifest";
     const requested: string[] = Array.isArray(body?.tables) ? body.tables : [];
+    const clientScope: number | null =
+      body?.clientId != null && Number.isFinite(Number(body.clientId)) ? Number(body.clientId) : null;
     if (!workspaceId) return json({ error: "workspaceId required" }, 400);
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
