@@ -5524,6 +5524,7 @@ export type Database = {
           email: string | null
           gfunnel_user_profile_id: string | null
           id: string
+          must_change_password: boolean
           position: string | null
           updated_at: string
         }
@@ -5535,6 +5536,7 @@ export type Database = {
           email?: string | null
           gfunnel_user_profile_id?: string | null
           id: string
+          must_change_password?: boolean
           position?: string | null
           updated_at?: string
         }
@@ -5546,6 +5548,7 @@ export type Database = {
           email?: string | null
           gfunnel_user_profile_id?: string | null
           id?: string
+          must_change_password?: boolean
           position?: string | null
           updated_at?: string
         }
