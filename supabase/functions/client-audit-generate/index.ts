@@ -341,6 +341,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    await admin.from("client_audit_artifacts").insert({
+      workspace_id: client.workspace_id,
+      client_id: clientId,
+      kind: "audit_pdf",
+      audience,
+      storage_path: path,
+      file_name: fileName,
+      days_window: daysWindow,
+      findings: story.findings.length,
+      defects: data.defects.length,
+      tasks_created: tasksCreated,
+      summary: story.executive_summary,
+      is_permanent: false,
+      created_by: userId,
+    });
+
     await admin.from("clients").update({ last_audit: new Date().toISOString() }).eq("id", clientId);
 
     return json({
