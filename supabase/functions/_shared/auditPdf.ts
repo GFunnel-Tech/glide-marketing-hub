@@ -24,6 +24,15 @@ export interface AuditNarrative {
 const BRAND = rgb(0.145, 0.388, 0.921);
 const BRAND_DARK = rgb(0.08, 0.22, 0.55);
 const INK = rgb(0.06, 0.09, 0.16);
+
+/** Form keys arrive as snake_case slugs; make them readable. */
+const humanize = (s: string) =>
+  String(s ?? "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^last question:?\s*/i, "")
+    .trim()
+    .replace(/^./, (c) => c.toUpperCase());
 const MUTED = rgb(0.42, 0.45, 0.52);
 const LINE = rgb(0.89, 0.91, 0.94);
 const SOFT = rgb(0.968, 0.975, 0.988);
