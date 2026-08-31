@@ -409,9 +409,7 @@ export function ClientTable() {
     }
     if (search) {
       const s = search.toLowerCase();
-      list = list.filter((c: any) =>
-        `${c.name ?? ""} ${c.brand ?? ""} ${c.accountName ?? ""} ${c.ghlName ?? ""}`.toLowerCase().includes(s)
-      );
+      list = list.filter((c: any) => clientSearchHaystack(c).includes(s));
     }
 
     const sorted = [...list].sort((a, b) => {
