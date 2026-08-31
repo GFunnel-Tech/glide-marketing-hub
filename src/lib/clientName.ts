@@ -30,6 +30,30 @@ export function clientContactName(c: ClientLike): string {
   return person;
 }
 
+/**
+ * Everything a user might type when looking for a client: brand, business
+ * name, the contact person, the GHL sub-account name, email and location id.
+ */
+export function clientSearchHaystack(c: any): string {
+  return [
+    c?.name,
+    c?.brand,
+    c?.contactName,
+    c?.contact_name,
+    c?.accountName,
+    c?.account_name,
+    c?.ghlName,
+    c?.ghl_name,
+    c?.email,
+    c?.ghlLocationId,
+    c?.ghl_location_id,
+    clientDisplayName(c ?? {}),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
 /** "Brand (First Last)" — the canonical client label. */
 export function clientDisplayName(c: ClientLike): string {
   const brand = clientBrandName(c);
