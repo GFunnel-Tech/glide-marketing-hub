@@ -297,11 +297,23 @@ export function ClientAuditExportPanel({
         </button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <History className="h-5 w-5 text-primary" />
-            Audit export history
-          </DialogTitle>
+        <DialogHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              Audit export history
+            </DialogTitle>
+          </div>
+          <button
+            type="button"
+            onClick={purgeExpired}
+            disabled={purging}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 transition-colors"
+            title="Remove expired exports from storage and history"
+          >
+            {purging ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Purge expired
+          </button>
         </DialogHeader>
         <p className="text-sm text-muted-foreground -mt-2">
           Items are kept for 3 months unless marked permanent. Permanent exports are kept indefinitely.
