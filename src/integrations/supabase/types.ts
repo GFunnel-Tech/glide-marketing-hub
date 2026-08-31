@@ -7175,6 +7175,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      cleanup_expired_audit_artifacts_db: { Args: never; Returns: number }
       client_red_kpis: { Args: { _client_id: number }; Returns: Json }
       compute_client_status: { Args: { _client_id: number }; Returns: string }
       detect_client_anomalies: { Args: { _client_id: number }; Returns: Json }
