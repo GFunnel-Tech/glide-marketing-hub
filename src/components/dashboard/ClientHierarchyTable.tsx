@@ -450,8 +450,7 @@ export function ClientHierarchyTable() {
     const filtered = base.filter((c) => {
       const archived = archivedSet.has(`client:${c.id}`);
       if (q) {
-        const hay = `${c.name ?? ""} ${c.brand ?? ""} ${(c as any).accountName ?? ""} ${(c as any).ghlName ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
+        if (!clientSearchHaystack(c).includes(q)) return false;
       }
       if (showArchived) {
         // Archive view: archived clients, plus clients that still own an
