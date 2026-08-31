@@ -166,9 +166,15 @@ export function ClientAuditReportPanel({
       {result && (
         <div className="rounded-md border border-border bg-muted/40 p-3 space-y-2">
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-            <span><strong className="text-foreground">{result.findings}</strong> findings</span>
-            <span><strong className="text-foreground">{result.defects}</strong> defects detected</span>
-            <span><strong className="text-foreground">{result.tasksCreated}</strong> tasks assigned</span>
+            <span>
+              <strong className="text-foreground">{result.findings}</strong> {forClient ? "priorities" : "findings"}
+            </span>
+            {!forClient && (
+              <>
+                <span><strong className="text-foreground">{result.defects}</strong> defects detected</span>
+                <span><strong className="text-foreground">{result.tasksCreated}</strong> tasks assigned</span>
+              </>
+            )}
           </div>
           {result.summary && <p className="text-sm text-foreground">{result.summary}</p>}
         </div>
