@@ -284,13 +284,30 @@ Deno.serve(async (req) => {
     const bytes = await buildAuditPdf(data, story, audience);
     const stamp = new Date().toISOString().slice(0, 10);
     const prefix = audience === "client" ? "review" : "audit";
-    const path = `${client.workspace_id}/${clientId}/${prefix}_${stamp}_${crypto.randomUUID().slice(0, 8)}.pdf`;
+    const fileName = `${prefix}_${stamp}_${crypto.randomUUID().slice(0, 8)}.pdf`;
+    const path = `${client.workspace_id}/${clientId}/${fileName}`;
     const up = await admin.storage.from("client-reports")
       .upload(path, bytes, { contentType: "application/pdf", upsert: true });
     if (up.error) return json({ error: `PDF upload failed: ${up.error.message}` }, 500);
     const { data: signed } = await admin.storage.from("client-reports")
       .createSignedUrl(path, 60 * 60 * 24 * 365);
     const pdfUrl = signed?.signedUrl ?? null;
+
+    await admin.from("client_audit_artifacts").insert({
+      workspace_id: client.workspace_id,
+      client_id: clientId,
+      kind: "audit_pdf",
+      audience,
+      storage_path: path,
+      file_name: fileName,
+      days_window: daysWindow,
+      findings: story.findings.length,
+      defects: data.defects.length,
+      tasks_created: 0,
+      summary: story.executive_summary,
+      is_permanent: false,
+      created_by: userId,
+    });
 
     // ---- assigned tasks from findings ---------------------------------------
     let tasksCreated = 0;
