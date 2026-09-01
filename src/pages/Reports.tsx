@@ -236,9 +236,14 @@ export default function Reports() {
             Scheduled PDF performance reports, generated and emailed to your clients.
           </p>
         </div>
-        <Button onClick={openNew} className="gap-1.5">
-          <Plus className="h-4 w-4" /> New schedule
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={openOneOff} className="gap-1.5">
+            <FileText className="h-4 w-4" /> Generate report
+          </Button>
+          <Button onClick={openNew} className="gap-1.5">
+            <Plus className="h-4 w-4" /> New schedule
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
