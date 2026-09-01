@@ -92,6 +92,14 @@ export default function Reports() {
 
   const [draft, setDraft] = useState<DraftSchedule | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [oneOff, setOneOff] = useState<{
+    client_id: string;
+    periodStart: string;
+    periodEnd: string;
+    recipients: string;
+    send: boolean;
+  } | null>(null);
+
 
   const clientName = useMemo(() => {
     const map = new Map<number, string>();
@@ -109,6 +117,48 @@ export default function Reports() {
   );
 
   const openNew = () => setDraft({ ...emptyDraft });
+
+  const openOneOff = () => {
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(end.getDate() - 30);
+    setOneOff({
+      client_id: "",
+      periodStart: start.toISOString().slice(0, 10),
+      periodEnd: end.toISOString().slice(0, 10),
+      recipients: "",
+      send: false,
+    });
+  };
+
+  const runOneOff = async () => {
+    if (!oneOff?.client_id) return toast.error("Pick a client");
+    const recipients = oneOff.recipients
+      .split(/[,\s]+/)
+      .map((e) => e.trim())
+      .filter((e) => e.includes("@"));
+    if (oneOff.send && recipients.length === 0) return toast.error("Add at least one recipient email");
+    setBusyId("one-off");
+    try {
+      const res = await generate.mutateAsync({
+        clientId: Number(oneOff.client_id),
+        periodStart: oneOff.periodStart,
+        periodEnd: oneOff.periodEnd,
+        recipients,
+        send: oneOff.send,
+      });
+      if (res?.delivery && res.delivery.ok === false) {
+        toast.warning(`Report created, but email failed: ${res.delivery.error}`);
+      } else {
+        toast.success(oneOff.send ? "Report generated and emailed" : "Report generated");
+      }
+      setOneOff(null);
+    } catch (e: any) {
+      toast.error(e.message ?? "Generation failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
   const openEdit = (s: ReportSchedule) =>
     setDraft({
       id: s.id,
@@ -186,9 +236,14 @@ export default function Reports() {
             Scheduled PDF performance reports, generated and emailed to your clients.
           </p>
         </div>
-        <Button onClick={openNew} className="gap-1.5">
-          <Plus className="h-4 w-4" /> New schedule
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={openOneOff} className="gap-1.5">
+            <FileText className="h-4 w-4" /> Generate report
+          </Button>
+          <Button onClick={openNew} className="gap-1.5">
+            <Plus className="h-4 w-4" /> New schedule
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -481,6 +536,80 @@ export default function Reports() {
             <Button onClick={handleSave} disabled={saveSchedule.isPending}>
               {saveSchedule.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               Save schedule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!oneOff} onOpenChange={(o) => !o && setOneOff(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Generate a report now</DialogTitle>
+          </DialogHeader>
+          {oneOff && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Client</Label>
+                <Select value={oneOff.client_id} onValueChange={(v) => setOneOff({ ...oneOff, client_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {(clients as any[]).map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.brand || c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Period start</Label>
+                  <Input
+                    type="date"
+                    value={oneOff.periodStart}
+                    onChange={(e) => setOneOff({ ...oneOff, periodStart: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Period end</Label>
+                  <Input
+                    type="date"
+                    value={oneOff.periodEnd}
+                    onChange={(e) => setOneOff({ ...oneOff, periodEnd: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Recipients (optional)</Label>
+                <Input
+                  placeholder="client@example.com, team@example.com"
+                  value={oneOff.recipients}
+                  onChange={(e) => setOneOff({ ...oneOff, recipients: e.target.value })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Email it right away</p>
+                  <p className="text-xs text-muted-foreground">
+                    Off = just create the PDF and share link; you can send it later.
+                  </p>
+                </div>
+                <Switch checked={oneOff.send} onCheckedChange={(send) => setOneOff({ ...oneOff, send })} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOneOff(null)}>
+              Cancel
+            </Button>
+            <Button onClick={runOneOff} disabled={busyId === "one-off"}>
+              {busyId === "one-off" && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Generate report
             </Button>
           </DialogFooter>
         </DialogContent>
