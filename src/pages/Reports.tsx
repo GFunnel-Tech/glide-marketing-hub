@@ -117,6 +117,48 @@ export default function Reports() {
   );
 
   const openNew = () => setDraft({ ...emptyDraft });
+
+  const openOneOff = () => {
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(end.getDate() - 30);
+    setOneOff({
+      client_id: "",
+      periodStart: start.toISOString().slice(0, 10),
+      periodEnd: end.toISOString().slice(0, 10),
+      recipients: "",
+      send: false,
+    });
+  };
+
+  const runOneOff = async () => {
+    if (!oneOff?.client_id) return toast.error("Pick a client");
+    const recipients = oneOff.recipients
+      .split(/[,\s]+/)
+      .map((e) => e.trim())
+      .filter((e) => e.includes("@"));
+    if (oneOff.send && recipients.length === 0) return toast.error("Add at least one recipient email");
+    setBusyId("one-off");
+    try {
+      const res = await generate.mutateAsync({
+        clientId: Number(oneOff.client_id),
+        periodStart: oneOff.periodStart,
+        periodEnd: oneOff.periodEnd,
+        recipients,
+        send: oneOff.send,
+      });
+      if (res?.delivery && res.delivery.ok === false) {
+        toast.warning(`Report created, but email failed: ${res.delivery.error}`);
+      } else {
+        toast.success(oneOff.send ? "Report generated and emailed" : "Report generated");
+      }
+      setOneOff(null);
+    } catch (e: any) {
+      toast.error(e.message ?? "Generation failed");
+    } finally {
+      setBusyId(null);
+    }
+  };
   const openEdit = (s: ReportSchedule) =>
     setDraft({
       id: s.id,
