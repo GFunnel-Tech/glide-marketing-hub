@@ -2,11 +2,30 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
+export type ClientLifecycle = "prospect" | "client" | "churned";
+
 export interface DbClient {
   id: number;
   name: string;
   brand: string;
   contact_name?: string | null;
+
+  // Pre-sale vs paying vs former. Rows default to "client" in the database, so
+  // anything predating the prospect model keeps its existing behaviour.
+  website?: string | null;
+  vertical?: string | null;
+
+  lifecycle?: ClientLifecycle;
+  decision_maker?: string | null;
+  decision_maker_role?: string | null;
+  decision_maker_email?: string | null;
+  decision_maker_phone?: string | null;
+  relationship_owner?: string | null;
+  warm_path?: string | null;
+  prospect_source?: string | null;
+  converted_at?: string | null;
+  lost_at?: string | null;
+  lost_reason?: string | null;
 
   status: "GREEN" | "YELLOW" | "RED" | "BLOCKED" | "NEW" | "PENDING_APPROVAL" | "SETUP_COMPLETE" | "LAUNCHING" | "LEARNING" | "RELAUNCH" | "PAUSED" | "PENDING_CANCELLATION" | "CANCELLED";
   bm_type: "Own BM" | "Agency BM";
@@ -140,8 +159,26 @@ export function toClient(c: DbClient) {
     ghlLocationId: c.ghl_location_id || null,
     autonomousOptimization: !!(c as any).autonomous_optimization,
     isAgencyAccount: !!c.is_agency_account,
+
+    website: (c as any).website ?? null,
+    vertical: (c as any).vertical ?? null,
+
+    lifecycle: ((c as any).lifecycle ?? "client") as ClientLifecycle,
+    decisionMaker: (c as any).decision_maker ?? null,
+    decisionMakerRole: (c as any).decision_maker_role ?? null,
+    decisionMakerEmail: (c as any).decision_maker_email ?? null,
+    decisionMakerPhone: (c as any).decision_maker_phone ?? null,
+    relationshipOwner: (c as any).relationship_owner ?? null,
+    warmPath: (c as any).warm_path ?? null,
+    prospectSource: (c as any).prospect_source ?? null,
+    convertedAt: (c as any).converted_at ?? null,
+    lostAt: (c as any).lost_at ?? null,
+    lostReason: (c as any).lost_reason ?? null,
   };
 }
+
+/** The shape every client query returns, prospects included. */
+export type Client = ReturnType<typeof toClient>;
 
 export function toCampaign(c: DbCampaign) {
   return {
@@ -196,6 +233,41 @@ async function fetchScoped<T>(table: string, workspaceId: string | null): Promis
   return (data || []) as T[];
 }
 
+// Postgres "undefined_column" — raised while the prospect-model migration has
+// not yet been applied to the environment the app is pointed at.
+const UNDEFINED_COLUMN = "42703";
+
+// Clients are fetched by lifecycle so that pre-sale rows never leak into
+// surfaces that report spend, KPIs or revenue. `null` fetches every lifecycle
+// and is reserved for places that genuinely need the whole book.
+//
+// The lifecycle column is tolerated as absent so that code and migration can
+// deploy in either order: before the migration every row is a paying client,
+// which is exactly how the app behaved beforehand, and nothing can be a
+// prospect yet.
+async function fetchClientsByLifecycle(
+  workspaceId: string | null,
+  lifecycle: ClientLifecycle | null,
+): Promise<DbClient[]> {
+  if (!workspaceId) return [];
+  const base = () =>
+    (supabase as any).from("clients").select("*").eq("workspace_id", workspaceId);
+
+  const q = lifecycle ? base().eq("lifecycle", lifecycle) : base();
+  const { data, error } = await q;
+
+  if (error) {
+    if (error.code === UNDEFINED_COLUMN) {
+      if (lifecycle === "prospect" || lifecycle === "churned") return [];
+      const { data: all, error: allErr } = await base();
+      if (allErr) throw allErr;
+      return (all || []) as DbClient[];
+    }
+    throw error;
+  }
+  return (data || []) as DbClient[];
+}
+
 // Fetch the workspace's GHL sub-account names keyed by location id, so client
 // rows can display the GHL name while remaining searchable by their own name.
 async function fetchGhlNames(workspaceId: string | null): Promise<Record<string, string>> {
@@ -226,14 +298,56 @@ function withGhlName<T extends { ghlLocationId?: string | null; name: string }>(
   };
 }
 
+/**
+ * Paying clients only. Every reporting, billing and KPI surface uses this, so
+ * prospects stay out of portfolio numbers by default rather than by each caller
+ * remembering to filter.
+ */
 export function useClients() {
   const { currentWorkspace } = useWorkspace();
   const wsId = currentWorkspace?.id ?? null;
   return useQuery({
-    queryKey: ["clients", wsId],
+    queryKey: ["clients", wsId, "client"],
     queryFn: async () => {
       const [rows, ghlNames] = await Promise.all([
-        fetchScoped<DbClient>("clients", wsId),
+        fetchClientsByLifecycle(wsId, "client"),
+        fetchGhlNames(wsId),
+      ]);
+      return rows.map((r) => withGhlName(toClient(r), ghlNames));
+    },
+    enabled: !!wsId,
+  });
+}
+
+/** Pre-sale rows only — the agency's own pipeline. */
+export function useProspects() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
+  return useQuery({
+    queryKey: ["clients", wsId, "prospect"],
+    queryFn: async () => {
+      const [rows, ghlNames] = await Promise.all([
+        fetchClientsByLifecycle(wsId, "prospect"),
+        fetchGhlNames(wsId),
+      ]);
+      return rows.map((r) => withGhlName(toClient(r), ghlNames));
+    },
+    enabled: !!wsId,
+  });
+}
+
+/**
+ * Every lifecycle. Only for surfaces that must resolve a client by id
+ * regardless of sale stage — lookups, admin tooling, impersonation.
+ */
+export function useAllClients() {
+  const { currentWorkspace } = useWorkspace();
+  const wsId = currentWorkspace?.id ?? null;
+  return useQuery({
+    queryKey: ["clients", wsId, "all"],
+    queryFn: async () => {
+      const [rows, ghlNames] = await Promise.all([
+        fetchClientsByLifecycle(wsId, null),
         fetchGhlNames(wsId),
       ]);
       return rows.map((r) => withGhlName(toClient(r), ghlNames));
