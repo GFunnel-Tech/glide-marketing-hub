@@ -15,6 +15,10 @@ export interface DbClient {
   website?: string | null;
   vertical?: string | null;
 
+  pipeline_id?: string | null;
+  pipeline_stage_id?: string | null;
+  stage_entered_at?: string | null;
+
   lifecycle?: ClientLifecycle;
   decision_maker?: string | null;
   decision_maker_role?: string | null;
@@ -162,6 +166,10 @@ export function toClient(c: DbClient) {
 
     website: (c as any).website ?? null,
     vertical: (c as any).vertical ?? null,
+
+    pipelineId: (c as any).pipeline_id ?? null,
+    pipelineStageId: (c as any).pipeline_stage_id ?? null,
+    stageEnteredAt: (c as any).stage_entered_at ?? null,
 
     lifecycle: ((c as any).lifecycle ?? "client") as ClientLifecycle,
     decisionMaker: (c as any).decision_maker ?? null,

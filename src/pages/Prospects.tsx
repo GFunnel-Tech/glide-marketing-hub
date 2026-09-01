@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,12 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useProspects, type Client } from "@/hooks/useDatabase";
 import { useConvertProspect, useMarkProspectLost } from "@/hooks/useProspectActions";
+import { usePipelines, useSeedPipelines } from "@/hooks/usePipelines";
 import NewProspectDialog from "@/components/prospects/NewProspectDialog";
+import { PipelineBoard } from "@/components/prospects/PipelineBoard";
 
 export default function Prospects() {
   const { data: prospects = [], isLoading } = useProspects();
@@ -20,6 +23,26 @@ export default function Prospects() {
   const markLost = useMarkProspectLost();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [q, setQ] = useState("");
+  const { data: pipelines = [] } = usePipelines();
+  const seed = useSeedPipelines();
+  // Controlled, because pipelines arrive after first paint and a defaultValue
+  // would leave the board tab unreachable until a manual click.
+  const [tab, setTab] = useState("list");
+
+  useEffect(() => {
+    if (tab === "list" && pipelines.length > 0) setTab(pipelines[0].id);
+    // Only nudges off the fallback tab; a deliberate choice is never overridden.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pipelines]);
+
+  const onSeed = async () => {
+    try {
+      await seed.mutateAsync();
+      toast.success("Default pipelines loaded");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not load the default pipelines");
+    }
+  };
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -59,12 +82,34 @@ export default function Prospects() {
             from first contact, and keep all of it when they convert.
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New prospect
-        </Button>
+        <div className="flex items-center gap-2">
+          {pipelines.length === 0 && (
+            <Button variant="outline" onClick={onSeed} disabled={seed.isPending}>
+              {seed.isPending ? "Loading\u2026" : "Load default pipelines"}
+            </Button>
+          )}
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New prospect
+          </Button>
+        </div>
       </div>
 
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          {pipelines.map((p) => (
+            <TabsTrigger key={p.id} value={p.id}>{p.name}</TabsTrigger>
+          ))}
+          <TabsTrigger value="list">All prospects</TabsTrigger>
+        </TabsList>
+
+        {pipelines.map((p) => (
+          <TabsContent key={p.id} value={p.id} className="mt-4">
+            <PipelineBoard pipelineId={p.id} prospects={prospects} />
+          </TabsContent>
+        ))}
+
+        <TabsContent value="list" className="mt-4 space-y-6">
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -174,6 +219,8 @@ export default function Prospects() {
           </TableBody>
         </Table>
       </div>
+        </TabsContent>
+      </Tabs>
 
       <NewProspectDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>

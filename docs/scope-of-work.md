@@ -208,12 +208,20 @@ and artifact attached during the sale.
 #### C2 · Pipeline stage machines — **M**
 Two configured stage sets on shared phase machinery: RIVE D3 (Day 0 → 14) and Glide CTV (productized funnel).
 
-**Deliverables.** `pipeline_key` on `client_status_phases`; both phase sets seeded with ordering and
-per-phase webhook; exit-criteria gating; a kanban view per pipeline.
-**Acceptance.** Moving a prospect through D3 phases fires the configured n8n webhook per phase; a phase with
+**Deliverables.** Dedicated `pipelines` and `pipeline_stages` tables; both stage sets seeded with ordering,
+day labels, exit criteria and a per-stage webhook; `pipeline_id` / `pipeline_stage_id` / `stage_entered_at`
+on `clients`; a board view per pipeline.
+**Acceptance.** Moving a prospect through D3 stages fires the configured n8n webhook per stage; a stage with
 unmet exit criteria is blocked with a stated reason; the two pipelines render and operate independently.
-**Depends on.** C1. **Reuses.** `client_status_phases`, `seed_default_status_phases`, `Onboarding.tsx` kanban.
-**Consolidates.** D3 S2.
+**Depends on.** C1. **Reuses.** `update_updated_at_column`, the workspace RLS helpers, `Onboarding.tsx` kanban
+patterns. **Consolidates.** D3 S2.
+
+> **Design correction (2026-09-01).** This item originally proposed extending `client_status_phases`.
+> Inspection of that table shows it is keyed by `status_key` against the `client_status` enum — GREEN,
+> LAUNCHING, LEARNING — and several keys are auto-managed by `compute_client_status`. Those are client
+> *health* states, not sale stages. Overloading it would mean adding fourteen sales stages to a health enum
+> and teaching the health automation to ignore them. Dedicated tables are cheaper and keep both concepts
+> intact; the per-stage webhook idea carries over unchanged.
 
 ---
 

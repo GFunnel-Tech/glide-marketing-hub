@@ -2249,11 +2249,14 @@ export type Database = {
           lost_at: string | null
           lost_reason: string | null
           name: string
+          pipeline_id: string | null
+          pipeline_stage_id: string | null
           portal_slug: string | null
           prospect_source: string | null
           relationship_owner: string | null
           reported_leads: number
           spend: number
+          stage_entered_at: string | null
           status: Database["public"]["Enums"]["client_status"]
           true_cpl: number
           true_leads: number
@@ -2302,11 +2305,14 @@ export type Database = {
           lost_at?: string | null
           lost_reason?: string | null
           name: string
+          pipeline_id?: string | null
+          pipeline_stage_id?: string | null
           portal_slug?: string | null
           prospect_source?: string | null
           relationship_owner?: string | null
           reported_leads?: number
           spend?: number
+          stage_entered_at?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           true_cpl?: number
           true_leads?: number
@@ -2355,11 +2361,14 @@ export type Database = {
           lost_at?: string | null
           lost_reason?: string | null
           name?: string
+          pipeline_id?: string | null
+          pipeline_stage_id?: string | null
           portal_slug?: string | null
           prospect_source?: string | null
           relationship_owner?: string | null
           reported_leads?: number
           spend?: number
+          stage_entered_at?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           true_cpl?: number
           true_leads?: number
@@ -7335,6 +7344,10 @@ export type Database = {
       rollup_client_kpis_for_workspace: {
         Args: { _workspace_id?: string }
         Returns: number
+      }
+      seed_default_pipelines: {
+        Args: { _workspace_id: string }
+        Returns: undefined
       }
       seed_default_status_phases: {
         Args: { _workspace_id: string }
