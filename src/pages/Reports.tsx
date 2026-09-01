@@ -540,6 +540,80 @@ export default function Reports() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!oneOff} onOpenChange={(o) => !o && setOneOff(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Generate a report now</DialogTitle>
+          </DialogHeader>
+          {oneOff && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Client</Label>
+                <Select value={oneOff.client_id} onValueChange={(v) => setOneOff({ ...oneOff, client_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {(clients as any[]).map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.brand || c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Period start</Label>
+                  <Input
+                    type="date"
+                    value={oneOff.periodStart}
+                    onChange={(e) => setOneOff({ ...oneOff, periodStart: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Period end</Label>
+                  <Input
+                    type="date"
+                    value={oneOff.periodEnd}
+                    onChange={(e) => setOneOff({ ...oneOff, periodEnd: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Recipients (optional)</Label>
+                <Input
+                  placeholder="client@example.com, team@example.com"
+                  value={oneOff.recipients}
+                  onChange={(e) => setOneOff({ ...oneOff, recipients: e.target.value })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Email it right away</p>
+                  <p className="text-xs text-muted-foreground">
+                    Off = just create the PDF and share link; you can send it later.
+                  </p>
+                </div>
+                <Switch checked={oneOff.send} onCheckedChange={(send) => setOneOff({ ...oneOff, send })} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOneOff(null)}>
+              Cancel
+            </Button>
+            <Button onClick={runOneOff} disabled={busyId === "one-off"}>
+              {busyId === "one-off" && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Generate report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
