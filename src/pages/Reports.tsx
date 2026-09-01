@@ -92,6 +92,14 @@ export default function Reports() {
 
   const [draft, setDraft] = useState<DraftSchedule | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [oneOff, setOneOff] = useState<{
+    client_id: string;
+    periodStart: string;
+    periodEnd: string;
+    recipients: string;
+    send: boolean;
+  } | null>(null);
+
 
   const clientName = useMemo(() => {
     const map = new Map<number, string>();
